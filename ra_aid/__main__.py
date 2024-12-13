@@ -29,6 +29,32 @@ import time
 from anthropic import APIError, APITimeoutError, RateLimitError, InternalServerError
 from ra_aid.llm import initialize_llm
 
+# Common tools used across multiple agents
+COMMON_TOOLS = [
+    emit_related_files,
+    emit_key_facts,
+    delete_key_facts,
+    emit_key_snippets,
+    delete_key_snippets,
+    read_file_tool,
+    fuzzy_find_project_files,
+    ripgrep_search
+]
+
+# Expert-specific tools
+EXPERT_TOOLS = [
+    emit_expert_context,
+    ask_expert
+]
+
+# Research-specific tools
+RESEARCH_TOOLS = [
+    list_directory_tree,
+    emit_research_subtask,
+    run_shell_command,
+    emit_research_notes
+]
+
 def parse_arguments():
     parser = argparse.ArgumentParser(
         description='RA.Aid - AI Agent for executing programming and research tasks',
@@ -104,24 +130,13 @@ implementation_memory = MemorySaver()
 
 def get_research_tools(research_only: bool = False, expert_enabled: bool = True) -> list:
     """Get the list of research tools based on mode and whether expert is enabled."""
-    tools = [
-        list_directory_tree,
-        emit_research_subtask,
-        run_shell_command, 
-        emit_research_notes,
-        emit_related_files,
-        emit_key_facts,
-        delete_key_facts,
-        emit_key_snippets,
-        delete_key_snippets,
-        read_file_tool,
-        fuzzy_find_project_files,
-        ripgrep_search
-    ]
+    tools = RESEARCH_TOOLS.copy()  # Start with research-specific tools including list_directory_tree
+    
+    # Add common tools 
+    tools.extend(COMMON_TOOLS.copy())
     
     if expert_enabled:
-        tools.append(emit_expert_context)
-        tools.append(ask_expert)
+        tools.extend(EXPERT_TOOLS)
     
     if not research_only:
         tools.append(request_implementation)
