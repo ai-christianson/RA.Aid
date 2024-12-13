@@ -4,7 +4,7 @@ from langchain_core.tools import tool
 from rich.console import Console
 from rich.panel import Panel
 from rich.markdown import Markdown
-from langchain_openai import ChatOpenAI
+from ..llm import initialize_expert_llm
 from .memory import get_memory_value, get_related_files
 
 console = Console()
@@ -13,7 +13,9 @@ _model = None
 def get_model():
     global _model
     if _model is None:
-        _model = ChatOpenAI(model_name="o1-preview")
+        provider = get_memory_value('expert_provider') or 'openai'
+        model = get_memory_value('expert_model') or 'o1-preview'
+        _model = initialize_expert_llm(provider, model)
     return _model
 
 # Keep track of context globally

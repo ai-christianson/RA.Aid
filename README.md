@@ -148,6 +148,8 @@ ra-aid -m "Explain the authentication flow" --research-only
 - `--cowboy-mode`: Skip interactive approval for shell commands
 - `--provider`: Specify the model provider (See Model Configuration section)
 - `--model`: Specify the model name (See Model Configuration section)
+- `--expert-provider`: Specify the provider for the expert tool (defaults to OpenAI)
+- `--expert-model`: Specify the model name for the expert tool (defaults to o1-preview for OpenAI)
 
 ### Model Configuration
 
@@ -155,14 +157,22 @@ RA.Aid supports multiple AI providers and models. The default model is Anthropic
 
 The programmer tool (aider) automatically selects its model based on your available API keys. It will use Claude models if ANTHROPIC_API_KEY is set, or fall back to OpenAI models if only OPENAI_API_KEY is available.
 
+Note: The expert tool can be configured to use different providers (OpenAI, Anthropic, OpenRouter) using the --expert-provider flag along with the corresponding EXPERT_*_KEY environment variables. Each provider requires its own API key set through the appropriate environment variable.
+
 #### Environment Variables
 
 RA.Aid supports multiple providers through environment variables:
 
 - `ANTHROPIC_API_KEY`: Required for the default Anthropic provider
-- `OPENAI_API_KEY`: Required for OpenAI provider and expert tool
+- `OPENAI_API_KEY`: Required for OpenAI provider
 - `OPENROUTER_API_KEY`: Required for OpenRouter provider
 - `OPENAI_API_BASE`: Required for OpenAI-compatible providers along with `OPENAI_API_KEY`
+
+Expert Tool Environment Variables:
+- `EXPERT_OPENAI_KEY`: API key for expert tool using OpenAI provider
+- `EXPERT_ANTHROPIC_KEY`: API key for expert tool using Anthropic provider
+- `EXPERT_OPENROUTER_KEY`: API key for expert tool using OpenRouter provider  
+- `EXPERT_OPENAI_BASE`: Base URL for expert tool using OpenAI-compatible provider
 
 You can set these permanently in your shell's configuration file (e.g., `~/.bashrc` or `~/.zshrc`):
 
@@ -180,7 +190,7 @@ export OPENROUTER_API_KEY=your_api_key_here
 export OPENAI_API_BASE=your_api_base_url
 ```
 
-Note: The expert tool always uses OpenAI's `o1-preview` model and requires `OPENAI_API_KEY` to be set, even if you're using a different provider for the main application.
+Note: The expert tool defaults to OpenAI's o1-preview model with the OpenAI provider, but this can be configured using the --expert-provider flag along with the corresponding EXPERT_*_KEY environment variables.
 
 #### Examples
 
@@ -201,6 +211,18 @@ Note: The expert tool always uses OpenAI's `o1-preview` model and requires `OPEN
 3. **Using OpenRouter**
    ```bash
    ra-aid -m "Your task" --provider openrouter --model mistralai/mistral-large-2411
+   ```
+
+4. **Configuring Expert Provider**
+   ```bash
+   # Use Anthropic for expert tool
+   ra-aid -m "Your task" --expert-provider anthropic
+
+   # Use OpenRouter for expert tool
+   ra-aid -m "Your task" --expert-provider openrouter
+
+   # Use default OpenAI for expert tool
+   ra-aid -m "Your task" --expert-provider openai
    ```
 
 **Important Notes:**

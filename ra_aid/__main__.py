@@ -67,6 +67,18 @@ Examples:
         action='store_true',
         help='Skip interactive approval for shell commands'
     )
+    parser.add_argument(
+        '--expert-provider',
+        type=str,
+        default='openai',
+        choices=['anthropic', 'openai', 'openrouter', 'openai-compatible'],
+        help='The LLM provider to use for expert knowledge queries (default: openai)'
+    )
+    parser.add_argument(
+        '--expert-model',
+        type=str,
+        help='The model name to use for expert knowledge queries (required for non-OpenAI providers)'
+    )
     
     args = parser.parse_args()
     
@@ -76,6 +88,10 @@ Examples:
             args.model = 'claude-3-5-sonnet-20241022'
     elif not args.model:
         parser.error(f"--model is required when using provider '{args.provider}'")
+    
+    # Validate expert model requirement
+    if args.expert_provider != 'openai' and not args.expert_model:
+        parser.error(f"--expert-model is required when using expert provider '{args.expert_provider}'")
     
     return args
 
@@ -256,6 +272,7 @@ def validate_environment(args):
     """
     missing = []
     provider = args.provider
+    expert_provider = args.expert_provider
 
     # Check API keys based on provider
     if provider == "anthropic":
@@ -272,6 +289,22 @@ def validate_environment(args):
             missing.append('OPENAI_API_KEY environment variable is not set')
         if not os.environ.get('OPENAI_API_BASE'):
             missing.append('OPENAI_API_BASE environment variable is not set')
+
+    # Check expert provider keys
+    if expert_provider == "anthropic":
+        if not os.environ.get('EXPERT_ANTHROPIC_KEY'):
+            missing.append('EXPERT_ANTHROPIC_KEY environment variable is not set')
+    elif expert_provider == "openai":
+        if not os.environ.get('EXPERT_OPENAI_KEY'):
+            missing.append('EXPERT_OPENAI_KEY environment variable is not set')
+    elif expert_provider == "openrouter":
+        if not os.environ.get('EXPERT_OPENROUTER_KEY'):
+            missing.append('EXPERT_OPENROUTER_KEY environment variable is not set')
+    elif expert_provider == "openai-compatible":
+        if not os.environ.get('EXPERT_OPENAI_KEY'):
+            missing.append('EXPERT_OPENAI_KEY environment variable is not set')
+        if not os.environ.get('EXPERT_OPENAI_BASE'):
+            missing.append('EXPERT_OPENAI_BASE environment variable is not set')
 
     if missing:
         print_error("Missing required dependencies:")
@@ -306,6 +339,10 @@ def main():
             
             # Store config in global memory for access by is_informational_query
             _global_memory['config'] = config
+            
+            # Store expert provider and model in config
+            _global_memory['config']['expert_provider'] = args.expert_provider
+            _global_memory['config']['expert_model'] = args.expert_model
             
             # Run research stage
             print_stage_header("Research Stage")

@@ -43,3 +43,45 @@ def initialize_llm(provider: str, model_name: str) -> BaseChatModel:
         )
     else:
         raise ValueError(f"Unsupported provider: {provider}")
+
+def initialize_expert_llm(provider: str = "openai", model_name: str = "o1-preview") -> BaseChatModel:
+    """Initialize an expert language model client based on the specified provider and model.
+
+    Note: Environment variables must be validated before calling this function.
+    Use validate_environment() to ensure all required variables are set.
+
+    Args:
+        provider: The LLM provider to use ('openai', 'anthropic', 'openrouter', 'openai-compatible').
+                 Defaults to 'openai'.
+        model_name: Name of the model to use. Defaults to 'o1-preview'.
+
+    Returns:
+        BaseChatModel: Configured expert language model client
+
+    Raises:
+        ValueError: If the provider is not supported
+    """
+    if provider == "openai":
+        return ChatOpenAI(
+            openai_api_key=os.getenv("EXPERT_OPENAI_KEY"),
+            model=model_name
+        )
+    elif provider == "anthropic":
+        return ChatAnthropic(
+            anthropic_api_key=os.getenv("EXPERT_ANTHROPIC_KEY"),
+            model=model_name
+        )
+    elif provider == "openrouter":
+        return ChatOpenAI(
+            openai_api_key=os.getenv("EXPERT_OPENROUTER_KEY"),
+            openai_api_base="https://openrouter.ai/api/v1",
+            model=model_name
+        )
+    elif provider == "openai-compatible":
+        return ChatOpenAI(
+            openai_api_key=os.getenv("EXPERT_OPENAI_KEY"),
+            openai_api_base=os.getenv("EXPERT_OPENAI_BASE"),
+            model=model_name
+        )
+    else:
+        raise ValueError(f"Unsupported provider: {provider}")
