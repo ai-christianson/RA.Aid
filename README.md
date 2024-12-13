@@ -18,7 +18,7 @@
 
 <img src="assets/demo.gif" alt="RA.Aid Demo" autoplay loop style="width: 100%; max-width: 800px;">
 
-> 👋 **Pull requests are very welcome!** As a technical founder with limited time, I greatly appreciate any contributions to this repository. Don't be shy - your help makes a real difference!
+> 👋 **Pull requests are very welcome!** As a technical founder with limited time (who uses RA.Aid to save time), I greatly appreciate any contributions to this repository. Don't be shy - your help makes a real difference!
 >
 > 💬 **Join our Discord community:** [Click here to join](https://discord.gg/f6wYbzHYxV)
 
