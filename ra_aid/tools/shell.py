@@ -14,11 +14,6 @@ console = Console()
 def run_shell_command(command: str) -> Dict[str, Union[str, int, bool]]:
     """Execute a shell command and return its output.
 
-    Assume these are available:
-    - rg
-    - tree
-    - standard linux utilities
-
     Important notes:
     1. Try to constrain/limit the output. Output processing is expensive, and infinite/looping output will cause us to fail.
     2. When using commands like 'find', 'grep', or similar recursive search tools, always exclude common 

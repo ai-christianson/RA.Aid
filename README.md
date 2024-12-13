@@ -104,19 +104,25 @@ pip install aider-chat
 2. API keys for the required AI services:
 
 ```bash
-# Default: Set up Anthropic API key (default provider)
+# Set up API keys based on your preferred provider:
+
+# For Anthropic Claude models (recommended)
 export ANTHROPIC_API_KEY=your_api_key_here
 
-# Required for expert tool and OpenAI provider
+# For OpenAI models
 export OPENAI_API_KEY=your_api_key_here
 
-# Required for OpenRouter provider
+# For OpenRouter provider (optional)
 export OPENROUTER_API_KEY=your_api_key_here
 
-# For OpenAI-compatible providers
-export OPENAI_API_KEY=your_api_key_here
+# For OpenAI-compatible providers (optional)
 export OPENAI_API_BASE=your_api_base_url
 ```
+
+Note: The programmer tool (aider) will automatically select its model based on your available API keys:
+- If ANTHROPIC_API_KEY is set, it will use Claude models
+- If only OPENAI_API_KEY is set, it will use OpenAI models
+- You can set multiple API keys to enable different features
 
 You can get your API keys from:
 - Anthropic API key: https://console.anthropic.com/
@@ -147,6 +153,8 @@ ra-aid -m "Explain the authentication flow" --research-only
 
 RA.Aid supports multiple AI providers and models. The default model is Anthropic's Claude 3 Sonnet (`claude-3-5-sonnet-20241022`).
 
+The programmer tool (aider) automatically selects its model based on your available API keys. It will use Claude models if ANTHROPIC_API_KEY is set, or fall back to OpenAI models if only OPENAI_API_KEY is available.
+
 #### Environment Variables
 
 RA.Aid supports multiple providers through environment variables:
@@ -172,7 +180,7 @@ export OPENROUTER_API_KEY=your_api_key_here
 export OPENAI_API_BASE=your_api_base_url
 ```
 
-Note: The expert tool always uses OpenAI's `o1-preview` model and requires `OPENAI_API_KEY` to be set, even if you're using a different provider for the main application. Additionally, the programmer tool (aider) is currently hardcoded to use Anthropic Claude - this is something we plan to fix in a future update.
+Note: The expert tool always uses OpenAI's `o1-preview` model and requires `OPENAI_API_KEY` to be set, even if you're using a different provider for the main application.
 
 #### Examples
 
