@@ -153,7 +153,6 @@ ra-aid -m "Explain the authentication flow" --research-only
    ```bash
    ra-aid -m "Analyze the current error handling patterns" --research-only
    ```
-   ```
 
 2. Code Research:
    ```bash
