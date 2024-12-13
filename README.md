@@ -172,7 +172,7 @@ export OPENROUTER_API_KEY=your_api_key_here
 export OPENAI_API_BASE=your_api_base_url
 ```
 
-Note: The expert tool always uses OpenAI's `o1-preview` model and requires `OPENAI_API_KEY` to be set, even if you're using a different provider for the main application.
+Note: The expert tool always uses OpenAI's `o1-preview` model and requires `OPENAI_API_KEY` to be set, even if you're using a different provider for the main application. Additionally, the programmer tool (aider) is currently hardcoded to use Anthropic Claude - this is something we plan to fix in a future update.
 
 #### Examples
 
