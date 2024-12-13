@@ -4,33 +4,41 @@ from langchain_anthropic import ChatAnthropic
 from langchain_core.language_models import BaseChatModel
 
 def initialize_llm(provider: str, model_name: str) -> BaseChatModel:
+    """Initialize a language model client based on the specified provider and model.
+
+    Note: Environment variables must be validated before calling this function.
+    Use validate_environment() to ensure all required variables are set.
+
+    Args:
+        provider: The LLM provider to use ('openai', 'anthropic', 'openrouter', 'openai-compatible')
+        model_name: Name of the model to use
+
+    Returns:
+        BaseChatModel: Configured language model client
+
+    Raises:
+        ValueError: If the provider is not supported
+    """
     if provider == "openai":
-        api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
-            raise ValueError("OPENAI_API_KEY environment variable is not set.")
-        return ChatOpenAI(openai_api_key=api_key, model=model_name)
-    elif provider == "anthropic":
-        api_key = os.getenv("ANTHROPIC_API_KEY")
-        if not api_key:
-            raise ValueError("ANTHROPIC_API_KEY environment variable is not set.")
-        return ChatAnthropic(anthropic_api_key=api_key, model=model_name)
-    elif provider == "openrouter":
-        api_key = os.getenv("OPENROUTER_API_KEY")
-        if not api_key:
-            raise ValueError("OPENROUTER_API_KEY environment variable is not set.")
         return ChatOpenAI(
-            openai_api_key=api_key,
+            openai_api_key=os.getenv("OPENAI_API_KEY"),
+            model=model_name
+        )
+    elif provider == "anthropic":
+        return ChatAnthropic(
+            anthropic_api_key=os.getenv("ANTHROPIC_API_KEY"),
+            model=model_name
+        )
+    elif provider == "openrouter":
+        return ChatOpenAI(
+            openai_api_key=os.getenv("OPENROUTER_API_KEY"),
             openai_api_base="https://openrouter.ai/api/v1",
             model=model_name
         )
     elif provider == "openai-compatible":
-        api_key = os.getenv("OPENAI_API_KEY")
-        api_base = os.getenv("OPENAI_API_BASE")
-        if not api_key or not api_base:
-            raise ValueError("Both OPENAI_API_KEY and OPENAI_API_BASE environment variables must be set.")
         return ChatOpenAI(
-            openai_api_key=api_key,
-            openai_api_base=api_base,
+            openai_api_key=os.getenv("OPENAI_API_KEY"),
+            openai_api_base=os.getenv("OPENAI_API_BASE"),
             model=model_name
         )
     else:

@@ -42,7 +42,6 @@ def run_programming_task(input: RunProgrammingTaskInput) -> Dict[str, Union[str,
     # Build command
     command = [
         "aider",
-        "--sonnet",
         "--yes-always",
         "--no-auto-commits",
         "--dark-mode",
