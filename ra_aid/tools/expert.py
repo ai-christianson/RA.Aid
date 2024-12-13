@@ -133,55 +133,46 @@ def ask_expert(question: str) -> str:
     """
     global expert_context
     
-    # Build query with context and key facts
-    query_parts = []
-    
-    # Add key facts if they exist
-    key_facts = get_memory_value('key_facts')
-    if key_facts and len(key_facts) > 0:
-        query_parts.append("# Key Facts About This Project")
-        query_parts.append(key_facts)
-    
-    # Add key snippets if they exist
+    # Get all content first
+    related_contents = read_related_files()
     key_snippets = get_memory_value('key_snippets')
-    if key_snippets and len(key_snippets) > 0:
-        query_parts.append('# Key Snippets')
-        query_parts.append(key_snippets)
+    key_facts = get_memory_value('key_facts')
     
-    # Add other context if it exists
-    if expert_context:
-        query_parts.append("\n# Additional Context")
-        query_parts.append("\n".join(expert_context))
+    # Build display query (just question)
+    display_query = "# Question\n" + question
     
-    # Add the question
-    if query_parts:  # If we have context/facts, add a newline before question
-        query_parts.append("\n# Question")
-    query_parts.append(question)
-    
-    # Join all parts
-    query = "\n".join(query_parts)
-    
-    # Display the query in a panel before making the call
+    # Show only question in panel
     console.print(Panel(
-        Markdown(query),
+        Markdown(display_query),
         title="🤔 Expert Query",
         border_style="yellow"
     ))
     
-    # Clear context after use (only after successful panel display)
+    # Clear context after panel display
     expert_context.clear()
     
-    # Get related file contents and rebuild query with it at the start
-    related_contents = read_related_files()
+    # Build full query in specified order
+    query_parts = []
+    
     if related_contents:
-        # Create new query_parts with related files at the start
-        new_query_parts = ['# Related Files', related_contents]
-        new_query_parts.extend(query_parts)
-        query_parts = new_query_parts
-        query = "\n".join(query_parts)
+        query_parts.extend(['# Related Files', related_contents])
         
-    # Get response
-    response = get_model().invoke(query)
+    if key_snippets and len(key_snippets) > 0:
+        query_parts.extend(['# Key Snippets', key_snippets])
+        
+    if key_facts and len(key_facts) > 0:
+        query_parts.extend(['# Key Facts About This Project', key_facts])
+        
+    if expert_context:
+        query_parts.extend(['\n# Additional Context', '\n'.join(expert_context)])
+        
+    query_parts.extend(['# Question', question])
+    
+    # Join all parts
+    full_query = '\n'.join(query_parts)
+    
+    # Get response using full query
+    response = get_model().invoke(full_query)
     
     # Format and display response
     console.print(Panel(
