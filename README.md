@@ -221,7 +221,6 @@ Note: The expert tool always uses OpenAI's `o1-preview` model and requires `OPEN
    ```bash
    ra-aid -m "Analyze the current error handling patterns" --research-only
    ```
-   ```
 
 2. Code Research:
    ```bash
