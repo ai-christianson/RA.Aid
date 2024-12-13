@@ -290,21 +290,31 @@ def validate_environment(args):
         if not os.environ.get('OPENAI_API_BASE'):
             missing.append('OPENAI_API_BASE environment variable is not set')
 
-    # Check expert provider keys
+    # Check expert provider keys with fallback to regular keys if providers match
     if expert_provider == "anthropic":
-        if not os.environ.get('EXPERT_ANTHROPIC_KEY'):
-            missing.append('EXPERT_ANTHROPIC_KEY environment variable is not set')
+        expert_key_missing = not os.environ.get('EXPERT_ANTHROPIC_API_KEY')
+        fallback_available = expert_provider == provider and os.environ.get('ANTHROPIC_API_KEY')
+        if expert_key_missing and not fallback_available:
+            missing.append('EXPERT_ANTHROPIC_API_KEY environment variable is not set')
     elif expert_provider == "openai":
-        if not os.environ.get('EXPERT_OPENAI_KEY'):
-            missing.append('EXPERT_OPENAI_KEY environment variable is not set')
+        expert_key_missing = not os.environ.get('EXPERT_OPENAI_API_KEY')
+        fallback_available = expert_provider == provider and os.environ.get('OPENAI_API_KEY')
+        if expert_key_missing and not fallback_available:
+            missing.append('EXPERT_OPENAI_API_KEY environment variable is not set')
     elif expert_provider == "openrouter":
-        if not os.environ.get('EXPERT_OPENROUTER_KEY'):
-            missing.append('EXPERT_OPENROUTER_KEY environment variable is not set')
+        expert_key_missing = not os.environ.get('EXPERT_OPENROUTER_API_KEY')
+        fallback_available = expert_provider == provider and os.environ.get('OPENROUTER_API_KEY')
+        if expert_key_missing and not fallback_available:
+            missing.append('EXPERT_OPENROUTER_API_KEY environment variable is not set')
     elif expert_provider == "openai-compatible":
-        if not os.environ.get('EXPERT_OPENAI_KEY'):
-            missing.append('EXPERT_OPENAI_KEY environment variable is not set')
-        if not os.environ.get('EXPERT_OPENAI_BASE'):
-            missing.append('EXPERT_OPENAI_BASE environment variable is not set')
+        expert_key_missing = not os.environ.get('EXPERT_OPENAI_API_KEY')
+        fallback_available = expert_provider == provider and os.environ.get('OPENAI_API_KEY')
+        if expert_key_missing and not fallback_available:
+            missing.append('EXPERT_OPENAI_API_KEY environment variable is not set')
+        expert_base_missing = not os.environ.get('EXPERT_OPENAI_API_BASE')
+        base_fallback_available = expert_provider == provider and os.environ.get('OPENAI_API_BASE')
+        if expert_base_missing and not base_fallback_available:
+            missing.append('EXPERT_OPENAI_API_BASE environment variable is not set')
 
     if missing:
         print_error("Missing required dependencies:")

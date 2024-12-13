@@ -157,7 +157,7 @@ RA.Aid supports multiple AI providers and models. The default model is Anthropic
 
 The programmer tool (aider) automatically selects its model based on your available API keys. It will use Claude models if ANTHROPIC_API_KEY is set, or fall back to OpenAI models if only OPENAI_API_KEY is available.
 
-Note: The expert tool can be configured to use different providers (OpenAI, Anthropic, OpenRouter) using the --expert-provider flag along with the corresponding EXPERT_*_KEY environment variables. Each provider requires its own API key set through the appropriate environment variable.
+Note: The expert tool can be configured to use different providers (OpenAI, Anthropic, OpenRouter) using the --expert-provider flag along with the corresponding EXPERT_*API_KEY environment variables. Each provider requires its own API key set through the appropriate environment variable.
 
 #### Environment Variables
 
@@ -169,10 +169,10 @@ RA.Aid supports multiple providers through environment variables:
 - `OPENAI_API_BASE`: Required for OpenAI-compatible providers along with `OPENAI_API_KEY`
 
 Expert Tool Environment Variables:
-- `EXPERT_OPENAI_KEY`: API key for expert tool using OpenAI provider
-- `EXPERT_ANTHROPIC_KEY`: API key for expert tool using Anthropic provider
-- `EXPERT_OPENROUTER_KEY`: API key for expert tool using OpenRouter provider  
-- `EXPERT_OPENAI_BASE`: Base URL for expert tool using OpenAI-compatible provider
+- `EXPERT_OPENAI_API_KEY`: API key for expert tool using OpenAI provider
+- `EXPERT_ANTHROPIC_API_KEY`: API key for expert tool using Anthropic provider
+- `EXPERT_OPENROUTER_API_KEY`: API key for expert tool using OpenRouter provider  
+- `EXPERT_OPENAI_API_BASE`: Base URL for expert tool using OpenAI-compatible provider
 
 You can set these permanently in your shell's configuration file (e.g., `~/.bashrc` or `~/.zshrc`):
 
@@ -214,15 +214,21 @@ Note: The expert tool defaults to OpenAI's o1-preview model with the OpenAI prov
    ```
 
 4. **Configuring Expert Provider**
+
+   The expert tool is used by the agent for complex logic and debugging tasks. It can be configured to use different providers (OpenAI, Anthropic, OpenRouter) using the --expert-provider flag along with the corresponding EXPERT_*API_KEY environment variables.
+
    ```bash
    # Use Anthropic for expert tool
-   ra-aid -m "Your task" --expert-provider anthropic
+   export EXPERT_ANTHROPIC_API_KEY=your_anthropic_api_key
+   ra-aid -m "Your task" --expert-provider anthropic --expert-model claude-3-5-sonnet-20241022
 
    # Use OpenRouter for expert tool
-   ra-aid -m "Your task" --expert-provider openrouter
+   export OPENROUTER_API_KEY=your_openrouter_api_key
+   ra-aid -m "Your task" --expert-provider openrouter --expert-model mistralai/mistral-large-2411
 
    # Use default OpenAI for expert tool
-   ra-aid -m "Your task" --expert-provider openai
+   export EXPERT_OPENAI_API_KEY=your_openai_api_key
+   ra-aid -m "Your task" --expert-provider openai --expert-model o1-preview
    ```
 
 **Important Notes:**

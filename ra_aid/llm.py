@@ -21,24 +21,24 @@ def initialize_llm(provider: str, model_name: str) -> BaseChatModel:
     """
     if provider == "openai":
         return ChatOpenAI(
-            openai_api_key=os.getenv("OPENAI_API_KEY"),
+            api_key=os.getenv("OPENAI_API_KEY"),
             model=model_name
         )
     elif provider == "anthropic":
         return ChatAnthropic(
-            anthropic_api_key=os.getenv("ANTHROPIC_API_KEY"),
-            model=model_name
+            api_key=os.getenv("ANTHROPIC_API_KEY"),
+            model_name=model_name
         )
     elif provider == "openrouter":
         return ChatOpenAI(
-            openai_api_key=os.getenv("OPENROUTER_API_KEY"),
-            openai_api_base="https://openrouter.ai/api/v1",
+            api_key=os.getenv("OPENROUTER_API_KEY"),
+            base_url="https://openrouter.ai/api/v1",
             model=model_name
         )
     elif provider == "openai-compatible":
         return ChatOpenAI(
-            openai_api_key=os.getenv("OPENAI_API_KEY"),
-            openai_api_base=os.getenv("OPENAI_API_BASE"),
+            api_key=os.getenv("OPENAI_API_KEY"),
+            base_url=os.getenv("OPENAI_API_BASE"),
             model=model_name
         )
     else:
@@ -63,24 +63,24 @@ def initialize_expert_llm(provider: str = "openai", model_name: str = "o1-previe
     """
     if provider == "openai":
         return ChatOpenAI(
-            openai_api_key=os.getenv("EXPERT_OPENAI_KEY"),
+            api_key=os.getenv("EXPERT_OPENAI_API_KEY"),
             model=model_name
         )
     elif provider == "anthropic":
         return ChatAnthropic(
-            anthropic_api_key=os.getenv("EXPERT_ANTHROPIC_KEY"),
-            model=model_name
+            api_key=os.getenv("EXPERT_ANTHROPIC_API_KEY"),
+            model_name=model_name
         )
     elif provider == "openrouter":
         return ChatOpenAI(
-            openai_api_key=os.getenv("EXPERT_OPENROUTER_KEY"),
-            openai_api_base="https://openrouter.ai/api/v1",
+            api_key=os.getenv("EXPERT_OPENROUTER_API_KEY"),
+            base_url="https://openrouter.ai/api/v1",
             model=model_name
         )
     elif provider == "openai-compatible":
         return ChatOpenAI(
-            openai_api_key=os.getenv("EXPERT_OPENAI_KEY"),
-            openai_api_base=os.getenv("EXPERT_OPENAI_BASE"),
+            api_key=os.getenv("EXPERT_OPENAI_API_KEY"),
+            base_url=os.getenv("EXPERT_OPENAI_API_BASE"),
             model=model_name
         )
     else:

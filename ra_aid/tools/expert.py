@@ -5,17 +5,22 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.markdown import Markdown
 from ..llm import initialize_expert_llm
-from .memory import get_memory_value, get_related_files
+from .memory import get_memory_value, get_related_files, _global_memory
 
 console = Console()
 _model = None
 
 def get_model():
     global _model
-    if _model is None:
-        provider = get_memory_value('expert_provider') or 'openai'
-        model = get_memory_value('expert_model') or 'o1-preview'
-        _model = initialize_expert_llm(provider, model)
+    try:
+        if _model is None:
+            provider = _global_memory['config']['expert_provider'] or 'openai'
+            model = _global_memory['config']['expert_model'] or 'o1-preview'
+            _model = initialize_expert_llm(provider, model)
+    except Exception as e:
+        _model = None
+        console.print(Panel(f"Failed to initialize expert model: {e}", title="Error", border_style="red"))
+        raise
     return _model
 
 # Keep track of context globally
