@@ -44,8 +44,10 @@ def write_file_tool(
     }
 
     try:
-        # Ensure directory exists
-        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        # Ensure directory exists if filepath contains directories
+        dirpath = os.path.dirname(filepath)
+        if dirpath:
+            os.makedirs(dirpath, exist_ok=True)
 
         logging.debug(f"Starting to write file: {filepath}")
         
@@ -71,7 +73,6 @@ def write_file_tool(
     except Exception as e:
         elapsed = time.time() - start_time
         error_msg = str(e)
-        logging.error(f"Error writing file {filepath} after {elapsed:.2f}s: {error_msg}")
         
         result["elapsed_time"] = elapsed
         result["error"] = error_msg
