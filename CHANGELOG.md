@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Adjust research prompt to make sure related files are related to the base task, not just the research subtask.
 - Track tasks by ID and allow them to be deleted.
 - Make one_shot_completed tool available to research agent.
+- Make sure file modification tools are not available when research only flag is used.
 
 ## [0.6.0] - 2024-12-17
 

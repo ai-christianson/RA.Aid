@@ -30,17 +30,29 @@ import time
 from anthropic import APIError, APITimeoutError, RateLimitError, InternalServerError
 from ra_aid.llm import initialize_llm
 
-# Common tools used across multiple agents
-COMMON_TOOLS = [
+# Read-only tools that don't modify system state
+READ_ONLY_TOOLS = [
     emit_related_files,
     emit_key_facts,
     delete_key_facts,
     emit_key_snippets,
     delete_key_snippets,
     read_file_tool,
-    write_file_tool,
     fuzzy_find_project_files,
-    ripgrep_search,
+    ripgrep_search
+]
+
+# Tools that can modify files or system state
+MODIFICATION_TOOLS = [
+    write_file_tool,
+    file_str_replace,
+    run_shell_command,
+    run_programming_task
+]
+
+# Common tools used across multiple agents
+COMMON_TOOLS = READ_ONLY_TOOLS + [
+    write_file_tool,
     file_str_replace
 ]
 
@@ -134,56 +146,55 @@ implementation_memory = MemorySaver()
 
 def get_research_tools(research_only: bool = False, expert_enabled: bool = True) -> list:
     """Get the list of research tools based on mode and whether expert is enabled."""
-    tools = RESEARCH_TOOLS.copy()  # Start with research-specific tools including list_directory_tree
+    # Start with read-only tools
+    tools = READ_ONLY_TOOLS.copy()
     
-    # Add common tools 
-    tools.extend(COMMON_TOOLS.copy())
+    # Add research tools except run_shell_command
+    research_tools = [t for t in RESEARCH_TOOLS if t != run_shell_command]
+    tools.extend(research_tools)
     
+    # Add modification tools if not research_only
+    if not research_only:
+        tools.extend(MODIFICATION_TOOLS)
+        tools.append(request_complex_implementation)
+    
+    # Add expert tools if enabled
     if expert_enabled:
         tools.extend(EXPERT_TOOLS)
-    
-    if not research_only:
-        tools.append(request_complex_implementation)
     
     return tools
 
 def get_planning_tools(expert_enabled: bool = True) -> list:
-    tools = [
-        list_directory_tree,
+    """Get the list of planning tools based on whether expert is enabled."""
+    # Start with common tools
+    tools = COMMON_TOOLS.copy()
+    
+    # Add planning-specific tools
+    planning_tools = [
         emit_plan,
-        emit_task,
-        swap_task_order,
-        emit_related_files,
-        emit_key_facts,
-        delete_key_facts,
-        emit_key_snippets,
-        delete_key_snippets,
-        read_file_tool,
-        fuzzy_find_project_files,
-        ripgrep_search
+        emit_task, 
+        swap_task_order
     ]
+    tools.extend(planning_tools)
+    
+    # Add expert tools if enabled
     if expert_enabled:
-        tools.append(ask_expert)
-        tools.append(emit_expert_context)
+        tools.extend(EXPERT_TOOLS)
+    
     return tools
 
 def get_implementation_tools(expert_enabled: bool = True) -> list:
-    tools = [
-        list_directory_tree,
-        run_shell_command,
-        run_programming_task,
-        emit_related_files,
-        emit_key_facts,
-        delete_key_facts,
-        emit_key_snippets,
-        delete_key_snippets,
-        read_file_tool,
-        fuzzy_find_project_files,
-        ripgrep_search
-    ]
+    """Get the list of implementation tools based on whether expert is enabled."""
+    # Start with common tools
+    tools = COMMON_TOOLS.copy()
+    
+    # Add modification tools since it's not research-only
+    tools.extend(MODIFICATION_TOOLS)
+    
+    # Add expert tools if enabled
     if expert_enabled:
-        tools.append(ask_expert)
-        tools.append(emit_expert_context)
+        tools.extend(EXPERT_TOOLS)
+    
     return tools
 
 def is_informational_query() -> bool:
