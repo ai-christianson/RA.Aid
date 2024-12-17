@@ -1,6 +1,37 @@
 from langchain_core.tools import tool
 from typing import Dict
 from pathlib import Path
+from rich.panel import Panel
+from ra_aid.console import console
+from ra_aid.console.formatting import print_error
+
+def truncate_display_str(s: str, max_length: int = 30) -> str:
+    """Truncate a string for display purposes if it exceeds max length.
+    
+    Args:
+        s: String to truncate
+        max_length: Maximum length before truncating
+        
+    Returns:
+        Truncated string with ellipsis if needed
+    """
+    if len(s) <= max_length:
+        return s
+    return s[:max_length] + "..."
+
+def format_string_for_display(s: str, threshold: int = 30) -> str:
+    """Format a string for display, showing either quoted string or length.
+    
+    Args:
+        s: String to format
+        threshold: Max length before switching to character count display
+        
+    Returns:
+        Formatted string for display
+    """
+    if len(s) <= threshold:
+        return f"'{s}'"
+    return f'[{len(s)} characters]'
 
 @tool
 def file_str_replace(
@@ -24,23 +55,36 @@ def file_str_replace(
     try:
         path = Path(filepath)
         if not path.exists():
-            return {"success": False, "message": f"File not found: {filepath}"}
+            msg = f"File not found: {filepath}"
+            print_error(msg)
+            return {"success": False, "message": msg}
             
         content = path.read_text()
         count = content.count(old_str)
         
         if count == 0:
-            return {"success": False, "message": f"String not found: {old_str}"}
+            msg = f"String not found: {truncate_display_str(old_str)}"
+            print_error(msg)
+            return {"success": False, "message": msg}
         elif count > 1:
-            return {"success": False, "message": f"String appears {count} times - must be unique"}
+            msg = f"String appears {count} times - must be unique"
+            print_error(msg)
+            return {"success": False, "message": msg}
             
         new_content = content.replace(old_str, new_str)
         path.write_text(new_content)
         
+        console.print(Panel(
+            f"Replaced in {filepath}:\n{format_string_for_display(old_str)} → {format_string_for_display(new_str)}",
+            title="✓ String Replaced",
+            border_style="bright_blue"
+        ))
         return {
             "success": True,
             "message": f"Successfully replaced '{old_str}' with '{new_str}' in {filepath}"
         }
         
     except Exception as e:
-        return {"success": False, "message": f"Error: {str(e)}"}
+        msg = f"Error: {str(e)}"
+        print_error(msg)
+        return {"success": False, "message": msg}

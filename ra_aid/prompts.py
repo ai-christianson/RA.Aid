@@ -196,7 +196,10 @@ Instructions:
 4. Use delete_key_facts to remove any key facts that no longer apply.
 5. Do not add features not explicitly required.
 6. Only create or modify files directly related to this task.
-7. For trivial changes, use sed and awk judiciously via the run_shell_command tool.
+
+Testing:
+
+- If your task involves writing unit tests, first inspect existing test suites and analyze at least one existing test to learn about testing organization and conventions.
 
 Once the task is complete, ensure all updated files are emitted.
 """
