@@ -10,7 +10,8 @@ from ra_aid.tools.memory import (
     emit_related_files,
     get_related_files,
     emit_task,
-    delete_tasks
+    delete_tasks,
+    swap_task_order
 )
 
 @pytest.fixture
@@ -362,6 +363,73 @@ def test_delete_tasks(reset_memory):
     
     # Counter should remain unchanged after deletions
     assert _global_memory['task_id_counter'] == 3
+
+def test_swap_task_order_valid_ids(reset_memory):
+    """Test basic task swapping functionality"""
+    # Add test tasks
+    tasks = ["Task 1", "Task 2", "Task 3"]
+    for task in tasks:
+        emit_task.invoke({"task": task})
+    
+    # Swap tasks 0 and 2
+    result = swap_task_order.invoke({"id1": 0, "id2": 2})
+    assert result == "Tasks swapped."
+    
+    # Verify tasks were swapped
+    assert _global_memory['tasks'][0] == "Task 3"
+    assert _global_memory['tasks'][2] == "Task 1"
+    assert _global_memory['tasks'][1] == "Task 2"  # Unchanged
+
+def test_swap_task_order_invalid_ids(reset_memory):
+    """Test error handling for invalid task IDs"""
+    # Add a test task
+    emit_task.invoke({"task": "Task 1"})
+    
+    # Try to swap with non-existent ID
+    result = swap_task_order.invoke({"id1": 0, "id2": 999})
+    assert result == "Invalid task ID(s)"
+    
+    # Verify original task unchanged
+    assert _global_memory['tasks'][0] == "Task 1"
+
+def test_swap_task_order_same_id(reset_memory):
+    """Test handling of attempt to swap a task with itself"""
+    # Add test task
+    emit_task.invoke({"task": "Task 1"})
+    
+    # Try to swap task with itself
+    result = swap_task_order.invoke({"id1": 0, "id2": 0})
+    assert result == "Cannot swap task with itself"
+    
+    # Verify task unchanged
+    assert _global_memory['tasks'][0] == "Task 1"
+
+def test_swap_task_order_empty_tasks(reset_memory):
+    """Test swapping behavior with empty tasks dictionary"""
+    result = swap_task_order.invoke({"id1": 0, "id2": 1})
+    assert result == "Invalid task ID(s)"
+
+def test_swap_task_order_after_delete(reset_memory):
+    """Test swapping after deleting a task"""
+    # Add test tasks
+    tasks = ["Task 1", "Task 2", "Task 3"]
+    for task in tasks:
+        emit_task.invoke({"task": task})
+    
+    # Delete middle task
+    delete_tasks.invoke({"task_ids": [1]})
+    
+    # Try to swap with deleted task
+    result = swap_task_order.invoke({"id1": 0, "id2": 1})
+    assert result == "Invalid task ID(s)"
+    
+    # Try to swap remaining valid tasks
+    result = swap_task_order.invoke({"id1": 0, "id2": 2})
+    assert result == "Tasks swapped."
+    
+    # Verify swap worked
+    assert _global_memory['tasks'][0] == "Task 3"
+    assert _global_memory['tasks'][2] == "Task 1"
 
 def test_emit_research_subtask(reset_memory):
     """Test emitting research subtasks"""

@@ -96,7 +96,7 @@ Thoroughness and Completeness
 Decision on Implementation
 
     After completing your factual enumeration and description, decide:
-        If you see reasons that implementation changes will be required in the future, after documenting all findings, call request_implementation and specify why.
+        If you see reasons that implementation changes will be required in the future, after documenting all findings, call request_complex_implementation and specify why.
         If no changes are needed, simply state that no changes are required.
 
 Be thorough on locating all potential change sites/gauging blast radius.
@@ -154,8 +154,6 @@ Guidelines:
             API contracts, endpoints, or protocols it requires or provides
             Testing strategies appropriate to the complexity of that sub-task
             You may include pseudocode, but not full code.
-    
-    If you need to consult with the expert, do that *BEFORE* emitting any tasks.
 
     After finalizing the overall approach:
         Use emit_plan to store the high-level implementation plan.
@@ -171,7 +169,7 @@ Guidelines:
 IMPLEMENTATION_PROMPT = """Base-level task (for reference only):
 {base_task} --keep it simple
 
-Plan Overview:
+Plan Overview (for reference only, remember you are only implementing your specific task):
 {plan}
 
 Key Facts:

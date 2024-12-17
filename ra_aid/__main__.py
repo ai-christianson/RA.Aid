@@ -15,10 +15,10 @@ from ra_aid.tools import (
     emit_research_notes, emit_plan, emit_related_files, emit_task,
     emit_expert_context, get_memory_value, emit_key_facts, delete_key_facts,
     emit_key_snippets, delete_key_snippets,
-    emit_research_subtask, request_implementation, read_file_tool, write_file_tool, fuzzy_find_project_files, ripgrep_search, list_directory_tree,
-    file_str_replace
+    emit_research_subtask, request_complex_implementation, read_file_tool, write_file_tool, fuzzy_find_project_files, ripgrep_search, list_directory_tree,
+    file_str_replace, swap_task_order
 )
-from ra_aid.tools.memory import _global_memory, get_related_files
+from ra_aid.tools.memory import _global_memory, get_related_files, one_shot_completed
 from ra_aid import print_agent_output, print_stage_header, print_task_header, print_error
 from ra_aid.prompts import (
     RESEARCH_PROMPT,
@@ -55,7 +55,8 @@ RESEARCH_TOOLS = [
     list_directory_tree,
     emit_research_subtask,
     run_shell_command,
-    emit_research_notes
+    emit_research_notes,
+    one_shot_completed
 ]
 
 def parse_arguments():
@@ -142,7 +143,7 @@ def get_research_tools(research_only: bool = False, expert_enabled: bool = True)
         tools.extend(EXPERT_TOOLS)
     
     if not research_only:
-        tools.append(request_implementation)
+        tools.append(request_complex_implementation)
     
     return tools
 
@@ -151,6 +152,7 @@ def get_planning_tools(expert_enabled: bool = True) -> list:
         list_directory_tree,
         emit_plan,
         emit_task,
+        swap_task_order,
         emit_related_files,
         emit_key_facts,
         delete_key_facts,

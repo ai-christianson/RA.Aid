@@ -170,10 +170,11 @@ def delete_tasks(task_ids: List[int]) -> str:
             
     return "Tasks deleted."
 
-@tool("request_implementation")
-def request_implementation(reason: str) -> str:
+@tool("request_complex_implementation")
+def request_complex_implementation(reason: str) -> str:
     """Request that implementation proceed after research/planning.
     Used to indicate the agent should move to implementation stage.
+    Should be called when the implementation is more complex than a one-shot task.
     
     Args:
         reason: Why implementation should proceed
@@ -275,9 +276,43 @@ def delete_key_snippets(snippet_ids: List[int]) -> str:
             
     return "Snippets deleted."
 
+@tool("swap_task_order")
+def swap_task_order(id1: int, id2: int) -> str:
+    """Swap the order of two tasks in global memory by their IDs.
+    
+    Args:
+        id1: First task ID
+        id2: Second task ID
+        
+    Returns:
+        Success or error message depending on outcome
+    """
+    # Validate IDs are different
+    if id1 == id2:
+        return "Cannot swap task with itself"
+        
+    # Validate both IDs exist
+    if id1 not in _global_memory['tasks'] or id2 not in _global_memory['tasks']:
+        return "Invalid task ID(s)"
+        
+    # Swap the tasks
+    _global_memory['tasks'][id1], _global_memory['tasks'][id2] = \
+        _global_memory['tasks'][id2], _global_memory['tasks'][id1]
+    
+    # Display what was swapped
+    console.print(Panel(
+        Markdown(f"Swapped:\n- Task #{id1} ↔️ Task #{id2}"),
+        title="🔄 Tasks Reordered",
+        border_style="green"
+    ))
+    
+    return "Tasks swapped."
+
 @tool("one_shot_completed")
 def one_shot_completed(message: str) -> str:
     """Signal that a one-shot task has been completed and execution should stop.
+
+    Only call this if you have already **fully** completed the original request.
     
     Args:
         message: Completion message to display
