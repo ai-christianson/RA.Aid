@@ -8,7 +8,9 @@ from ra_aid.tools.memory import (
     emit_key_snippets,
     delete_key_snippets,
     emit_related_files,
-    get_related_files
+    get_related_files,
+    emit_task,
+    delete_tasks
 )
 
 @pytest.fixture
@@ -23,6 +25,8 @@ def reset_memory():
     _global_memory['tasks'] = []
     _global_memory['research_subtasks'] = []
     _global_memory['related_files'] = set()
+    _global_memory['tasks'] = {}
+    _global_memory['task_id_counter'] = 0
     yield
     # Clean up after test
     _global_memory['key_facts'] = {}
@@ -31,7 +35,8 @@ def reset_memory():
     _global_memory['key_snippet_id_counter'] = 0
     _global_memory['research_notes'] = []
     _global_memory['plans'] = []
-    _global_memory['tasks'] = []
+    _global_memory['tasks'] = {}
+    _global_memory['task_id_counter'] = 0
     _global_memory['research_subtasks'] = []
 
 def test_emit_key_facts_single_fact(reset_memory):
@@ -310,6 +315,53 @@ def test_key_snippets_integration(reset_memory):
     
     # Counter should still maintain its value
     assert _global_memory['key_snippet_id_counter'] == 4
+
+def test_emit_task_with_id(reset_memory):
+    """Test emitting tasks with ID tracking"""
+    # Test adding a single task
+    task = "Implement new feature"
+    result = emit_task.invoke({"task": task})
+    
+    # Verify return message includes task ID
+    assert result == "Task #0 stored."
+    
+    # Verify task stored correctly with ID
+    assert _global_memory['tasks'][0] == task
+    
+    # Verify counter incremented
+    assert _global_memory['task_id_counter'] == 1
+    
+    # Add another task to verify counter continues correctly
+    task2 = "Fix bug"
+    result = emit_task.invoke({"task": task2})
+    assert result == "Task #1 stored."
+    assert _global_memory['tasks'][1] == task2
+    assert _global_memory['task_id_counter'] == 2
+
+def test_delete_tasks(reset_memory):
+    """Test deleting tasks"""
+    # Add some test tasks
+    tasks = ["Task 1", "Task 2", "Task 3"]
+    for task in tasks:
+        emit_task.invoke({"task": task})
+    
+    # Test deleting single task
+    result = delete_tasks.invoke({"task_ids": [1]})
+    assert result == "Tasks deleted."
+    assert 1 not in _global_memory['tasks']
+    assert len(_global_memory['tasks']) == 2
+    
+    # Test deleting multiple tasks including non-existent ID
+    result = delete_tasks.invoke({"task_ids": [0, 2, 999]})
+    assert result == "Tasks deleted."
+    assert len(_global_memory['tasks']) == 0
+    
+    # Test deleting from empty tasks dict
+    result = delete_tasks.invoke({"task_ids": [0]})
+    assert result == "Tasks deleted."
+    
+    # Counter should remain unchanged after deletions
+    assert _global_memory['task_id_counter'] == 3
 
 def test_emit_research_subtask(reset_memory):
     """Test emitting research subtasks"""

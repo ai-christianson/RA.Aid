@@ -18,7 +18,8 @@ console = Console()
 _global_memory: Dict[str, Union[List[Any], Dict[int, str], Dict[int, SnippetInfo], int, Set[str]]] = {
     'research_notes': [],
     'plans': [],
-    'tasks': [],
+    'tasks': {},  # Dict[int, str] - ID to task mapping
+    'task_id_counter': 0,  # Counter for generating unique task IDs
     'research_subtasks': [],
     'key_facts': {},  # Dict[int, str] - ID to fact mapping
     'key_fact_id_counter': 0,  # Counter for generating unique fact IDs
@@ -65,11 +66,17 @@ def emit_task(task: str) -> str:
         task: The task to store
         
     Returns:
-        The stored task
+        String confirming task storage with ID number
     """
-    _global_memory['tasks'].append(task)
-    console.print(Panel(Markdown(task), title="✅ Task"))
-    return task
+    # Get and increment task ID
+    task_id = _global_memory['task_id_counter']
+    _global_memory['task_id_counter'] += 1
+    
+    # Store task with ID
+    _global_memory['tasks'][task_id] = task
+    
+    console.print(Panel(Markdown(task), title=f"✅ Task #{task_id}"))
+    return f"Task #{task_id} stored."
 
 @tool("emit_research_subtask")
 def emit_research_subtask(subtask: str) -> str:
@@ -138,6 +145,30 @@ def delete_key_facts(fact_ids: List[int]) -> str:
             results.append(success_msg)
             
     return "Facts deleted."
+
+@tool("delete_tasks")
+def delete_tasks(task_ids: List[int]) -> str:
+    """Delete multiple tasks from global memory by their IDs.
+    Silently skips any IDs that don't exist.
+    
+    Args:
+        task_ids: List of task IDs to delete
+        
+    Returns:
+        Confirmation message
+    """
+    results = []
+    for task_id in task_ids:
+        if task_id in _global_memory['tasks']:
+            # Delete the task
+            deleted_task = _global_memory['tasks'].pop(task_id)
+            success_msg = f"Successfully deleted task #{task_id}: {deleted_task}"
+            console.print(Panel(Markdown(success_msg), 
+                              title="🗑️ Task Deleted", 
+                              border_style="green"))
+            results.append(success_msg)
+            
+    return "Tasks deleted."
 
 @tool("request_implementation")
 def request_implementation(reason: str) -> str:

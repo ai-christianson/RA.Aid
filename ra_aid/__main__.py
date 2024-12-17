@@ -225,8 +225,8 @@ def run_implementation_stage(base_task, tasks, plan, related_files, model, exper
         
     print_stage_header("Implementation Stage")
     
-    # Get tasks directly from memory
-    task_list = _global_memory['tasks']
+    # Get tasks directly from memory, maintaining order by ID
+    task_list = [task for _, task in sorted(_global_memory['tasks'].items())]
     
     print_task_header(f"Found {len(task_list)} tasks to implement")
     
