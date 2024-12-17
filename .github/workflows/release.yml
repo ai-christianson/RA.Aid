@@ -1,0 +1,76 @@
+name: Publish to PyPI and GitHub Releases
+
+on:
+  push:
+    tags:
+      - 'v*'  # Trigger workflow on version tags like v1.2.3
+
+jobs:
+  build-and-publish:
+    name: Test, Build, and Publish
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write  # Needed for publishing
+      contents: write  # Needed to create GitHub Releases
+
+    steps:
+      # Step 1: Checkout Code
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Step 2: Set up Python
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      # Step 3: Install Normal and Dev Dependencies
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install build
+          python -m pip install -e .  # Install project dependencies
+          pip install -r requirements-dev.txt  # Install dev tools like pytest
+
+      # Step 4: Run Unit Tests
+      - name: Run Unit Tests
+        run: python -m pytest --junitxml=pytest-results.xml
+
+      # Step 5: Build the Package
+      - name: Build the Package
+        run: python -m build
+
+      # Step 6: Publish to PyPI
+      - name: Publish to PyPI
+        env:
+          PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          twine upload --non-interactive --disable-progress-bar \
+          -u __token__ -p "${PYPI_API_TOKEN}" dist/*
+
+      # Step 7: Extract Tag Version
+      - name: Extract Tag Version
+        id: get_version
+        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
+
+      # Step 8: Extract Changelog for the Version
+      - name: Extract Changelog for Version
+        id: changelog
+        run: |
+          python scripts/extract_changelog.py ${{ env.version }} > release_notes.txt
+          echo "changelog<<EOF" >> $GITHUB_ENV
+          cat release_notes.txt >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      # Step 9: Create GitHub Release
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref }}
+          name: Release v${{ env.version }}
+          body: |
+            ${{ env.changelog }}
+          files: |
+            dist/*.tar.gz
+            dist/*.whl
