@@ -18,6 +18,7 @@ from ra_aid.tools import (
     emit_research_subtask, request_complex_implementation, read_file_tool, write_file_tool, fuzzy_find_project_files, ripgrep_search, list_directory_tree,
     file_str_replace, swap_task_order
 )
+from ra_aid.env import validate_environment
 from ra_aid.tools.memory import _global_memory, get_related_files, one_shot_completed
 from ra_aid import print_agent_output, print_stage_header, print_task_header, print_error
 from ra_aid.prompts import (
