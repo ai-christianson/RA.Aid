@@ -2,6 +2,7 @@ from .shell import run_shell_command
 from .programmer import run_programming_task
 from .expert import ask_expert, emit_expert_context
 from .read_file import read_file_tool
+from .file_str_replace import file_str_replace
 from .fuzzy_find import fuzzy_find_project_files
 from .list_directory import list_directory_tree
 from .ripgrep import ripgrep_search
@@ -31,5 +32,6 @@ __all__ = [
     'run_shell_command',
     'skip_implementation',
     'emit_research_subtask',
-    'ripgrep_search'
+    'ripgrep_search',
+    'file_str_replace'
 ]

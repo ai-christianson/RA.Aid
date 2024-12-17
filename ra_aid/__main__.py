@@ -15,7 +15,8 @@ from ra_aid.tools import (
     emit_research_notes, emit_plan, emit_related_files, emit_task,
     emit_expert_context, get_memory_value, emit_key_facts, delete_key_facts,
     emit_key_snippets, delete_key_snippets,
-    emit_research_subtask, request_implementation, read_file_tool, fuzzy_find_project_files, ripgrep_search, list_directory_tree
+    emit_research_subtask, request_implementation, read_file_tool, fuzzy_find_project_files, ripgrep_search, list_directory_tree,
+    file_str_replace
 )
 from ra_aid.tools.memory import _global_memory, get_related_files
 from ra_aid import print_agent_output, print_stage_header, print_task_header, print_error
@@ -38,7 +39,8 @@ COMMON_TOOLS = [
     delete_key_snippets,
     read_file_tool,
     fuzzy_find_project_files,
-    ripgrep_search
+    ripgrep_search,
+    file_str_replace
 ]
 
 # Expert-specific tools
