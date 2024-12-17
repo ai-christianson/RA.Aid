@@ -74,5 +74,4 @@ def read_file_tool(
 
     except Exception as e:
         elapsed = time.time() - start_time
-        logging.error(f"Error reading file {filepath} after {elapsed:.2f}s: {str(e)}")
         raise

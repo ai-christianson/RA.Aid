@@ -1,5 +1,4 @@
 from typing import Dict, List, Any, Union, TypedDict, Optional, Sequence, Set
-from ra_aid.exceptions import TaskCompletedException
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
@@ -15,10 +14,12 @@ class SnippetInfo(TypedDict):
 console = Console()
 
 # Global memory store
-_global_memory: Dict[str, Union[List[Any], Dict[int, str], Dict[int, SnippetInfo], int, Set[str]]] = {
+_global_memory: Dict[str, Union[List[Any], Dict[int, str], Dict[int, SnippetInfo], int, Set[str], bool, str]] = {
     'research_notes': [],
     'plans': [],
     'tasks': {},  # Dict[int, str] - ID to task mapping
+    'task_completed': False,  # Flag indicating if task is complete
+    'completion_message': '',  # Message explaining completion
     'task_id_counter': 0,  # Counter for generating unique task IDs
     'research_subtasks': [],
     'key_facts': {},  # Dict[int, str] - ID to fact mapping
@@ -316,18 +317,18 @@ def one_shot_completed(message: str) -> str:
     Args:
         message: Completion message to display
         
-    Raises:
-        ValueError: If there are pending research subtasks or implementation requests
-        TaskCompletedException: When task is truly complete with no pending items
-        
     Returns:
-        Never returns, always raises exception
+        Original message if task can be completed, or error message if there are
+        pending subtasks or implementation requests
     """
     if len(_global_memory['research_subtasks']) > 0:
-        raise ValueError("Cannot complete in one shot - research subtasks pending")
+        return "Cannot complete in one shot - research subtasks pending"
     if len(_global_memory['implementation_requested']) > 0:
-        raise ValueError("Cannot complete in one shot - implementation was requested")
-    raise TaskCompletedException(message)
+        return "Cannot complete in one shot - implementation was requested"
+        
+    _global_memory['task_completed'] = True
+    _global_memory['completion_message'] = message
+    return message
 
 def get_related_files() -> Set[str]:
     """Get the current set of related files.

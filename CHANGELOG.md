@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+- Fix one shot completion signaling.
+- Clean up error outputs.
+
 ## [0.6.2]
 - Allow shell commands to be run in read-only mode.
 - When asking for shell command approval, allow cowboy mode to be enabled.

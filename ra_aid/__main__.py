@@ -1,5 +1,6 @@
 import argparse
 import sys
+from typing import Optional
 from rich.panel import Panel
 from rich.console import Console
 from langchain_core.messages import HumanMessage
@@ -21,7 +22,6 @@ from ra_aid.prompts import (
     PLANNING_PROMPT,
     IMPLEMENTATION_PROMPT,
 )
-from ra_aid.exceptions import TaskCompletedException
 import time
 from anthropic import APIError, APITimeoutError, RateLimitError, InternalServerError
 from ra_aid.llm import initialize_llm
@@ -198,8 +198,20 @@ def is_stage_requested(stage: str) -> bool:
         return len(_global_memory.get('implementation_requested', [])) > 0
     return False
 
-def run_agent_with_retry(agent, prompt: str, config: dict):
-    """Run an agent with retry logic for internal server errors."""
+def run_agent_with_retry(agent, prompt: str, config: dict) -> Optional[str]:
+    """Run an agent with retry logic for internal server errors and task completion handling.
+    
+    Args:
+        agent: The agent to run
+        prompt: The prompt to send to the agent
+        config: Configuration dictionary for the agent
+        
+    Returns:
+        Optional[str]: The completion message if task was completed, None otherwise
+        
+    Handles API errors with exponential backoff retry logic and checks for task
+    completion after each chunk of output.
+    """
     max_retries = 20
     base_delay = 1  # Initial delay in seconds
     
@@ -210,6 +222,17 @@ def run_agent_with_retry(agent, prompt: str, config: dict):
                 config
             ):
                 print_agent_output(chunk)
+                
+                # Check for task completion after each chunk
+                if _global_memory.get('task_completed'):
+                    completion_msg = _global_memory.get('completion_message', 'Task was completed successfully.')
+                    print_stage_header("Task Completed")
+                    console.print(Panel(
+                        f"[green]{completion_msg}[/green]",
+                        title="Task Completed",
+                        style="green"
+                    ))
+                    return completion_msg
             break
         except (InternalServerError, APITimeoutError, RateLimitError, APIError) as e:
             if attempt == max_retries - 1:
@@ -291,106 +314,100 @@ def run_research_subtasks(base_task: str, config: dict, model, expert_enabled: b
 
 def main():
     """Main entry point for the ra-aid command line tool."""
-    try:
-        try:
-            args = parse_arguments()
-            expert_enabled, expert_missing = validate_environment(args)  # Will exit if main env vars missing
-            
-            if expert_missing:
-                console.print(Panel(
-                    f"[yellow]Expert tools disabled due to missing configuration:[/yellow]\n" + 
-                    "\n".join(f"- {m}" for m in expert_missing) +
-                    "\nSet the required environment variables or args to enable expert mode.",
-                    title="Expert Tools Disabled",
-                    style="yellow"
-                ))
-            
-            # Create the base model after validation
-            model = initialize_llm(args.provider, args.model)
+    args = parse_arguments()
+    expert_enabled, expert_missing = validate_environment(args)  # Will exit if main env vars missing
+    
+    if expert_missing:
+        console.print(Panel(
+            f"[yellow]Expert tools disabled due to missing configuration:[/yellow]\n" + 
+            "\n".join(f"- {m}" for m in expert_missing) +
+            "\nSet the required environment variables or args to enable expert mode.",
+            title="Expert Tools Disabled",
+            style="yellow"
+        ))
+    
+    # Create the base model after validation
+    model = initialize_llm(args.provider, args.model)
 
-            # Validate message is provided
-            if not args.message:
-                print_error("--message is required")
-                sys.exit(1)
-                
-            base_task = args.message
-            config = {
-                "configurable": {
-                    "thread_id": "abc123"
-                },
-                "recursion_limit": 100,
-                "research_only": args.research_only,
-                "cowboy_mode": args.cowboy_mode
-            }
-            
-            # Store config in global memory for access by is_informational_query
-            _global_memory['config'] = config
-            
-            # Store expert provider and model in config
-            _global_memory['config']['expert_provider'] = args.expert_provider
-            _global_memory['config']['expert_model'] = args.expert_model
-            
-            # Run research stage
-            print_stage_header("Research Stage")
-            
-            # Create research agent
-            research_agent = create_react_agent(
-                model,
-                get_research_tools(research_only=_global_memory.get('config', {}).get('research_only', False), expert_enabled=expert_enabled),
-                checkpointer=research_memory
-            )
-            
-            research_prompt = f"""User query: {base_task} --keep it simple
+    # Validate message is provided
+    if not args.message:
+        print_error("--message is required")
+        sys.exit(1)
+        
+    base_task = args.message
+    config = {
+        "configurable": {
+            "thread_id": "abc123"
+        },
+        "recursion_limit": 100,
+        "research_only": args.research_only,
+        "cowboy_mode": args.cowboy_mode
+    }
+    
+    # Store config in global memory for access by is_informational_query
+    _global_memory['config'] = config
+    
+    # Store expert provider and model in config
+    _global_memory['config']['expert_provider'] = args.expert_provider
+    _global_memory['config']['expert_model'] = args.expert_model
+    
+    # Run research stage
+    print_stage_header("Research Stage")
+    
+    # Create research agent
+    research_agent = create_react_agent(
+        model,
+        get_research_tools(research_only=_global_memory.get('config', {}).get('research_only', False), expert_enabled=expert_enabled),
+        checkpointer=research_memory
+    )
+    
+    research_prompt = f"""User query: {base_task} --keep it simple
 
 {RESEARCH_PROMPT}
 
 Be very thorough in your research and emit lots of snippets, key facts. If you take more than a few steps, be eager to emit research subtasks.{'' if args.research_only else ' Only request implementation if the user explicitly asked for changes to be made.'}"""
 
-            try:
-                run_agent_with_retry(research_agent, research_prompt, config)
-            except TaskCompletedException as e:
-                print_stage_header("Task Completed")
-                raise  # Re-raise to be caught by outer handler
+    # Run research agent and check for one-shot completion
+    output = run_agent_with_retry(research_agent, research_prompt, config)
+    if isinstance(output, str) and "one_shot_completed" in str(output):
+        print_stage_header("Task Completed")
+        console.print(Panel(
+            "[green]Task was completed successfully as a one-shot operation.[/green]",
+            title="Task Completed",
+            style="green"
+        ))
+        sys.exit(0)
+    
+    # Run any research subtasks
+    run_research_subtasks(base_task, config, model, expert_enabled=expert_enabled)
+    
+    # Proceed with planning and implementation if not an informational query
+    if not is_informational_query():
+        print_stage_header("Planning Stage")
+        
+        # Create planning agent
+        planning_agent = create_react_agent(model, get_planning_tools(expert_enabled=expert_enabled), checkpointer=planning_memory)
+        
+        planning_prompt = PLANNING_PROMPT.format(
+            research_notes=get_memory_value('research_notes'),
+            key_facts=get_memory_value('key_facts'),
+            key_snippets=get_memory_value('key_snippets'),
+            base_task=base_task,
+            related_files="\n".join(get_related_files())
+        )
 
-            # Run any research subtasks
-            run_research_subtasks(base_task, config, model, expert_enabled=expert_enabled)
-            
-            # Proceed with planning and implementation if not an informational query
-            if not is_informational_query():
-                print_stage_header("Planning Stage")
-                
-                # Create planning agent
-                planning_agent = create_react_agent(model, get_planning_tools(expert_enabled=expert_enabled), checkpointer=planning_memory)
-                
-                planning_prompt = PLANNING_PROMPT.format(
-                    research_notes=get_memory_value('research_notes'),
-                    key_facts=get_memory_value('key_facts'),
-                    key_snippets=get_memory_value('key_snippets'),
-                    base_task=base_task,
-                    related_files="\n".join(get_related_files())
-                )
+        # Run planning agent
+        run_agent_with_retry(planning_agent, planning_prompt, config)
 
-                # Run planning agent
-                run_agent_with_retry(planning_agent, planning_prompt, config)
-
-                # Run implementation stage with task-specific agents
-                run_implementation_stage(
-                    base_task,
-                    get_memory_value('tasks'),
-                    get_memory_value('plan'),
-                    get_related_files(),
-                    model,
-                    expert_enabled=expert_enabled
-                )
-        except TaskCompletedException:
-            console.print(Panel(
-                "[green]Task was completed successfully as a one-shot operation.[/green]",
-                title="Task Completed",
-                style="green"
-            ))
-            sys.exit(0)
-    finally:
-        pass
+        # Run implementation stage with task-specific agents
+        run_implementation_stage(
+            base_task,
+            get_memory_value('tasks'),
+            get_memory_value('plan'),
+            get_related_files(),
+            model,
+            expert_enabled=expert_enabled
+        )
 
 if __name__ == "__main__":
     main()

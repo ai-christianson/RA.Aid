@@ -24,8 +24,8 @@ def print_agent_output(chunk: Dict[str, Any]) -> None:
                             console.print(Panel(Markdown(content['text']), title="🤖 Assistant"))
                 else:
                     if msg.content.strip():
-                        console.print(Panel(Markdown(msg.content), title="🤖 Assistant"))
+                        console.print(Panel(Markdown(msg.content.strip()), title="🤖 Assistant"))
     elif 'tools' in chunk and 'messages' in chunk['tools']:
         for msg in chunk['tools']['messages']:
             if msg.status == 'error' and msg.content:
-                console.print(Panel(Markdown(msg.content), title="❌ Tool Error", border_style="red bold"))
+                console.print(Panel(Markdown(msg.content.strip()), title="❌ Tool Error", border_style="red bold"))
