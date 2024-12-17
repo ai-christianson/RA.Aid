@@ -43,6 +43,8 @@ Tools and Methodology
     Prefer to use list_directory_tree and other tools over shell commands.
     Do not produce huge outputs from your commands. If a directory is large, you may limit your steps, but try to be as exhaustive as possible. Incrementally gather details as needed.
     Spawn subtasks for topics that require deeper investigation.
+    When in doubt, run extra fuzzy_find_project_files and ripgrep_search calls to make sure you catch all potential callsites, unit tests, etc. that could be relevant to the base task. You don't want to miss anything.
+    Take your time and research thoroughly.
 
 Reporting Findings
 
