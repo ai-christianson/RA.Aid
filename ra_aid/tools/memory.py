@@ -173,6 +173,7 @@ def skip_implementation(reason: str) -> str:
 @tool("emit_key_snippets")
 def emit_key_snippets(snippets: List[SnippetInfo]) -> str:
     """Store multiple key source code snippets in global memory.
+    Automatically adds the filepaths of the snippets to related files.
     
     Args:
         snippets: List of snippet information dictionaries containing:
@@ -184,6 +185,9 @@ def emit_key_snippets(snippets: List[SnippetInfo]) -> str:
     Returns:
         List of stored snippet confirmation messages
     """
+    # First collect unique filepaths to add as related files
+    _global_memory['related_files'].update(snippet_info['filepath'] for snippet_info in snippets)
+
     results = []
     for snippet_info in snippets:
         # Get and increment snippet ID 

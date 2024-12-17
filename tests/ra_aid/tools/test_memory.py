@@ -267,6 +267,8 @@ def test_key_snippets_integration(reset_memory):
     result = emit_key_snippets.invoke({"snippets": snippets})
     assert result == "Snippets stored."
     assert _global_memory['key_snippet_id_counter'] == 3
+    # Verify related files were tracked
+    assert _global_memory['related_files'] == {"file1.py", "file2.py", "file3.py"}
     
     # Verify all snippets were stored correctly
     assert len(_global_memory['key_snippets']) == 3
@@ -296,6 +298,8 @@ def test_key_snippets_integration(reset_memory):
     result = emit_key_snippets.invoke({"snippets": [new_snippet]})
     assert result == "Snippets stored."
     assert _global_memory['key_snippet_id_counter'] == 4
+    # Verify new file was added to related files
+    assert _global_memory['related_files'] == {"file1.py", "file2.py", "file3.py", "file4.py"}
     
     # Delete remaining snippets
     result = delete_key_snippets.invoke({"snippet_ids": [1, 3]})

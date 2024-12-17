@@ -47,12 +47,12 @@ Tools and Methodology
 Reporting Findings
 
     Use emit_research_notes to record detailed, fact-based observations about what currently exists.
-    For each significant file or directory that is part of the codebase, use emit_related_files to list it.
     Your research notes should be strictly about what you have observed:
         Document files by their names and locations.
         Document discovered documentation files and their contents at a high level (e.g., "There is a README.md in the root directory that explains the folder structure").
         Document code files by type or apparent purpose (e.g., "There is a main.py file containing code to launch an application").
         Document configuration files, dependencies (like package.json, requirements.txt), testing files, and anything else present.
+    Use emit_related_files to note all files that are relevant to the base task.
 
 No Planning or Problem-Solving
 
@@ -154,6 +154,8 @@ Guidelines:
             API contracts, endpoints, or protocols it requires or provides
             Testing strategies appropriate to the complexity of that sub-task
             You may include pseudocode, but not full code.
+    
+    If you need to consult with the expert, do that *BEFORE* emitting any tasks.
 
     After finalizing the overall approach:
         Use emit_plan to store the high-level implementation plan.

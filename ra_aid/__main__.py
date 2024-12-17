@@ -280,7 +280,7 @@ def run_research_subtasks(base_task: str, config: dict, model, expert_enabled: b
         )
         
         # Run the subtask agent
-        subtask_prompt = f"Research Subtask: {subtask}\n\n{RESEARCH_PROMPT}"
+        subtask_prompt = f"Base Task: {base_task}\nResearch Subtask: {subtask}\n\n{RESEARCH_PROMPT}"
         run_agent_with_retry(subtask_agent, subtask_prompt, config)
 
 
