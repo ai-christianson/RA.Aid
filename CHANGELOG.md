@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.6.1] - 2024-12-17
 
 ### Added
 - When key snippets are emitted, snippet files are auto added to related files.
@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Track tasks by ID and allow them to be deleted.
 - Make one_shot_completed tool available to research agent.
 - Make sure file modification tools are not available when research only flag is used.
+- Temporarily disable write file/str replace as they do not work as well as just using the programmer tool.
 
 ## [0.6.0] - 2024-12-17
 

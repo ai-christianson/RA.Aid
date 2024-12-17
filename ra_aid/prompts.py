@@ -65,10 +65,10 @@ No Planning or Problem-Solving
 
 You must remain strictly within the bounds of describing what currently exists.
 
-If this is a simple task that can be completed in one shot, do the change using tools available and call one_shot_completed.
-    
-    Only use single-shot completion for truly straightforward tasks that don't require additional planning or extensive changes.
-    If the change is estimated to be less than 100 lines and less than 5 files, it is definitely a single-shot task.
+If the task requires *ANY* compilation, unit tests, or any other non-trivial changes, call request_implementation.
+If this is a trival task that can be completed in one shot, do the change using tools available and call one_shot_completed.
+  Remember, many tasks are more complex and nuanced than they seem and still require requesting implementation.
+  For one shot tasks, still take some time to consider whether compilation, testing, or additional validation should be done to check your work.
 
 Thoroughness and Completeness
 
@@ -83,7 +83,7 @@ Thoroughness and Completeness
 Decision on Implementation
 
     After completing your factual enumeration and description, decide:
-        If you see reasons that implementation changes will be required in the future, after documenting all findings, call request_complex_implementation and specify why.
+        If you see reasons that implementation changes will be required in the future, after documenting all findings, call request_implementation and specify why.
         If no changes are needed, simply state that no changes are required.
 
 Be thorough on locating all potential change sites/gauging blast radius.

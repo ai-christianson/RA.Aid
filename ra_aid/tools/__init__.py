@@ -9,7 +9,7 @@ from .list_directory import list_directory_tree
 from .ripgrep import ripgrep_search
 from .memory import (
     emit_research_notes, emit_plan, emit_task, get_memory_value, emit_key_facts,
-    request_complex_implementation, skip_implementation, delete_key_facts, emit_research_subtask,
+    request_implementation, skip_implementation, delete_key_facts, emit_research_subtask,
     emit_key_snippets, delete_key_snippets, emit_related_files, swap_task_order
 )
 
@@ -28,7 +28,7 @@ __all__ = [
     'get_memory_value',
     'list_directory_tree',
     'read_file_tool',
-    'request_complex_implementation',
+    'request_implementation',
     'run_programming_task',
     'run_shell_command',
     'skip_implementation',

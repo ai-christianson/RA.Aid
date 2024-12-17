@@ -1,12 +1,7 @@
-import sqlite3
 import argparse
-import glob
-import os
 import sys
-import shutil
 from rich.panel import Panel
 from rich.console import Console
-from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import create_react_agent
@@ -15,8 +10,8 @@ from ra_aid.tools import (
     emit_research_notes, emit_plan, emit_related_files, emit_task,
     emit_expert_context, get_memory_value, emit_key_facts, delete_key_facts,
     emit_key_snippets, delete_key_snippets,
-    emit_research_subtask, request_complex_implementation, read_file_tool, write_file_tool, fuzzy_find_project_files, ripgrep_search, list_directory_tree,
-    file_str_replace, swap_task_order
+    emit_research_subtask, request_implementation, read_file_tool, fuzzy_find_project_files, ripgrep_search, list_directory_tree,
+    swap_task_order
 )
 from ra_aid.env import validate_environment
 from ra_aid.tools.memory import _global_memory, get_related_files, one_shot_completed
@@ -45,17 +40,12 @@ READ_ONLY_TOOLS = [
 
 # Tools that can modify files or system state
 MODIFICATION_TOOLS = [
-    write_file_tool,
-    file_str_replace,
     run_shell_command,
     run_programming_task
 ]
 
 # Common tools used across multiple agents
-COMMON_TOOLS = READ_ONLY_TOOLS + [
-    write_file_tool,
-    file_str_replace
-]
+COMMON_TOOLS = READ_ONLY_TOOLS + []
 
 # Expert-specific tools
 EXPERT_TOOLS = [
@@ -157,7 +147,7 @@ def get_research_tools(research_only: bool = False, expert_enabled: bool = True)
     # Add modification tools if not research_only
     if not research_only:
         tools.extend(MODIFICATION_TOOLS)
-        tools.append(request_complex_implementation)
+        tools.append(request_implementation)
     
     # Add expert tools if enabled
     if expert_enabled:

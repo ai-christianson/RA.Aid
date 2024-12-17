@@ -141,7 +141,7 @@ def delete_key_facts(fact_ids: List[int]) -> str:
             # Delete the fact
             deleted_fact = _global_memory['key_facts'].pop(fact_id)
             success_msg = f"Successfully deleted fact #{fact_id}: {deleted_fact}"
-            console.print(Panel(Markdown(success_msg), title="🗑️ Fact Deleted", border_style="green"))
+            console.print(Panel(Markdown(success_msg), title="Fact Deleted", border_style="green"))
             results.append(success_msg)
             
     return "Facts deleted."
@@ -164,17 +164,16 @@ def delete_tasks(task_ids: List[int]) -> str:
             deleted_task = _global_memory['tasks'].pop(task_id)
             success_msg = f"Successfully deleted task #{task_id}: {deleted_task}"
             console.print(Panel(Markdown(success_msg), 
-                              title="🗑️ Task Deleted", 
+                              title="Task Deleted", 
                               border_style="green"))
             results.append(success_msg)
             
     return "Tasks deleted."
 
-@tool("request_complex_implementation")
-def request_complex_implementation(reason: str) -> str:
+@tool("request_implementation")
+def request_implementation(reason: str) -> str:
     """Request that implementation proceed after research/planning.
     Used to indicate the agent should move to implementation stage.
-    Should be called when the implementation is more complex than a one-shot task.
     
     Args:
         reason: Why implementation should proceed
@@ -270,7 +269,7 @@ def delete_key_snippets(snippet_ids: List[int]) -> str:
             deleted_snippet = _global_memory['key_snippets'].pop(snippet_id)
             success_msg = f"Successfully deleted snippet #{snippet_id} from {deleted_snippet['filepath']}"
             console.print(Panel(Markdown(success_msg), 
-                              title="🗑️ Snippet Deleted", 
+                              title="Snippet Deleted", 
                               border_style="green"))
             results.append(success_msg)
             
