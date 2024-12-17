@@ -35,12 +35,12 @@ READ_ONLY_TOOLS = [
     delete_key_snippets,
     read_file_tool,
     fuzzy_find_project_files,
-    ripgrep_search
+    ripgrep_search,
+    run_shell_command # can modify files, but we still need it for read-only tasks.
 ]
 
 # Tools that can modify files or system state
 MODIFICATION_TOOLS = [
-    run_shell_command,
     run_programming_task
 ]
 

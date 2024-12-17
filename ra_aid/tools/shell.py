@@ -25,6 +25,7 @@ def run_shell_command(command: str) -> Dict[str, Union[str, int, bool]]:
        - Environment: .env, venv, env
        - IDE: .idea, .vscode
     3. Avoid doing recursive lists, finds, etc. that could be slow and have a ton of output. Likewise, avoid flags like '-l' that needlessly increase the output. But if you really need to, you can.
+    4. Add flags e.g. git --no-pager in order to reduce interaction required by the human.
     """
     # Check if we need approval
     cowboy_mode = _global_memory.get('config', {}).get('cowboy_mode', False)
