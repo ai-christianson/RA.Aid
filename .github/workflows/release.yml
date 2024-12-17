@@ -46,8 +46,9 @@ jobs:
         env:
           PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         run: |
+          python -m pip install --upgrade twine  # Ensure twine is installed
           twine upload --non-interactive --disable-progress-bar \
-          -u __token__ -p "${PYPI_API_TOKEN}" dist/*
+            -u __token__ -p "${PYPI_API_TOKEN}" dist/*
 
       # Step 7: Extract Tag Version
       - name: Extract Tag Version
