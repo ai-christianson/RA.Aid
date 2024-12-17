@@ -69,6 +69,7 @@ If the task requires *ANY* compilation, unit tests, or any other non-trivial cha
 If this is a trival task that can be completed in one shot, do the change using tools available and call one_shot_completed.
   Remember, many tasks are more complex and nuanced than they seem and still require requesting implementation.
   For one shot tasks, still take some time to consider whether compilation, testing, or additional validation should be done to check your work.
+  If implement the task yourself, do not request implementation.
 
 Thoroughness and Completeness
 

@@ -2,7 +2,7 @@ from typing import Dict, Union
 from langchain_core.tools import tool
 from rich.console import Console
 from rich.panel import Panel
-from rich.prompt import Confirm
+from rich.prompt import Prompt
 from ra_aid.tools.memory import _global_memory
 from ra_aid.proc.interactive import run_interactive_command
 from ra_aid.text.processing import truncate_output
@@ -39,12 +39,27 @@ def run_shell_command(command: str) -> Dict[str, Union[str, int, bool]]:
     console.print(Panel(command, title="🐚 Shell", border_style="bright_yellow"))
     
     if not cowboy_mode:
-        if not Confirm.ask("Execute this command?", default=True):
+        choices = ["y", "n", "c"]
+        response = Prompt.ask(
+            "Execute this command? (y=yes, n=no, c=enable cowboy mode for session)",
+            choices=choices,
+            default="y",
+            show_choices=True,
+            show_default=True
+        )
+        
+        if response == "n":
+            print()
             return {
                 "output": "Command execution cancelled by user",
                 "return_code": 1,
                 "success": False
             }
+        elif response == "c":
+            _global_memory['config']['cowboy_mode'] = True
+            console.print("")
+            console.print(" " + get_cowboy_message())
+            console.print("")
     
     try:
         print()

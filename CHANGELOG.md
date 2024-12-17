@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 - Allow shell commands to be run in read-only mode.
+- When asking for shell command approval, allow cowboy mode to be enabled.
+- Update prompt to suggest commands be run in non-interactive mode if possible, e.g. using --no-pager git flag.
+- Show tool errors in a panel.
 
 ## [0.6.1] - 2024-12-17
 
