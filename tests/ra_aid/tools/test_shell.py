@@ -9,8 +9,8 @@ def mock_console():
         yield mock
 
 @pytest.fixture
-def mock_confirm():
-    with patch('ra_aid.tools.shell.Confirm') as mock:
+def mock_prompt():
+    with patch('ra_aid.tools.shell.Prompt') as mock:
         yield mock
 
 @pytest.fixture
@@ -19,7 +19,7 @@ def mock_run_interactive():
         mock.return_value = (b"test output", 0)
         yield mock
 
-def test_shell_command_cowboy_mode(mock_console, mock_confirm, mock_run_interactive):
+def test_shell_command_cowboy_mode(mock_console, mock_prompt, mock_run_interactive):
     """Test shell command execution in cowboy mode (no approval)"""
     _global_memory['config'] = {'cowboy_mode': True}
     
@@ -28,9 +28,9 @@ def test_shell_command_cowboy_mode(mock_console, mock_confirm, mock_run_interact
     assert result['success'] is True
     assert result['return_code'] == 0
     assert "test output" in result['output']
-    mock_confirm.ask.assert_not_called()
+    mock_prompt.ask.assert_not_called()
 
-def test_shell_command_cowboy_message(mock_console, mock_confirm, mock_run_interactive):
+def test_shell_command_cowboy_message(mock_console, mock_prompt, mock_run_interactive):
     """Test that cowboy mode displays a properly formatted cowboy message with correct spacing"""
     _global_memory['config'] = {'cowboy_mode': True}
     
@@ -44,32 +44,44 @@ def test_shell_command_cowboy_message(mock_console, mock_confirm, mock_run_inter
     mock_console.print.assert_any_call("")
     mock_get_message.assert_called_once()
 
-def test_shell_command_interactive_approved(mock_console, mock_confirm, mock_run_interactive):
+def test_shell_command_interactive_approved(mock_console, mock_prompt, mock_run_interactive):
     """Test shell command execution with interactive approval"""
     _global_memory['config'] = {'cowboy_mode': False}
-    mock_confirm.ask.return_value = True
+    mock_prompt.ask.return_value = 'y'
     
     result = run_shell_command("echo test")
     
     assert result['success'] is True
     assert result['return_code'] == 0
     assert "test output" in result['output']
-    mock_confirm.ask.assert_called_once()
+    mock_prompt.ask.assert_called_once_with(
+        "Execute this command? (y=yes, n=no, c=enable cowboy mode for session)",
+        choices=["y", "n", "c"],
+        default="y",
+        show_choices=True,
+        show_default=True
+    )
 
-def test_shell_command_interactive_rejected(mock_console, mock_confirm, mock_run_interactive):
+def test_shell_command_interactive_rejected(mock_console, mock_prompt, mock_run_interactive):
     """Test shell command rejection in interactive mode"""
     _global_memory['config'] = {'cowboy_mode': False}
-    mock_confirm.ask.return_value = False
+    mock_prompt.ask.return_value = 'n'
     
     result = run_shell_command("echo test")
     
     assert result['success'] is False
     assert result['return_code'] == 1
     assert "cancelled by user" in result['output']
-    mock_confirm.ask.assert_called_once()
+    mock_prompt.ask.assert_called_once_with(
+        "Execute this command? (y=yes, n=no, c=enable cowboy mode for session)",
+        choices=["y", "n", "c"],
+        default="y",
+        show_choices=True,
+        show_default=True
+    )
     mock_run_interactive.assert_not_called()
 
-def test_shell_command_execution_error(mock_console, mock_confirm, mock_run_interactive):
+def test_shell_command_execution_error(mock_console, mock_prompt, mock_run_interactive):
     """Test handling of shell command execution errors"""
     _global_memory['config'] = {'cowboy_mode': True}
     mock_run_interactive.side_effect = Exception("Command failed")

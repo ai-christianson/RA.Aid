@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.6.2]
 - Allow shell commands to be run in read-only mode.
 - When asking for shell command approval, allow cowboy mode to be enabled.
 - Update prompt to suggest commands be run in non-interactive mode if possible, e.g. using --no-pager git flag.
