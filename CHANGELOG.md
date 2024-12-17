@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Fix one shot completion signaling.
 - Clean up error outputs.
+- Update prompt for better performance on large/monorepo projects.
 
 ## [0.6.2]
 - Allow shell commands to be run in read-only mode.

@@ -77,6 +77,8 @@ Thoroughness and Completeness
     If it is an existing project, explore it fully:
         Start at the root directory, ls to see what’s there.
         For each directory found, navigate in and run ls again.
+        If this is a monorepo or multi-module project, thoroughly discover all directories and files related to the task --sometimes user requests will span multiple modules or parts of the monorepo.
+        When you find related files, search for files related to those that could be affected, and so on, until you're sure you've gone deep enough. Err on the side of going too deep.
         Continue this process until you have discovered all directories and files at all levels.
         Carefully report what you found, including all directories and files.
     Do not move on until you are certain you have a complete picture of the codebase structure.
@@ -90,6 +92,13 @@ Decision on Implementation
 Be thorough on locating all potential change sites/gauging blast radius.
 
 If there is a top-level README.md or docs/ folder, always start with that.
+
+You have often been criticized for:
+- Missing 2nd- or 3rd-level related files. You have to do a recursive crawl to get it right, and don't be afraid to spawn subtasks.
+- Missing related files spanning modules or parts of the monorepo.
+- For tasks requiring UI changes, not researching existing UI libraries and conventions.
+- Not spawning enough research subtasks on changes on large projects, e.g. to discover testing or UI conventions, etc.
+- Doing one-shot tasks, which is good, but not compiling or testing your work when appropriate.
 """
 
 # Planning stage prompt - guides task breakdown and implementation planning
