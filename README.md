@@ -29,11 +29,11 @@ Here's a video of RA.Aid adding a feature to itself:
 RA.Aid (ReAct Aid) is a powerful AI-driven command-line tool that integrates `aider` (https://aider.chat/) within a LangChain ReAct agent loop. This unique combination allows developers to leverage aider's code editing capabilities while benefiting from LangChain's agent-based task execution framework. The tool provides an intelligent assistant that can help with research, planning, and implementation of development tasks.
 
 ⚠️ **IMPORTANT: USE AT YOUR OWN RISK** ⚠️
-- This tool **can and will** automatically execute shell commands on your system
-- Shell commands require interactive approval unless --cowboy-mode is enabled
-- The --cowboy-mode flag disables command approval and should be used with extreme caution
+- This tool **can and will** automatically execute shell commands and make code changes
+- The --cowboy-mode flag can be enabled to skip shell command approval prompts
 - No warranty is provided, either express or implied
-- Always review the actions the agent proposes before allowing them to proceed
+- Always use in version-controlled repositories
+- Review proposed changes in your git diff before committing
 
 ## Key Features
 
@@ -270,28 +270,24 @@ Note: The expert tool defaults to OpenAI's o1-preview model with the OpenAI prov
    ra-aid -m "Refactor the database connection code to use connection pooling" --cowboy-mode
    ```
 
-### Automating Code Changes with Cowboy Mode 🏇
+### Shell Command Automation with Cowboy Mode 🏇
 
-For situations where you need to automate code modifications without manual intervention—such as continuous integration/continuous deployment (CI/CD) pipelines, scripted batch operations, or large-scale refactoring—you can use the `--cowboy-mode` flag. This mode executes commands non-interactively, bypassing the usual confirmation prompts.
+The `--cowboy-mode` flag enables automated shell command execution without confirmation prompts. This is useful for:
+
+- CI/CD pipelines
+- Automated testing environments
+- Batch processing operations
+- Scripted workflows
 
 ```bash
 ra-aid -m "Update all deprecated API calls" --cowboy-mode
 ```
 
-In the example above, the command will automatically find and update all deprecated API calls in your codebase **without** asking for confirmation before each change.
-
-**⚠️ Use with Extreme Caution:** Cowboy mode is a powerful tool that removes safety checks designed to prevent unintended modifications. While it enables efficient automation, it also increases the risk of errors propagating through your codebase. **Ensure you have proper backups or version control in place before using this mode.**
-
-**Appropriate Use Cases for Cowboy Mode:**
-
-- **CI/CD Pipelines:** Automate code changes as part of your deployment process.
-- **Scripted Batch Operations:** Apply repetitive changes across multiple files without manual approval.
-- **Controlled Environments:** Use in environments where changes can be reviewed and reverted if necessary.
-
-**When Not to Use Cowboy Mode:**
-
-- **Research or Experimental Changes:** When you are exploring solutions and unsure of the outcomes.
-- **Critical Codebases Without Backups:** If you don't have a way to revert changes, it's safer to use the interactive mode.
+**⚠️ Important Safety Notes:**
+- Cowboy mode skips confirmation prompts for shell commands
+- Always use in version-controlled repositories
+- Ensure you have a clean working tree before running
+- Review changes in git diff before committing
 
 ### Environment Variables
 
