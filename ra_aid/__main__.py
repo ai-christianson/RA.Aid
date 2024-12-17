@@ -481,6 +481,11 @@ Be very thorough in your research and emit lots of snippets, key facts. If you t
                     expert_enabled=expert_enabled
                 )
         except TaskCompletedException:
+            console.print(Panel(
+                "[green]Task was completed successfully as a one-shot operation.[/green]",
+                title="Task Completed",
+                style="green"
+            ))
             sys.exit(0)
     finally:
         pass
