@@ -200,6 +200,9 @@ Instructions:
 Testing:
 
 - If your task involves writing unit tests, first inspect existing test suites and analyze at least one existing test to learn about testing organization and conventions.
+- If you add or change any unit tests, run them using run_shell_command and ensure they pass (check docs or analyze directory structure/test files to infer how to run them.)
+  - Start with running very specific tests, then move to more general/complete test suites.
+- If you have any doubts about logic or debugging (or how to best test something), ask the expert to perform deep analysis.
 
 Once the task is complete, ensure all updated files are emitted.
 """
