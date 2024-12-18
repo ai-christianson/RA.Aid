@@ -19,15 +19,17 @@ class RunProgrammingTaskInput(BaseModel):
 
 @tool
 def run_programming_task(input: RunProgrammingTaskInput) -> Dict[str, Union[str, int, bool]]:
-    """Execute a programming task using Aider.
+    """Assigns a programming task to a human programmer.
+    
+    Before invoking this tool, make sure all existing related files have been emitted using the emit_related_files tool.
+
+    The programmer cannot see files you have seen and only can see what you explicitly give it.
 
     Be very detailed in your instructions, but do not write the full code for the programmer, as that's the job of the programmer.
 
     The programmer can edit multiple files at once and is intelligent.
 
     If any new files are created, remember to emit them using the emit_related_files tool once this tool completes.
-
-    Additionally, before invoking this tool, make sure all existing related files have been emitted using the emit_related_files tool.
 
     The programmer can add or modify files, but cannot remove them. Use the run_shell_command tool to remove files.
       If you need the programmer to reference files you intend to delete, delete them after the programmer finises their work.

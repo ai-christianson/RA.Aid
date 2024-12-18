@@ -142,7 +142,6 @@ def get_research_tools(research_only: bool = False, expert_enabled: bool = True)
     # Start with read-only tools
     tools = READ_ONLY_TOOLS.copy()
     
-    # Add research tools except run_shell_command
     tools.extend(RESEARCH_TOOLS)
     
     # Add modification tools if not research_only
