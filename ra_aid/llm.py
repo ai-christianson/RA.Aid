@@ -69,7 +69,8 @@ def initialize_expert_llm(provider: str = "openai", model_name: str = "o1-previe
     elif provider == "anthropic":
         return ChatAnthropic(
             api_key=os.getenv("EXPERT_ANTHROPIC_API_KEY"),
-            model_name=model_name
+            model_name=model_name,
+            max_tokens=200000
         )
     elif provider == "openrouter":
         return ChatOpenAI(

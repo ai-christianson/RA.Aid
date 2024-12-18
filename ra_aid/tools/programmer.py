@@ -28,6 +28,9 @@ def run_programming_task(input: RunProgrammingTaskInput) -> Dict[str, Union[str,
     If any new files are created, remember to emit them using the emit_related_files tool once this tool completes.
 
     Additionally, before invoking this tool, make sure all existing related files have been emitted using the emit_related_files tool.
+
+    The programmer can add or modify files, but cannot remove them. Use the run_shell_command tool to remove files.
+      If you need the programmer to reference files you intend to delete, delete them after the programmer finises their work.
     
     Args:
         instructions: Instructions for the programming task

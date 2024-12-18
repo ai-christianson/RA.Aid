@@ -1,8 +1,6 @@
-from pathlib import Path
-from typing import List, Tuple, Optional
+from typing import List, Tuple
 import fnmatch
 from git import Repo
-from git.exc import InvalidGitRepositoryError
 from fuzzywuzzy import process
 from langchain_core.tools import tool
 from rich.console import Console
