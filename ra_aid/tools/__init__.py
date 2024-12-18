@@ -1,4 +1,5 @@
 from .shell import run_shell_command
+from .monorepo import monorepo_detected
 from .programmer import run_programming_task
 from .expert import ask_expert, emit_expert_context
 from .read_file import read_file_tool
@@ -36,5 +37,6 @@ __all__ = [
     'emit_research_subtask',
     'ripgrep_search',
     'file_str_replace',
-    'swap_task_order'
+    'swap_task_order',
+    'monorepo_detected'
 ]

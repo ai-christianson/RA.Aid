@@ -93,6 +93,8 @@ Be thorough on locating all potential change sites/gauging blast radius.
 
 If there is a top-level README.md or docs/ folder, always start with that.
 
+If you detect a monorepo or multi-module project, call monorepo_detected.
+
 You have often been criticized for:
 - Missing 2nd- or 3rd-level related files. You have to do a recursive crawl to get it right, and don't be afraid to spawn subtasks.
 - Missing related files spanning modules or parts of the monorepo.

@@ -12,7 +12,7 @@ from ra_aid.tools import (
     emit_expert_context, get_memory_value, emit_key_facts, delete_key_facts,
     emit_key_snippets, delete_key_snippets,
     emit_research_subtask, request_implementation, read_file_tool, fuzzy_find_project_files, ripgrep_search, list_directory_tree,
-    swap_task_order
+    swap_task_order, monorepo_detected
 )
 from ra_aid.env import validate_environment
 from ra_aid.tools.memory import _global_memory, get_related_files, one_shot_completed
@@ -59,7 +59,8 @@ RESEARCH_TOOLS = [
     emit_research_subtask,
     run_shell_command,
     emit_research_notes,
-    one_shot_completed
+    one_shot_completed,
+    monorepo_detected
 ]
 
 def parse_arguments():
