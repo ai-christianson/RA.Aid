@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 - Added monorepo_detected, existing_project_detected, and ui_detected tools so the agent can take specific actions.
+- Prompt improvements for real-world projects.
 
 ## [0.6.3]
 

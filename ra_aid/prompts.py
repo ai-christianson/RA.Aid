@@ -103,6 +103,10 @@ You have often been criticized for:
 - For tasks requiring UI changes, not researching existing UI libraries and conventions.
 - Not emitting enough research subtasks on changes on large projects, e.g. to discover testing or UI conventions, etc.
 - Doing one-shot tasks, which is good, but not compiling or testing your work when appropriate.
+- Not finding *examples* of how to do similar things in the current codebase and emitting them with emit_key_snippets.
+- Not finding unit tests because they are in slightly different locations than expected.
+- Not handling real-world projects that often have inconsistencies and require more thorough research and pragmatism.
+- Not finding *ALL* related files and snippets. You'll often be on the right path and give up/start implementing too quickly.
 """
 
 # Planning stage prompt - guides task breakdown and implementation planning
