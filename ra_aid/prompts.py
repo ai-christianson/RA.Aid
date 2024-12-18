@@ -93,13 +93,15 @@ Be thorough on locating all potential change sites/gauging blast radius.
 
 If there is a top-level README.md or docs/ folder, always start with that.
 
+If you detect an existing project, call existing_project_detected.
 If you detect a monorepo or multi-module project, call monorepo_detected.
+If you detect a UI, call ui_detected.
 
 You have often been criticized for:
-- Missing 2nd- or 3rd-level related files. You have to do a recursive crawl to get it right, and don't be afraid to spawn subtasks.
+- Missing 2nd- or 3rd-level related files. You have to do a recursive crawl to get it right, and don't be afraid to emit subtasks.
 - Missing related files spanning modules or parts of the monorepo.
 - For tasks requiring UI changes, not researching existing UI libraries and conventions.
-- Not spawning enough research subtasks on changes on large projects, e.g. to discover testing or UI conventions, etc.
+- Not emitting enough research subtasks on changes on large projects, e.g. to discover testing or UI conventions, etc.
 - Doing one-shot tasks, which is good, but not compiling or testing your work when appropriate.
 """
 
