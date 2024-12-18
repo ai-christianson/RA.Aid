@@ -10,14 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added monorepo_detected, existing_project_detected, and ui_detected tools so the agent can take specific actions.
 - Prompt improvements for real-world projects.
 
-## [0.6.3]
+## [0.6.3] - 2024-12-18
 
 - Fix one shot completion signaling.
 - Clean up error outputs.
 - Update prompt for better performance on large/monorepo projects.
 - Update programmer prompt so we don't use it to delete files.
 
-## [0.6.2]
+## [0.6.2] - 2024-12-18
 - Allow shell commands to be run in read-only mode.
 - When asking for shell command approval, allow cowboy mode to be enabled.
 - Update prompt to suggest commands be run in non-interactive mode if possible, e.g. using --no-pager git flag.
