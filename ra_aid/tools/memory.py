@@ -79,12 +79,11 @@ def emit_task(task: str) -> str:
     console.print(Panel(Markdown(task), title=f"✅ Task #{task_id}"))
     return f"Task #{task_id} stored."
 
-@tool("emit_research_subtask")
-def emit_research_subtask(subtask: str) -> str:
-    """Spawn a research subtask for deeper investigation of a specific topic.
-    
-    Only use this when a topic requires dedicated focused research beyond the main task.
-    This should be used sparingly for truly complex research needs.
+@tool("request_research_subtask")
+def request_research_subtask(subtask: str) -> str:
+    """Spawn a research subtask for investigation of a specific topic.
+
+    Use this anytime you can to offload your work to specific things that need to be looked into.
     
     Args:
         subtask: Detailed description of the research subtask
@@ -175,6 +174,11 @@ def delete_tasks(task_ids: List[int]) -> str:
 def request_implementation(reason: str) -> str:
     """Request that implementation proceed after research/planning.
     Used to indicate the agent should move to implementation stage.
+
+    Think carefully before requesting implementation.
+      Do you need to request research subtasks first?
+      Have you run relevant unit tests, if they exist, to get a baseline (this can be a subtask)?
+      Do you need to crawl deeper to find all related files and symbols?
     
     Args:
         reason: Why implementation should proceed

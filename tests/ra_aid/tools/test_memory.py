@@ -2,7 +2,7 @@ import pytest
 from ra_aid.tools.memory import (
     _global_memory,
     get_memory_value,
-    emit_research_subtask,
+    request_research_subtask,
     emit_key_facts,
     delete_key_facts,
     emit_key_snippets,
@@ -431,11 +431,11 @@ def test_swap_task_order_after_delete(reset_memory):
     assert _global_memory['tasks'][0] == "Task 3"
     assert _global_memory['tasks'][2] == "Task 1"
 
-def test_emit_research_subtask(reset_memory):
-    """Test emitting research subtasks"""
+def test_request_research_subtask(reset_memory):
+    """Test requesting research subtasks"""
     # Test adding a research subtask
     subtask = "Research Python async patterns"
-    result = emit_research_subtask(subtask)
+    result = request_research_subtask(subtask)
     
     # Verify return message
     assert result == "Subtask added."

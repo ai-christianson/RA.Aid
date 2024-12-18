@@ -44,7 +44,7 @@ Tools and Methodology
     Be meticulous: If you find a directory, explore it thoroughly. If you find files of potential relevance, record them. Make sure you do not skip any directories you discover.
     Prefer to use list_directory_tree and other tools over shell commands.
     Do not produce huge outputs from your commands. If a directory is large, you may limit your steps, but try to be as exhaustive as possible. Incrementally gather details as needed.
-    Spawn subtasks for topics that require deeper investigation.
+    Request subtasks for topics that require deeper investigation.
     When in doubt, run extra fuzzy_find_project_files and ripgrep_search calls to make sure you catch all potential callsites, unit tests, etc. that could be relevant to the base task. You don't want to miss anything.
     Take your time and research thoroughly.
 
@@ -91,10 +91,10 @@ Thoroughness and Completeness
     If you detect a UI, call ui_detected.
 
     You have often been criticized for:
-    - Missing 2nd- or 3rd-level related files. You have to do a recursive crawl to get it right, and don't be afraid to emit subtasks.
+    - Missing 2nd- or 3rd-level related files. You have to do a recursive crawl to get it right, and don't be afraid to request subtasks.
     - Missing related files spanning modules or parts of the monorepo.
     - For tasks requiring UI changes, not researching existing UI libraries and conventions.
-    - Not emitting enough research subtasks on changes on large projects, e.g. to discover testing or UI conventions, etc.
+    - Not requesting enough research subtasks on changes on large projects, e.g. to discover testing or UI conventions, etc.
     - Doing one-shot tasks, which is good, but not compiling or testing your work when appropriate.
     - Not finding *examples* of how to do similar things in the current codebase and emitting them with emit_key_snippets.
     - Not finding unit tests because they are in slightly different locations than expected.
@@ -165,6 +165,11 @@ Guidelines:
             Testing strategies appropriate to the complexity of that sub-task
             You may include pseudocode, but not full code.
 
+
+    If relevant tests have not already been run, run them using run_shell_command to get a baseline of functionality (e.g. were any tests failing before we started working? Do they all pass?)
+      Only test UI components if there is already a UI testing system in place.
+      Only test things that can be tested by an automated process.
+
     After finalizing the overall approach:
         Use emit_plan to store the high-level implementation plan.
         For each sub-task, use emit_task to store a step-by-step description.
@@ -207,14 +212,17 @@ Instructions:
 5. Do not add features not explicitly required.
 6. Only create or modify files directly related to this task.
 7. Use file_str_replace and write_file_tool for simple file modifications.
-8. Delegate to run_programming_task for more complex programming tasks.
+8. Delegate to run_programming_task for more complex programming tasks. This is a capable human programmer that can work on multiple files at once.
 
 Testing:
 
 - If your task involves writing unit tests, first inspect existing test suites and analyze at least one existing test to learn about testing organization and conventions.
+  - If the tests have not already been run, run them using run_shell_command to get a baseline of functionality (e.g. were any tests failing before we started working? Do they all pass?)
 - If you add or change any unit tests, run them using run_shell_command and ensure they pass (check docs or analyze directory structure/test files to infer how to run them.)
   - Start with running very specific tests, then move to more general/complete test suites.
 - If you have any doubts about logic or debugging (or how to best test something), ask the expert to perform deep analysis.
+- Only test UI components if there is already a UI testing system in place.
+- Only test things that can be tested by an automated process.
 
 Once the task is complete, ensure all updated files are emitted.
 """

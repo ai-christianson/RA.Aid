@@ -11,7 +11,7 @@ from ra_aid.tools import (
     emit_research_notes, emit_plan, emit_related_files, emit_task,
     emit_expert_context, get_memory_value, emit_key_facts, delete_key_facts,
     emit_key_snippets, delete_key_snippets,
-    emit_research_subtask, request_implementation, read_file_tool, fuzzy_find_project_files, ripgrep_search, list_directory_tree,
+    request_research_subtask, request_implementation, read_file_tool, fuzzy_find_project_files, ripgrep_search, list_directory_tree,
     swap_task_order, monorepo_detected, existing_project_detected, ui_detected
 )
 from ra_aid.env import validate_environment
@@ -33,6 +33,7 @@ READ_ONLY_TOOLS = [
     delete_key_facts,
     emit_key_snippets,
     delete_key_snippets,
+    list_directory_tree,
     read_file_tool,
     fuzzy_find_project_files,
     ripgrep_search,
@@ -55,9 +56,7 @@ EXPERT_TOOLS = [
 
 # Research-specific tools
 RESEARCH_TOOLS = [
-    list_directory_tree,
-    emit_research_subtask,
-    run_shell_command,
+    request_research_subtask,
     emit_research_notes,
     one_shot_completed,
     monorepo_detected,
@@ -290,11 +289,11 @@ def run_research_subtasks(base_task: str, config: dict, model, expert_enabled: b
         
     print_stage_header("Research Subtasks")
     
-    # Get tools for subtask agents (excluding emit_research_subtask and implementation)
+    # Get tools for subtask agents (excluding request_research_subtask and implementation)
     research_only = _global_memory.get('config', {}).get('research_only', False)
     subtask_tools = [
         t for t in get_research_tools(research_only=research_only, expert_enabled=expert_enabled)
-        if t.name not in ['emit_research_subtask']
+        if t.name not in ['request_research_subtask']
     ]
     
     for i, subtask in enumerate(subtasks, 1):
