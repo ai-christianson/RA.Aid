@@ -35,7 +35,10 @@ Expert Consultation:
 """
  
 # Research stage prompt - guides initial codebase analysis
-RESEARCH_PROMPT = """
+RESEARCH_PROMPT = """User query: {base_task} --keep it simple
+
+Be very thorough in your research and emit lots of snippets, key facts. If you take more than a few steps, be eager to emit research subtasks.{research_only_note}
+
 Objective
 
 Your only goal is to thoroughly research what currently exists in the codebase—nothing else.
@@ -137,6 +140,8 @@ Decision on Implementation
 Be thorough on locating all potential change sites/gauging blast radius.
 
 If this is a top-level README.md or docs folder, start there. If relevant tests exist, run them upfront as part of the research phase to establish a baseline.
+
+{expert_section}
 """
 
 # Planning stage prompt - guides task breakdown and implementation planning
@@ -201,6 +206,8 @@ Guidelines:
             The description should be only as detailed as warranted by the complexity of the request.
 
     Do not implement anything yet.
+
+{expert_section}
 """
 
 

@@ -277,7 +277,8 @@ def run_implementation_stage(base_task, tasks, plan, related_files, model, exper
             key_snippets=get_memory_value('key_snippets'),
             task=task,
             related_files="\n".join(related_files),
-            base_task=base_task
+            base_task=base_task,
+            expert_section=expert_section
         )
         
         # Run agent for this task
@@ -366,12 +367,11 @@ def main():
     )
     
     expert_section = EXPERT_PROMPT_SECTION_RESEARCH if expert_enabled else ""
-    research_prompt = f"""User query: {base_task} --keep it simple
-
-{RESEARCH_PROMPT}
-{expert_section}
-
-Be very thorough in your research and emit lots of snippets, key facts. If you take more than a few steps, be eager to emit research subtasks.{'' if args.research_only else ' Only request implementation if the user explicitly asked for changes to be made.'}"""
+    research_prompt = RESEARCH_PROMPT.format(
+        expert_section=expert_section,
+        base_task=base_task,
+        research_only_note='' if args.research_only else ' Only request implementation if the user explicitly asked for changes to be made.'
+    )
 
     # Run research agent and check for one-shot completion
     output = run_agent_with_retry(research_agent, research_prompt, config)
@@ -395,12 +395,13 @@ Be very thorough in your research and emit lots of snippets, key facts. If you t
         planning_agent = create_react_agent(model, get_planning_tools(expert_enabled=expert_enabled), checkpointer=planning_memory)
         
         expert_section = EXPERT_PROMPT_SECTION_PLANNING if expert_enabled else ""
-        planning_prompt = (PLANNING_PROMPT + expert_section).format(
+        planning_prompt = PLANNING_PROMPT.format(
             research_notes=get_memory_value('research_notes'),
             key_facts=get_memory_value('key_facts'),
             key_snippets=get_memory_value('key_snippets'),
             base_task=base_task,
-            related_files="\n".join(get_related_files())
+            related_files="\n".join(get_related_files()),
+            expert_section=expert_section
         )
 
         # Run planning agent
