@@ -324,7 +324,7 @@ def one_shot_completed(message: str) -> str:
     """
     if len(_global_memory['research_subtasks']) > 0:
         return "Cannot complete in one shot - research subtasks pending"
-    if len(_global_memory['implementation_requested']) > 0:
+    if _global_memory.get('implementation_requested', False):
         return "Cannot complete in one shot - implementation was requested"
         
     _global_memory['task_completed'] = True

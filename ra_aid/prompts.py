@@ -8,6 +8,31 @@ These updated prompts include instructions to scale complexity:
 - For simpler requests, keep the scope minimal and avoid unnecessary complexity.
 - For more complex requests, still provide detailed planning and thorough steps.
 """
+
+# Expert-specific prompt sections
+EXPERT_PROMPT_SECTION_RESEARCH = """
+Expert Consultation:
+    If you need additional guidance or analysis:
+    - Use emit_expert_context to provide all relevant context about what you've found
+    - Wait for expert response before proceeding with research
+    - The expert can help analyze complex codebases or unclear patterns
+"""
+
+EXPERT_PROMPT_SECTION_PLANNING = """
+Expert Consultation:
+    If you need additional input or assistance:
+    - First use emit_expert_context to provide all relevant context
+    - Wait for the expert's response before defining tasks in non-trivial scenarios
+    - The expert can help with architectural decisions and implementation approaches
+"""
+
+EXPERT_PROMPT_SECTION_IMPLEMENTATION = """
+Expert Consultation:
+    If you have any doubts about logic or debugging (or how to best test something):
+    - Use emit_expert_context to provide context about your specific concern
+    - Ask the expert to perform deep analysis
+    - Wait for expert guidance before proceeding with implementation
+"""
  
 # Research stage prompt - guides initial codebase analysis
 RESEARCH_PROMPT = """
@@ -220,7 +245,7 @@ Testing:
   - If the tests have not already been run, run them using run_shell_command to get a baseline of functionality (e.g. were any tests failing before we started working? Do they all pass?)
 - If you add or change any unit tests, run them using run_shell_command and ensure they pass (check docs or analyze directory structure/test files to infer how to run them.)
   - Start with running very specific tests, then move to more general/complete test suites.
-- If you have any doubts about logic or debugging (or how to best test something), ask the expert to perform deep analysis.
+{expert_section}
 - Only test UI components if there is already a UI testing system in place.
 - Only test things that can be tested by an automated process.
 

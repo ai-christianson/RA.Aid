@@ -21,6 +21,9 @@ from ra_aid.prompts import (
     RESEARCH_PROMPT,
     PLANNING_PROMPT,
     IMPLEMENTATION_PROMPT,
+    EXPERT_PROMPT_SECTION_RESEARCH,
+    EXPERT_PROMPT_SECTION_PLANNING,
+    EXPERT_PROMPT_SECTION_IMPLEMENTATION,
 )
 import time
 from anthropic import APIError, APITimeoutError, RateLimitError, InternalServerError
@@ -196,7 +199,7 @@ def is_informational_query() -> bool:
 def is_stage_requested(stage: str) -> bool:
     """Check if a stage has been requested to proceed."""
     if stage == 'implementation':
-        return len(_global_memory.get('implementation_requested', [])) > 0
+        return _global_memory.get('implementation_requested', False)
     return False
 
 def run_agent_with_retry(agent, prompt: str, config: dict) -> Optional[str]:
@@ -227,10 +230,9 @@ def run_agent_with_retry(agent, prompt: str, config: dict) -> Optional[str]:
                 # Check for task completion after each chunk
                 if _global_memory.get('task_completed'):
                     completion_msg = _global_memory.get('completion_message', 'Task was completed successfully.')
-                    print_stage_header("Task Completed")
                     console.print(Panel(
                         f"[green]{completion_msg}[/green]",
-                        title="Task Completed",
+                        title="✅ Task Completed",
                         style="green"
                     ))
                     return completion_msg
@@ -268,7 +270,8 @@ def run_implementation_stage(base_task, tasks, plan, related_files, model, exper
         task_agent = create_react_agent(model, get_implementation_tools(expert_enabled=expert_enabled), checkpointer=task_memory)
         
         # Construct task-specific prompt
-        task_prompt = IMPLEMENTATION_PROMPT.format(
+        expert_section = EXPERT_PROMPT_SECTION_IMPLEMENTATION if expert_enabled else ""
+        task_prompt = (IMPLEMENTATION_PROMPT + expert_section).format(
             plan=plan,
             key_facts=get_memory_value('key_facts'),
             key_snippets=get_memory_value('key_snippets'),
@@ -362,9 +365,11 @@ def main():
         checkpointer=research_memory
     )
     
+    expert_section = EXPERT_PROMPT_SECTION_RESEARCH if expert_enabled else ""
     research_prompt = f"""User query: {base_task} --keep it simple
 
 {RESEARCH_PROMPT}
+{expert_section}
 
 Be very thorough in your research and emit lots of snippets, key facts. If you take more than a few steps, be eager to emit research subtasks.{'' if args.research_only else ' Only request implementation if the user explicitly asked for changes to be made.'}"""
 
@@ -389,7 +394,8 @@ Be very thorough in your research and emit lots of snippets, key facts. If you t
         # Create planning agent
         planning_agent = create_react_agent(model, get_planning_tools(expert_enabled=expert_enabled), checkpointer=planning_memory)
         
-        planning_prompt = PLANNING_PROMPT.format(
+        expert_section = EXPERT_PROMPT_SECTION_PLANNING if expert_enabled else ""
+        planning_prompt = (PLANNING_PROMPT + expert_section).format(
             research_notes=get_memory_value('research_notes'),
             key_facts=get_memory_value('key_facts'),
             key_snippets=get_memory_value('key_snippets'),
