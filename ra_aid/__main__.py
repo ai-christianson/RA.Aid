@@ -7,7 +7,7 @@ from langchain_core.messages import HumanMessage
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import create_react_agent
 from ra_aid.env import validate_environment
-from ra_aid.tools.memory import _global_memory, get_related_files
+from ra_aid.tools.memory import _global_memory, get_related_files, get_memory_value
 from ra_aid import print_agent_output, print_stage_header, print_task_header, print_error
 from ra_aid.prompts import (
     RESEARCH_PROMPT,
