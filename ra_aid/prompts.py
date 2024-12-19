@@ -33,7 +33,32 @@ Expert Consultation:
     - Ask the expert to perform deep analysis
     - Wait for expert guidance before proceeding with implementation
 """
- 
+
+# Human-specific prompt sections
+HUMAN_PROMPT_SECTION_RESEARCH = """
+Human Interaction:
+    If you need clarification from the human operator:
+    - Ask clear, specific questions
+    - Use the ask_human tool for queries
+    - Wait for human response before proceeding
+"""
+
+HUMAN_PROMPT_SECTION_PLANNING = """
+Human Interaction:
+    If you need requirements clarification:
+    - Use ask_human for specific planning questions
+    - Await human input before finalizing plans
+    - Keep questions focused and context-aware
+"""
+
+HUMAN_PROMPT_SECTION_IMPLEMENTATION = """
+Human Interaction:
+    If you need implementation guidance:
+    - Ask the human operator using ask_human
+    - Keep questions specific to the current task
+    - Wait for responses before proceeding
+"""
+
 # Research stage prompt - guides initial codebase analysis
 RESEARCH_PROMPT = """User query: {base_task} --keep it simple
 
@@ -142,6 +167,7 @@ Be thorough on locating all potential change sites/gauging blast radius.
 If this is a top-level README.md or docs folder, start there. If relevant tests exist, run them upfront as part of the research phase to establish a baseline.
 
 {expert_section}
+{human_section}
 """
 
 # Planning stage prompt - guides task breakdown and implementation planning
@@ -208,6 +234,7 @@ Guidelines:
     Do not implement anything yet.
 
 {expert_section}
+{human_section}
 """
 
 
@@ -253,6 +280,7 @@ Testing:
 - If you add or change any unit tests, run them using run_shell_command and ensure they pass (check docs or analyze directory structure/test files to infer how to run them.)
   - Start with running very specific tests, then move to more general/complete test suites.
 {expert_section}
+{human_section}
 - Only test UI components if there is already a UI testing system in place.
 - Only test things that can be tested by an automated process.
 

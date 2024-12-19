@@ -7,7 +7,7 @@ from langchain_core.messages import HumanMessage
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import create_react_agent
 from ra_aid.tools import (
-    ask_expert, run_shell_command, run_programming_task,
+    ask_expert, ask_human, run_shell_command, run_programming_task,
     emit_research_notes, emit_plan, emit_related_files, emit_task,
     emit_expert_context, get_memory_value, emit_key_facts, delete_key_facts,
     emit_key_snippets, delete_key_snippets, delete_tasks,
@@ -24,24 +24,35 @@ from ra_aid.prompts import (
     EXPERT_PROMPT_SECTION_RESEARCH,
     EXPERT_PROMPT_SECTION_PLANNING,
     EXPERT_PROMPT_SECTION_IMPLEMENTATION,
+    HUMAN_PROMPT_SECTION_RESEARCH,
+    HUMAN_PROMPT_SECTION_PLANNING
 )
 import time
 from anthropic import APIError, APITimeoutError, RateLimitError, InternalServerError
 from ra_aid.llm import initialize_llm
 
 # Read-only tools that don't modify system state
-READ_ONLY_TOOLS = [
-    emit_related_files,
-    emit_key_facts,
-    delete_key_facts,
-    emit_key_snippets,
-    delete_key_snippets,
-    list_directory_tree,
-    read_file_tool,
-    fuzzy_find_project_files,
-    ripgrep_search,
-    run_shell_command # can modify files, but we still need it for read-only tasks.
-]
+def get_read_only_tools(human_interaction: bool = False) -> list:
+    """Get the list of read-only tools, optionally including human interaction tools."""
+    tools = [
+        emit_related_files,
+        emit_key_facts,
+        delete_key_facts,
+        emit_key_snippets,
+        delete_key_snippets,
+        list_directory_tree,
+        read_file_tool,
+        fuzzy_find_project_files,
+        ripgrep_search,
+        run_shell_command # can modify files, but we still need it for read-only tasks.
+    ]
+    
+    if human_interaction:
+        tools.append(ask_human)
+    
+    return tools
+
+READ_ONLY_TOOLS = get_read_only_tools()
 
 # Tools that can modify files or system state
 MODIFICATION_TOOLS = [
@@ -116,6 +127,11 @@ Examples:
         type=str,
         help='The model name to use for expert knowledge queries (required for non-OpenAI providers)'
     )
+    parser.add_argument(
+        '--human-interaction',
+        action='store_true',
+        help='Enable human interaction'
+    )
     
     args = parser.parse_args()
     
@@ -140,10 +156,10 @@ research_memory = MemorySaver()
 planning_memory = MemorySaver()
 implementation_memory = MemorySaver()
 
-def get_research_tools(research_only: bool = False, expert_enabled: bool = True) -> list:
+def get_research_tools(research_only: bool = False, expert_enabled: bool = True, human_interaction: bool = False) -> list:
     """Get the list of research tools based on mode and whether expert is enabled."""
     # Start with read-only tools
-    tools = READ_ONLY_TOOLS.copy()
+    tools = get_read_only_tools(human_interaction).copy()
     
     tools.extend(RESEARCH_TOOLS)
     
@@ -270,15 +286,13 @@ def run_implementation_stage(base_task, tasks, plan, related_files, model, exper
         task_agent = create_react_agent(model, get_implementation_tools(expert_enabled=expert_enabled), checkpointer=task_memory)
         
         # Construct task-specific prompt
-        expert_section = EXPERT_PROMPT_SECTION_IMPLEMENTATION if expert_enabled else ""
-        task_prompt = (IMPLEMENTATION_PROMPT + expert_section).format(
+        task_prompt = (IMPLEMENTATION_PROMPT).format(
             plan=plan,
             key_facts=get_memory_value('key_facts'),
             key_snippets=get_memory_value('key_snippets'),
             task=task,
             related_files="\n".join(related_files),
-            base_task=base_task,
-            expert_section=expert_section
+            base_task=base_task
         )
         
         # Run agent for this task
@@ -312,7 +326,7 @@ def run_research_subtasks(base_task: str, config: dict, model, expert_enabled: b
         )
         
         # Run the subtask agent
-        subtask_prompt = f"Base Task: {base_task}\nResearch Subtask: {subtask}\n\n{RESEARCH_PROMPT}"
+        subtask_prompt = f"Base Task: {base_task}\nResearch Subtask: {subtask}\n\n{RESEARCH_PROMPT.format(base_task=base_task, research_only_note='')}"
         run_agent_with_retry(subtask_agent, subtask_prompt, config)
 
 
@@ -362,13 +376,19 @@ def main():
     # Create research agent
     research_agent = create_react_agent(
         model,
-        get_research_tools(research_only=_global_memory.get('config', {}).get('research_only', False), expert_enabled=expert_enabled),
+        get_research_tools(
+            research_only=_global_memory.get('config', {}).get('research_only', False),
+            expert_enabled=expert_enabled,
+            human_interaction=args.human_interaction
+        ),
         checkpointer=research_memory
     )
     
     expert_section = EXPERT_PROMPT_SECTION_RESEARCH if expert_enabled else ""
+    human_section = HUMAN_PROMPT_SECTION_RESEARCH if args.human_interaction else ""
     research_prompt = RESEARCH_PROMPT.format(
         expert_section=expert_section,
+        human_section=human_section,
         base_task=base_task,
         research_only_note='' if args.research_only else ' Only request implementation if the user explicitly asked for changes to be made.'
     )
@@ -395,13 +415,16 @@ def main():
         planning_agent = create_react_agent(model, get_planning_tools(expert_enabled=expert_enabled), checkpointer=planning_memory)
         
         expert_section = EXPERT_PROMPT_SECTION_PLANNING if expert_enabled else ""
+        human_section = HUMAN_PROMPT_SECTION_PLANNING if args.human_interaction else ""
         planning_prompt = PLANNING_PROMPT.format(
+            expert_section=expert_section,
+            human_section=human_section,
+            base_task=base_task,
             research_notes=get_memory_value('research_notes'),
+            related_files="\n".join(get_related_files()),
             key_facts=get_memory_value('key_facts'),
             key_snippets=get_memory_value('key_snippets'),
-            base_task=base_task,
-            related_files="\n".join(get_related_files()),
-            expert_section=expert_section
+            research_only_note='' if args.research_only else ' Only request implementation if the user explicitly asked for changes to be made.'
         )
 
         # Run planning agent

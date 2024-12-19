@@ -1,5 +1,6 @@
 from .shell import run_shell_command
 from .research import monorepo_detected, existing_project_detected, ui_detected
+from .human import ask_human
 from .programmer import run_programming_task
 from .expert import ask_expert, emit_expert_context
 from .read_file import read_file_tool
@@ -41,5 +42,6 @@ __all__ = [
     'swap_task_order',
     'monorepo_detected',
     'existing_project_detected',
-    'ui_detected'
+    'ui_detected',
+    'ask_human'
 ]
