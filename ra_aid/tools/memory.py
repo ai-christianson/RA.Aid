@@ -2,6 +2,7 @@ from typing import Dict, List, Any, Union, TypedDict, Optional, Sequence, Set
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
+from rich.rule import Rule
 from langchain_core.tools import tool
 
 class SnippetInfo(TypedDict):
@@ -27,7 +28,6 @@ _global_memory: Dict[str, Union[List[Any], Dict[int, str], Dict[int, SnippetInfo
     'key_snippets': {},  # Dict[int, SnippetInfo] - ID to snippet mapping
     'key_snippet_id_counter': 0,  # Counter for generating unique snippet IDs
     'implementation_requested': False,
-    'implementation_skipped': [],
     'related_files': set()
 }
 
@@ -184,24 +184,12 @@ def request_implementation() -> str:
         Empty string
     """
     _global_memory['implementation_requested'] = True
-    console.print(Panel("Implementation stage requested", title="🚀 Implementation Requested"))
+    console.print()
+    console.print(Rule("🚀 Implementation Requested", style="yellow"))
+    console.print()
     return ""
 
 
-@tool("skip_implementation")
-def skip_implementation(reason: str) -> str:
-    """Indicate that implementation can be skipped.
-    Used when research/planning determines no changes are needed.
-    
-    Args:
-        reason: Why implementation can be skipped
-        
-    Returns:
-        The stored reason
-    """
-    _global_memory['implementation_skipped'].append(reason)
-    console.print(Panel(Markdown(reason), title="⏭️ Implementation Skipped"))
-    return reason
 
 @tool("emit_key_snippets")
 def emit_key_snippets(snippets: List[SnippetInfo]) -> str:

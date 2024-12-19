@@ -1,6 +1,6 @@
 from langchain_core.tools import tool
 from rich.console import Console
-from rich.panel import Panel
+from rich.rule import Rule
 
 console = Console()
 
@@ -9,7 +9,9 @@ def existing_project_detected() -> dict:
     """
     When to call: Once you have confirmed that the current working directory contains project files.
     """
-    console.print(Panel("Existing project detected.", title="📁 Existing Project Detected", border_style="bright_blue"))
+    print()
+    console.print(Rule("📁 Existing Project Detected", style="bright_blue"))
+    print()
     return {
         'hint': (
             "You are working within an existing codebase that already has established patterns and standards. "
@@ -28,7 +30,9 @@ def monorepo_detected() -> dict:
     """
     When to call: After identifying that multiple packages or modules exist within a single repository.
     """
-    console.print(Panel("Monorepo detected.", title="📦 Monorepo Detected", border_style="bright_blue"))
+    print()
+    console.print(Rule("📦 Monorepo Detected", style="bright_blue"))
+    print()
     return {
         'hint': (
             "You are researching in a monorepo environment that manages multiple packages or services under one roof. "
@@ -50,7 +54,9 @@ def ui_detected() -> dict:
     """
     When to call: After detecting that the project contains a user interface layer or front-end component.
     """
-    console.print(Panel("UI detected.", title="🎯 UI Detected", border_style="bright_blue"))
+    print()
+    console.print(Rule("🎯 UI Detected", style="bright_blue"))
+    print()
     return {
         'hint': (
             "You are working with a user interface component where established UI conventions, styles, and frameworks are likely in place. "
