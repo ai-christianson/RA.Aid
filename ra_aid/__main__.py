@@ -2,6 +2,7 @@ import argparse
 import sys
 from typing import Optional
 from rich.panel import Panel
+from rich.markdown import Markdown
 from rich.console import Console
 from langchain_core.messages import HumanMessage
 from langgraph.checkpoint.memory import MemorySaver
@@ -149,7 +150,7 @@ def run_agent_with_retry(agent, prompt: str, config: dict) -> Optional[str]:
                 if _global_memory.get('task_completed'):
                     completion_msg = _global_memory.get('completion_message', 'Task was completed successfully.')
                     console.print(Panel(
-                        completion_msg,
+                        Markdown(completion_msg),
                         title="✅ Task Completed",
                         style="green"
                     ))
@@ -306,16 +307,8 @@ def main():
         research_only_note='' if args.research_only else ' Only request implementation if the user explicitly asked for changes to be made.'
     )
 
-    # Run research agent and check for one-shot completion
-    output = run_agent_with_retry(research_agent, research_prompt, config)
-    if isinstance(output, str) and "one_shot_completed" in str(output):
-        print_stage_header("Task Completed")
-        console.print(Panel(
-            "[green]Task was completed successfully as a one-shot operation.[/green]",
-            title="Task Completed",
-            style="green"
-        ))
-        sys.exit(0)
+    # Run research agent
+    run_agent_with_retry(research_agent, research_prompt, config)
     
     # Run any research subtasks
     run_research_subtasks(base_task, config, model, expert_enabled=expert_enabled)
