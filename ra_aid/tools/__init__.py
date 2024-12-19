@@ -9,7 +9,7 @@ from .fuzzy_find import fuzzy_find_project_files
 from .list_directory import list_directory_tree
 from .ripgrep import ripgrep_search
 from .memory import (
-    emit_research_notes, emit_plan, emit_task, get_memory_value, emit_key_facts,
+    delete_tasks, emit_research_notes, emit_plan, emit_task, get_memory_value, emit_key_facts,
     request_implementation, skip_implementation, delete_key_facts, request_research_subtask,
     emit_key_snippets, delete_key_snippets, emit_related_files, swap_task_order
 )
@@ -37,6 +37,7 @@ __all__ = [
     'request_research_subtask',
     'ripgrep_search',
     'file_str_replace',
+    'delete_tasks',
     'swap_task_order',
     'monorepo_detected',
     'existing_project_detected',

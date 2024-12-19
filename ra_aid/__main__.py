@@ -10,7 +10,7 @@ from ra_aid.tools import (
     ask_expert, run_shell_command, run_programming_task,
     emit_research_notes, emit_plan, emit_related_files, emit_task,
     emit_expert_context, get_memory_value, emit_key_facts, delete_key_facts,
-    emit_key_snippets, delete_key_snippets,
+    emit_key_snippets, delete_key_snippets, delete_tasks,
     request_research_subtask, request_implementation, read_file_tool, fuzzy_find_project_files, ripgrep_search, list_directory_tree,
     swap_task_order, monorepo_detected, existing_project_detected, ui_detected
 )
@@ -162,8 +162,9 @@ def get_planning_tools(expert_enabled: bool = True) -> list:
     
     # Add planning-specific tools
     planning_tools = [
+        delete_tasks,
         emit_plan,
-        emit_task, 
+        emit_task,
         swap_task_order
     ]
     tools.extend(planning_tools)
