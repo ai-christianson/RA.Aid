@@ -247,104 +247,109 @@ def run_research_subtasks(base_task: str, config: dict, model, expert_enabled: b
 
 def main():
     """Main entry point for the ra-aid command line tool."""
-    args = parse_arguments()
-    expert_enabled, expert_missing = validate_environment(args)  # Will exit if main env vars missing
-    
-    if expert_missing:
-        console.print(Panel(
-            f"[yellow]Expert tools disabled due to missing configuration:[/yellow]\n" + 
-            "\n".join(f"- {m}" for m in expert_missing) +
-            "\nSet the required environment variables or args to enable expert mode.",
-            title="Expert Tools Disabled",
-            style="yellow"
-        ))
-    
-    # Create the base model after validation
-    model = initialize_llm(args.provider, args.model)
+    try:
+        args = parse_arguments()
+        expert_enabled, expert_missing = validate_environment(args)  # Will exit if main env vars missing
+        
+        if expert_missing:
+            console.print(Panel(
+                f"[yellow]Expert tools disabled due to missing configuration:[/yellow]\n" + 
+                "\n".join(f"- {m}" for m in expert_missing) +
+                "\nSet the required environment variables or args to enable expert mode.",
+                title="Expert Tools Disabled",
+                style="yellow"
+            ))
+        
+        # Create the base model after validation
+        model = initialize_llm(args.provider, args.model)
 
-    # Validate message is provided
-    if not args.message:
-        print_error("--message is required")
-        sys.exit(1)
+        # Validate message is provided
+        if not args.message:
+            print_error("--message is required")
+            sys.exit(1)
+            
+        base_task = args.message
+        config = {
+            "configurable": {
+                "thread_id": "abc123"
+            },
+            "recursion_limit": 100,
+            "research_only": args.research_only,
+            "cowboy_mode": args.cowboy_mode
+        }
+    
+        # Store config in global memory for access by is_informational_query
+        _global_memory['config'] = config
+    
+        # Store expert provider and model in config
+        _global_memory['config']['expert_provider'] = args.expert_provider
+        _global_memory['config']['expert_model'] = args.expert_model
         
-    base_task = args.message
-    config = {
-        "configurable": {
-            "thread_id": "abc123"
-        },
-        "recursion_limit": 100,
-        "research_only": args.research_only,
-        "cowboy_mode": args.cowboy_mode
-    }
-    
-    # Store config in global memory for access by is_informational_query
-    _global_memory['config'] = config
-    
-    # Store expert provider and model in config
-    _global_memory['config']['expert_provider'] = args.expert_provider
-    _global_memory['config']['expert_model'] = args.expert_model
-    
-    # Run research stage
-    print_stage_header("Research Stage")
-    
-    # Create research agent
-    research_agent = create_react_agent(
-        model,
-        get_research_tools(
-            research_only=_global_memory.get('config', {}).get('research_only', False),
-            expert_enabled=expert_enabled,
-            human_interaction=args.hil
-        ),
-        checkpointer=research_memory
-    )
-    
-    expert_section = EXPERT_PROMPT_SECTION_RESEARCH if expert_enabled else ""
-    human_section = HUMAN_PROMPT_SECTION_RESEARCH if args.hil else ""
-    research_prompt = RESEARCH_PROMPT.format(
-        expert_section=expert_section,
-        human_section=human_section,
-        base_task=base_task,
-        research_only_note='' if args.research_only else ' Only request implementation if the user explicitly asked for changes to be made.'
-    )
-
-    # Run research agent
-    run_agent_with_retry(research_agent, research_prompt, config)
-    
-    # Run any research subtasks
-    run_research_subtasks(base_task, config, model, expert_enabled=expert_enabled)
-    
-    # Proceed with planning and implementation if not an informational query
-    if not is_informational_query():
-        print_stage_header("Planning Stage")
+        # Run research stage
+        print_stage_header("Research Stage")
         
-        # Create planning agent
-        planning_agent = create_react_agent(model, get_planning_tools(expert_enabled=expert_enabled), checkpointer=planning_memory)
-        
-        expert_section = EXPERT_PROMPT_SECTION_PLANNING if expert_enabled else ""
-        human_section = HUMAN_PROMPT_SECTION_PLANNING if args.hil else ""
-        planning_prompt = PLANNING_PROMPT.format(
+        # Create research agent
+        research_agent = create_react_agent(
+            model,
+            get_research_tools(
+                research_only=_global_memory.get('config', {}).get('research_only', False),
+                expert_enabled=expert_enabled,
+                human_interaction=args.hil
+            ),
+            checkpointer=research_memory
+        )
+    
+        expert_section = EXPERT_PROMPT_SECTION_RESEARCH if expert_enabled else ""
+        human_section = HUMAN_PROMPT_SECTION_RESEARCH if args.hil else ""
+        research_prompt = RESEARCH_PROMPT.format(
             expert_section=expert_section,
             human_section=human_section,
             base_task=base_task,
-            research_notes=get_memory_value('research_notes'),
-            related_files="\n".join(get_related_files()),
-            key_facts=get_memory_value('key_facts'),
-            key_snippets=get_memory_value('key_snippets'),
             research_only_note='' if args.research_only else ' Only request implementation if the user explicitly asked for changes to be made.'
         )
 
-        # Run planning agent
-        run_agent_with_retry(planning_agent, planning_prompt, config)
+        # Run research agent
+        run_agent_with_retry(research_agent, research_prompt, config)
+        
+        # Run any research subtasks
+        run_research_subtasks(base_task, config, model, expert_enabled=expert_enabled)
+        
+        # Proceed with planning and implementation if not an informational query
+        if not is_informational_query():
+            print_stage_header("Planning Stage")
+            
+            # Create planning agent
+            planning_agent = create_react_agent(model, get_planning_tools(expert_enabled=expert_enabled), checkpointer=planning_memory)
+            
+            expert_section = EXPERT_PROMPT_SECTION_PLANNING if expert_enabled else ""
+            human_section = HUMAN_PROMPT_SECTION_PLANNING if args.hil else ""
+            planning_prompt = PLANNING_PROMPT.format(
+                expert_section=expert_section,
+                human_section=human_section,
+                base_task=base_task,
+                research_notes=get_memory_value('research_notes'),
+                related_files="\n".join(get_related_files()),
+                key_facts=get_memory_value('key_facts'),
+                key_snippets=get_memory_value('key_snippets'),
+                research_only_note='' if args.research_only else ' Only request implementation if the user explicitly asked for changes to be made.'
+            )
 
-        # Run implementation stage with task-specific agents
-        run_implementation_stage(
-            base_task,
-            get_memory_value('tasks'),
-            get_memory_value('plan'),
-            get_related_files(),
-            model,
-            expert_enabled=expert_enabled
-        )
+            # Run planning agent
+            run_agent_with_retry(planning_agent, planning_prompt, config)
+
+            # Run implementation stage with task-specific agents
+            run_implementation_stage(
+                base_task,
+                get_memory_value('tasks'),
+                get_memory_value('plan'),
+                get_related_files(),
+                model,
+                expert_enabled=expert_enabled
+            )
+
+    except KeyboardInterrupt:
+        console.print("\n[red]Operation cancelled by user[/red]")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
