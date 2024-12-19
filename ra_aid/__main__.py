@@ -149,7 +149,7 @@ def run_agent_with_retry(agent, prompt: str, config: dict) -> Optional[str]:
                 if _global_memory.get('task_completed'):
                     completion_msg = _global_memory.get('completion_message', 'Task was completed successfully.')
                     console.print(Panel(
-                        f"[green]{completion_msg}[/green]",
+                        completion_msg,
                         title="✅ Task Completed",
                         style="green"
                     ))

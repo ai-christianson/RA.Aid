@@ -317,6 +317,7 @@ def one_shot_completed(message: str) -> str:
         
     _global_memory['task_completed'] = True
     _global_memory['completion_message'] = message
+    console.print(Panel(Markdown(message), title="✨ Task Completed", border_style="green"))
     return message
 
 def get_related_files() -> Set[str]:
