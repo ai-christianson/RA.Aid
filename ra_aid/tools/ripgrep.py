@@ -94,6 +94,7 @@ def ripgrep_search(
     info_sections.append("\n".join(params))
 
     # Execute command
+    console.print(Panel(Markdown(f"Searching for: **{pattern}**"), title="🔎 Ripgrep Search", border_style="bright_blue"))
     try:
         print()
         output, return_code = run_interactive_command(cmd)

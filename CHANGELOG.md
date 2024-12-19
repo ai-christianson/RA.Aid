@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Make delete_tasks tool available to planning agent.
 - Get rid of implementation args as they are not used.
+- Improve ripgrep tool status output.
 
 ## [0.6.4] - 2024-12-19
 
