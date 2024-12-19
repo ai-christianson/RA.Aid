@@ -52,6 +52,10 @@ def run_interactive_command(cmd: List[str]) -> Tuple[bytes, int]:
                 os.remove(path)
 
     try:
+        # Disable pagers by setting environment variables
+        os.environ['GIT_PAGER'] = ''
+        os.environ['PAGER'] = ''
+        
         # Run command with script for TTY and output capture
         os.system(f"script -q -c {shlex.quote(shell_cmd)} {shlex.quote(output_path)}")
 
