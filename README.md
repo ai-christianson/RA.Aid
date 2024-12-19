@@ -43,6 +43,8 @@ Here's a demo of RA.Aid adding a feature to itself:
 
 - **Automated Command Execution**: The agent can run shell commands automatically to accomplish tasks. While this makes it powerful, it also means you should carefully review its actions.
 
+- **Ability to Leverage Expert Reasoning Models**: The agent can use advanced reasoning models such as OpenAI's o1 *just when needed*, e.g. to solve complex debugging problems or in planning for complex feature implementation.
+
 - **Three-Stage Architecture**:
   1. **Research**: Analyzes codebases and gathers context
   2. **Planning**: Breaks down tasks into specific, actionable steps
