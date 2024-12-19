@@ -26,7 +26,7 @@ _global_memory: Dict[str, Union[List[Any], Dict[int, str], Dict[int, SnippetInfo
     'key_fact_id_counter': 0,  # Counter for generating unique fact IDs
     'key_snippets': {},  # Dict[int, SnippetInfo] - ID to snippet mapping
     'key_snippet_id_counter': 0,  # Counter for generating unique snippet IDs
-    'implementation_requested': [],
+    'implementation_requested': False,
     'implementation_skipped': [],
     'related_files': set()
 }
@@ -171,7 +171,7 @@ def delete_tasks(task_ids: List[int]) -> str:
     return "Tasks deleted."
 
 @tool("request_implementation")
-def request_implementation(reason: str) -> str:
+def request_implementation() -> str:
     """Request that implementation proceed after research/planning.
     Used to indicate the agent should move to implementation stage.
 
@@ -180,15 +180,12 @@ def request_implementation(reason: str) -> str:
       Have you run relevant unit tests, if they exist, to get a baseline (this can be a subtask)?
       Do you need to crawl deeper to find all related files and symbols?
     
-    Args:
-        reason: Why implementation should proceed
-        
     Returns:
-        The stored reason
+        Empty string
     """
-    _global_memory['implementation_requested'].append(reason)
-    console.print(Panel(Markdown(reason), title="🚀 Implementation Requested"))
-    return reason
+    _global_memory['implementation_requested'] = True
+    console.print(Panel("Implementation stage requested", title="🚀 Implementation Requested"))
+    return ""
 
 
 @tool("skip_implementation")
