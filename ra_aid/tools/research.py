@@ -1,7 +1,6 @@
 from langchain_core.tools import tool
 from rich.console import Console
-from rich.rule import Rule
-from rich.padding import Padding
+from rich.panel import Panel
 
 console = Console()
 
@@ -10,8 +9,7 @@ def existing_project_detected() -> dict:
     """
     When to call: Once you have confirmed that the current working directory contains project files.
     """
-    padded_rule = Padding(Rule("📁 Existing Project Detected", style="bright_blue"), (1, 0))
-    console.print(padded_rule)
+    console.print(Panel("📁 Existing Project Detected", style="bright_blue", padding=0))
     return {
         'hint': (
             "You are working within an existing codebase that already has established patterns and standards. "
@@ -30,8 +28,7 @@ def monorepo_detected() -> dict:
     """
     When to call: After identifying that multiple packages or modules exist within a single repository.
     """
-    padded_rule = Padding(Rule("📦 Monorepo Detected", style="bright_blue"), (1, 0))
-    console.print(padded_rule)
+    console.print(Panel("📦 Monorepo Detected", style="bright_blue", padding=0))
     return {
         'hint': (
             "You are researching in a monorepo environment that manages multiple packages or services under one roof. "
@@ -53,8 +50,7 @@ def ui_detected() -> dict:
     """
     When to call: After detecting that the project contains a user interface layer or front-end component.
     """
-    padded_rule = Padding(Rule("🎯 UI Detected", style="bright_blue"), (1, 0))
-    console.print(padded_rule)
+    console.print(Panel("🎯 UI Detected", style="bright_blue", padding=0))
     return {
         'hint': (
             "You are working with a user interface component where established UI conventions, styles, and frameworks are likely in place. "

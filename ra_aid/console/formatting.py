@@ -1,8 +1,6 @@
 from rich.console import Console
-from rich.rule import Rule
 from rich.panel import Panel
 from rich.markdown import Markdown
-from rich.padding import Padding
 
 console = Console()
 
@@ -31,10 +29,9 @@ def print_stage_header(stage: str) -> None:
     # Get appropriate icon with fallback
     icon = icons.get(stage_key, '🚀')
     
-    # Create styled rule with icon
-    rule_content = f"{icon} {stage_title}"
-    padded_rule = Padding(Rule(rule_content, style="green bold"), (1, 0))
-    console.print(padded_rule)
+    # Create styled panel with icon
+    panel_content = f"{icon} {stage_title}"
+    console.print(Panel(panel_content, style="green bold", padding=0))
 
 def print_task_header(task: str) -> None:
     """Print a task header with yellow styling and wrench emoji. Content is rendered as Markdown.

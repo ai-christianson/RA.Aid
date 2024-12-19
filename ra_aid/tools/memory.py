@@ -3,7 +3,6 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.rule import Rule
-from rich.padding import Padding
 from langchain_core.tools import tool
 
 class SnippetInfo(TypedDict):
@@ -185,8 +184,7 @@ def request_implementation() -> str:
         Empty string
     """
     _global_memory['implementation_requested'] = True
-    padded_rule = Padding(Rule("🚀 Implementation Requested", style="yellow"), (1, 0))
-    console.print(padded_rule)
+    console.print(Panel("🚀 Implementation Requested", style="yellow", padding=0))
     return ""
 
 
