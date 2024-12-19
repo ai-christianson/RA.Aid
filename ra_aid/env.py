@@ -56,20 +56,21 @@ def validate_environment(args) -> Tuple[bool, List[str]]:
         expert_key = f'EXPERT_{config.key_name}'
         expert_key_missing = not os.environ.get(expert_key)
         
-        # Try fallback to base key if providers match
-        fallback_available = expert_provider == provider and os.environ.get(config.key_name)
+        # Try fallback to base key for expert provider
+        fallback_available = os.environ.get(config.key_name)
         if expert_key_missing and fallback_available:
             os.environ[expert_key] = os.environ[config.key_name]
             expert_key_missing = False
-            
+        
+        # Only add to missing list if still missing after fallback attempt    
         if expert_key_missing:
             expert_missing.append(f'{expert_key} environment variable is not set')
             
-        # Special case for openai-compatible expert needing base URL
+        # Special case for openai-compatible expert needing base URL 
         if expert_provider == "openai-compatible":
             expert_base = 'EXPERT_OPENAI_API_BASE'
             base_missing = not os.environ.get(expert_base)
-            base_fallback = expert_provider == provider and os.environ.get('OPENAI_API_BASE')
+            base_fallback = os.environ.get('OPENAI_API_BASE')
             
             if base_missing and base_fallback:
                 os.environ[expert_base] = os.environ['OPENAI_API_BASE']

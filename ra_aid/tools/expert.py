@@ -119,7 +119,8 @@ def ask_expert(question: str) -> str:
 
     The expert can be extremely useful at logic questions, debugging, and reviewing complex source code, but you must provide all context including source manually.
 
-    The query will automatically include any key facts and code snippets from memory, along with any additional context you've provided.
+    The can see any key facts and code snippets previously noted, along with any additional context you've provided.
+      But the expert cannot see or reason about anything you have not explicitly provided in this way.
 
     Try to phrase your question in a way that it does not expand the scope of our top-level task.
 

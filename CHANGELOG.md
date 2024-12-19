@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added monorepo_detected, existing_project_detected, and ui_detected tools so the agent can take specific actions.
 - Prompt improvements for real-world projects.
+- Fix env var fallback when base key is given, expert and base provider are different, and expert key is missing.
 
 ## [0.6.3] - 2024-12-18
 

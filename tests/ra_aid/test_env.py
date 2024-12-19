@@ -88,3 +88,71 @@ def test_expert_fallback(clean_env, monkeypatch):
     assert expert_enabled
     assert not missing
     assert os.environ.get('EXPERT_OPENAI_API_KEY') == 'expert-key'
+
+def test_cross_provider_fallback(clean_env, monkeypatch):
+    """Test that fallback works even when providers differ"""
+    args = MockArgs(provider="openai", expert_provider="anthropic")
+    
+    # Set base API key for main provider and expert provider
+    monkeypatch.setenv('OPENAI_API_KEY', 'openai-key')
+    monkeypatch.setenv('ANTHROPIC_API_KEY', 'anthropic-key')
+    
+    # Should enable expert mode with fallback to ANTHROPIC base key
+    expert_enabled, missing = validate_environment(args)
+    assert expert_enabled
+    assert not missing
+    assert os.environ.get('EXPERT_ANTHROPIC_API_KEY') == 'anthropic-key'
+
+    # Try with openai-compatible expert provider
+    args = MockArgs(provider="anthropic", expert_provider="openai-compatible")
+    monkeypatch.setenv('OPENAI_API_KEY', 'openai-key')
+    monkeypatch.setenv('OPENAI_API_BASE', 'http://test')
+    
+    expert_enabled, missing = validate_environment(args)
+    assert expert_enabled
+    assert not missing
+    assert os.environ.get('EXPERT_OPENAI_API_KEY') == 'openai-key'
+    assert os.environ.get('EXPERT_OPENAI_API_BASE') == 'http://test'
+
+def test_no_warning_on_fallback(clean_env, monkeypatch):
+    """Test that no warning is issued when fallback succeeds"""
+    args = MockArgs(provider="openai", expert_provider="openai")
+    
+    # Set only base API key
+    monkeypatch.setenv('OPENAI_API_KEY', 'test-key')
+    
+    # Should enable expert mode with fallback and no warnings
+    expert_enabled, expert_missing = validate_environment(args)
+    assert expert_enabled
+    assert not expert_missing  # List should be empty
+    assert os.environ.get('EXPERT_OPENAI_API_KEY') == 'test-key'
+
+def test_different_providers_no_expert_key(clean_env, monkeypatch):
+    """Test behavior when providers differ and only base keys are available"""
+    args = MockArgs(provider="anthropic", expert_provider="openai")
+    
+    # Set only base keys
+    monkeypatch.setenv('ANTHROPIC_API_KEY', 'anthropic-key')
+    monkeypatch.setenv('OPENAI_API_KEY', 'openai-key')
+    
+    # Should enable expert mode and use base OPENAI key
+    expert_enabled, missing = validate_environment(args)
+    assert expert_enabled
+    assert not missing
+    assert os.environ.get('EXPERT_OPENAI_API_KEY') == 'openai-key'
+
+def test_mixed_provider_openai_compatible(clean_env, monkeypatch):
+    """Test behavior with openai-compatible expert and different main provider"""
+    args = MockArgs(provider="anthropic", expert_provider="openai-compatible")
+    
+    # Set all required keys and URLs
+    monkeypatch.setenv('ANTHROPIC_API_KEY', 'anthropic-key')
+    monkeypatch.setenv('OPENAI_API_KEY', 'openai-key')
+    monkeypatch.setenv('OPENAI_API_BASE', 'http://test')
+    
+    # Should enable expert mode and use base openai key and URL
+    expert_enabled, missing = validate_environment(args)
+    assert expert_enabled
+    assert not missing
+    assert os.environ.get('EXPERT_OPENAI_API_KEY') == 'openai-key'
+    assert os.environ.get('EXPERT_OPENAI_API_BASE') == 'http://test'
