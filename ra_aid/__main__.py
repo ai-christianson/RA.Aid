@@ -25,7 +25,8 @@ from ra_aid.prompts import (
     EXPERT_PROMPT_SECTION_PLANNING,
     EXPERT_PROMPT_SECTION_IMPLEMENTATION,
     HUMAN_PROMPT_SECTION_RESEARCH,
-    HUMAN_PROMPT_SECTION_PLANNING
+    HUMAN_PROMPT_SECTION_PLANNING,
+    HUMAN_PROMPT_SECTION_IMPLEMENTATION
 )
 import time
 from anthropic import APIError, APITimeoutError, RateLimitError, InternalServerError
@@ -128,9 +129,9 @@ Examples:
         help='The model name to use for expert knowledge queries (required for non-OpenAI providers)'
     )
     parser.add_argument(
-        '--human-interaction',
+        '--hil', '-H',
         action='store_true',
-        help='Enable human interaction'
+        help='Enable human-in-the-loop mode, where the agent can prompt the user for additional information.'
     )
     
     args = parser.parse_args()
@@ -286,13 +287,17 @@ def run_implementation_stage(base_task, tasks, plan, related_files, model, exper
         task_agent = create_react_agent(model, get_implementation_tools(expert_enabled=expert_enabled), checkpointer=task_memory)
         
         # Construct task-specific prompt
+        expert_section = EXPERT_PROMPT_SECTION_IMPLEMENTATION if expert_enabled else ""
+        human_section = HUMAN_PROMPT_SECTION_IMPLEMENTATION if _global_memory.get('config', {}).get('hil', False) else ""
         task_prompt = (IMPLEMENTATION_PROMPT).format(
             plan=plan,
             key_facts=get_memory_value('key_facts'),
             key_snippets=get_memory_value('key_snippets'),
             task=task,
             related_files="\n".join(related_files),
-            base_task=base_task
+            base_task=base_task,
+            expert_section=expert_section,
+            human_section=human_section
         )
         
         # Run agent for this task
@@ -326,7 +331,14 @@ def run_research_subtasks(base_task: str, config: dict, model, expert_enabled: b
         )
         
         # Run the subtask agent
-        subtask_prompt = f"Base Task: {base_task}\nResearch Subtask: {subtask}\n\n{RESEARCH_PROMPT.format(base_task=base_task, research_only_note='')}"
+        expert_section = EXPERT_PROMPT_SECTION_RESEARCH if expert_enabled else ""
+        human_section = HUMAN_PROMPT_SECTION_RESEARCH if config.get('hil', False) else ""
+        subtask_prompt = f"Base Task: {base_task}\nResearch Subtask: {subtask}\n\n{RESEARCH_PROMPT.format(
+            base_task=base_task,
+            research_only_note='',
+            expert_section=expert_section,
+            human_section=human_section
+        )}"
         run_agent_with_retry(subtask_agent, subtask_prompt, config)
 
 
@@ -379,13 +391,13 @@ def main():
         get_research_tools(
             research_only=_global_memory.get('config', {}).get('research_only', False),
             expert_enabled=expert_enabled,
-            human_interaction=args.human_interaction
+            human_interaction=args.hil
         ),
         checkpointer=research_memory
     )
     
     expert_section = EXPERT_PROMPT_SECTION_RESEARCH if expert_enabled else ""
-    human_section = HUMAN_PROMPT_SECTION_RESEARCH if args.human_interaction else ""
+    human_section = HUMAN_PROMPT_SECTION_RESEARCH if args.hil else ""
     research_prompt = RESEARCH_PROMPT.format(
         expert_section=expert_section,
         human_section=human_section,
@@ -415,7 +427,7 @@ def main():
         planning_agent = create_react_agent(model, get_planning_tools(expert_enabled=expert_enabled), checkpointer=planning_memory)
         
         expert_section = EXPERT_PROMPT_SECTION_PLANNING if expert_enabled else ""
-        human_section = HUMAN_PROMPT_SECTION_PLANNING if args.human_interaction else ""
+        human_section = HUMAN_PROMPT_SECTION_PLANNING if args.hil else ""
         planning_prompt = PLANNING_PROMPT.format(
             expert_section=expert_section,
             human_section=human_section,

@@ -81,6 +81,7 @@ What sets RA.Aid apart is its ability to handle complex programming tasks that e
   
   Each stage is powered by dedicated AI agents and specialized toolsets.
 - **Advanced AI Integration**: Built on LangChain and leverages the latest LLMs for natural language understanding and generation.
+- **Human-in-the-Loop Interaction**: Optional mode that enables the agent to ask you questions during task execution, ensuring higher accuracy and better handling of complex tasks that may require your input or clarification
 - **Comprehensive Toolset**:
   - Shell command execution
   - Expert querying system
@@ -154,6 +155,7 @@ ra-aid -m "Explain the authentication flow" --research-only
 - `-m, --message`: The task or query to be executed (required)
 - `--research-only`: Only perform research without implementation
 - `--cowboy-mode`: Skip interactive approval for shell commands
+- `--hil, -H`: Enable human-in-the-loop mode, allowing the agent to interactively ask you questions during task execution
 - `--provider`: Specify the model provider (See Model Configuration section)
 - `--model`: Specify the model name (See Model Configuration section)
 - `--expert-provider`: Specify the provider for the expert tool (defaults to OpenAI)
@@ -294,6 +296,23 @@ ra-aid -m "Update all deprecated API calls" --cowboy-mode
 - Always use in version-controlled repositories
 - Ensure you have a clean working tree before running
 - Review changes in git diff before committing
+
+### Human-in-the-Loop Mode
+
+Enable interactive mode to allow the agent to ask you questions during task execution:
+
+```bash
+ra-aid -m "Implement a new feature" --hil
+# or
+ra-aid -m "Implement a new feature" -H
+```
+
+This mode is particularly useful for:
+- Complex tasks requiring human judgment
+- Clarifying ambiguous requirements
+- Making architectural decisions
+- Validating critical changes
+- Providing domain-specific knowledge
 
 ### Environment Variables
 
