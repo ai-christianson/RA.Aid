@@ -16,17 +16,19 @@
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 [![Status](https://img.shields.io/badge/status-Beta-yellow)]()
 
-Here's a video of RA.Aid adding a feature to itself:
+# RA.Aid
+
+**RA.Aid is an AI software development agent.**
+
+RA.Aid (ReAct Aid) was made by putting `aider` (https://aider.chat/) in a LangChain ReAct agent loop. This unique combination allows developers to leverage aider's code editing capabilities while benefiting from LangChain's agent-based task execution framework. The tool provides an intelligent assistant that can help with research, planning, and implementation of multi-step development tasks. 
+
+Here's a demo of RA.Aid adding a feature to itself:
 
 <img src="assets/demo-ra-aid-task-1.gif" alt="RA.Aid Demo" autoplay loop style="width: 100%; max-width: 800px;">
 
-> 👋 **Pull requests are very welcome!** As a technical founder with limited time (who uses RA.Aid to save time), I greatly appreciate any contributions to this repository. Don't be shy - your help makes a real difference!
+> 👋 **Pull requests are very welcome!** Have ideas for how to impove RA.Aid? Don't be shy - your help makes a real difference!
 >
 > 💬 **Join our Discord community:** [Click here to join](https://discord.gg/f6wYbzHYxV)
-
-# RA.Aid
-
-RA.Aid (ReAct Aid) is a powerful AI-driven command-line tool that integrates `aider` (https://aider.chat/) within a LangChain ReAct agent loop. This unique combination allows developers to leverage aider's code editing capabilities while benefiting from LangChain's agent-based task execution framework. The tool provides an intelligent assistant that can help with research, planning, and implementation of development tasks.
 
 ⚠️ **IMPORTANT: USE AT YOUR OWN RISK** ⚠️
 - This tool **can and will** automatically execute shell commands and make code changes
