@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added ask_human tool to allow human operator to answer questions asked by the agent.
 - Handle keyboard interrupt (ctrl-c.)
 - Disable PAGERs for shell commands so agent can work autonomously.
+- Reduce model temperatures to 0.
 
 ## [0.6.4] - 2024-12-19
 
