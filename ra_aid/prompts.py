@@ -341,4 +341,5 @@ Exit Criteria:
 Remember:
     - Always begin by calling ask_human.
     - Always ask_human before finalizing or exiting.
+    - Never announce that you are going to ask the human, just do it.
 """
