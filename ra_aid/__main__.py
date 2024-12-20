@@ -14,6 +14,7 @@ from ra_aid.prompts import (
     RESEARCH_PROMPT,
     PLANNING_PROMPT,
     IMPLEMENTATION_PROMPT,
+    CHAT_PROMPT,
     EXPERT_PROMPT_SECTION_RESEARCH,
     EXPERT_PROMPT_SECTION_PLANNING,
     EXPERT_PROMPT_SECTION_IMPLEMENTATION,
@@ -29,7 +30,8 @@ from ra_aid.tool_configs import (
     get_read_only_tools,
     get_research_tools,
     get_planning_tools,
-    get_implementation_tools
+    get_implementation_tools,
+    get_chat_tools
 )
 
 def parse_arguments():
@@ -86,8 +88,17 @@ Examples:
         action='store_true',
         help='Enable human-in-the-loop mode, where the agent can prompt the user for additional information.'
     )
+    parser.add_argument(
+        '--chat',
+        action='store_true',
+        help='Enable chat mode with direct human interaction (implies --hil)'
+    )
     
     args = parser.parse_args()
+    
+    # Set hil=True when chat mode is enabled
+    if args.chat:
+        args.hil = True
     
     # Set default model for Anthropic, require model for other providers
     if args.provider == 'anthropic':
@@ -262,6 +273,35 @@ def main():
         
         # Create the base model after validation
         model = initialize_llm(args.provider, args.model)
+
+        # Handle chat mode
+        if args.chat:
+            print_stage_header("Chat Mode")
+            
+            # Create chat agent with appropriate tools
+            chat_agent = create_react_agent(
+                model,
+                get_chat_tools(expert_enabled=expert_enabled),
+                checkpointer=MemorySaver()
+            )
+            
+            # Run chat agent with CHAT_PROMPT
+            config = {
+                "configurable": {"thread_id": "abc123"},
+                "recursion_limit": 100,
+                "chat_mode": True,
+                "cowboy_mode": args.cowboy_mode,
+                "hil": True  # Always true in chat mode
+            }
+            
+            # Store config in global memory
+            _global_memory['config'] = config
+            _global_memory['config']['expert_provider'] = args.expert_provider
+            _global_memory['config']['expert_model'] = args.expert_model
+            
+            # Run chat agent and exit
+            run_agent_with_retry(chat_agent, CHAT_PROMPT, config)
+            return
 
         # Validate message is provided
         if not args.message:

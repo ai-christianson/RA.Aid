@@ -96,3 +96,25 @@ def get_implementation_tools(expert_enabled: bool = True) -> list:
         tools.extend(EXPERT_TOOLS)
     
     return tools
+
+def get_chat_tools(expert_enabled: bool = True) -> list:
+    """Get the list of tools available in chat mode.
+    
+    Chat mode includes research and implementation capabilities but excludes
+    complex planning tools. Human interaction is always enabled.
+    """
+    # Start with read-only tools and always include human interaction
+    tools = get_read_only_tools(human_interaction=True).copy()
+    
+    # Add implementation capability
+    tools.extend(MODIFICATION_TOOLS)
+    
+    # Add research tools except for subtask management
+    research_tools = [t for t in RESEARCH_TOOLS if t.name != 'request_research_subtask']
+    tools.extend(research_tools)
+    
+    # Add expert tools if enabled
+    if expert_enabled:
+        tools.extend(EXPERT_TOOLS)
+    
+    return tools
