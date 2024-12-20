@@ -22,9 +22,12 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules"
 ]
 dependencies = [
-    "langchain-anthropic",
+    "langchain-anthropic>=0.3.1",
     "langchain-openai",
-    "langgraph",
+    "langgraph>=0.2.60",
+    "langgraph-checkpoint>=2.0.9",
+    "langgraph-sdk>=0.1.48",
+    "langchain-core>=0.3.28",
     "rich>=13.0.0",
     "GitPython==3.1.43",
     "fuzzywuzzy==0.18.0", 
