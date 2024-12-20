@@ -41,6 +41,8 @@ def ask_human(question: str) -> str:
         vi_mode=True  # Enable Vi mode for more intuitive Ctrl+D behavior
     )
 
+    print()
+    
     response = session.prompt(
         "> ",
         wrap_lines=True
