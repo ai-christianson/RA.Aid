@@ -287,17 +287,14 @@ def one_shot_completed(message: str) -> str:
     
     Args:
         message: Completion message to display
-        
-    Returns:
-        Original message if task can be completed, or error message if there are
-        pending subtasks or implementation requests
     """
     if _global_memory.get('implementation_requested', False):
         return "Cannot complete in one shot - implementation was requested"
         
     _global_memory['task_completed'] = True
     _global_memory['completion_message'] = message
-    return message
+    console.print(Panel(Markdown(message), title="✅ One-Shot Task Completed"))
+    return "Completion noted."
 
 @tool("task_completed")
 def task_completed(message: str) -> str:
