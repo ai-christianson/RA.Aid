@@ -218,16 +218,6 @@ def run_agent_with_retry(agent, prompt: str, config: dict) -> Optional[str]:
                 config
             ):
                 print_agent_output(chunk)
-                
-                # Check for task completion after each chunk
-                if _global_memory.get('task_completed'):
-                    completion_msg = _global_memory.get('completion_message', 'Task was completed successfully.')
-                    console.print(Panel(
-                        Markdown(completion_msg),
-                        title="✅ Task Completed",
-                        style="green"
-                    ))
-                    return completion_msg
             break
         except (InternalServerError, APITimeoutError, RateLimitError, APIError) as e:
             if attempt == max_retries - 1:

@@ -6,7 +6,8 @@ from ra_aid.tools import (
     emit_key_snippets, delete_key_snippets, delete_tasks,
     request_implementation, read_file_tool,
     fuzzy_find_project_files, ripgrep_search, list_directory_tree,
-    swap_task_order, monorepo_detected, existing_project_detected, ui_detected
+    swap_task_order, monorepo_detected, existing_project_detected, ui_detected,
+    task_completed
 )
 from ra_aid.tools.memory import one_shot_completed
 from ra_aid.tools.agent import request_research, request_task_implementation
@@ -94,6 +95,9 @@ def get_implementation_tools(expert_enabled: bool = True) -> list:
     
     # Add modification tools since it's not research-only
     tools.extend(MODIFICATION_TOOLS)
+    tools.extend([
+        task_completed
+    ])
     
     # Add expert tools if enabled
     if expert_enabled:

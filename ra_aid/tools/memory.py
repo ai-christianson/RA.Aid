@@ -299,6 +299,21 @@ def one_shot_completed(message: str) -> str:
     _global_memory['completion_message'] = message
     return message
 
+@tool("task_completed")
+def task_completed(message: str) -> str:
+    """Mark the current task as completed with a completion message.
+    
+    Args:
+        message: Message explaining how/why the task is complete
+        
+    Returns:
+        The completion message
+    """
+    _global_memory['task_completed'] = True
+    _global_memory['completion_message'] = message
+    console.print(Panel(Markdown(message), title="✅ Task Completed"))
+    return "Completion noted."
+
 def get_related_files() -> Set[str]:
     """Get the current set of related files.
     
