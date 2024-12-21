@@ -24,8 +24,9 @@ def request_research(query: str) -> Dict[str, Any]:
         - success: Whether completed or interrupted
         - reason: Reason for failure, if any
     """
-    # Initialize model
-    model = initialize_llm("anthropic", "claude-3-sonnet-20240229")
+    # Initialize model from config
+    config = _global_memory.get('config', {})
+    model = initialize_llm(config.get('provider', 'anthropic'), config.get('model', 'claude-3-5-sonnet-20241022'))
     
     try:
         # Run research agent
