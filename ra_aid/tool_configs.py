@@ -10,7 +10,7 @@ from ra_aid.tools import (
     task_completed, plan_implementation_completed
 )
 from ra_aid.tools.memory import one_shot_completed
-from ra_aid.tools.agent import request_research, request_task_implementation
+from ra_aid.tools.agent import request_research, request_research_and_implementation, request_task_implementation
 
 # Read-only tools that don't modify system state
 def get_read_only_tools(human_interaction: bool = False) -> list:
