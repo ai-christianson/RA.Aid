@@ -3,14 +3,13 @@ from ra_aid.tools import (
     ask_expert, ask_human, run_shell_command, run_programming_task,
     emit_research_notes, emit_plan, emit_related_files, emit_task,
     emit_expert_context, emit_key_facts, delete_key_facts,
-    emit_key_snippets, delete_key_snippets, delete_tasks,
-    request_implementation, read_file_tool,
+    emit_key_snippets, delete_key_snippets, delete_tasks, read_file_tool,
     fuzzy_find_project_files, ripgrep_search, list_directory_tree,
     swap_task_order, monorepo_detected, existing_project_detected, ui_detected,
     task_completed, plan_implementation_completed
 )
 from ra_aid.tools.memory import one_shot_completed
-from ra_aid.tools.agent import request_research, request_research_and_implementation, request_task_implementation
+from ra_aid.tools.agent import request_research, request_implementation, request_research_and_implementation, request_task_implementation
 
 # Read-only tools that don't modify system state
 def get_read_only_tools(human_interaction: bool = False) -> list:

@@ -167,3 +167,49 @@ def request_task_implementation(task_spec: str) -> Dict[str, Any]:
         "success": success,
         "reason": reason
     }
+
+@tool("request_implementation")
+def request_implementation(task_spec: str) -> Dict[str, Any]:
+    """Spawn a planning agent to create an implementation plan for the given task.
+    
+    Args:
+        task_spec: The task specification to plan implementation for
+        
+    Returns:
+        Dict containing:
+        - facts: Current key facts
+        - files: Related files
+        - success: Whether completed or interrupted
+        - reason: Reason for failure, if any
+    """
+    # Initialize model from config
+    config = _global_memory.get('config', {})
+    model = initialize_llm(config.get('provider', 'anthropic'), config.get('model', 'claude-3-5-sonnet-20241022'))
+    
+    try:
+        # Run planning agent
+        from ..agent_utils import run_planning_agent
+        result = run_planning_agent(
+            task_spec,
+            model,
+            expert_enabled=True,
+            hil=_global_memory.get('config', {}).get('hil', False)
+        )
+        
+        success = True
+        reason = None
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Planning interrupted by user[/yellow]")
+        success = False
+        reason = "cancelled_by_user"
+    except Exception as e:
+        console.print(f"\n[red]Error during planning: {str(e)}[/red]")
+        success = False
+        reason = f"error: {str(e)}"
+        
+    return {
+        "facts": get_memory_value("key_facts"),
+        "files": list(get_related_files()),
+        "success": success,
+        "reason": reason
+    }
