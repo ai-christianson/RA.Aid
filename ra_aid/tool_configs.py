@@ -113,7 +113,8 @@ def get_chat_tools(expert_enabled: bool = True) -> list:
     """
     tools = [
         ask_human,
-        request_research
+        request_research,
+        request_research_and_implementation
     ]
     
     # Add expert tools if enabled

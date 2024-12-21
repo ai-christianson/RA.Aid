@@ -129,7 +129,7 @@ No Planning or Problem-Solving
 You must remain strictly within the bounds of describing what currently exists.
 
 If the task requires *ANY* compilation, unit tests, or any other non-trivial changes, call request_implementation.
-If this is a trivial task that can be completed in one shot, do the change using tools available and call one_shot_completed.
+If this is a trivial task that can be completed in one shot, do the change using tools available, call one_shot_completed, and immediately exit without saying anything.
   Remember, many tasks are more complex and nuanced than they seem and still require requesting implementation.
   For one shot tasks, still take some time to consider whether compilation, testing, or additional validation should be done to check your work.
   If you implement the task yourself, do not request implementation.
