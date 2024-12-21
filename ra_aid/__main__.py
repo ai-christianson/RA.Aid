@@ -7,7 +7,8 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import create_react_agent
 from ra_aid.env import validate_environment
 from ra_aid.tools.memory import _global_memory, get_related_files, get_memory_value
-from ra_aid import print_stage_header, print_task_header, print_error, run_agent_with_retry
+from ra_aid import print_stage_header, print_task_header, print_error
+from ra_aid.agent_utils import run_agent_with_retry, run_task_implementation_agent
 from ra_aid.agent_utils import run_research_agent
 from ra_aid.prompts import (
     PLANNING_PROMPT,
@@ -140,28 +141,16 @@ def run_implementation_stage(base_task, tasks, plan, related_files, model, exper
     for i, task in enumerate(task_list, 1):
         print_task_header(task)
         
-        # Create a unique memory instance for this task
-        task_memory = MemorySaver()
-        
-        # Create a fresh agent for each task
-        task_agent = create_react_agent(model, get_implementation_tools(expert_enabled=expert_enabled), checkpointer=task_memory)
-        
-        # Construct task-specific prompt
-        expert_section = EXPERT_PROMPT_SECTION_IMPLEMENTATION if expert_enabled else ""
-        human_section = HUMAN_PROMPT_SECTION_IMPLEMENTATION if _global_memory.get('config', {}).get('hil', False) else ""
-        task_prompt = (IMPLEMENTATION_PROMPT).format(
-            plan=plan,
-            key_facts=get_memory_value('key_facts'),
-            key_snippets=get_memory_value('key_snippets'),
-            task=task,
-            related_files="\n".join(related_files),
+        # Run implementation agent for this task
+        run_task_implementation_agent(
             base_task=base_task,
-            expert_section=expert_section,
-            human_section=human_section
+            tasks=task_list,
+            task=task,
+            plan=plan,
+            related_files=related_files, 
+            model=model,
+            expert_enabled=expert_enabled
         )
-        
-        # Run agent for this task
-        run_agent_with_retry(task_agent, task_prompt, {"configurable": {"thread_id": "abc123"}, "recursion_limit": 100})
 
 
 
