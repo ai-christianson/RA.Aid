@@ -192,8 +192,9 @@ def request_implementation(task_spec: str) -> Dict[str, Any]:
         result = run_planning_agent(
             task_spec,
             model,
+            config=config,
             expert_enabled=True,
-            hil=_global_memory.get('config', {}).get('hil', False)
+            hil=config.get('hil', False)
         )
         
         success = True
