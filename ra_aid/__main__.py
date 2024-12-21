@@ -1,29 +1,26 @@
 import argparse
 import sys
+import uuid
 from rich.panel import Panel
 from rich.console import Console
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import create_react_agent
 from ra_aid.env import validate_environment
 from ra_aid.tools.memory import _global_memory, get_related_files, get_memory_value
-from ra_aid import  print_stage_header, print_task_header, print_error, run_agent_with_retry
+from ra_aid import print_stage_header, print_task_header, print_error, run_agent_with_retry
+from ra_aid.agent_utils import run_research_agent
 from ra_aid.prompts import (
-    RESEARCH_PROMPT,
     PLANNING_PROMPT,
     IMPLEMENTATION_PROMPT,
     CHAT_PROMPT,
-    EXPERT_PROMPT_SECTION_RESEARCH,
     EXPERT_PROMPT_SECTION_PLANNING,
     EXPERT_PROMPT_SECTION_IMPLEMENTATION,
-    HUMAN_PROMPT_SECTION_RESEARCH,
     HUMAN_PROMPT_SECTION_PLANNING,
     HUMAN_PROMPT_SECTION_IMPLEMENTATION
 )
 from ra_aid.llm import initialize_llm
 
 from ra_aid.tool_configs import (
-    get_read_only_tools,
-    get_research_tools,
     get_planning_tools,
     get_implementation_tools,
     get_chat_tools
@@ -199,7 +196,7 @@ def main():
             
             # Run chat agent with CHAT_PROMPT
             config = {
-                "configurable": {"thread_id": "abc123"},
+                "configurable": {"thread_id": uuid.uuid4()},
                 "recursion_limit": 100,
                 "chat_mode": True,
                 "cowboy_mode": args.cowboy_mode,
@@ -222,9 +219,7 @@ def main():
             
         base_task = args.message
         config = {
-            "configurable": {
-                "thread_id": "abc123"
-            },
+            "configurable": {"thread_id": uuid.uuid4()},
             "recursion_limit": 100,
             "research_only": args.research_only,
             "cowboy_mode": args.cowboy_mode
@@ -240,28 +235,15 @@ def main():
         # Run research stage
         print_stage_header("Research Stage")
         
-        # Create research agent
-        research_agent = create_react_agent(
+        run_research_agent(
+            base_task,
             model,
-            get_research_tools(
-                research_only=_global_memory.get('config', {}).get('research_only', False),
-                expert_enabled=expert_enabled,
-                human_interaction=args.hil
-            ),
-            checkpointer=research_memory
+            expert_enabled=expert_enabled,
+            research_only=args.research_only,
+            hil=args.hil,
+            memory=research_memory,
+            config=config
         )
-    
-        expert_section = EXPERT_PROMPT_SECTION_RESEARCH if expert_enabled else ""
-        human_section = HUMAN_PROMPT_SECTION_RESEARCH if args.hil else ""
-        research_prompt = RESEARCH_PROMPT.format(
-            expert_section=expert_section,
-            human_section=human_section,
-            base_task=base_task,
-            research_only_note='' if args.research_only else ' Only request implementation if the user explicitly asked for changes to be made.'
-        )
-
-        # Run research agent
-        run_agent_with_retry(research_agent, research_prompt, config)
         
         # Proceed with planning and implementation if not an informational query
         if not is_informational_query():
