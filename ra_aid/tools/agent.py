@@ -29,6 +29,7 @@ def request_research(query: str) -> Dict[str, Any]:
         - facts: Current key facts
         - files: Related files
         - success: Whether completed or interrupted
+        - reason: Reason for failure, if any
     """
     # Initialize model and memory
     model = initialize_llm("anthropic", "claude-3-sonnet-20240229")
@@ -79,17 +80,21 @@ def request_research(query: str) -> Dict[str, Any]:
         )
         
         success = True
+        reason = None
     except KeyboardInterrupt:
         console.print("\n[yellow]Research interrupted by user[/yellow]")
         success = False
+        reason = "cancelled_by_user"
     except Exception as e:
         console.print(f"\n[red]Error during research: {str(e)}[/red]")
         success = False
+        reason = f"error: {str(e)}"
         
     # Gather results
     return {
         "facts": get_memory_value("key_facts"),
         "files": list(get_related_files()),
         "notes": get_memory_value("research_notes"),
-        "success": success
+        "success": success,
+        "reason": reason
     }
