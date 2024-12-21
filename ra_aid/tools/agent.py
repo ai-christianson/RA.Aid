@@ -16,14 +16,6 @@ def request_research(query: str) -> Dict[str, Any]:
     
     Args:
         query: The research question or project description
-        
-    Returns:
-        Dict containing:
-        - notes: Research notes from the agent 
-        - facts: Current key facts
-        - files: Related files
-        - success: Whether completed or interrupted
-        - reason: Reason for failure, if any
     """
     # Initialize model from config
     config = _global_memory.get('config', {})
@@ -37,7 +29,7 @@ def request_research(query: str) -> Dict[str, Any]:
             model,
             expert_enabled=True,
             research_only=True,
-            hil=_global_memory.get('config', {}).get('hil', False),
+            hil=config.get('hil', False),
             console_message=query
         )
         
@@ -52,8 +44,15 @@ def request_research(query: str) -> Dict[str, Any]:
         success = False
         reason = f"error: {str(e)}"
         
-    # Gather results
+    # Get completion message if available
+    completion_message = _global_memory.get('completion_message', 'Task was completed successfully.' if success else None)
+    
+    # Clear completion state from global memory
+    _global_memory['completion_message'] = ''
+    _global_memory['completion_state'] = False
+        
     return {
+        "completion_message": completion_message,
         "facts": get_memory_value("key_facts"),
         "files": list(get_related_files()),
         "notes": get_memory_value("research_notes"),
@@ -67,14 +66,6 @@ def request_research_and_implementation(query: str) -> Dict[str, Any]:
     
     Args:
         query: The research question or project description
-        
-    Returns:
-        Dict containing:
-        - notes: Research notes from the agent 
-        - facts: Current key facts
-        - files: Related files
-        - success: Whether completed or interrupted
-        - reason: Reason for failure, if any
     """
     # Initialize model from config
     config = _global_memory.get('config', {})
@@ -88,7 +79,7 @@ def request_research_and_implementation(query: str) -> Dict[str, Any]:
             model,
             expert_enabled=True,
             research_only=False,
-            hil=_global_memory.get('config', {}).get('hil', False),
+            hil=config.get('hil', False),
             console_message=query
         )
         
@@ -103,8 +94,15 @@ def request_research_and_implementation(query: str) -> Dict[str, Any]:
         success = False
         reason = f"error: {str(e)}"
         
-    # Gather results
+    # Get completion message if available
+    completion_message = _global_memory.get('completion_message', 'Task was completed successfully.' if success else None)
+    
+    # Clear completion state from global memory
+    _global_memory['completion_message'] = ''
+    _global_memory['completion_state'] = False
+        
     return {
+        "completion_message": completion_message,
         "facts": get_memory_value("key_facts"),
         "files": list(get_related_files()),
         "notes": get_memory_value("research_notes"),
@@ -174,13 +172,6 @@ def request_implementation(task_spec: str) -> Dict[str, Any]:
     
     Args:
         task_spec: The task specification to plan implementation for
-        
-    Returns:
-        Dict containing:
-        - facts: Current key facts
-        - files: Related files
-        - success: Whether completed or interrupted
-        - reason: Reason for failure, if any
     """
     # Initialize model from config
     config = _global_memory.get('config', {})
@@ -208,7 +199,15 @@ def request_implementation(task_spec: str) -> Dict[str, Any]:
         success = False
         reason = f"error: {str(e)}"
         
+    # Get completion message if available
+    completion_message = _global_memory.get('completion_message', 'Task was completed successfully.' if success else None)
+    
+    # Clear completion state from global memory
+    _global_memory['completion_message'] = ''
+    _global_memory['completion_state'] = False
+        
     return {
+        "completion_message": completion_message,
         "facts": get_memory_value("key_facts"),
         "files": list(get_related_files()),
         "success": success,
