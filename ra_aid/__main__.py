@@ -12,12 +12,9 @@ from ra_aid.agent_utils import run_agent_with_retry, run_task_implementation_age
 from ra_aid.agent_utils import run_research_agent
 from ra_aid.prompts import (
     PLANNING_PROMPT,
-    IMPLEMENTATION_PROMPT,
     CHAT_PROMPT,
     EXPERT_PROMPT_SECTION_PLANNING,
-    EXPERT_PROMPT_SECTION_IMPLEMENTATION,
     HUMAN_PROMPT_SECTION_PLANNING,
-    HUMAN_PROMPT_SECTION_IMPLEMENTATION
 )
 from ra_aid.llm import initialize_llm
 
@@ -125,35 +122,6 @@ def is_stage_requested(stage: str) -> bool:
         return _global_memory.get('implementation_requested', False)
     return False
 
-def run_implementation_stage(base_task, tasks, plan, related_files, model, expert_enabled: bool):
-    """Run implementation stage with a distinct agent for each task."""
-    if not is_stage_requested('implementation'):
-        print_stage_header("Implementation Stage Skipped")
-        return
-        
-    print_stage_header("Implementation Stage")
-    
-    # Get tasks directly from memory, maintaining order by ID
-    task_list = [task for _, task in sorted(_global_memory['tasks'].items())]
-    
-    print_task_header(f"Found {len(task_list)} tasks to implement")
-    
-    for i, task in enumerate(task_list, 1):
-        print_task_header(task)
-        
-        # Run implementation agent for this task
-        run_task_implementation_agent(
-            base_task=base_task,
-            tasks=task_list,
-            task=task,
-            plan=plan,
-            related_files=related_files, 
-            model=model,
-            expert_enabled=expert_enabled
-        )
-
-
-
 def main():
     """Main entry point for the ra-aid command line tool."""
     try:
@@ -260,16 +228,6 @@ def main():
 
             # Run planning agent
             run_agent_with_retry(planning_agent, planning_prompt, config)
-
-            # Run implementation stage with task-specific agents
-            run_implementation_stage(
-                base_task,
-                get_memory_value('tasks'),
-                get_memory_value('plan'),
-                get_related_files(),
-                model,
-                expert_enabled=expert_enabled
-            )
 
     except KeyboardInterrupt:
         console.print("\n[red]Operation cancelled by user[/red]")

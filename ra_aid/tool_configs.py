@@ -9,7 +9,7 @@ from ra_aid.tools import (
     swap_task_order, monorepo_detected, existing_project_detected, ui_detected
 )
 from ra_aid.tools.memory import one_shot_completed
-from ra_aid.tools.agent import request_research
+from ra_aid.tools.agent import request_research, request_task_implementation
 
 # Read-only tools that don't modify system state
 def get_read_only_tools(human_interaction: bool = False) -> list:
@@ -76,7 +76,8 @@ def get_planning_tools(expert_enabled: bool = True) -> list:
         delete_tasks,
         emit_plan,
         emit_task,
-        swap_task_order
+        swap_task_order,
+        request_task_implementation
     ]
     tools.extend(planning_tools)
     

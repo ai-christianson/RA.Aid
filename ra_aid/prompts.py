@@ -238,8 +238,9 @@ Guidelines:
         Use emit_plan to store the high-level implementation plan.
         For each sub-task, use emit_task to store a step-by-step description.
             The description should be only as detailed as warranted by the complexity of the request.
+        You may use delete_tasks or swap_task_order to adjust the task list/order as you plan.
 
-    Do not implement anything yet.
+    Once you are absolutely sure you are completed planning, you may begin to call request_task_implementation one-by-one for each task to implement the plan.
 
 {expert_section}
 {human_section}
