@@ -8,8 +8,11 @@ from langgraph.prebuilt import create_react_agent
 from ra_aid.env import validate_environment
 from ra_aid.tools.memory import _global_memory, get_related_files, get_memory_value
 from ra_aid import print_stage_header, print_error
-from ra_aid.agent_utils import run_agent_with_retry
-from ra_aid.agent_utils import run_research_agent
+from ra_aid.agent_utils import (
+    run_agent_with_retry,
+    run_research_agent,
+    run_planning_agent
+)
 from ra_aid.prompts import (
     PLANNING_PROMPT,
     CHAT_PROMPT,
@@ -207,26 +210,15 @@ def main():
         
         # Proceed with planning and implementation if not an informational query
         if not is_informational_query():
-            print_stage_header("Planning Stage")
-            
-            # Create planning agent
-            planning_agent = create_react_agent(model, get_planning_tools(expert_enabled=expert_enabled), checkpointer=planning_memory)
-            
-            expert_section = EXPERT_PROMPT_SECTION_PLANNING if expert_enabled else ""
-            human_section = HUMAN_PROMPT_SECTION_PLANNING if args.hil else ""
-            planning_prompt = PLANNING_PROMPT.format(
-                expert_section=expert_section,
-                human_section=human_section,
-                base_task=base_task,
-                research_notes=get_memory_value('research_notes'),
-                related_files="\n".join(get_related_files()),
-                key_facts=get_memory_value('key_facts'),
-                key_snippets=get_memory_value('key_snippets'),
-                research_only_note='' if args.research_only else ' Only request implementation if the user explicitly asked for changes to be made.'
-            )
-
             # Run planning agent
-            run_agent_with_retry(planning_agent, planning_prompt, config)
+            run_planning_agent(
+                base_task,
+                model,
+                expert_enabled=expert_enabled,
+                hil=args.hil,
+                memory=planning_memory,
+                config=config
+            )
 
     except KeyboardInterrupt:
         console.print("\n[red]Operation cancelled by user[/red]")

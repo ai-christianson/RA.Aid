@@ -104,6 +104,10 @@ def request_task_implementation(task_spec: str) -> Dict[str, Any]:
         
     # Get completion message if available
     completion_message = _global_memory.get('completion_message', 'Task was completed successfully.' if success else None)
+    
+    # Clear completion state from global memory
+    _global_memory['completion_message'] = ''
+    _global_memory['completion_state'] = False
         
     return {
         "facts": get_memory_value("key_facts"),
