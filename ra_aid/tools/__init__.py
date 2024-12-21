@@ -12,7 +12,8 @@ from .ripgrep import ripgrep_search
 from .memory import (
     delete_tasks, emit_research_notes, emit_plan, emit_task, get_memory_value, emit_key_facts,
     request_implementation, delete_key_facts,
-    emit_key_snippets, delete_key_snippets, emit_related_files, swap_task_order, task_completed
+    emit_key_snippets, delete_key_snippets, emit_related_files, swap_task_order, task_completed,
+    plan_implementation_completed
 )
 
 __all__ = [
@@ -42,5 +43,6 @@ __all__ = [
     'existing_project_detected',
     'ui_detected',
     'ask_human',
-    'task_completed'
+    'task_completed',
+    'plan_implementation_completed'
 ]

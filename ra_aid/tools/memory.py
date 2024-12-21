@@ -27,7 +27,8 @@ _global_memory: Dict[str, Union[List[Any], Dict[int, str], Dict[int, SnippetInfo
     'key_snippets': {},  # Dict[int, SnippetInfo] - ID to snippet mapping
     'key_snippet_id_counter': 0,  # Counter for generating unique snippet IDs
     'implementation_requested': False,
-    'related_files': set()
+    'related_files': set(),
+    'plan_completed': False
 }
 
 @tool("emit_research_notes")
@@ -310,6 +311,21 @@ def task_completed(message: str) -> str:
     _global_memory['completion_message'] = message
     console.print(Panel(Markdown(message), title="✅ Task Completed"))
     return "Completion noted."
+
+@tool("plan_implementation_completed")
+def plan_implementation_completed(message: str) -> str:
+    """Mark the entire implementation plan as completed.
+    
+    Args:
+        message: Message explaining how the implementation plan was completed
+        
+    Returns:
+        Confirmation message
+    """
+    _global_memory['plan_completed'] = True
+    _global_memory['completion_message'] = message
+    console.print(Panel(Markdown(message), title="✅ Plan Implementation Completed"))
+    return "Plan completion noted."
 
 def get_related_files() -> Set[str]:
     """Get the current set of related files.

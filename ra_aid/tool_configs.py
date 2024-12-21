@@ -7,7 +7,7 @@ from ra_aid.tools import (
     request_implementation, read_file_tool,
     fuzzy_find_project_files, ripgrep_search, list_directory_tree,
     swap_task_order, monorepo_detected, existing_project_detected, ui_detected,
-    task_completed
+    task_completed, plan_implementation_completed
 )
 from ra_aid.tools.memory import one_shot_completed
 from ra_aid.tools.agent import request_research, request_task_implementation
@@ -78,7 +78,8 @@ def get_planning_tools(expert_enabled: bool = True) -> list:
         emit_plan,
         emit_task,
         swap_task_order,
-        request_task_implementation
+        request_task_implementation,
+        plan_implementation_completed
     ]
     tools.extend(planning_tools)
     
