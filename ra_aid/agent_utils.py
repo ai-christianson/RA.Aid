@@ -6,6 +6,7 @@ from typing import Optional, Any, List
 
 from langgraph.prebuilt import create_react_agent
 from ra_aid.console.formatting import print_stage_header
+from ra_aid.console.output import print_agent_output
 from ra_aid.tool_configs import (
     get_implementation_tools,
     get_research_tools,
@@ -126,11 +127,6 @@ def run_research_agent(
 
     # Run agent with retry logic
     return run_agent_with_retry(agent, prompt, run_config)
-
-def print_agent_output(chunk: dict[str, BaseMessage]) -> None:
-    """Print agent output chunks."""
-    if chunk.get("delta") and chunk["delta"].content:
-        console.print(chunk["delta"].content, end="", style="blue")
 
 def print_error(msg: str) -> None:
     """Print error messages."""
