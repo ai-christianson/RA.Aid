@@ -9,6 +9,7 @@ from ra_aid.tools import (
     swap_task_order, monorepo_detected, existing_project_detected, ui_detected
 )
 from ra_aid.tools.memory import one_shot_completed
+from ra_aid.tools.agent import request_research
 
 # Read-only tools that don't modify system state
 def get_read_only_tools(human_interaction: bool = False) -> list:
@@ -61,6 +62,9 @@ def get_research_tools(research_only: bool = False, expert_enabled: bool = True,
     if expert_enabled:
         tools.extend(EXPERT_TOOLS)
     
+    # Add chat-specific tools
+    tools.append(request_research)
+    
     return tools
 
 def get_planning_tools(expert_enabled: bool = True) -> list:
@@ -103,18 +107,13 @@ def get_chat_tools(expert_enabled: bool = True) -> list:
     Chat mode includes research and implementation capabilities but excludes
     complex planning tools. Human interaction is always enabled.
     """
-    # Start with read-only tools and always include human interaction
-    tools = get_read_only_tools(human_interaction=True).copy()
-    
-    # Add implementation capability
-    tools.extend(MODIFICATION_TOOLS)
-    
-    # Add research tools except for subtask management
-    research_tools = [t for t in RESEARCH_TOOLS if t.name != 'request_research_subtask']
-    tools.extend(research_tools)
+    tools = [
+        ask_human,
+        request_research
+    ]
     
     # Add expert tools if enabled
     if expert_enabled:
         tools.extend(EXPERT_TOOLS)
-    
+        
     return tools

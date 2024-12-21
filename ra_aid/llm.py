@@ -23,27 +23,23 @@ def initialize_llm(provider: str, model_name: str) -> BaseChatModel:
         return ChatOpenAI(
             api_key=os.getenv("OPENAI_API_KEY"),
             model=model_name,
-            temperature=0
         )
     elif provider == "anthropic":
         return ChatAnthropic(
             api_key=os.getenv("ANTHROPIC_API_KEY"),
             model_name=model_name,
-            temperature=0
         )
     elif provider == "openrouter":
         return ChatOpenAI(
             api_key=os.getenv("OPENROUTER_API_KEY"),
             base_url="https://openrouter.ai/api/v1",
             model=model_name,
-            temperature=0
         )
     elif provider == "openai-compatible":
         return ChatOpenAI(
             api_key=os.getenv("OPENAI_API_KEY"),
             base_url=os.getenv("OPENAI_API_BASE"),
             model=model_name,
-            temperature=0
         )
     else:
         raise ValueError(f"Unsupported provider: {provider}")

@@ -84,6 +84,7 @@ def request_research_subtask(subtask: str) -> str:
     """Spawn a research subtask for investigation of a specific topic.
 
     Use this anytime you can to offload your work to specific things that need to be looked into.
+    Use this only when it's necessary to dig deeper into a specific topic.
     
     Args:
         subtask: Detailed description of the research subtask

@@ -1,15 +1,12 @@
 import argparse
 import sys
-from typing import Optional
 from rich.panel import Panel
-from rich.markdown import Markdown
 from rich.console import Console
-from langchain_core.messages import HumanMessage
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import create_react_agent
 from ra_aid.env import validate_environment
 from ra_aid.tools.memory import _global_memory, get_related_files, get_memory_value
-from ra_aid import print_agent_output, print_stage_header, print_task_header, print_error
+from ra_aid import  print_stage_header, print_task_header, print_error, run_agent_with_retry
 from ra_aid.prompts import (
     RESEARCH_PROMPT,
     PLANNING_PROMPT,
@@ -22,8 +19,6 @@ from ra_aid.prompts import (
     HUMAN_PROMPT_SECTION_PLANNING,
     HUMAN_PROMPT_SECTION_IMPLEMENTATION
 )
-import time
-from anthropic import APIError, APITimeoutError, RateLimitError, InternalServerError
 from ra_aid.llm import initialize_llm
 
 from ra_aid.tool_configs import (
@@ -132,51 +127,6 @@ def is_stage_requested(stage: str) -> bool:
         return _global_memory.get('implementation_requested', False)
     return False
 
-def run_agent_with_retry(agent, prompt: str, config: dict) -> Optional[str]:
-    """Run an agent with retry logic for internal server errors and task completion handling.
-    
-    Args:
-        agent: The agent to run
-        prompt: The prompt to send to the agent
-        config: Configuration dictionary for the agent
-        
-    Returns:
-        Optional[str]: The completion message if task was completed, None otherwise
-        
-    Handles API errors with exponential backoff retry logic and checks for task
-    completion after each chunk of output.
-    """
-    max_retries = 20
-    base_delay = 1  # Initial delay in seconds
-    
-    for attempt in range(max_retries):
-        try:
-            for chunk in agent.stream(
-                {"messages": [HumanMessage(content=prompt)]},
-                config
-            ):
-                print_agent_output(chunk)
-                
-                # Check for task completion after each chunk
-                if _global_memory.get('task_completed'):
-                    completion_msg = _global_memory.get('completion_message', 'Task was completed successfully.')
-                    console.print(Panel(
-                        Markdown(completion_msg),
-                        title="✅ Task Completed",
-                        style="green"
-                    ))
-                    return completion_msg
-            break
-        except (InternalServerError, APITimeoutError, RateLimitError, APIError) as e:
-            if attempt == max_retries - 1:
-                raise RuntimeError(f"Max retries ({max_retries}) exceeded. Last error: {str(e)}")
-            
-            delay = base_delay * (2 ** attempt)  # Exponential backoff
-            error_type = e.__class__.__name__
-            print_error(f"Encountered {error_type}: {str(e)}. Retrying in {delay} seconds... (Attempt {attempt + 1}/{max_retries})")
-            time.sleep(delay)
-            continue
-
 def run_implementation_stage(base_task, tasks, plan, related_files, model, expert_enabled: bool):
     """Run implementation stage with a distinct agent for each task."""
     if not is_stage_requested('implementation'):
@@ -215,7 +165,6 @@ def run_implementation_stage(base_task, tasks, plan, related_files, model, exper
         
         # Run agent for this task
         run_agent_with_retry(task_agent, task_prompt, {"configurable": {"thread_id": "abc123"}, "recursion_limit": 100})
-
 
 def run_research_subtasks(base_task: str, config: dict, model, expert_enabled: bool):
     """Run research subtasks with separate agents."""
