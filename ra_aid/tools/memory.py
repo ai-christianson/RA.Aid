@@ -22,7 +22,6 @@ _global_memory: Dict[str, Union[List[Any], Dict[int, str], Dict[int, SnippetInfo
     'task_completed': False,  # Flag indicating if task is complete
     'completion_message': '',  # Message explaining completion
     'task_id_counter': 0,  # Counter for generating unique task IDs
-    'research_subtasks': [],
     'key_facts': {},  # Dict[int, str] - ID to fact mapping
     'key_fact_id_counter': 0,  # Counter for generating unique fact IDs
     'key_snippets': {},  # Dict[int, SnippetInfo] - ID to snippet mapping
@@ -79,22 +78,6 @@ def emit_task(task: str) -> str:
     console.print(Panel(Markdown(task), title=f"✅ Task #{task_id}"))
     return f"Task #{task_id} stored."
 
-@tool("request_research_subtask")
-def request_research_subtask(subtask: str) -> str:
-    """Spawn a research subtask for investigation of a specific topic.
-
-    Use this anytime you can to offload your work to specific things that need to be looked into.
-    Use this only when it's necessary to dig deeper into a specific topic.
-    
-    Args:
-        subtask: Detailed description of the research subtask
-        
-    Returns:
-        Confirmation message
-    """
-    _global_memory['research_subtasks'].append(subtask)
-    console.print(Panel(Markdown(subtask), title="🔬 Research Subtask"))
-    return "Subtask added."
 
 
 @tool("emit_key_facts")
@@ -309,8 +292,6 @@ def one_shot_completed(message: str) -> str:
         Original message if task can be completed, or error message if there are
         pending subtasks or implementation requests
     """
-    if len(_global_memory['research_subtasks']) > 0:
-        return "Cannot complete in one shot - research subtasks pending"
     if _global_memory.get('implementation_requested', False):
         return "Cannot complete in one shot - implementation was requested"
         

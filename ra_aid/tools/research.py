@@ -40,7 +40,7 @@ def monorepo_detected() -> dict:
             "- Find and note  existing versioning and release management practices already in place.\n\n"
             "- Pay extra attention to integration nuances such as authentication, authorization, examples of how APIs are called, etc.\n\n"
             "- Find and note specific examples of all of the above.\n\n"
-            "- Because you are in a monorepo, you will likely need to call request_research_subtask multiple times.\n\n"
+            "- Because you are in a monorepo, you will need to carefully organize your research into focused areas.\n\n"
             "Your goal is to enhance the entire codebase without disrupting its well-established, unified structure."
         )
     }

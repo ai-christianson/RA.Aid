@@ -166,43 +166,6 @@ def run_implementation_stage(base_task, tasks, plan, related_files, model, exper
         # Run agent for this task
         run_agent_with_retry(task_agent, task_prompt, {"configurable": {"thread_id": "abc123"}, "recursion_limit": 100})
 
-def run_research_subtasks(base_task: str, config: dict, model, expert_enabled: bool):
-    """Run research subtasks with separate agents."""
-    subtasks = _global_memory.get('research_subtasks', [])
-    if not subtasks:
-        return
-        
-    print_stage_header("Research Subtasks")
-    
-    # Get tools for subtask agents (excluding request_research_subtask and implementation)
-    research_only = _global_memory.get('config', {}).get('research_only', False)
-    subtask_tools = [
-        t for t in get_research_tools(research_only=research_only, expert_enabled=expert_enabled)
-        if t.name not in ['request_research_subtask']
-    ]
-    
-    for i, subtask in enumerate(subtasks, 1):
-        print_task_header(f"Research Subtask {i}/{len(subtasks)}")
-        
-        # Create fresh memory and agent for each subtask
-        subtask_memory = MemorySaver()
-        subtask_agent = create_react_agent(
-            model,
-            subtask_tools,
-            checkpointer=subtask_memory
-        )
-        
-        # Run the subtask agent
-        expert_section = EXPERT_PROMPT_SECTION_RESEARCH if expert_enabled else ""
-        human_section = HUMAN_PROMPT_SECTION_RESEARCH if config.get('hil', False) else ""
-        subtask_prompt = f"Base Task: {base_task}\nResearch Subtask: {subtask}\n\n{RESEARCH_PROMPT.format(
-            base_task=base_task,
-            research_only_note='',
-            expert_section=expert_section,
-            human_section=human_section
-        )}"
-        run_agent_with_retry(subtask_agent, subtask_prompt, config)
-
 
 
 def main():
@@ -299,9 +262,6 @@ def main():
 
         # Run research agent
         run_agent_with_retry(research_agent, research_prompt, config)
-        
-        # Run any research subtasks
-        run_research_subtasks(base_task, config, model, expert_enabled=expert_enabled)
         
         # Proceed with planning and implementation if not an informational query
         if not is_informational_query():
