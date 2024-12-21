@@ -53,9 +53,10 @@ def request_research(query: str) -> Dict[str, Any]:
         
     return {
         "completion_message": completion_message,
-        "facts": get_memory_value("key_facts"),
-        "files": list(get_related_files()),
-        "notes": get_memory_value("research_notes"),
+        "key_facts": get_memory_value("key_facts"),
+        "related_files": list(get_related_files()),
+        "research_notes": get_memory_value("research_notes"),
+        "key_snippets": get_memory_value("key_snippets"),
         "success": success,
         "reason": reason
     }
@@ -103,9 +104,10 @@ def request_research_and_implementation(query: str) -> Dict[str, Any]:
         
     return {
         "completion_message": completion_message,
-        "facts": get_memory_value("key_facts"),
-        "files": list(get_related_files()),
-        "notes": get_memory_value("research_notes"),
+        "key_facts": get_memory_value("key_facts"),
+        "related_files": list(get_related_files()),
+        "research_notes": get_memory_value("research_notes"),
+        "key_snippets": get_memory_value("key_snippets"),
         "success": success,
         "reason": reason
     }
@@ -159,8 +161,9 @@ def request_task_implementation(task_spec: str) -> Dict[str, Any]:
     _global_memory['completion_state'] = False
         
     return {
-        "facts": get_memory_value("key_facts"),
-        "files": list(get_related_files()),
+        "key_facts": get_memory_value("key_facts"),
+        "related_files": list(get_related_files()),
+        "key_snippets": get_memory_value("key_snippets"),
         "completion_message": completion_message,
         "success": success,
         "reason": reason
@@ -208,8 +211,9 @@ def request_implementation(task_spec: str) -> Dict[str, Any]:
         
     return {
         "completion_message": completion_message,
-        "facts": get_memory_value("key_facts"),
-        "files": list(get_related_files()),
+        "key_facts": get_memory_value("key_facts"),
+        "related_files": list(get_related_files()),
+        "key_snippets": get_memory_value("key_snippets"),
         "success": success,
         "reason": reason
     }
