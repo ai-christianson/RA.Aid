@@ -160,6 +160,7 @@ ra-aid -m "Explain the authentication flow" --research-only
 - `--model`: Specify the model name (See Model Configuration section)
 - `--expert-provider`: Specify the provider for the expert tool (defaults to OpenAI)
 - `--expert-model`: Specify the model name for the expert tool (defaults to o1-preview for OpenAI)
+- `--chat`: Enable chat mode for interactive assistance
 
 ### Model Configuration
 
@@ -313,6 +314,9 @@ This mode is particularly useful for:
 - Making architectural decisions
 - Validating critical changes
 - Providing domain-specific knowledge
+
+### Chat Mode
+Enable with `--chat` to transform ra-aid into an interactive assistant that guides you through research and implementation tasks. Have a natural conversation about what you want to build, explore options together, and dispatch work - all while maintaining context of your discussion. Perfect for when you want to think through problems collaboratively rather than just executing commands.
 
 ### Environment Variables
 
