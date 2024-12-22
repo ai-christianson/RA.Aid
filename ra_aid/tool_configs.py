@@ -116,9 +116,5 @@ def get_chat_tools(expert_enabled: bool = True) -> list:
         request_research,
         request_research_and_implementation
     ]
-    
-    # Add expert tools if enabled
-    if expert_enabled:
-        tools.extend(EXPERT_TOOLS)
-        
+
     return tools
