@@ -295,7 +295,7 @@ def one_shot_completed(message: str) -> str:
         
     _global_memory['task_completed'] = True
     _global_memory['completion_message'] = message
-    console.print(Panel(Markdown(message), title="✅ One-Shot Task Completed"))
+    console.print(Panel(Markdown(message), title="✅ Task Completed"))
     return "Completion noted."
 
 @tool("task_completed")
@@ -325,7 +325,7 @@ def plan_implementation_completed(message: str) -> str:
     """
     _global_memory['plan_completed'] = True
     _global_memory['completion_message'] = message
-    console.print(Panel(Markdown(message), title="✅ Plan Implementation Completed"))
+    console.print(Panel(Markdown(message), title="✅ Plan Executed"))
     return "Plan completion noted."
 
 def get_related_files() -> Set[str]:

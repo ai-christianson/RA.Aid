@@ -7,6 +7,7 @@ from typing_extensions import TypeAlias
 ResearchResult = Dict[str, Union[str, bool, Dict[int, Any], List[Any], None]]
 from rich.console import Console
 from ra_aid.tools.memory import _global_memory
+from ra_aid.console.formatting import print_error, print_interrupt
 from .memory import get_memory_value, get_related_files
 from ..llm import initialize_llm
 from ..console import print_task_header
@@ -32,7 +33,7 @@ def request_research(query: str) -> ResearchResult:
     # Check recursion depth
     current_depth = _global_memory.get('research_depth', 0)
     if current_depth >= RESEARCH_AGENT_RECURSION_LIMIT:
-        console.print("\n[red]Maximum research recursion depth reached[/red]")
+        print_error("Maximum research recursion depth reached")
         return {
             "completion_message": "Research stopped - maximum recursion depth reached",
             "key_facts": get_memory_value("key_facts"),
@@ -61,11 +62,11 @@ def request_research(query: str) -> ResearchResult:
             console_message=query
         )
     except KeyboardInterrupt:
-        console.print("\n[yellow]Research interrupted by user[/yellow]")
+        print_interrupt("Research interrupted by user")
         success = False
         reason = "cancelled_by_user"
     except Exception as e:
-        console.print(f"\n[red]Error during research: {str(e)}[/red]")
+        print_error(f"Error during research: {str(e)}")
         success = False
         reason = f"error: {str(e)}"
     finally:
@@ -173,11 +174,11 @@ def request_task_implementation(task_spec: str) -> Dict[str, Any]:
         success = True
         reason = None
     except KeyboardInterrupt:
-        console.print("\n[yellow]Task implementation interrupted by user[/yellow]")
+        print_interrupt("Task implementation interrupted by user")
         success = False
         reason = "cancelled_by_user"
     except Exception as e:
-        console.print(f"\n[red]Error during task implementation: {str(e)}[/red]")
+        print_error(f"Error during task implementation: {str(e)}")
         success = False
         reason = f"error: {str(e)}"
         
@@ -222,11 +223,11 @@ def request_implementation(task_spec: str) -> Dict[str, Any]:
         success = True
         reason = None
     except KeyboardInterrupt:
-        console.print("\n[yellow]Planning interrupted by user[/yellow]")
+        print_interrupt("Planning interrupted by user")
         success = False
         reason = "cancelled_by_user"
     except Exception as e:
-        console.print(f"\n[red]Error during planning: {str(e)}[/red]")
+        print_error(f"Error during planning: {str(e)}")
         success = False
         reason = f"error: {str(e)}"
         

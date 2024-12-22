@@ -48,3 +48,11 @@ def print_error(message: str) -> None:
         message: The error message to display (supports Markdown formatting)
     """
     console.print(Panel(Markdown(message), title="Error", border_style="red bold"))
+
+def print_interrupt(message: str) -> None:
+    """Print an interruption message in a yellow-bordered panel with appropriate emoji.
+    
+    Args:
+        message: The interruption message to display (supports Markdown formatting)
+    """
+    console.print(Panel(Markdown(message), title="Interrupted", border_style="yellow bold"))
