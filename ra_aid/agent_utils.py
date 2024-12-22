@@ -4,8 +4,13 @@ import time
 import uuid
 from typing import Optional, Any, List
 
+import signal
+import threading
+import time
+from typing import Optional
+
 from langgraph.prebuilt import create_react_agent
-from ra_aid.console.formatting import print_stage_header
+from ra_aid.console.formatting import print_stage_header, print_error, print_interrupt
 from ra_aid.console.output import print_agent_output
 from ra_aid.tool_configs import (
     get_implementation_tools,
@@ -134,10 +139,6 @@ def run_research_agent(
 
     # Run agent with retry logic
     return run_agent_with_retry(agent, prompt, run_config)
-
-def print_error(msg: str) -> None:
-    """Print error messages."""
-    console.print(f"\n{msg}", style="red")
 
 def run_planning_agent(
     base_task: str,
@@ -272,37 +273,55 @@ def run_task_implementation_agent(
     # Run agent with retry logic
     return run_agent_with_retry(agent, prompt, run_config)
 
+_CONTEXT_STACK = []
+_INTERRUPT_CONTEXT = None
+
+def _request_interrupt(signum, frame):
+    global _INTERRUPT_CONTEXT
+    if _CONTEXT_STACK:
+        _INTERRUPT_CONTEXT = _CONTEXT_STACK[-1]
+
+class InterruptibleSection:
+    def __enter__(self):
+        _CONTEXT_STACK.append(self)
+        return self
+    
+    def __exit__(self, exc_type, exc_value, traceback):
+        _CONTEXT_STACK.remove(self)
+
+def check_interrupt():
+    if _CONTEXT_STACK and _INTERRUPT_CONTEXT is _CONTEXT_STACK[-1]:
+        raise KeyboardInterrupt("Interrupt requested")
+
 def run_agent_with_retry(agent, prompt: str, config: dict) -> Optional[str]:
-    """Run an agent with retry logic for internal server errors and task completion handling.
-    
-    Args:
-        agent: The agent to run
-        prompt: The prompt to send to the agent
-        config: Configuration dictionary for the agent
-        
-    Returns:
-        Optional[str]: The completion message if task was completed, None otherwise
-        
-    Handles API errors with exponential backoff retry logic and checks for task
-    completion after each chunk of output.
-    """
+    original_handler = None
+    if threading.current_thread() is threading.main_thread():
+        original_handler = signal.getsignal(signal.SIGINT)
+        signal.signal(signal.SIGINT, _request_interrupt)
+
     max_retries = 20
-    base_delay = 1  # Initial delay in seconds
-    
-    for attempt in range(max_retries):
+    base_delay = 1
+
+    with InterruptibleSection():
         try:
-            for chunk in agent.stream(
-                {"messages": [HumanMessage(content=prompt)]},
-                config
-            ):
-                print_agent_output(chunk)
-            break
-        except (InternalServerError, APITimeoutError, RateLimitError, APIError) as e:
-            if attempt == max_retries - 1:
-                raise RuntimeError(f"Max retries ({max_retries}) exceeded. Last error: {str(e)}")
-            
-            delay = base_delay * (2 ** attempt)  # Exponential backoff
-            error_type = e.__class__.__name__
-            print_error(f"Encountered {error_type}: {str(e)}. Retrying in {delay} seconds... (Attempt {attempt + 1}/{max_retries})")
-            time.sleep(delay)
-            continue
+            for attempt in range(max_retries):
+                check_interrupt()
+                try:
+                    for chunk in agent.stream({"messages": [HumanMessage(content=prompt)]}, config):
+                        check_interrupt()
+                        print_agent_output(chunk)
+                    return "Agent run completed successfully"
+                except KeyboardInterrupt:
+                    raise
+                except (InternalServerError, APITimeoutError, RateLimitError, APIError) as e:
+                    if attempt == max_retries - 1:
+                        raise RuntimeError(f"Max retries ({max_retries}) exceeded. Last error: {e}")
+                    delay = base_delay * (2 ** attempt)
+                    print_error(f"Encountered {e.__class__.__name__}: {e}. Retrying in {delay}s... (Attempt {attempt+1}/{max_retries})")
+                    start = time.monotonic()
+                    while time.monotonic() - start < delay:
+                        check_interrupt()
+                        time.sleep(0.1)
+        finally:
+            if original_handler and threading.current_thread() is threading.main_thread():
+                signal.signal(signal.SIGINT, original_handler)

@@ -12,6 +12,8 @@ from .memory import get_memory_value, get_related_files
 from ..llm import initialize_llm
 from ..console import print_task_header
 
+CANCELLED_BY_USER_REASON = "The operation was explicitly cancelled by the user. This typically is an indication that the action requested was not aligned with the user request."
+
 RESEARCH_AGENT_RECURSION_LIMIT = 2
 
 console = Console()
@@ -64,7 +66,7 @@ def request_research(query: str) -> ResearchResult:
     except KeyboardInterrupt:
         print_interrupt("Research interrupted by user")
         success = False
-        reason = "cancelled_by_user"
+        reason = CANCELLED_BY_USER_REASON
     except Exception as e:
         print_error(f"Error during research: {str(e)}")
         success = False
@@ -116,9 +118,9 @@ def request_research_and_implementation(query: str) -> Dict[str, Any]:
         success = True
         reason = None
     except KeyboardInterrupt:
-        console.print("\n[yellow]Research interrupted by user[/yellow]")
+        print_interrupt("Research interrupted by user")
         success = False
-        reason = "cancelled_by_user"
+        reason = CANCELLED_BY_USER_REASON
     except Exception as e:
         console.print(f"\n[red]Error during research: {str(e)}[/red]")
         success = False
@@ -177,7 +179,7 @@ def request_task_implementation(task_spec: str) -> Dict[str, Any]:
     except KeyboardInterrupt:
         print_interrupt("Task implementation interrupted by user")
         success = False
-        reason = "cancelled_by_user"
+        reason = CANCELLED_BY_USER_REASON
     except Exception as e:
         print_error(f"Error during task implementation: {str(e)}")
         success = False
@@ -226,7 +228,7 @@ def request_implementation(task_spec: str) -> Dict[str, Any]:
     except KeyboardInterrupt:
         print_interrupt("Planning interrupted by user")
         success = False
-        reason = "cancelled_by_user"
+        reason = CANCELLED_BY_USER_REASON
     except Exception as e:
         print_error(f"Error during planning: {str(e)}")
         success = False

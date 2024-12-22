@@ -55,4 +55,5 @@ def print_interrupt(message: str) -> None:
     Args:
         message: The interruption message to display (supports Markdown formatting)
     """
+    print() # Give space for "^C"
     console.print(Panel(Markdown(message), title="Interrupted", border_style="yellow bold"))

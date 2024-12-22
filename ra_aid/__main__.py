@@ -3,6 +3,7 @@ import sys
 import uuid
 from rich.panel import Panel
 from rich.console import Console
+from ra_aid.console.formatting import print_interrupt
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import create_react_agent
 from ra_aid.env import validate_environment
@@ -221,7 +222,7 @@ def main():
             )
 
     except KeyboardInterrupt:
-        console.print("\n[red]Operation cancelled by user[/red]")
+        print_interrupt("Operation cancelled by user")
         sys.exit(1)
 
 if __name__ == "__main__":

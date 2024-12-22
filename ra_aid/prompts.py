@@ -361,8 +361,9 @@ Exit Criteria:
 Remember:
     - Always begin by calling ask_human.
     - Always ask_human before finalizing or exiting.
-    - Never announce that you are going to ask the human, just do it.
+    - Never announce that you are going to use a tool, just quietly use it.
     - Do communicate results/responses from tools that you call as it pertains to the users request.
+    - If the user interrupts/cancels an operation, you may want to ask why.
     - For deep debugging, logic analysis, or correctness checks, rely on the expert (if expert is available) for guidance.
 
 """

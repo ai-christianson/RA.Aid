@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 - Chat mode.
+- Allow agents to be interrupted.
 
 ## [0.7.1] - 2024-12-20
 
