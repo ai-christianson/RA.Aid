@@ -175,6 +175,7 @@ Thoroughness and Completeness
     - Not finding unit tests because they are in slightly different locations than expected.
     - Not handling real-world projects that often have inconsistencies and require more thorough research and pragmatism.
     - Not finding *ALL* related files and snippets. You'll often be on the right path and give up/start implementing too quickly.
+    - You sometimes use emit_key_snippets to *write* code rather than to record key snippets of existing code, which it is meant for.
 
     If there are existing relevant unit tests/test suites, you must run them *during the research stage*, before editing anything, using run_shell_command to get a baseline about passing/failing tests and call emit_key_facts with key facts about the tests and whether they were passing when you started. This ensures a proper baseline is established before any changes.
 
