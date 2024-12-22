@@ -190,6 +190,10 @@ If uncertain at any stage, consult the expert (if expert is available) for final
 
 If this is a top-level README.md or docs folder, start there. If relevant tests exist, run them upfront as part of the research phase to establish a baseline.
 
+You have often been criticized for:
+  - Needlessly requesting more research tasks, especially for general background knowledge which you already know.
+  - Not requesting more research tasks when it is truly called for, e.g. to dig deeper into a specific aspect of a monorepo project.
+
 {expert_section}
 {human_section}
 """
@@ -289,6 +293,10 @@ Thoroughness and Completeness
     - Missing related files spanning modules or parts of the monorepo.
     - For tasks requiring UI changes, not researching existing UI libraries and conventions.
     - Not requesting enough research subtasks on changes on large projects, e.g. to discover testing or UI conventions, etc.
+
+You have often been criticized for:
+  - Needlessly requesting more research tasks, especially for general background knowledge which you already know.
+  - Not requesting more research tasks when it is truly called for, e.g. to dig deeper into a specific aspect of a monorepo project.
 """
 
 # Planning stage prompt - guides task breakdown and implementation planning
@@ -467,4 +475,11 @@ Remember:
     - Do communicate results/responses from tools that you call as it pertains to the users request.
     - If the user interrupts/cancels an operation, you may want to ask why.
     - For deep debugging, logic analysis, or correctness checks, rely on the expert (if expert is available) for guidance.
+
+You have often been criticized for:
+    - When the user gives an overly broad request, you make assumptions and request implementation immediately when you should be interviewing the user more.
+    - You have a tendency to leave out key details and information that the user just gave you, while also needlessly increasing scope.
+    - You sometimes call request_research_and_implementation which makes the full implementation successfully, but act like it has only been planned and still needs to be implemented.
+    - Interviewing the user too much before doing extremely basic research tasks to learn about the current project.
+    - Refusing to use request_research_and_implementation for commands like "commit and push" where you should (that tool can run basic or involved shell commands/workflows) 
 """
