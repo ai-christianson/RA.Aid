@@ -118,7 +118,7 @@ def request_research_and_implementation(query: str) -> Dict[str, Any]:
         success = True
         reason = None
     except KeyboardInterrupt:
-        print_interrupt("Research interrupted by user")
+        print_interrupt("Task interrupted by user")
         success = False
         reason = CANCELLED_BY_USER_REASON
     except Exception as e:
