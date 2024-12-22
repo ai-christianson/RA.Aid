@@ -42,9 +42,6 @@ def emit_expert_context(context: str) -> str:
     
     Args:
         context: The context to add
-        
-    Returns:
-        Confirmation message
     """
     expert_context.append(context)
     
@@ -60,9 +57,6 @@ def read_files_with_limit(file_paths: List[str], max_lines: int = 10000) -> str:
     Args:
         file_paths: List of file paths to read
         max_lines: Maximum total lines to read (default: 10000)
-        
-    Returns:
-        String containing concatenated file contents with headers
         
     Note:
         - Each file's contents will be prefaced with its path as a header
@@ -99,9 +93,6 @@ def read_files_with_limit(file_paths: List[str], max_lines: int = 10000) -> str:
 
 def read_related_files() -> str:
     """Read related files from memory.
-    
-    Returns:
-        String containing concatenated file contents with headers
     """
     related_files = get_related_files()
     if not related_files:
@@ -125,12 +116,6 @@ def ask_expert(question: str) -> str:
     Try to phrase your question in a way that it does not expand the scope of our top-level task.
 
     The expert can be prone to overthinking depending on what and how you ask it.
-    
-    Args:
-        question: The question to ask the expert
-        
-    Returns:
-        The expert's response
     """
     global expert_context
     
@@ -168,6 +153,7 @@ def ask_expert(question: str) -> str:
         query_parts.extend(['\n# Additional Context', '\n'.join(expert_context)])
         
     query_parts.extend(['# Question', question])
+    query_parts.extend(['\n # Addidional Requirements', "Do not expand the scope unnecessarily."])
     
     # Join all parts
     full_query = '\n'.join(query_parts)
