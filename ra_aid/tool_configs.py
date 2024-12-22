@@ -3,7 +3,7 @@ from ra_aid.tools import (
     ask_expert, ask_human, run_shell_command, run_programming_task,
     emit_research_notes, emit_plan, emit_related_files, emit_task,
     emit_expert_context, emit_key_facts, delete_key_facts,
-    emit_key_snippets, delete_key_snippets, delete_tasks, read_file_tool,
+    emit_key_snippets, delete_key_snippets, delete_related_files, delete_tasks, read_file_tool,
     fuzzy_find_project_files, ripgrep_search, list_directory_tree,
     swap_task_order, monorepo_detected, existing_project_detected, ui_detected,
     task_completed, plan_implementation_completed
@@ -20,6 +20,7 @@ def get_read_only_tools(human_interaction: bool = False) -> list:
         delete_key_facts,
         emit_key_snippets,
         delete_key_snippets,
+        delete_related_files,
         list_directory_tree,
         read_file_tool,
         fuzzy_find_project_files,
@@ -114,7 +115,10 @@ def get_chat_tools(expert_enabled: bool = True) -> list:
     tools = [
         ask_human,
         request_research,
-        request_research_and_implementation
+        request_research_and_implementation,
+        delete_key_facts,
+        delete_key_snippets,
+        delete_related_files
     ]
 
     return tools
