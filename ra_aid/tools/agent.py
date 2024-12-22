@@ -39,7 +39,7 @@ def request_research(query: str) -> ResearchResult:
         return {
             "completion_message": "Research stopped - maximum recursion depth reached",
             "key_facts": get_memory_value("key_facts"),
-            "related_files": list(get_related_files()),
+            "related_files": get_related_files(),
             "research_notes": get_memory_value("research_notes"),
             "key_snippets": get_memory_value("key_snippets"),
             "success": False,
@@ -85,7 +85,7 @@ def request_research(query: str) -> ResearchResult:
     return {
         "completion_message": completion_message,
         "key_facts": get_memory_value("key_facts"),
-        "related_files": list(get_related_files()),
+        "related_files": get_related_files(),
         "research_notes": get_memory_value("research_notes"),
         "key_snippets": get_memory_value("key_snippets"),
         "success": success,
@@ -133,11 +133,11 @@ def request_research_and_implementation(query: str) -> Dict[str, Any]:
     _global_memory['completion_message'] = ''
     _global_memory['task_completed'] = False
     _global_memory['plan_completed'] = False
-        
+
     return {
         "completion_message": completion_message,
         "key_facts": get_memory_value("key_facts"),
-        "related_files": list(get_related_files()),
+        "related_files": get_related_files(),
         "research_notes": get_memory_value("research_notes"),
         "key_snippets": get_memory_value("key_snippets"),
         "success": success,
@@ -194,7 +194,7 @@ def request_task_implementation(task_spec: str) -> Dict[str, Any]:
         
     return {
         "key_facts": get_memory_value("key_facts"),
-        "related_files": list(get_related_files()),
+        "related_files": get_related_files(),
         "key_snippets": get_memory_value("key_snippets"),
         "completion_message": completion_message,
         "success": success,
@@ -245,7 +245,7 @@ def request_implementation(task_spec: str) -> Dict[str, Any]:
     return {
         "completion_message": completion_message,
         "key_facts": get_memory_value("key_facts"),
-        "related_files": list(get_related_files()),
+        "related_files": get_related_files(),
         "key_snippets": get_memory_value("key_snippets"),
         "success": success,
         "reason": reason

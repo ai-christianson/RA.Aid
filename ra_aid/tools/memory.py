@@ -375,7 +375,7 @@ def emit_related_files(files: List[str]) -> str:
     
     # Rich output - single consolidated panel
     if added_files:
-        files_added_md = '\n'.join(f"- ID#{id}: `{file}`" for id, file in added_files)
+        files_added_md = '\n'.join(f"- `{file}`" for id, file in added_files)
         md_content = f"**Files Noted:**\n{files_added_md}"
         console.print(Panel(Markdown(md_content), 
                           title="📁 Related Files Noted", 
