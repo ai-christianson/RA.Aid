@@ -384,8 +384,8 @@ def emit_related_files(files: List[str]) -> str:
     return '\n'.join(results)
 
 
-@tool("delete_related_files")
-def delete_related_files(file_ids: List[int]) -> str:
+@tool("deregister_related_files")
+def deregister_related_files(file_ids: List[int]) -> str:
     """Delete multiple related files from global memory by their IDs.
     Silently skips any IDs that don't exist.
     

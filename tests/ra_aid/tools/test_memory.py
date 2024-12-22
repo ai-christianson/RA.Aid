@@ -8,7 +8,7 @@ from ra_aid.tools.memory import (
     delete_key_snippets,
     emit_related_files,
     get_related_files,
-    delete_related_files,
+    deregister_related_files,
     emit_task,
     delete_tasks,
     swap_task_order
@@ -269,19 +269,19 @@ def test_related_files_id_tracking(reset_memory):
     assert _global_memory['related_files'][0] == "file1.py"
     assert _global_memory['related_files'][1] == "file2.py"
 
-def test_delete_related_files(reset_memory):
+def test_deregister_related_files(reset_memory):
     """Test deleting related files"""
     # Add test files
     emit_related_files.invoke({"files": ["file1.py", "file2.py", "file3.py"]})
     
     # Delete middle file
-    result = delete_related_files.invoke({"file_ids": [1]})
+    result = deregister_related_files.invoke({"file_ids": [1]})
     assert result == "File references removed."
     assert 1 not in _global_memory['related_files']
     assert len(_global_memory['related_files']) == 2
     
     # Delete multiple files including non-existent ID
-    result = delete_related_files.invoke({"file_ids": [0, 2, 999]})
+    result = deregister_related_files.invoke({"file_ids": [0, 2, 999]})
     assert result == "File references removed."
     assert len(_global_memory['related_files']) == 0
     

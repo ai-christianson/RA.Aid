@@ -458,7 +458,7 @@ Exit Criteria:
 Context Cleanup:
     - Use delete_key_facts to remove any key facts that no longer apply.
     - Use delete_key_snippets to remove any key snippets that no longer apply.
-    - Use delete_research_notes to remove any research notes that no longer apply.
+    - Use deregister_related_files to remove any related files that no longer apply.
 
 Remember:
     - Always begin by calling ask_human.

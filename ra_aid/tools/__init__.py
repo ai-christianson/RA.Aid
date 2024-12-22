@@ -13,14 +13,14 @@ from .memory import (
     delete_tasks, emit_research_notes, emit_plan, emit_task, get_memory_value, emit_key_facts,
     request_implementation, delete_key_facts,
     emit_key_snippets, delete_key_snippets, emit_related_files, swap_task_order, task_completed,
-    plan_implementation_completed, delete_related_files
+    plan_implementation_completed, deregister_related_files
 )
 
 __all__ = [
     'ask_expert',
     'delete_key_facts',
     'delete_key_snippets',
-    'delete_related_files',
+    'deregister_related_files',
     'emit_expert_context', 
     'emit_key_facts',
     'emit_key_snippets',
