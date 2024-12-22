@@ -23,6 +23,7 @@ from ra_aid.prompts import (
     HUMAN_PROMPT_SECTION_IMPLEMENTATION,
     EXPERT_PROMPT_SECTION_RESEARCH,
     RESEARCH_PROMPT,
+    RESEARCH_ONLY_PROMPT,
     HUMAN_PROMPT_SECTION_RESEARCH,
     PLANNING_PROMPT,
     EXPERT_PROMPT_SECTION_PLANNING,
@@ -45,6 +46,7 @@ from ra_aid.tools.memory import (
 from ra_aid.tool_configs import get_research_tools
 from ra_aid.prompts import (
     RESEARCH_PROMPT,
+    RESEARCH_ONLY_PROMPT,
     EXPERT_PROMPT_SECTION_RESEARCH,
     HUMAN_PROMPT_SECTION_RESEARCH
 )
@@ -115,7 +117,7 @@ def run_research_agent(
     related_files = _global_memory.get("related_files", "")
     
     # Build prompt
-    prompt = RESEARCH_PROMPT.format(
+    prompt = (RESEARCH_ONLY_PROMPT if research_only else RESEARCH_PROMPT).format(
         base_task=base_task_or_query,
         research_only_note='' if research_only else ' Only request implementation if the user explicitly asked for changes to be made.',
         expert_section=expert_section,
