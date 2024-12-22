@@ -70,6 +70,16 @@ Human Interaction:
 # Research stage prompt - guides initial codebase analysis
 RESEARCH_PROMPT = """User query: {base_task} --keep it simple
 
+Context from Previous Research (if available):
+Key Facts:
+{key_facts}
+
+Relevant Code Snippets:
+{code_snippets}
+
+Related Files:
+{related_files}
+
 Be very thorough in your research and emit lots of snippets, key facts. If you take more than a few steps, be eager to emit research subtasks.{research_only_note}
 
 Objective

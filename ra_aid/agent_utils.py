@@ -105,12 +105,20 @@ def run_research_agent(
     expert_section = EXPERT_PROMPT_SECTION_RESEARCH if expert_enabled else ""
     human_section = HUMAN_PROMPT_SECTION_RESEARCH if hil else ""
     
+    # Get research context from memory
+    key_facts = _global_memory.get("key_facts", "")
+    code_snippets = _global_memory.get("code_snippets", "")
+    related_files = _global_memory.get("related_files", "")
+    
     # Build prompt
     prompt = RESEARCH_PROMPT.format(
         base_task=base_task_or_query,
         research_only_note='' if research_only else ' Only request implementation if the user explicitly asked for changes to be made.',
         expert_section=expert_section,
-        human_section=human_section
+        human_section=human_section,
+        key_facts=key_facts,
+        code_snippets=code_snippets,
+        related_files=related_files
     )
 
     # Set up configuration
