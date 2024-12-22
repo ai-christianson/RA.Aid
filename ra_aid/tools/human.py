@@ -38,7 +38,6 @@ def ask_human(question: str) -> str:
         multiline=True,
         key_bindings=create_keybindings(),
         prompt_continuation='. ',
-        vi_mode=True  # Enable Vi mode for more intuitive Ctrl+D behavior
     )
 
     print()
