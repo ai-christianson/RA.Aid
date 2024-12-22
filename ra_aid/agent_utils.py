@@ -131,7 +131,7 @@ def run_research_agent(
 
     # Display console message if provided
     if console_message:
-        console.print(Panel(Markdown(console_message), title="🔬 Research Task"))
+        console.print(Panel(Markdown(console_message), title="🔬 Researching"))
 
     # Run agent with retry logic
     return run_agent_with_retry(agent, prompt, run_config)
