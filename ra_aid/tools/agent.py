@@ -78,7 +78,7 @@ def request_research(query: str) -> ResearchResult:
     
     # Clear completion state from global memory
     _global_memory['completion_message'] = ''
-    _global_memory['completion_state'] = False
+    _global_memory['task_completed'] = False
         
     return {
         "completion_message": completion_message,
@@ -129,7 +129,8 @@ def request_research_and_implementation(query: str) -> Dict[str, Any]:
     
     # Clear completion state from global memory
     _global_memory['completion_message'] = ''
-    _global_memory['completion_state'] = False
+    _global_memory['task_completed'] = False
+    _global_memory['plan_completed'] = False
         
     return {
         "completion_message": completion_message,
@@ -187,7 +188,7 @@ def request_task_implementation(task_spec: str) -> Dict[str, Any]:
     
     # Clear completion state from global memory
     _global_memory['completion_message'] = ''
-    _global_memory['completion_state'] = False
+    _global_memory['task_completed'] = False
         
     return {
         "key_facts": get_memory_value("key_facts"),
@@ -236,7 +237,8 @@ def request_implementation(task_spec: str) -> Dict[str, Any]:
     
     # Clear completion state from global memory
     _global_memory['completion_message'] = ''
-    _global_memory['completion_state'] = False
+    _global_memory['task_completed'] = False
+    _global_memory['plan_completed'] = False
         
     return {
         "completion_message": completion_message,
