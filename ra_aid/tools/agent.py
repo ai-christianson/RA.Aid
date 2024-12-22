@@ -1,19 +1,27 @@
 """Tools for spawning and managing sub-agents."""
 
 from langchain_core.tools import tool
-from typing import Dict, Any
+from typing import Dict, Any, Union, List
+from typing_extensions import TypeAlias
+
+ResearchResult = Dict[str, Union[str, bool, Dict[int, Any], List[Any], None]]
 from rich.console import Console
 from ra_aid.tools.memory import _global_memory
 from .memory import get_memory_value, get_related_files
 from ..llm import initialize_llm
 from ..console import print_task_header
 
+RESEARCH_AGENT_RECURSION_LIMIT = 2
+
 console = Console()
 
 @tool("request_research")
-def request_research(query: str) -> Dict[str, Any]:
+def request_research(query: str) -> ResearchResult:
     """Spawn a research-only agent to investigate the given query.
-    
+
+    This function creates a new research agent to investigate the given query. It includes 
+    recursion depth limiting to prevent infinite recursive research calls.
+
     Args:
         query: The research question or project description
     """
@@ -21,7 +29,27 @@ def request_research(query: str) -> Dict[str, Any]:
     config = _global_memory.get('config', {})
     model = initialize_llm(config.get('provider', 'anthropic'), config.get('model', 'claude-3-5-sonnet-20241022'))
     
+    # Check recursion depth
+    current_depth = _global_memory.get('research_depth', 0)
+    if current_depth >= RESEARCH_AGENT_RECURSION_LIMIT:
+        console.print("\n[red]Maximum research recursion depth reached[/red]")
+        return {
+            "completion_message": "Research stopped - maximum recursion depth reached",
+            "key_facts": get_memory_value("key_facts"),
+            "related_files": list(get_related_files()),
+            "research_notes": get_memory_value("research_notes"),
+            "key_snippets": get_memory_value("key_snippets"),
+            "success": False,
+            "reason": "max_depth_exceeded"
+        }
+
+    success = True
+    reason = None
+    
     try:
+        # Increment depth counter
+        _global_memory['research_depth'] = current_depth + 1
+        
         # Run research agent
         from ..agent_utils import run_research_agent
         result = run_research_agent(
@@ -32,9 +60,6 @@ def request_research(query: str) -> Dict[str, Any]:
             hil=config.get('hil', False),
             console_message=query
         )
-        
-        success = True
-        reason = None
     except KeyboardInterrupt:
         console.print("\n[yellow]Research interrupted by user[/yellow]")
         success = False
@@ -43,6 +68,9 @@ def request_research(query: str) -> Dict[str, Any]:
         console.print(f"\n[red]Error during research: {str(e)}[/red]")
         success = False
         reason = f"error: {str(e)}"
+    finally:
+        # Always decrement depth counter
+        _global_memory['research_depth'] = current_depth
         
     # Get completion message if available
     completion_message = _global_memory.get('completion_message', 'Task was completed successfully.' if success else None)

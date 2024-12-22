@@ -15,7 +15,7 @@ class SnippetInfo(TypedDict):
 console = Console()
 
 # Global memory store
-_global_memory: Dict[str, Union[List[Any], Dict[int, str], Dict[int, SnippetInfo], int, Set[str], bool, str]] = {
+_global_memory: Dict[str, Union[List[Any], Dict[int, str], Dict[int, SnippetInfo], int, Set[str], bool, str, int]] = {
     'research_notes': [],
     'plans': [],
     'tasks': {},  # Dict[int, str] - ID to task mapping
@@ -28,7 +28,8 @@ _global_memory: Dict[str, Union[List[Any], Dict[int, str], Dict[int, SnippetInfo
     'key_snippet_id_counter': 0,  # Counter for generating unique snippet IDs
     'implementation_requested': False,
     'related_files': set(),
-    'plan_completed': False
+    'plan_completed': False,
+    'research_depth': 0
 }
 
 @tool("emit_research_notes")

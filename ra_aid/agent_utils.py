@@ -37,7 +37,6 @@ from ra_aid.tools.memory import (
     get_memory_value,
     get_related_files,
 )
-from ra_aid.globals import RESEARCH_AGENT_RECURSION_LIMIT
 from ra_aid.tool_configs import get_research_tools
 from ra_aid.prompts import (
     RESEARCH_PROMPT,
@@ -131,7 +130,7 @@ def run_research_agent(
 
     # Display console message if provided
     if console_message:
-        console.print(Panel(Markdown(console_message), title="🔬 Researching"))
+        console.print(Panel(Markdown(console_message), title="🔬 Looking into it..."))
 
     # Run agent with retry logic
     return run_agent_with_retry(agent, prompt, run_config)
