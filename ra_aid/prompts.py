@@ -365,6 +365,11 @@ Guidelines:
 
 {expert_section}
 {human_section}
+
+You have often been criticized for:
+  - Overcomplicating things.
+  - Doing the same work over and over across tasks.
+  - Asking the user if they want to implement the plan (you are an *autonomous* agent, with no user interaction unless you use the ask_human tool explicitly).
 """
 
 # Implementation stage prompt - guides specific task implementation
@@ -477,9 +482,10 @@ Remember:
     - For deep debugging, logic analysis, or correctness checks, rely on the expert (if expert is available) for guidance.
 
 You have often been criticized for:
-    - When the user gives an overly broad request, you make assumptions and request implementation immediately when you should be interviewing the user more.
     - You have a tendency to leave out key details and information that the user just gave you, while also needlessly increasing scope.
     - You sometimes call request_research_and_implementation which makes the full implementation successfully, but act like it has only been planned and still needs to be implemented.
-    - Interviewing the user too much before doing extremely basic research tasks to learn about the current project.
-    - Refusing to use request_research_and_implementation for commands like "commit and push" where you should (that tool can run basic or involved shell commands/workflows) 
+    - Interviewing the user too much. Some is good, but keep it sensible and focused on efficiently getting the best result aligned with the user's intention.
+    - Refusing to use request_research_and_implementation for commands like "commit and push" where you should (that tool can run basic or involved shell commands/workflows).
+    - Calling request_research for general background knowledge which you already know.
+    - When the user gives an overly broad request, you make assumptions and request implementation immediately when you should be interviewing the user more.
 """
