@@ -27,7 +27,8 @@ _global_memory: Dict[str, Union[List[Any], Dict[int, str], Dict[int, SnippetInfo
     'key_snippets': {},  # Dict[int, SnippetInfo] - ID to snippet mapping
     'key_snippet_id_counter': 0,  # Counter for generating unique snippet IDs
     'implementation_requested': False,
-    'related_files': set(),
+    'related_files': {},  # Dict[int, str] - ID to filepath mapping
+    'related_file_id_counter': 0,  # Counter for generating unique file IDs
     'plan_completed': False,
     'research_depth': 0
 }
@@ -191,7 +192,7 @@ def emit_key_snippets(snippets: List[SnippetInfo]) -> str:
         List of stored snippet confirmation messages
     """
     # First collect unique filepaths to add as related files
-    _global_memory['related_files'].update(snippet_info['filepath'] for snippet_info in snippets)
+    emit_related_files.invoke({"files": [snippet_info['filepath'] for snippet_info in snippets]})
 
     results = []
     for snippet_info in snippets:
@@ -328,13 +329,14 @@ def plan_implementation_completed(message: str) -> str:
     console.print(Panel(Markdown(message), title="✅ Plan Executed"))
     return "Plan completion noted."
 
-def get_related_files() -> Set[str]:
-    """Get the current set of related files.
+def get_related_files() -> List[str]:
+    """Get the current list of related files.
     
     Returns:
-        Set of file paths that have been marked as related
+        List of formatted strings in the format 'ID#X path/to/file.py'
     """
-    return _global_memory['related_files']
+    files = _global_memory['related_files']
+    return [f"ID#{file_id} {filepath}" for file_id, filepath in sorted(files.items())]
 
 @tool("emit_related_files")
 def emit_related_files(files: List[str]) -> str:
@@ -344,27 +346,67 @@ def emit_related_files(files: List[str]) -> str:
         files: List of file paths to add
         
     Returns:
-        Confirmation message
+        Formatted string containing file IDs and paths for all processed files
     """
     results = []
     added_files = []
     
-    # Process unique files
-    for file in set(files):  # Remove duplicates in input
-        if file not in _global_memory['related_files']:
-            _global_memory['related_files'].add(file)
-            added_files.append(file)
-            results.append(f"Added related file: {file}")
+    # Process files
+    for file in files:
+        # Check if file path already exists in values
+        existing_id = None
+        for fid, fpath in _global_memory['related_files'].items():
+            if fpath == file:
+                existing_id = fid
+                break
+                
+        if existing_id is not None:
+            # File exists, use existing ID
+            results.append(f"File ID #{existing_id}: {file}")
+        else:
+            # New file, assign new ID
+            file_id = _global_memory['related_file_id_counter']
+            _global_memory['related_file_id_counter'] += 1
+            
+            # Store file with ID
+            _global_memory['related_files'][file_id] = file
+            added_files.append((file_id, file))
+            results.append(f"File ID #{file_id}: {file}")
     
     # Rich output - single consolidated panel
     if added_files:
-        files_added_md = '\n'.join(f"- `{file}`" for file in added_files)
+        files_added_md = '\n'.join(f"- ID#{id}: `{file}`" for id, file in added_files)
         md_content = f"**Files Noted:**\n{files_added_md}"
         console.print(Panel(Markdown(md_content), 
                           title="📁 Related Files Noted", 
                           border_style="green"))
     
-    return "Files noted."
+    return '\n'.join(results)
+
+
+@tool("delete_related_files")
+def delete_related_files(file_ids: List[int]) -> str:
+    """Delete multiple related files from global memory by their IDs.
+    Silently skips any IDs that don't exist.
+    
+    Args:
+        file_ids: List of file IDs to delete
+        
+    Returns:
+        Success message string
+    """
+    results = []
+    for file_id in file_ids:
+        if file_id in _global_memory['related_files']:
+            # Delete the file reference
+            deleted_file = _global_memory['related_files'].pop(file_id)
+            success_msg = f"Successfully removed related file #{file_id}: {deleted_file}"
+            console.print(Panel(Markdown(success_msg), 
+                              title="File Reference Removed", 
+                              border_style="green"))
+            results.append(success_msg)
+            
+    return "File references removed."
 
 def get_memory_value(key: str) -> str:
     """Get a value from global memory.

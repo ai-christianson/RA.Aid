@@ -8,6 +8,7 @@ from ra_aid.tools.memory import (
     delete_key_snippets,
     emit_related_files,
     get_related_files,
+    delete_related_files,
     emit_task,
     delete_tasks,
     swap_task_order
@@ -23,7 +24,8 @@ def reset_memory():
     _global_memory['research_notes'] = []
     _global_memory['plans'] = []
     _global_memory['tasks'] = []
-    _global_memory['related_files'] = set()
+    _global_memory['related_files'] = {}
+    _global_memory['related_file_id_counter'] = 0
     _global_memory['tasks'] = {}
     _global_memory['task_id_counter'] = 0
     yield
@@ -34,6 +36,8 @@ def reset_memory():
     _global_memory['key_snippet_id_counter'] = 0
     _global_memory['research_notes'] = []
     _global_memory['plans'] = []
+    _global_memory['related_files'] = {}
+    _global_memory['related_file_id_counter'] = 0
     _global_memory['tasks'] = {}
     _global_memory['task_id_counter'] = 0
 
@@ -214,33 +218,104 @@ def test_delete_key_snippets_empty(reset_memory):
     assert 0 in _global_memory['key_snippets']
 
 def test_emit_related_files_basic(reset_memory):
-    """Test basic adding of files"""
+    """Test basic adding of files with ID tracking"""
     # Test adding single file
     result = emit_related_files.invoke({"files": ["test.py"]})
-    assert result == "Files noted."
-    assert get_related_files() == {"test.py"}
+    assert result == "File ID #0: test.py"
+    assert _global_memory['related_files'][0] == "test.py"
     
     # Test adding multiple files
     result = emit_related_files.invoke({"files": ["main.py", "utils.py"]})
-    assert result == "Files noted."
-    assert get_related_files() == {"test.py", "main.py", "utils.py"}
+    assert result == "File ID #1: main.py\nFile ID #2: utils.py"
+    # Verify both files exist in related_files
+    values = list(_global_memory['related_files'].values())
+    assert "main.py" in values
+    assert "utils.py" in values
 
 def test_get_related_files_empty(reset_memory):
     """Test getting related files when none added"""
-    assert get_related_files() == set()
+    assert get_related_files() == []
 
 def test_emit_related_files_duplicates(reset_memory):
-    """Test that duplicate files are handled correctly"""
+    """Test that duplicate files return existing IDs with proper formatting"""
     # Add initial files
     result = emit_related_files.invoke({"files": ["test.py", "main.py"]})
-    assert result == "Files noted."
-    assert get_related_files() == {"test.py", "main.py"}
+    assert result == "File ID #0: test.py\nFile ID #1: main.py"
+    first_id = 0  # ID of test.py
     
     # Try adding duplicates
-    result = emit_related_files.invoke({"files": ["test.py", "main.py", "test.py"]})
-    assert result == "Files noted."
-    # Set should still only contain unique entries
-    assert get_related_files() == {"test.py", "main.py"}
+    result = emit_related_files.invoke({"files": ["test.py"]})
+    assert result == "File ID #0: test.py"  # Should return same ID
+    assert len(_global_memory['related_files']) == 2  # Count should not increase
+    
+    # Try mix of new and duplicate files
+    result = emit_related_files.invoke({"files": ["test.py", "new.py"]})
+    assert result == "File ID #0: test.py\nFile ID #2: new.py"
+    assert len(_global_memory['related_files']) == 3
+
+def test_related_files_id_tracking(reset_memory):
+    """Test ID assignment and counter functionality for related files"""
+    # Add first file
+    result = emit_related_files.invoke({"files": ["file1.py"]})
+    assert result == "File ID #0: file1.py"
+    assert _global_memory['related_file_id_counter'] == 1
+    
+    # Add second file
+    result = emit_related_files.invoke({"files": ["file2.py"]})
+    assert result == "File ID #1: file2.py"
+    assert _global_memory['related_file_id_counter'] == 2
+    
+    # Verify all files stored correctly
+    assert _global_memory['related_files'][0] == "file1.py"
+    assert _global_memory['related_files'][1] == "file2.py"
+
+def test_delete_related_files(reset_memory):
+    """Test deleting related files"""
+    # Add test files
+    emit_related_files.invoke({"files": ["file1.py", "file2.py", "file3.py"]})
+    
+    # Delete middle file
+    result = delete_related_files.invoke({"file_ids": [1]})
+    assert result == "File references removed."
+    assert 1 not in _global_memory['related_files']
+    assert len(_global_memory['related_files']) == 2
+    
+    # Delete multiple files including non-existent ID
+    result = delete_related_files.invoke({"file_ids": [0, 2, 999]})
+    assert result == "File references removed."
+    assert len(_global_memory['related_files']) == 0
+    
+    # Counter should remain unchanged after deletions
+    assert _global_memory['related_file_id_counter'] == 3
+
+def test_related_files_duplicates(reset_memory):
+    """Test duplicate file handling returns same ID"""
+    # Add initial file
+    result1 = emit_related_files.invoke({"files": ["test.py"]})
+    assert result1 == "File ID #0: test.py"
+    
+    # Add same file again
+    result2 = emit_related_files.invoke({"files": ["test.py"]})
+    assert result2 == "File ID #0: test.py"
+    
+    # Verify only one entry exists
+    assert len(_global_memory['related_files']) == 1
+    assert _global_memory['related_file_id_counter'] == 1
+
+def test_related_files_formatting(reset_memory):
+    """Test related files output string formatting"""
+    # Add some files
+    emit_related_files.invoke({"files": ["file1.py", "file2.py"]})
+    
+    # Get formatted output
+    output = get_memory_value('related_files')
+    # Expect just the IDs on separate lines
+    expected = "0\n1"
+    assert output == expected
+    
+    # Test empty case
+    _global_memory['related_files'] = {}
+    assert get_memory_value('related_files') == ""
 
 def test_key_snippets_integration(reset_memory):
     """Integration test for key snippets functionality"""
@@ -270,8 +345,13 @@ def test_key_snippets_integration(reset_memory):
     result = emit_key_snippets.invoke({"snippets": snippets})
     assert result == "Snippets stored."
     assert _global_memory['key_snippet_id_counter'] == 3
-    # Verify related files were tracked
-    assert _global_memory['related_files'] == {"file1.py", "file2.py", "file3.py"}
+    # Verify related files were tracked with IDs
+    assert len(_global_memory['related_files']) == 3
+    # Check files are stored with proper IDs
+    file_values = _global_memory['related_files'].values()
+    assert "file1.py" in file_values
+    assert "file2.py" in file_values
+    assert "file3.py" in file_values
     
     # Verify all snippets were stored correctly
     assert len(_global_memory['key_snippets']) == 3
@@ -302,7 +382,9 @@ def test_key_snippets_integration(reset_memory):
     assert result == "Snippets stored."
     assert _global_memory['key_snippet_id_counter'] == 4
     # Verify new file was added to related files
-    assert _global_memory['related_files'] == {"file1.py", "file2.py", "file3.py", "file4.py"}
+    file_values = _global_memory['related_files'].values()
+    assert "file4.py" in file_values
+    assert len(_global_memory['related_files']) == 4
     
     # Delete remaining snippets
     result = delete_key_snippets.invoke({"snippet_ids": [1, 3]})
