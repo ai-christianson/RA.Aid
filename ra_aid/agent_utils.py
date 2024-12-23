@@ -24,7 +24,8 @@ from ra_aid.console.output import print_agent_output
 from ra_aid.tool_configs import (
     get_implementation_tools,
     get_research_tools,
-    get_planning_tools
+    get_planning_tools,
+    get_web_research_tools
 )
 from ra_aid.prompts import (
     IMPLEMENTATION_PROMPT,
@@ -200,11 +201,8 @@ def run_web_research_agent(
     if thread_id is None:
         thread_id = str(uuid.uuid4())
 
-    # Configure tools
-    tools = get_research_tools(
-        expert_enabled=expert_enabled,
-        human_interaction=hil
-    )
+    # Configure tools using restricted web research toolset
+    tools = get_web_research_tools(expert_enabled=expert_enabled)
 
     # Create agent
     agent = create_react_agent(model, tools, checkpointer=memory)

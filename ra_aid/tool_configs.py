@@ -6,7 +6,7 @@ from ra_aid.tools import (
     emit_key_snippets, delete_key_snippets, deregister_related_files, delete_tasks, read_file_tool,
     fuzzy_find_project_files, ripgrep_search, list_directory_tree,
     swap_task_order, monorepo_detected, existing_project_detected, ui_detected,
-    task_completed, plan_implementation_completed
+    task_completed, plan_implementation_completed, web_search_tavily
 )
 from ra_aid.tools.memory import one_shot_completed
 from ra_aid.tools.agent import request_research, request_implementation, request_research_and_implementation, request_task_implementation, request_web_research
@@ -105,6 +105,25 @@ def get_implementation_tools(expert_enabled: bool = True) -> list:
     if expert_enabled:
         tools.extend(EXPERT_TOOLS)
     
+    return tools
+
+def get_web_research_tools(expert_enabled: bool = True) -> list:
+    """Get the list of tools available for web research.
+    
+    Args:
+        expert_enabled: Whether expert tools should be included
+        
+    Returns:
+        list: List of tools configured for web research
+    """
+    tools = [
+        web_search_tavily
+    ]
+
+    if expert_enabled:
+        tools.append(emit_expert_context)
+        tools.append(ask_expert)
+
     return tools
 
 def get_chat_tools(expert_enabled: bool = True) -> list:

@@ -632,3 +632,10 @@ You have often been criticized for:
 
 NEVER ANNOUNCE WHAT YOU ARE DOING, JUST DO IT!
 """
+WEB_RESEARCH_PROMPT_SECTION_CHAT = """
+Web Research:
+    If you need to obtain additional context from online sources during chat:
+    - Use request_web_research to gather relevant information
+    - Wait for web research results before proceeding
+    - Web research can help provide up-to-date information and best practices
+"""
