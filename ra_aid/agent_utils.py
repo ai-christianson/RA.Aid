@@ -1,5 +1,6 @@
 """Utility functions for working with agents."""
 
+import sys
 import time
 import uuid
 from typing import Optional, Any, List
@@ -278,11 +279,16 @@ def run_task_implementation_agent(
 
 _CONTEXT_STACK = []
 _INTERRUPT_CONTEXT = None
+_FEEDBACK_MODE = False
 
 def _request_interrupt(signum, frame):
     global _INTERRUPT_CONTEXT
     if _CONTEXT_STACK:
         _INTERRUPT_CONTEXT = _CONTEXT_STACK[-1]
+    
+    if _FEEDBACK_MODE:
+        print(" 👋 Bye!")
+        sys.exit(0)
 
 class InterruptibleSection:
     def __enter__(self):

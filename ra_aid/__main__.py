@@ -228,8 +228,10 @@ def main():
             )
 
     except KeyboardInterrupt:
-        print_interrupt(f"Operation cancelled: {CANCELLED_BY_USER_REASON}")
-        sys.exit(1)
+        print()
+        print(" 👋 Bye!")
+        print()
+        sys.exit(0)
 
 if __name__ == "__main__":
     main()

@@ -1,4 +1,3 @@
-import sys
 from langchain_core.tools import tool
 from prompt_toolkit import PromptSession
 from prompt_toolkit.key_binding import KeyBindings
@@ -16,13 +15,6 @@ def create_keybindings():
     def submit(event):
         """Trigger submission when Ctrl+D is pressed."""
         event.current_buffer.validate_and_handle()
-
-    @bindings.add('c-c')
-    def exit(event):
-        """Trigger exit when Ctrl+C is pressed."""
-        print()
-        print(" 👋 Bye!")
-        sys.exit(0)
 
     return bindings
 
@@ -45,7 +37,7 @@ def ask_human(question: str) -> str:
     session = PromptSession(
         multiline=True,
         key_bindings=create_keybindings(),
-        prompt_continuation='. ',
+        prompt_continuation='.',
     )
 
     print()
