@@ -260,6 +260,7 @@ def run_task_implementation_agent(
         related_files=related_files,
         key_facts=get_memory_value('key_facts'),
         key_snippets=get_memory_value('key_snippets'),
+        work_log=get_memory_value('work_log'),
         expert_section=EXPERT_PROMPT_SECTION_IMPLEMENTATION if expert_enabled else "",
         human_section=HUMAN_PROMPT_SECTION_IMPLEMENTATION if _global_memory.get('config', {}).get('hil', False) else ""
     )

@@ -395,6 +395,11 @@ Key Snippets:
 Relevant Files:
 {related_files}
 
+Work done so far:
+<work log>
+{work_log}
+</work log>
+
 Important Notes:
 - Focus solely on the given task and implement it as described.
 - Scale the complexity of your solution to the complexity of the request. For simple requests, keep it straightforward and minimal. For complex requests, maintain the previously planned depth.
