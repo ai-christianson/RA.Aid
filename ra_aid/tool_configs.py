@@ -9,7 +9,7 @@ from ra_aid.tools import (
     task_completed, plan_implementation_completed
 )
 from ra_aid.tools.memory import one_shot_completed
-from ra_aid.tools.agent import request_research, request_implementation, request_research_and_implementation, request_task_implementation
+from ra_aid.tools.agent import request_research, request_implementation, request_research_and_implementation, request_task_implementation, request_web_research
 
 # Read-only tools that don't modify system state
 def get_read_only_tools(human_interaction: bool = False) -> list:
@@ -25,7 +25,8 @@ def get_read_only_tools(human_interaction: bool = False) -> list:
         read_file_tool,
         fuzzy_find_project_files,
         ripgrep_search,
-        run_shell_command # can modify files, but we still need it for read-only tasks.
+        run_shell_command, # can modify files, but we still need it for read-only tasks.
+        request_web_research
     ]
     
     if human_interaction:
@@ -116,6 +117,7 @@ def get_chat_tools(expert_enabled: bool = True) -> list:
         ask_human,
         request_research,
         request_research_and_implementation,
+        request_web_research,
         emit_key_facts,
         delete_key_facts,
         delete_key_snippets,
