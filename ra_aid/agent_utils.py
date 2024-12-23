@@ -31,12 +31,16 @@ from ra_aid.prompts import (
     EXPERT_PROMPT_SECTION_IMPLEMENTATION,
     HUMAN_PROMPT_SECTION_IMPLEMENTATION,
     EXPERT_PROMPT_SECTION_RESEARCH,
+    WEB_RESEARCH_PROMPT_SECTION_RESEARCH,
+    WEB_RESEARCH_PROMPT_SECTION_CHAT,
+    WEB_RESEARCH_PROMPT_SECTION_PLANNING,
     RESEARCH_PROMPT,
     RESEARCH_ONLY_PROMPT,
     HUMAN_PROMPT_SECTION_RESEARCH,
     PLANNING_PROMPT,
     EXPERT_PROMPT_SECTION_PLANNING,
-    HUMAN_PROMPT_SECTION_PLANNING
+    WEB_RESEARCH_PROMPT_SECTION_PLANNING,
+    HUMAN_PROMPT_SECTION_PLANNING,
 )
 from langgraph.checkpoint.memory import MemorySaver
 
@@ -120,6 +124,7 @@ def run_research_agent(
     # Format prompt sections
     expert_section = EXPERT_PROMPT_SECTION_RESEARCH if expert_enabled else ""
     human_section = HUMAN_PROMPT_SECTION_RESEARCH if hil else ""
+    web_research_section = WEB_RESEARCH_PROMPT_SECTION_RESEARCH if config.get('web_research') else ""
     
     # Get research context from memory
     key_facts = _global_memory.get("key_facts", "")
@@ -132,6 +137,7 @@ def run_research_agent(
         research_only_note='' if research_only else ' Only request implementation if the user explicitly asked for changes to be made.',
         expert_section=expert_section,
         human_section=human_section,
+        web_research_section=web_research_section,
         key_facts=key_facts,
         code_snippets=code_snippets,
         related_files=related_files
@@ -193,11 +199,13 @@ def run_planning_agent(
     # Format prompt sections
     expert_section = EXPERT_PROMPT_SECTION_PLANNING if expert_enabled else ""
     human_section = HUMAN_PROMPT_SECTION_PLANNING if hil else ""
+    web_research_section = WEB_RESEARCH_PROMPT_SECTION_PLANNING if config.get('web_research') else ""
     
     # Build prompt
     planning_prompt = PLANNING_PROMPT.format(
         expert_section=expert_section,
         human_section=human_section,
+        web_research_section=web_research_section,
         base_task=base_task,
         research_notes=get_memory_value('research_notes'),
         related_files="\n".join(get_related_files()),
@@ -272,7 +280,8 @@ def run_task_implementation_agent(
         key_snippets=get_memory_value('key_snippets'),
         work_log=get_memory_value('work_log'),
         expert_section=EXPERT_PROMPT_SECTION_IMPLEMENTATION if expert_enabled else "",
-        human_section=HUMAN_PROMPT_SECTION_IMPLEMENTATION if _global_memory.get('config', {}).get('hil', False) else ""
+        human_section=HUMAN_PROMPT_SECTION_IMPLEMENTATION if _global_memory.get('config', {}).get('hil', False) else "",
+        web_research_section=WEB_RESEARCH_PROMPT_SECTION_CHAT if config.get('web_research') else ""
     )
 
     # Set up configuration

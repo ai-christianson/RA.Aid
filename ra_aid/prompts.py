@@ -68,6 +68,39 @@ Human Interaction:
     - Wait for responses before proceeding
 """
 
+# Web research prompt sections
+WEB_RESEARCH_PROMPT_SECTION_RESEARCH = """
+Web Research:
+    If you need additional information from web sources:
+    - Use request_web_research to search and gather relevant information
+    - Wait for web research results before proceeding with research
+    - The web research can help validate patterns, best practices, or documentation
+"""
+
+WEB_RESEARCH_PROMPT_SECTION_PLANNING = """
+Web Research:
+    If you need to confirm current best practices or implementation approaches:
+    - Use request_web_research to verify implementation patterns
+    - Wait for web research results before finalizing plans
+    - Web research can help validate architectural decisions and technical choices
+"""
+
+WEB_RESEARCH_PROMPT_SECTION_IMPLEMENTATION = """
+Web Research:
+    If you need guidance on specific implementation details:
+    - Use request_web_research to find examples or documentation
+    - Wait for web research results before proceeding with implementation
+    - Web research can help validate specific code patterns or configurations
+"""
+
+WEB_RESEARCH_PROMPT_SECTION_CHAT = """
+Web Research:
+    If you need to obtain additional context from online sources during chat:
+    - Use request_web_research to gather relevant information
+    - Wait for web research results before proceeding
+    - Web research can help provide up-to-date information and best practices
+"""
+
 # Research stage prompt - guides initial codebase analysis
 RESEARCH_PROMPT = """User query: {base_task} --keep it simple
 

@@ -132,7 +132,7 @@ def main():
     """Main entry point for the ra-aid command line tool."""
     try:
         args = parse_arguments()
-        expert_enabled, expert_missing = validate_environment(args)  # Will exit if main env vars missing
+        expert_enabled, expert_missing, web_research_enabled, web_research_missing = validate_environment(args)  # Will exit if main env vars missing
         
         if expert_missing:
             console.print(Panel(
@@ -140,6 +140,15 @@ def main():
                 "\n".join(f"- {m}" for m in expert_missing) +
                 "\nSet the required environment variables or args to enable expert mode.",
                 title="Expert Tools Disabled",
+                style="yellow"
+            ))
+
+        if web_research_missing:
+            console.print(Panel(
+                f"[yellow]Web research disabled due to missing configuration:[/yellow]\n" + 
+                "\n".join(f"- {m}" for m in web_research_missing) +
+                "\nSet the required environment variables to enable web research.",
+                title="Web Research Disabled",
                 style="yellow"
             ))
         
@@ -167,6 +176,7 @@ def main():
                 "chat_mode": True,
                 "cowboy_mode": args.cowboy_mode,
                 "hil": True,  # Always true in chat mode
+                "web_research_enabled": web_research_enabled,
                 "initial_request": initial_request
             }
             
@@ -176,7 +186,10 @@ def main():
             _global_memory['config']['expert_model'] = args.expert_model
             
             # Run chat agent and exit
-            run_agent_with_retry(chat_agent, CHAT_PROMPT.format(initial_request=initial_request), config)
+            run_agent_with_retry(chat_agent, CHAT_PROMPT.format(
+                    initial_request=initial_request,
+                    web_research_section=WEB_RESEARCH_PROMPT_SECTION_CHAT if web_research_enabled else ""
+                ), config)
             return
 
         # Validate message is provided
@@ -189,7 +202,8 @@ def main():
             "configurable": {"thread_id": uuid.uuid4()},
             "recursion_limit": 100,
             "research_only": args.research_only,
-            "cowboy_mode": args.cowboy_mode
+            "cowboy_mode": args.cowboy_mode,
+            "web_research_enabled": web_research_enabled
         }
     
         # Store config in global memory for access by is_informational_query

@@ -20,7 +20,7 @@ PROVIDER_CONFIGS = {
     "openai-compatible": ProviderConfig("OPENAI_API_KEY", base_required=True),
 }
 
-def validate_environment(args) -> Tuple[bool, List[str]]:
+def validate_environment(args) -> Tuple[bool, List[str], bool, List[str]]:
     """Validate required environment variables and dependencies.
     
     Args:
@@ -32,6 +32,8 @@ def validate_environment(args) -> Tuple[bool, List[str]]:
         Tuple containing:
             - bool: Whether expert mode is enabled
             - List[str]: List of missing expert configuration items
+            - bool: Whether web research is enabled
+            - List[str]: List of missing web research configuration items
             
     Raises:
         SystemExit: If required base environment variables are missing
@@ -91,4 +93,13 @@ def validate_environment(args) -> Tuple[bool, List[str]]:
     if expert_missing:
         expert_enabled = False
 
-    return expert_enabled, expert_missing
+    # Check web research dependencies
+    web_research_missing = []
+    if not os.environ.get('TAVILY_API_KEY'):
+        web_research_missing.append('TAVILY_API_KEY environment variable is not set')
+    
+    web_research_enabled = True
+    if web_research_missing:
+        web_research_enabled = False
+
+    return expert_enabled, expert_missing, web_research_enabled, web_research_missing
