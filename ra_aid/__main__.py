@@ -8,6 +8,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import create_react_agent
 from ra_aid.env import validate_environment
 from ra_aid.tools.memory import _global_memory, get_related_files, get_memory_value
+from ra_aid.tools.human import ask_human
 from ra_aid import print_stage_header, print_error
 from ra_aid.agent_utils import (
     run_agent_with_retry,
@@ -147,6 +148,9 @@ def main():
         if args.chat:
             print_stage_header("Chat Mode")
             
+            # Get initial request from user
+            initial_request = ask_human.invoke({"question": "What would you like help with?"})
+
             # Create chat agent with appropriate tools
             chat_agent = create_react_agent(
                 model,
@@ -160,7 +164,8 @@ def main():
                 "recursion_limit": 100,
                 "chat_mode": True,
                 "cowboy_mode": args.cowboy_mode,
-                "hil": True  # Always true in chat mode
+                "hil": True,  # Always true in chat mode
+                "initial_request": initial_request
             }
             
             # Store config in global memory
@@ -169,7 +174,7 @@ def main():
             _global_memory['config']['expert_model'] = args.expert_model
             
             # Run chat agent and exit
-            run_agent_with_retry(chat_agent, CHAT_PROMPT, config)
+            run_agent_with_retry(chat_agent, CHAT_PROMPT.format(initial_request=initial_request), config)
             return
 
         # Validate message is provided

@@ -116,6 +116,7 @@ def get_chat_tools(expert_enabled: bool = True) -> list:
         ask_human,
         request_research,
         request_research_and_implementation,
+        emit_key_facts,
         delete_key_facts,
         delete_key_snippets,
         deregister_related_files
