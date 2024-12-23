@@ -11,7 +11,9 @@ from ra_aid.tools.memory import (
     deregister_related_files,
     emit_task,
     delete_tasks,
-    swap_task_order
+    swap_task_order,
+    log_work_event,
+    reset_work_log
 )
 
 @pytest.fixture
@@ -28,6 +30,7 @@ def reset_memory():
     _global_memory['related_file_id_counter'] = 0
     _global_memory['tasks'] = {}
     _global_memory['task_id_counter'] = 0
+    _global_memory['work_log'] = []
     yield
     # Clean up after test
     _global_memory['key_facts'] = {}
@@ -40,6 +43,7 @@ def reset_memory():
     _global_memory['related_file_id_counter'] = 0
     _global_memory['tasks'] = {}
     _global_memory['task_id_counter'] = 0
+    _global_memory['work_log'] = []
 
 def test_emit_key_facts_single_fact(reset_memory):
     """Test emitting a single key fact using emit_key_facts"""
@@ -96,6 +100,61 @@ def test_get_memory_value_other_types(reset_memory):
     
     # Test with non-existent key
     assert get_memory_value('nonexistent') == ""
+
+def test_log_work_event(reset_memory):
+    """Test logging work events with timestamps"""
+    # Log some events
+    log_work_event("Started task")
+    log_work_event("Made progress")
+    log_work_event("Completed task")
+    
+    # Verify events are stored
+    assert len(_global_memory['work_log']) == 3
+    
+    # Check event structure
+    event = _global_memory['work_log'][0]
+    assert isinstance(event['timestamp'], str)
+    assert event['event'] == "Started task"
+    
+    # Verify order
+    assert _global_memory['work_log'][1]['event'] == "Made progress"
+    assert _global_memory['work_log'][2]['event'] == "Completed task"
+
+def test_get_work_log(reset_memory):
+    """Test work log formatting in markdown"""
+    # Add some events
+    log_work_event("First event")
+    log_work_event("Second event")
+    
+    # Get formatted log
+    log = get_memory_value('work_log')
+    
+    # Verify events and timestamps exist
+    for event in _global_memory['work_log']:
+        assert isinstance(event['timestamp'], str)
+        assert isinstance(event['event'], str)
+    
+    # Verify events in chronological order
+    assert _global_memory['work_log'][0]['event'] == "First event"
+    assert _global_memory['work_log'][1]['event'] == "Second event"
+
+def test_reset_work_log(reset_memory):
+    """Test resetting the work log"""
+    # Add some events
+    log_work_event("Test event")
+    assert len(_global_memory['work_log']) == 1
+    
+    # Reset log
+    reset_work_log()
+    
+    # Verify log is empty
+    assert len(_global_memory['work_log']) == 0
+    assert get_memory_value('work_log') == ""
+
+def test_empty_work_log(reset_memory):
+    """Test empty work log behavior"""
+    # Fresh work log should return empty string
+    assert get_memory_value('work_log') == ""
 
 def test_emit_key_facts(reset_memory):
     """Test emitting multiple key facts at once"""

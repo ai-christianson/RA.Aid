@@ -1,4 +1,8 @@
-from typing import Dict, List, Any, Union, TypedDict, Optional, Sequence, Set
+from typing import Dict, List, Any, Union, TypedDict, Optional, Sequence, Set, TypeVar, Literal
+
+class WorkLogEntry(TypedDict):
+    timestamp: str
+    event: str
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
@@ -15,7 +19,7 @@ class SnippetInfo(TypedDict):
 console = Console()
 
 # Global memory store
-_global_memory: Dict[str, Union[List[Any], Dict[int, str], Dict[int, SnippetInfo], int, Set[str], bool, str, int]] = {
+_global_memory: Dict[str, Union[List[Any], Dict[int, str], Dict[int, SnippetInfo], int, Set[str], bool, str, int, List[WorkLogEntry]]] = {
     'research_notes': [],
     'plans': [],
     'tasks': {},  # Dict[int, str] - ID to task mapping
@@ -30,7 +34,8 @@ _global_memory: Dict[str, Union[List[Any], Dict[int, str], Dict[int, SnippetInfo
     'related_files': {},  # Dict[int, str] - ID to filepath mapping
     'related_file_id_counter': 1,  # Counter for generating unique file IDs
     'plan_completed': False,
-    'research_depth': 0
+    'research_depth': 0,
+    'work_log': []  # List[WorkLogEntry] - Timestamped work events
 }
 
 @tool("emit_research_notes")
@@ -59,6 +64,7 @@ def emit_plan(plan: str) -> str:
     """
     _global_memory['plans'].append(plan)
     console.print(Panel(Markdown(plan), title="📋 Plan"))
+    log_work_event(f"Added plan step: {plan}")
     return plan
 
 @tool("emit_task")
@@ -79,6 +85,7 @@ def emit_task(task: str) -> str:
     _global_memory['tasks'][task_id] = task
     
     console.print(Panel(Markdown(task), title=f"✅ Task #{task_id}"))
+    log_work_event(f"Task #{task_id} added: {task}")
     return f"Task #{task_id} stored."
 
 
@@ -107,7 +114,8 @@ def emit_key_facts(facts: List[str]) -> str:
         
         # Add result message
         results.append(f"Stored fact #{fact_id}: {fact}")
-        
+    
+    log_work_event(f"Stored {len(facts)} key facts")    
     return "Facts stored."
 
 
@@ -130,7 +138,8 @@ def delete_key_facts(fact_ids: List[int]) -> str:
             success_msg = f"Successfully deleted fact #{fact_id}: {deleted_fact}"
             console.print(Panel(Markdown(success_msg), title="Fact Deleted", border_style="green"))
             results.append(success_msg)
-            
+    
+    log_work_event(f"Deleted facts {fact_ids}")        
     return "Facts deleted."
 
 @tool("delete_tasks")
@@ -154,7 +163,8 @@ def delete_tasks(task_ids: List[int]) -> str:
                               title="Task Deleted", 
                               border_style="green"))
             results.append(success_msg)
-            
+    
+    log_work_event(f"Deleted tasks {task_ids}")        
     return "Tasks deleted."
 
 @tool("request_implementation")
@@ -172,6 +182,7 @@ def request_implementation() -> str:
     """
     _global_memory['implementation_requested'] = True
     console.print(Panel("🚀 Implementation Requested", style="yellow", padding=0))
+    log_work_event("Implementation requested")
     return ""
 
 
@@ -223,7 +234,8 @@ def emit_key_snippets(snippets: List[SnippetInfo]) -> str:
                           border_style="bright_cyan"))
         
         results.append(f"Stored snippet #{snippet_id}")
-        
+    
+    log_work_event(f"Stored {len(snippets)} code snippets")    
     return "Snippets stored."
 
 @tool("delete_key_snippets") 
@@ -247,7 +259,8 @@ def delete_key_snippets(snippet_ids: List[int]) -> str:
                               title="Snippet Deleted", 
                               border_style="green"))
             results.append(success_msg)
-            
+    
+    log_work_event(f"Deleted snippets {snippet_ids}")        
     return "Snippets deleted."
 
 @tool("swap_task_order")
@@ -297,6 +310,7 @@ def one_shot_completed(message: str) -> str:
     _global_memory['task_completed'] = True
     _global_memory['completion_message'] = message
     console.print(Panel(Markdown(message), title="✅ Task Completed"))
+    log_work_event(f"Task completed: {message}")
     return "Completion noted."
 
 @tool("task_completed")
@@ -327,6 +341,7 @@ def plan_implementation_completed(message: str) -> str:
     _global_memory['plan_completed'] = True
     _global_memory['completion_message'] = message
     console.print(Panel(Markdown(message), title="✅ Plan Executed"))
+    log_work_event(f"Plan execution completed: {message}")
     return "Plan completion noted."
 
 def get_related_files() -> List[str]:
@@ -382,6 +397,50 @@ def emit_related_files(files: List[str]) -> str:
                           border_style="green"))
     
     return '\n'.join(results)
+
+
+@tool("log_work_event")
+def log_work_event(event: str) -> str:
+    """Add timestamped entry to work log.
+    
+    Args:
+        event: Description of the event
+        
+    Returns:
+        Confirmation message
+    """
+    from datetime import datetime
+    entry = WorkLogEntry(
+        timestamp=datetime.now().isoformat(),
+        event=event
+    )
+    _global_memory['work_log'].append(entry)
+    return f"Event logged: {event}"
+
+
+def get_work_log() -> str:
+    """Return formatted markdown table of work log entries.
+    
+    Returns:
+        Formatted markdown table with timestamps and events
+    """
+    if not _global_memory['work_log']:
+        return "No work log entries"
+        
+    header = "| Timestamp | Event |\n|-----------|--------|"
+    rows = [f"| {entry['timestamp']} | {entry['event']} |"
+            for entry in _global_memory['work_log']]
+    return header + "\n".join(rows)
+
+
+def reset_work_log() -> str:
+    """Clear the work log.
+    
+    Returns: 
+        Confirmation message
+    """
+    _global_memory['work_log'].clear()
+    return "Work log cleared"
 
 
 @tool("deregister_related_files")
