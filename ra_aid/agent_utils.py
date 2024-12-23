@@ -161,7 +161,7 @@ def run_research_agent(
     return run_agent_with_retry(agent, prompt, run_config)
 
 def run_web_research_agent(
-    base_task_or_query: str,
+    query: str,
     model,
     *,
     expert_enabled: bool = False,
@@ -174,7 +174,7 @@ def run_web_research_agent(
     """Run a web research agent with the given configuration.
     
     Args:
-        base_task_or_query: The main task or query for web research
+        query: The mainquery for web research
         model: The LLM model to use
         expert_enabled: Whether expert mode is enabled
         hil: Whether human-in-the-loop mode is enabled
@@ -218,7 +218,7 @@ def run_web_research_agent(
     
     # Build prompt
     prompt = WEB_RESEARCH_PROMPT.format(
-        base_task=base_task_or_query,
+        web_research_query=query,
         expert_section=expert_section,
         human_section=human_section,
         key_facts=key_facts,

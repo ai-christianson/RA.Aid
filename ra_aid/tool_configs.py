@@ -117,7 +117,8 @@ def get_web_research_tools(expert_enabled: bool = True) -> list:
         list: List of tools configured for web research
     """
     tools = [
-        web_search_tavily
+        web_search_tavily,
+        emit_research_notes
     ]
 
     if expert_enabled:

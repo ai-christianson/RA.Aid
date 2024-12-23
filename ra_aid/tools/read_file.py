@@ -5,6 +5,7 @@ from typing import Dict, Optional, Tuple
 from langchain_core.tools import tool
 from rich.console import Console
 from rich.panel import Panel
+from rich.markdown import Markdown
 from ra_aid.text.processing import truncate_output
 
 console = Console()
