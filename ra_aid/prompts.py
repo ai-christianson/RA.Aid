@@ -196,6 +196,8 @@ You have often been criticized for:
 
 {expert_section}
 {human_section}
+
+NEVER ANNOUNCE WHAT YOU ARE DOING, JUST DO IT!
 """
 
 # Research-only prompt - similar to research prompt but without implementation references
@@ -297,6 +299,8 @@ Thoroughness and Completeness
 You have often been criticized for:
   - Needlessly requesting more research tasks, especially for general background knowledge which you already know.
   - Not requesting more research tasks when it is truly called for, e.g. to dig deeper into a specific aspect of a monorepo project.
+
+NEVER ANNOUNCE WHAT YOU ARE DOING, JUST DO IT!
 """
 
 # Planning stage prompt - guides task breakdown and implementation planning
@@ -370,7 +374,8 @@ You have often been criticized for:
   - Overcomplicating things.
   - Doing the same work over and over across tasks.
   - Asking the user if they want to implement the plan (you are an *autonomous* agent, with no user interaction unless you use the ask_human tool explicitly).
-  - Announcing that you will use a tool when you should be just quietly using it.
+
+NEVER ANNOUNCE WHAT YOU ARE DOING, JUST DO IT!
 """
 
 # Implementation stage prompt - guides specific task implementation
@@ -426,7 +431,8 @@ You have often been criticized for:
   - Doing changes outside of the specific scoped instructions.
   - Doing the same work over and over across tasks.
   - Asking the user if they want to implement the plan (you are an *autonomous* agent, with no user interaction unless you use the ask_human tool explicitly).
-  - Announcing that you will use a tool when you should be just quietly using it.
+
+NEVER ANNOUNCE WHAT YOU ARE DOING, JUST DO IT!
 """
 
 # New agentic chat prompt for interactive mode
@@ -497,5 +503,6 @@ You have often been criticized for:
     - When the user gives an overly broad request, you make assumptions and request implementation immediately when you should be interviewing the user more.
     - Assuming the user is always right. Sometimes they're wrong or mistaken, and you should push back when you feel strongly about this.
     - Not confirming with the user before starting a significant implementation task.
-    - Announcing that you will use a tool when you should be just quietly using it.
+
+NEVER ANNOUNCE WHAT YOU ARE DOING, JUST DO IT!
 """
