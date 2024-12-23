@@ -41,6 +41,7 @@ from ra_aid.prompts import (
     EXPERT_PROMPT_SECTION_PLANNING,
     WEB_RESEARCH_PROMPT_SECTION_PLANNING,
     HUMAN_PROMPT_SECTION_PLANNING,
+    WEB_RESEARCH_PROMPT,
 )
 from langgraph.checkpoint.memory import MemorySaver
 
@@ -154,6 +155,90 @@ def run_research_agent(
     # Display console message if provided
     if console_message:
         console.print(Panel(Markdown(console_message), title="🔬 Looking into it..."))
+
+    # Run agent with retry logic
+    return run_agent_with_retry(agent, prompt, run_config)
+
+def run_web_research_agent(
+    base_task_or_query: str,
+    model,
+    *,
+    expert_enabled: bool = False,
+    hil: bool = False,
+    memory: Optional[Any] = None,
+    config: Optional[dict] = None,
+    thread_id: Optional[str] = None,
+    console_message: Optional[str] = None
+) -> Optional[str]:
+    """Run a web research agent with the given configuration.
+    
+    Args:
+        base_task_or_query: The main task or query for web research
+        model: The LLM model to use
+        expert_enabled: Whether expert mode is enabled
+        hil: Whether human-in-the-loop mode is enabled
+        memory: Optional memory instance to use
+        config: Optional configuration dictionary
+        thread_id: Optional thread ID (defaults to new UUID)
+        console_message: Optional message to display before running
+        
+    Returns:
+        Optional[str]: The completion message if task completed successfully
+        
+    Example:
+        result = run_web_research_agent(
+            "Research latest Python async patterns",
+            model,
+            expert_enabled=True
+        )
+    """
+    # Initialize memory if not provided
+    if memory is None:
+        memory = MemorySaver()
+
+    # Set up thread ID
+    if thread_id is None:
+        thread_id = str(uuid.uuid4())
+
+    # Configure tools
+    tools = get_research_tools(
+        expert_enabled=expert_enabled,
+        human_interaction=hil
+    )
+
+    # Create agent
+    agent = create_react_agent(model, tools, checkpointer=memory)
+
+    # Format prompt sections
+    expert_section = EXPERT_PROMPT_SECTION_RESEARCH if expert_enabled else ""
+    human_section = HUMAN_PROMPT_SECTION_RESEARCH if hil else ""
+    
+    # Get research context from memory
+    key_facts = _global_memory.get("key_facts", "")
+    code_snippets = _global_memory.get("code_snippets", "")
+    related_files = _global_memory.get("related_files", "")
+    
+    # Build prompt
+    prompt = WEB_RESEARCH_PROMPT.format(
+        base_task=base_task_or_query,
+        expert_section=expert_section,
+        human_section=human_section,
+        key_facts=key_facts,
+        code_snippets=code_snippets,
+        related_files=related_files
+    )
+
+    # Set up configuration
+    run_config = {
+        "configurable": {"thread_id": thread_id},
+        "recursion_limit": 100
+    }
+    if config:
+        run_config.update(config)
+
+    # Display console message if provided
+    if console_message:
+        console.print(Panel(Markdown(console_message), title="🔍 Searching the Web..."))
 
     # Run agent with retry logic
     return run_agent_with_retry(agent, prompt, run_config)
