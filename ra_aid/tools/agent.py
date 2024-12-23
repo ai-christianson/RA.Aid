@@ -98,6 +98,67 @@ def request_research(query: str) -> ResearchResult:
         "reason": reason
     }
 
+@tool("request_web_research")
+def request_web_research(query: str) -> ResearchResult:
+    """Spawn a web research agent to investigate the given query using web search.
+    
+    Args:
+        query: The research question or project description
+    """
+    # Initialize model from config
+    config = _global_memory.get('config', {})
+    model = initialize_llm(config.get('provider', 'anthropic'), config.get('model', 'claude-3-5-sonnet-20241022'))
+    
+    success = True
+    reason = None
+    
+    try:
+        # Run web research agent
+        from ..agent_utils import run_web_research_agent
+        result = run_web_research_agent(
+            query,
+            model,
+            expert_enabled=True,
+            hil=config.get('hil', False),
+            console_message=query,
+            config=config
+        )
+    except AgentInterrupt:
+        print()
+        response = ask_human.invoke({"question": "Why did you interrupt me?"})
+        success = False
+        reason = response if response.strip() else CANCELLED_BY_USER_REASON
+    except KeyboardInterrupt:
+        raise
+    except Exception as e:
+        print_error(f"Error during web research: {str(e)}")
+        success = False
+        reason = f"error: {str(e)}"
+    finally:
+        # Get completion message if available
+        completion_message = _global_memory.get('completion_message', 'Task was completed successfully.' if success else None)
+        
+        # Get and reset work log if at root depth
+        current_depth = _global_memory.get('agent_depth', 0)
+        work_log = get_work_log() if current_depth == 1 else None
+        if current_depth == 1:
+            reset_work_log()
+            
+        # Clear completion state from global memory
+        _global_memory['completion_message'] = ''
+        _global_memory['task_completed'] = False
+        
+    return {
+        "work_log": work_log,
+        "completion_message": completion_message,
+        "key_facts": get_memory_value("key_facts"),
+        "related_files": get_related_files(),
+        "research_notes": get_memory_value("research_notes"),
+        "key_snippets": get_memory_value("key_snippets"),
+        "success": success,
+        "reason": reason
+    }
+
 @tool("request_research_and_implementation")
 def request_research_and_implementation(query: str) -> Dict[str, Any]:
     """Spawn a research agent to investigate and implement the given query.
