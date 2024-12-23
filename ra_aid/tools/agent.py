@@ -188,7 +188,8 @@ def request_task_implementation(task_spec: str) -> Dict[str, Any]:
             plan=plan, 
             related_files=related_files,
             model=model,
-            expert_enabled=True
+            expert_enabled=True,
+            config=config
         )
         
         success = True
