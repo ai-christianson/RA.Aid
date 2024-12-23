@@ -162,6 +162,86 @@ ra-aid -m "Explain the authentication flow" --research-only
 - `--expert-model`: Specify the model name for the expert tool (defaults to o1-preview for OpenAI)
 - `--chat`: Enable chat mode for interactive assistance
 
+### Example Tasks
+
+1. Code Analysis:
+   ```bash
+   ra-aid -m "Explain how the authentication middleware works" --research-only
+   ```
+
+2. Complex Changes:
+   ```bash
+   ra-aid -m "Refactor the database connection code to use connection pooling" --cowboy-mode
+   ```
+
+3. Automated Updates:
+   ```bash
+   ra-aid -m "Update deprecated API calls across the entire codebase" --cowboy-mode
+   ```
+
+4. Code Research:
+   ```bash
+   ra-aid -m "Analyze the current error handling patterns" --research-only
+   ```
+
+2. Code Research:
+   ```bash
+   ra-aid -m "Explain how the authentication middleware works" --research-only
+   ```
+
+3. Refactoring:
+   ```bash
+   ra-aid -m "Refactor the database connection code to use connection pooling" --cowboy-mode
+   ```
+
+### Human-in-the-Loop Mode
+
+Enable interactive mode to allow the agent to ask you questions during task execution:
+
+```bash
+ra-aid -m "Implement a new feature" --hil
+# or
+ra-aid -m "Implement a new feature" -H
+```
+
+This mode is particularly useful for:
+- Complex tasks requiring human judgment
+- Clarifying ambiguous requirements
+- Making architectural decisions
+- Validating critical changes
+- Providing domain-specific knowledge
+
+### Chat Mode
+<img src="assets/demo-chat-mode-1.gif" alt="Chat Mode Demo" autoplay loop style="display: block; margin: 0 auto; width: 100%; max-width: 800px;">
+
+Enable with `--chat` to transform ra-aid into an interactive assistant that guides you through research and implementation tasks. Have a natural conversation about what you want to build, explore options together, and dispatch work - all while maintaining context of your discussion. Perfect for when you want to think through problems collaboratively rather than just executing commands.
+
+### Command Interruption and Feedback
+
+<img src="assets/demo-chat-mode-interrupted-1.gif" alt="Command Interrupt Demo" autoplay loop style="display: block; margin: 0 auto; width: 100%; max-width: 800px;">
+
+You can interrupt the agent at any time by pressing `Ctrl-C`. This pauses the agent, allowing you to provide feedback, adjust your instructions, or steer the execution in a new direction. Press `Ctrl-C` again if you want to completely exit the program.
+
+
+### Shell Command Automation with Cowboy Mode 🏇
+
+The `--cowboy-mode` flag enables automated shell command execution without confirmation prompts. This is useful for:
+
+- CI/CD pipelines
+- Automated testing environments
+- Batch processing operations
+- Scripted workflows
+
+```bash
+ra-aid -m "Update all deprecated API calls" --cowboy-mode
+```
+
+**⚠️ Important Safety Notes:**
+- Cowboy mode skips confirmation prompts for shell commands
+- Always use in version-controlled repositories
+- Ensure you have a clean working tree before running
+- Review changes in git diff before committing
+
 ### Model Configuration
 
 RA.Aid supports multiple AI providers and models. The default model is Anthropic's Claude 3 Sonnet (`claude-3-5-sonnet-20241022`).
@@ -203,7 +283,7 @@ export OPENAI_API_BASE=your_api_base_url
 
 Note: The expert tool defaults to OpenAI's o1-preview model with the OpenAI provider, but this can be configured using the --expert-provider flag along with the corresponding EXPERT_*_KEY environment variables.
 
-#### Examples
+#### Custom Model Examples
 
 1. **Using Anthropic (Default)**
    ```bash
@@ -247,85 +327,7 @@ Note: The expert tool defaults to OpenAI's o1-preview model with the OpenAI prov
 - Model configuration is done via command line arguments: `--provider` and `--model`
 - The `--model` argument is required for all providers except Anthropic (which defaults to `claude-3-5-sonnet-20241022`)
 
-### Example Tasks
-
-1. Code Analysis:
-   ```bash
-   ra-aid -m "Explain how the authentication middleware works" --research-only
-   ```
-
-2. Complex Changes:
-   ```bash
-   ra-aid -m "Refactor the database connection code to use connection pooling" --cowboy-mode
-   ```
-
-3. Automated Updates:
-   ```bash
-   ra-aid -m "Update deprecated API calls across the entire codebase" --cowboy-mode
-   ```
-
-4. Code Research:
-   ```bash
-   ra-aid -m "Analyze the current error handling patterns" --research-only
-   ```
-
-2. Code Research:
-   ```bash
-   ra-aid -m "Explain how the authentication middleware works" --research-only
-   ```
-
-3. Refactoring:
-   ```bash
-   ra-aid -m "Refactor the database connection code to use connection pooling" --cowboy-mode
-   ```
-
-### Shell Command Automation with Cowboy Mode 🏇
-
-The `--cowboy-mode` flag enables automated shell command execution without confirmation prompts. This is useful for:
-
-- CI/CD pipelines
-- Automated testing environments
-- Batch processing operations
-- Scripted workflows
-
-```bash
-ra-aid -m "Update all deprecated API calls" --cowboy-mode
-```
-
-**⚠️ Important Safety Notes:**
-- Cowboy mode skips confirmation prompts for shell commands
-- Always use in version-controlled repositories
-- Ensure you have a clean working tree before running
-- Review changes in git diff before committing
-
-### Human-in-the-Loop Mode
-
-Enable interactive mode to allow the agent to ask you questions during task execution:
-
-```bash
-ra-aid -m "Implement a new feature" --hil
-# or
-ra-aid -m "Implement a new feature" -H
-```
-
-This mode is particularly useful for:
-- Complex tasks requiring human judgment
-- Clarifying ambiguous requirements
-- Making architectural decisions
-- Validating critical changes
-- Providing domain-specific knowledge
-
-### Chat Mode
-<img src="assets/demo-chat-mode-1.gif" alt="Chat Mode Demo" autoplay loop style="display: block; margin: 0 auto; width: 100%; max-width: 800px;">
-
-Enable with `--chat` to transform ra-aid into an interactive assistant that guides you through research and implementation tasks. Have a natural conversation about what you want to build, explore options together, and dispatch work - all while maintaining context of your discussion. Perfect for when you want to think through problems collaboratively rather than just executing commands.
-
-### Environment Variables
-
-See the [Model Configuration](#model-configuration) section for details on provider-specific environment variables.
-
 ## Architecture
-
 
 RA.Aid implements a three-stage architecture for handling development and research tasks:
 
