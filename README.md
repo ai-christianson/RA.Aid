@@ -28,6 +28,16 @@ Here's a demo of RA.Aid adding a feature to itself:
 
 <img src="assets/demo-ra-aid-task-1.gif" alt="RA.Aid Demo" autoplay loop style="width: 100%; max-width: 800px;">
 
+- [Features](#features)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Architecture](#architecture)
+- [Dependencies](#dependencies)
+- [Development Setup](#development-setup)
+- [Contributing](#contributing)
+- [License](#license)
+- [Contact](#contact)
+
 > 👋 **Pull requests are very welcome!** Have ideas for how to impove RA.Aid? Don't be shy - your help makes a real difference!
 >
 > 💬 **Join our Discord community:** [Click here to join](https://discord.gg/f6wYbzHYxV)
@@ -59,18 +69,6 @@ What sets RA.Aid apart is its ability to handle complex programming tasks that e
 - Plan and implement significant code changes across multiple files
 - Provide detailed explanations of existing code structure and functionality
 - Execute sophisticated refactoring operations with proper planning
-
-## Table of Contents
-
-- [Features](#features)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Architecture](#architecture)
-- [Dependencies](#dependencies)
-- [Development Setup](#development-setup)
-- [Contributing](#contributing)
-- [License](#license)
-- [Contact](#contact)
 
 ## Features
 
