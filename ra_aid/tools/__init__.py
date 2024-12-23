@@ -1,4 +1,5 @@
 from .shell import run_shell_command
+from .web_search_tavily import web_search_tavily
 from .research import monorepo_detected, existing_project_detected, ui_detected
 from .human import ask_human
 from .programmer import run_programming_task
@@ -20,6 +21,7 @@ __all__ = [
     'ask_expert',
     'delete_key_facts',
     'delete_key_snippets',
+    'web_search_tavily',
     'deregister_related_files',
     'emit_expert_context', 
     'emit_key_facts',
