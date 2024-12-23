@@ -86,19 +86,20 @@ def test_read_files_with_limit_encoding_error(temp_test_files):
 def test_expert_context_management():
     """Test expert context global state management."""
     # Clear any existing context
-    expert_context.clear()
+    expert_context['text'].clear()
+    expert_context['files'].clear()
     
     # Test adding context
     result1 = emit_expert_context("Test context 1")
     assert "Context added" in result1
-    assert len(expert_context) == 1
-    assert expert_context[0] == "Test context 1"
+    assert len(expert_context['text']) == 1
+    assert expert_context['text'][0] == "Test context 1"
     
     # Test adding multiple contexts
     result2 = emit_expert_context("Test context 2")
     assert "Context added" in result2
-    assert len(expert_context) == 2
-    assert expert_context[1] == "Test context 2"
+    assert len(expert_context['text']) == 2
+    assert expert_context['text'][1] == "Test context 2"
     
     # Test context accumulation
-    assert all(ctx in expert_context for ctx in ["Test context 1", "Test context 2"])
+    assert all(ctx in expert_context['text'] for ctx in ["Test context 1", "Test context 2"])
