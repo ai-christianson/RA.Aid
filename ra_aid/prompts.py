@@ -495,6 +495,13 @@ Context Cleanup:
     - Use delete_key_snippets to remove any key snippets that no longer apply.
     - Use deregister_related_files to remove any related files that no longer apply.
 
+When processing request_* tool responses:
+    - Always check completion_message and work_log for implementation status
+    - If the work_log includes 'Implementation completed' or 'Plan execution completed', the changes have already been made
+    - DO NOT treat a completed implementation as just a plan requiring further implementation
+    - If you see implementation confirmation in the response, inform the user that changes have been completed
+    - If you accidentally ask about implementing already-completed changes, acknowledge your error and correct yourself
+
 Remember:
     - Always process provided request or call ask_human if none provided
     - Always ask_human before finalizing or exiting.
