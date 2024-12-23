@@ -24,7 +24,10 @@ def get_model():
     return _model
 
 # Keep track of context globally
-expert_context = []
+expert_context = {
+    'text': [],    # Additional textual context
+    'files': []    # File paths to include
+}
 
 @tool("emit_expert_context")
 def emit_expert_context(context: str) -> str:
@@ -43,7 +46,7 @@ def emit_expert_context(context: str) -> str:
     Args:
         context: The context to add
     """
-    expert_context.append(context)
+    expert_context['text'].append(context)
     
     # Create and display status panel
     panel_content = f"Added expert context ({len(context)} characters)"
@@ -91,14 +94,19 @@ def read_files_with_limit(file_paths: List[str], max_lines: int = 10000) -> str:
             
     return ''.join(contents)
 
-def read_related_files() -> str:
-    """Read related files from memory.
+def read_related_files(file_paths: List[str]) -> str:
+    """Read the provided files and return their contents.
+    
+    Args:
+        file_paths: List of file paths to read
+        
+    Returns:
+        String containing concatenated file contents, or empty string if no paths
     """
-    related_files = get_related_files()
-    if not related_files:
+    if not file_paths:
         return ''
     
-    return read_files_with_limit(list(related_files), max_lines=10000)
+    return read_files_with_limit(file_paths, max_lines=10000)
 
 @tool("ask_expert")
 def ask_expert(question: str) -> str:
@@ -120,7 +128,8 @@ def ask_expert(question: str) -> str:
     global expert_context
     
     # Get all content first
-    related_contents = read_related_files()
+    file_paths = expert_context['files'] + list(get_related_files())
+    related_contents = read_related_files(file_paths)
     key_snippets = get_memory_value('key_snippets')
     key_facts = get_memory_value('key_facts')
     
@@ -135,7 +144,8 @@ def ask_expert(question: str) -> str:
     ))
     
     # Clear context after panel display
-    expert_context.clear()
+    expert_context['text'].clear()
+    expert_context['files'].clear()
     
     # Build full query in specified order
     query_parts = []
@@ -149,8 +159,8 @@ def ask_expert(question: str) -> str:
     if key_facts and len(key_facts) > 0:
         query_parts.extend(['# Key Facts About This Project', key_facts])
         
-    if expert_context:
-        query_parts.extend(['\n# Additional Context', '\n'.join(expert_context)])
+    if expert_context['text']:
+        query_parts.extend(['\n# Additional Context', '\n'.join(expert_context['text'])])
         
     query_parts.extend(['# Question', question])
     query_parts.extend(['\n # Addidional Requirements', "Do not expand the scope unnecessarily."])
