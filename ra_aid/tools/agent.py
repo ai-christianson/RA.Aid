@@ -33,7 +33,7 @@ def request_research(query: str) -> ResearchResult:
     model = initialize_llm(config.get('provider', 'anthropic'), config.get('model', 'claude-3-5-sonnet-20241022'))
     
     # Check recursion depth
-    current_depth = _global_memory.get('research_depth', 0)
+    current_depth = _global_memory.get('agent_depth', 0)
     if current_depth >= RESEARCH_AGENT_RECURSION_LIMIT:
         print_error("Maximum research recursion depth reached")
         return {
@@ -50,9 +50,6 @@ def request_research(query: str) -> ResearchResult:
     reason = None
     
     try:
-        # Increment depth counter
-        _global_memory['research_depth'] = current_depth + 1
-        
         # Run research agent
         from ..agent_utils import run_research_agent
         result = run_research_agent(
@@ -72,15 +69,12 @@ def request_research(query: str) -> ResearchResult:
         success = False
         reason = f"error: {str(e)}"
     finally:
-        # Always decrement depth counter
-        _global_memory['research_depth'] = current_depth
+        # Get completion message if available
+        completion_message = _global_memory.get('completion_message', 'Task was completed successfully.' if success else None)
         
-    # Get completion message if available
-    completion_message = _global_memory.get('completion_message', 'Task was completed successfully.' if success else None)
-    
-    # Clear completion state from global memory
-    _global_memory['completion_message'] = ''
-    _global_memory['task_completed'] = False
+        # Clear completion state from global memory
+        _global_memory['completion_message'] = ''
+        _global_memory['task_completed'] = False
         
     return {
         "completion_message": completion_message,

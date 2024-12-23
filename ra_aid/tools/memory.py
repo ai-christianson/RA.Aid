@@ -33,7 +33,7 @@ _global_memory: Dict[str, Union[List[Any], Dict[int, str], Dict[int, SnippetInfo
     'related_files': {},  # Dict[int, str] - ID to filepath mapping
     'related_file_id_counter': 1,  # Counter for generating unique file IDs
     'plan_completed': False,
-    'research_depth': 0,
+    'agent_depth': 0,
     'work_log': []  # List[WorkLogEntry] - Timestamped work events
 }
 
@@ -340,6 +340,7 @@ def plan_implementation_completed(message: str) -> str:
     _global_memory['plan_completed'] = True
     _global_memory['completion_message'] = message
     _global_memory['tasks'].clear()  # Clear task list when plan is completed
+    _global_memory['task_id_counter'] = 1
     console.print(Panel(Markdown(message), title="✅ Plan Executed"))
     log_work_event(f"Plan execution completed: {message}")
     return "Plan completion noted and task list cleared."

@@ -306,6 +306,10 @@ def run_agent_with_retry(agent, prompt: str, config: dict) -> Optional[str]:
 
     with InterruptibleSection():
         try:
+            # Track agent execution depth
+            current_depth = _global_memory.get('agent_depth', 0)
+            _global_memory['agent_depth'] = current_depth + 1
+            
             for attempt in range(max_retries):
                 check_interrupt()
                 try:
@@ -325,5 +329,8 @@ def run_agent_with_retry(agent, prompt: str, config: dict) -> Optional[str]:
                         check_interrupt()
                         time.sleep(0.1)
         finally:
+            # Reset depth tracking
+            _global_memory['agent_depth'] = _global_memory.get('agent_depth', 1) - 1
+            
             if original_handler and threading.current_thread() is threading.main_thread():
                 signal.signal(signal.SIGINT, original_handler)
