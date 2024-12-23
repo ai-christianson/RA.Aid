@@ -12,6 +12,7 @@ from ra_aid import print_stage_header, print_error, print_interrupt
 from ra_aid.tools.agent import CANCELLED_BY_USER_REASON
 from ra_aid.tools.human import ask_human
 from ra_aid.agent_utils import (
+    AgentInterrupt,
     run_agent_with_retry,
     run_research_agent,
     run_planning_agent
@@ -227,7 +228,7 @@ def main():
                 config=config
             )
 
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, AgentInterrupt):
         print()
         print(" 👋 Bye!")
         print()

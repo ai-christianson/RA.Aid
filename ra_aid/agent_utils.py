@@ -10,6 +10,14 @@ import threading
 import time
 from typing import Optional
 
+class AgentInterrupt(Exception):
+    """Exception raised when an agent's execution is interrupted.
+    
+    This exception is used for internal agent interruption handling,
+    separate from KeyboardInterrupt which is reserved for top-level handling.
+    """
+    pass
+
 from langgraph.prebuilt import create_react_agent
 from ra_aid.console.formatting import print_stage_header, print_error
 from ra_aid.console.output import print_agent_output
@@ -51,6 +59,7 @@ from ra_aid.prompts import (
     EXPERT_PROMPT_SECTION_RESEARCH,
     HUMAN_PROMPT_SECTION_RESEARCH
 )
+
 
 console = Console()
 
@@ -287,7 +296,9 @@ def _request_interrupt(signum, frame):
         _INTERRUPT_CONTEXT = _CONTEXT_STACK[-1]
     
     if _FEEDBACK_MODE:
+        print()
         print(" 👋 Bye!")
+        print()
         sys.exit(0)
 
 class InterruptibleSection:
@@ -300,7 +311,7 @@ class InterruptibleSection:
 
 def check_interrupt():
     if _CONTEXT_STACK and _INTERRUPT_CONTEXT is _CONTEXT_STACK[-1]:
-        raise KeyboardInterrupt("Interrupt requested")
+        raise AgentInterrupt("Interrupt requested")
 
 def run_agent_with_retry(agent, prompt: str, config: dict) -> Optional[str]:
     original_handler = None
@@ -324,7 +335,7 @@ def run_agent_with_retry(agent, prompt: str, config: dict) -> Optional[str]:
                         check_interrupt()
                         print_agent_output(chunk)
                     return "Agent run completed successfully"
-                except KeyboardInterrupt:
+                except (KeyboardInterrupt, AgentInterrupt):
                     raise
                 except (InternalServerError, APITimeoutError, RateLimitError, APIError) as e:
                     if attempt == max_retries - 1:

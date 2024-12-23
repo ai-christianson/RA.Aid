@@ -3,6 +3,7 @@
 from langchain_core.tools import tool
 from typing import Dict, Any, Union, List
 from typing_extensions import TypeAlias
+from ..agent_utils import AgentInterrupt
 
 ResearchResult = Dict[str, Union[str, bool, Dict[int, Any], List[Any], None]]
 from rich.console import Console
@@ -61,15 +62,13 @@ def request_research(query: str) -> ResearchResult:
             hil=config.get('hil', False),
             console_message=query
         )
+    except AgentInterrupt:
+        print()
+        response = ask_human.invoke({"question": "Why did you interrupt me?"})
+        success = False
+        reason = response if response.strip() else CANCELLED_BY_USER_REASON
     except KeyboardInterrupt:
-        try:
-            print()
-            response = ask_human.invoke({"question": "Why did you interrupt me?"})
-            success = False
-            reason = response if response.strip() else CANCELLED_BY_USER_REASON
-        except Exception:
-            success = False
-            reason = CANCELLED_BY_USER_REASON
+        raise
     except Exception as e:
         print_error(f"Error during research: {str(e)}")
         success = False
@@ -123,15 +122,13 @@ def request_research_and_implementation(query: str) -> Dict[str, Any]:
         
         success = True
         reason = None
+    except AgentInterrupt:
+        print()
+        response = ask_human.invoke({"question": "Why did you interrupt me?"})
+        success = False
+        reason = response if response.strip() else CANCELLED_BY_USER_REASON
     except KeyboardInterrupt:
-        try:
-            print()
-            response = ask_human.invoke({"question": "Why did you interrupt me?"})
-            success = False
-            reason = response if response.strip() else CANCELLED_BY_USER_REASON
-        except Exception:
-            success = False
-            reason = CANCELLED_BY_USER_REASON
+        raise
     except Exception as e:
         console.print(f"\n[red]Error during research: {str(e)}[/red]")
         success = False
@@ -194,15 +191,13 @@ def request_task_implementation(task_spec: str) -> Dict[str, Any]:
         
         success = True
         reason = None
+    except AgentInterrupt:
+        print()
+        response = ask_human.invoke({"question": "Why did you interrupt me?"})
+        success = False
+        reason = response if response.strip() else CANCELLED_BY_USER_REASON
     except KeyboardInterrupt:
-        try:
-            print()
-            response = ask_human.invoke({"question": "Why did you interrupt me?"})
-            success = False
-            reason = response if response.strip() else CANCELLED_BY_USER_REASON
-        except Exception:
-            success = False
-            reason = CANCELLED_BY_USER_REASON
+        raise
     except Exception as e:
         print_error(f"Error during task implementation: {str(e)}")
         success = False
@@ -255,15 +250,13 @@ def request_implementation(task_spec: str) -> Dict[str, Any]:
         
         success = True
         reason = None
+    except AgentInterrupt:
+        print()
+        response = ask_human.invoke({"question": "Why did you interrupt me?"})
+        success = False
+        reason = response if response.strip() else CANCELLED_BY_USER_REASON
     except KeyboardInterrupt:
-        try:
-            print()
-            response = ask_human.invoke({"question": "Why did you interrupt me?"})
-            success = False
-            reason = response if response.strip() else CANCELLED_BY_USER_REASON
-        except Exception:
-            success = False
-            reason = CANCELLED_BY_USER_REASON
+        raise
     except Exception as e:
         print_error(f"Error during planning: {str(e)}")
         success = False
