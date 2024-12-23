@@ -23,7 +23,7 @@ def test_shell_command_cowboy_mode(mock_console, mock_prompt, mock_run_interacti
     """Test shell command execution in cowboy mode (no approval)"""
     _global_memory['config'] = {'cowboy_mode': True}
     
-    result = run_shell_command("echo test")
+    result = run_shell_command.invoke({"command": "echo test"})
     
     assert result['success'] is True
     assert result['return_code'] == 0
@@ -36,7 +36,7 @@ def test_shell_command_cowboy_message(mock_console, mock_prompt, mock_run_intera
     
     with patch('ra_aid.tools.shell.get_cowboy_message') as mock_get_message:
         mock_get_message.return_value = '🤠 Test cowboy message!'
-        result = run_shell_command("echo test")
+        result = run_shell_command.invoke({"command": "echo test"})
     
     assert result['success'] is True
     mock_console.print.assert_any_call("")
@@ -49,7 +49,7 @@ def test_shell_command_interactive_approved(mock_console, mock_prompt, mock_run_
     _global_memory['config'] = {'cowboy_mode': False}
     mock_prompt.ask.return_value = 'y'
     
-    result = run_shell_command("echo test")
+    result = run_shell_command.invoke({"command": "echo test"})
     
     assert result['success'] is True
     assert result['return_code'] == 0
@@ -67,7 +67,7 @@ def test_shell_command_interactive_rejected(mock_console, mock_prompt, mock_run_
     _global_memory['config'] = {'cowboy_mode': False}
     mock_prompt.ask.return_value = 'n'
     
-    result = run_shell_command("echo test")
+    result = run_shell_command.invoke({"command": "echo test"})
     
     assert result['success'] is False
     assert result['return_code'] == 1
@@ -86,7 +86,7 @@ def test_shell_command_execution_error(mock_console, mock_prompt, mock_run_inter
     _global_memory['config'] = {'cowboy_mode': True}
     mock_run_interactive.side_effect = Exception("Command failed")
     
-    result = run_shell_command("invalid command")
+    result = run_shell_command.invoke({"command": "invalid command"})
     
     assert result['success'] is False
     assert result['return_code'] == 1

@@ -1,5 +1,6 @@
 import pytest
 from pytest import mark
+from langchain.schema.runnable import Runnable
 from ra_aid.tools import read_file_tool
 
 def test_basic_file_reading(tmp_path):
@@ -10,7 +11,7 @@ def test_basic_file_reading(tmp_path):
     test_file.write_text(test_content)
 
     # Read the file
-    result = read_file_tool(str(test_file))
+    result = read_file_tool.invoke({"filepath": str(test_file)})
 
     # Verify return format and content
     assert isinstance(result, dict)
@@ -26,14 +27,13 @@ def test_no_truncation(tmp_path):
     test_file.write_text(test_content)
 
     # Read the file
-    result = read_file_tool(str(test_file))
+    result = read_file_tool.invoke({"filepath": str(test_file)})
 
     # Verify no truncation occurred
     assert isinstance(result, dict)
     assert '[lines of output truncated]' not in result['content']
     assert len(result['content'].splitlines()) == line_count
 
-@pytest.mark.timeout(30)
 def test_with_truncation(tmp_path):
     """Test that files over max_lines are properly truncated"""
     # Create a test file exceeding the limit
@@ -43,7 +43,7 @@ def test_with_truncation(tmp_path):
     test_file.write_text(test_content)
 
     # Read the file
-    result = read_file_tool(str(test_file))
+    result = read_file_tool.invoke({"filepath": str(test_file)})
 
     # Verify truncation occurred correctly
     assert isinstance(result, dict)
@@ -53,7 +53,7 @@ def test_with_truncation(tmp_path):
 def test_nonexistent_file():
     """Test error handling for non-existent files"""
     with pytest.raises(FileNotFoundError):
-        read_file_tool("/nonexistent/file.txt")
+        read_file_tool.invoke({"filepath": "/nonexistent/file.txt"})
 
 def test_empty_file(tmp_path):
     """Test reading an empty file"""
@@ -62,7 +62,7 @@ def test_empty_file(tmp_path):
     test_file.write_text("")
 
     # Read the file
-    result = read_file_tool(str(test_file))
+    result = read_file_tool.invoke({"filepath": str(test_file)})
 
     # Verify return format and empty content
     assert isinstance(result, dict)

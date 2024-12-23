@@ -90,13 +90,13 @@ def test_expert_context_management():
     expert_context['files'].clear()
     
     # Test adding context
-    result1 = emit_expert_context("Test context 1")
+    result1 = emit_expert_context.invoke("Test context 1")
     assert "Context added" in result1
     assert len(expert_context['text']) == 1
     assert expert_context['text'][0] == "Test context 1"
     
     # Test adding multiple contexts
-    result2 = emit_expert_context("Test context 2")
+    result2 = emit_expert_context.invoke("Test context 2")
     assert "Context added" in result2
     assert len(expert_context['text']) == 2
     assert expert_context['text'][1] == "Test context 2"

@@ -28,6 +28,7 @@ dependencies = [
     "langgraph-checkpoint>=2.0.9",
     "langgraph-sdk>=0.1.48",
     "langchain-core>=0.3.28",
+    "langchain>=0.3.13",
     "rich>=13.0.0",
     "GitPython>=3.1",
     "fuzzywuzzy==0.18.0", 
