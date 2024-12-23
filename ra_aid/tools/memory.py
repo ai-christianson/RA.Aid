@@ -21,14 +21,14 @@ _global_memory: Dict[str, Union[List[Any], Dict[int, str], Dict[int, SnippetInfo
     'tasks': {},  # Dict[int, str] - ID to task mapping
     'task_completed': False,  # Flag indicating if task is complete
     'completion_message': '',  # Message explaining completion
-    'task_id_counter': 0,  # Counter for generating unique task IDs
+    'task_id_counter': 1,  # Counter for generating unique task IDs
     'key_facts': {},  # Dict[int, str] - ID to fact mapping
-    'key_fact_id_counter': 0,  # Counter for generating unique fact IDs
+    'key_fact_id_counter': 1,  # Counter for generating unique fact IDs
     'key_snippets': {},  # Dict[int, SnippetInfo] - ID to snippet mapping
-    'key_snippet_id_counter': 0,  # Counter for generating unique snippet IDs
+    'key_snippet_id_counter': 1,  # Counter for generating unique snippet IDs
     'implementation_requested': False,
     'related_files': {},  # Dict[int, str] - ID to filepath mapping
-    'related_file_id_counter': 0,  # Counter for generating unique file IDs
+    'related_file_id_counter': 1,  # Counter for generating unique file IDs
     'plan_completed': False,
     'research_depth': 0
 }
