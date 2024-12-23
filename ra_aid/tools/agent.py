@@ -158,7 +158,7 @@ def request_task_implementation(task_spec: str) -> Dict[str, Any]:
     # Get required parameters
     tasks = [_global_memory['tasks'][task_id] for task_id in sorted(_global_memory['tasks'])]
     plan = _global_memory.get('plan', '')
-    related_files = list(get_related_files())
+    related_files = list(_global_memory['related_files'].values())
     
     try:
         print_task_header(task_spec)
