@@ -50,10 +50,11 @@ def print_error(message: str) -> None:
     console.print(Panel(Markdown(message), title="Error", border_style="red bold"))
 
 def print_interrupt(message: str) -> None:
-    """Print an interruption message in a yellow-bordered panel with appropriate emoji.
+    """Print an interrupt message in a yellow-bordered panel with stop emoji.
     
     Args:
-        message: The interruption message to display (supports Markdown formatting)
+        message: The interrupt message to display (supports Markdown formatting)
     """
-    print() # Give space for "^C"
-    console.print(Panel(Markdown(message), title="Interrupted", border_style="yellow bold"))
+    print()  # Add spacing for ^C
+    console.print(Panel(Markdown(message), title="⛔ Interrupt", border_style="yellow bold"))
+

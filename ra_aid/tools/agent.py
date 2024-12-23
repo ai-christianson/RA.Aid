@@ -7,8 +7,9 @@ from typing_extensions import TypeAlias
 ResearchResult = Dict[str, Union[str, bool, Dict[int, Any], List[Any], None]]
 from rich.console import Console
 from ra_aid.tools.memory import _global_memory
-from ra_aid.console.formatting import print_error, print_interrupt
+from ra_aid.console.formatting import print_error
 from .memory import get_memory_value, get_related_files, get_work_log, reset_work_log
+from .human import ask_human
 from ..llm import initialize_llm
 from ..console import print_task_header
 
@@ -61,9 +62,14 @@ def request_research(query: str) -> ResearchResult:
             console_message=query
         )
     except KeyboardInterrupt:
-        print_interrupt("Research interrupted by user")
-        success = False
-        reason = CANCELLED_BY_USER_REASON
+        try:
+            print()
+            response = ask_human.invoke({"question": "Why did you interrupt me?"})
+            success = False
+            reason = response if response.strip() else CANCELLED_BY_USER_REASON
+        except Exception:
+            success = False
+            reason = CANCELLED_BY_USER_REASON
     except Exception as e:
         print_error(f"Error during research: {str(e)}")
         success = False
@@ -118,9 +124,14 @@ def request_research_and_implementation(query: str) -> Dict[str, Any]:
         success = True
         reason = None
     except KeyboardInterrupt:
-        print_interrupt("Task interrupted by user")
-        success = False
-        reason = CANCELLED_BY_USER_REASON
+        try:
+            print()
+            response = ask_human.invoke({"question": "Why did you interrupt me?"})
+            success = False
+            reason = response if response.strip() else CANCELLED_BY_USER_REASON
+        except Exception:
+            success = False
+            reason = CANCELLED_BY_USER_REASON
     except Exception as e:
         console.print(f"\n[red]Error during research: {str(e)}[/red]")
         success = False
@@ -184,9 +195,14 @@ def request_task_implementation(task_spec: str) -> Dict[str, Any]:
         success = True
         reason = None
     except KeyboardInterrupt:
-        print_interrupt("Task implementation interrupted by user")
-        success = False
-        reason = CANCELLED_BY_USER_REASON
+        try:
+            print()
+            response = ask_human.invoke({"question": "Why did you interrupt me?"})
+            success = False
+            reason = response if response.strip() else CANCELLED_BY_USER_REASON
+        except Exception:
+            success = False
+            reason = CANCELLED_BY_USER_REASON
     except Exception as e:
         print_error(f"Error during task implementation: {str(e)}")
         success = False
@@ -240,9 +256,14 @@ def request_implementation(task_spec: str) -> Dict[str, Any]:
         success = True
         reason = None
     except KeyboardInterrupt:
-        print_interrupt("Planning interrupted by user")
-        success = False
-        reason = CANCELLED_BY_USER_REASON
+        try:
+            print()
+            response = ask_human.invoke({"question": "Why did you interrupt me?"})
+            success = False
+            reason = response if response.strip() else CANCELLED_BY_USER_REASON
+        except Exception:
+            success = False
+            reason = CANCELLED_BY_USER_REASON
     except Exception as e:
         print_error(f"Error during planning: {str(e)}")
         success = False

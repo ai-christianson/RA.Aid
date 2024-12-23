@@ -3,13 +3,14 @@ import sys
 import uuid
 from rich.panel import Panel
 from rich.console import Console
-from ra_aid.console.formatting import print_interrupt
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import create_react_agent
 from ra_aid.env import validate_environment
 from ra_aid.tools.memory import _global_memory, get_related_files, get_memory_value
 from ra_aid.tools.human import ask_human
-from ra_aid import print_stage_header, print_error
+from ra_aid import print_stage_header, print_error, print_interrupt
+from ra_aid.tools.agent import CANCELLED_BY_USER_REASON
+from ra_aid.tools.human import ask_human
 from ra_aid.agent_utils import (
     run_agent_with_retry,
     run_research_agent,
@@ -227,7 +228,7 @@ def main():
             )
 
     except KeyboardInterrupt:
-        print_interrupt("Operation cancelled by user")
+        print_interrupt(f"Operation cancelled: {CANCELLED_BY_USER_REASON}")
         sys.exit(1)
 
 if __name__ == "__main__":

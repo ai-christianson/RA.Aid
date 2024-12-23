@@ -10,7 +10,7 @@ import time
 from typing import Optional
 
 from langgraph.prebuilt import create_react_agent
-from ra_aid.console.formatting import print_stage_header, print_error, print_interrupt
+from ra_aid.console.formatting import print_stage_header, print_error
 from ra_aid.console.output import print_agent_output
 from ra_aid.tool_configs import (
     get_implementation_tools,
