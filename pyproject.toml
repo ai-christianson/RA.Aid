@@ -29,11 +29,11 @@ dependencies = [
     "langgraph-sdk>=0.1.48",
     "langchain-core>=0.3.28",
     "rich>=13.0.0",
-    "GitPython==3.1.43",
+    "GitPython>=3.1",
     "fuzzywuzzy==0.18.0", 
     "python-Levenshtein==0.23.0",
     "pathspec>=0.11.0",
-    "aider-chat",
+    "aider-chat>=0.69.1"
 ]
 
 [project.optional-dependencies]
