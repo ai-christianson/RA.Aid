@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 - Do not put file ID in file paths when reading for expert context.
+- Agents log work internally, improving context information.
+- Clear task list when plan is completed.
 
 ## [0.8.2] - 2024-12-23
 

@@ -1,4 +1,4 @@
-from typing import Dict, List, Any, Union, TypedDict, Optional, Sequence, Set, TypeVar, Literal
+from typing import Dict, List, Any, Union, TypedDict, Optional, Set
 
 class WorkLogEntry(TypedDict):
     timestamp: str
@@ -6,7 +6,6 @@ class WorkLogEntry(TypedDict):
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
-from rich.rule import Rule
 from langchain_core.tools import tool
 
 class SnippetInfo(TypedDict):
@@ -340,9 +339,10 @@ def plan_implementation_completed(message: str) -> str:
     """
     _global_memory['plan_completed'] = True
     _global_memory['completion_message'] = message
+    _global_memory['tasks'].clear()  # Clear task list when plan is completed
     console.print(Panel(Markdown(message), title="✅ Plan Executed"))
     log_work_event(f"Plan execution completed: {message}")
-    return "Plan completion noted."
+    return "Plan completion noted and task list cleared."
 
 def get_related_files() -> List[str]:
     """Get the current list of related files.
@@ -399,15 +399,20 @@ def emit_related_files(files: List[str]) -> str:
     return '\n'.join(results)
 
 
-@tool("log_work_event")
 def log_work_event(event: str) -> str:
     """Add timestamped entry to work log.
     
+    Internal function used to track major events during agent execution.
+    Each entry is stored with an ISO format timestamp.
+    
     Args:
-        event: Description of the event
+        event: Description of the event to log
         
     Returns:
         Confirmation message
+        
+    Note:
+        Entries can be retrieved with get_work_log() as markdown formatted text.
     """
     from datetime import datetime
     entry = WorkLogEntry(
@@ -419,18 +424,28 @@ def log_work_event(event: str) -> str:
 
 
 def get_work_log() -> str:
-    """Return formatted markdown table of work log entries.
+    """Return formatted markdown of work log entries.
     
     Returns:
-        Formatted markdown table with timestamps and events
+        Markdown formatted text with timestamps as headings and events as content,
+        or 'No work log entries' if the log is empty.
+        
+    Example:
+        ## 2024-12-23T11:39:10
+        Task #1 added: Create login form
     """
     if not _global_memory['work_log']:
         return "No work log entries"
-        
-    header = "| Timestamp | Event |\n|-----------|--------|"
-    rows = [f"| {entry['timestamp']} | {entry['event']} |"
-            for entry in _global_memory['work_log']]
-    return header + "\n".join(rows)
+    
+    entries = []
+    for entry in _global_memory['work_log']:
+        entries.extend([
+            f"## {entry['timestamp']}",
+            entry['event'],
+            ""  # Blank line between entries
+        ])
+    
+    return "\n".join(entries).rstrip()  # Remove trailing newline
 
 
 def reset_work_log() -> str:
@@ -438,6 +453,9 @@ def reset_work_log() -> str:
     
     Returns: 
         Confirmation message
+        
+    Note:
+        This permanently removes all work log entries. The operation cannot be undone.
     """
     _global_memory['work_log'].clear()
     return "Work log cleared"
@@ -525,5 +543,12 @@ def get_memory_value(key: str) -> str:
             snippets.append("\n".join(snippet_text))
         return "\n\n".join(snippets)
     
+    if key == 'work_log':
+        if not values:
+            return ""
+        entries = [f"## {entry['timestamp']}\n{entry['event']}"
+                  for entry in values]
+        return "\n\n".join(entries)
+
     # For other types (lists), join with newlines
     return "\n".join(str(v) for v in values)

@@ -13,7 +13,8 @@ from ra_aid.tools.memory import (
     delete_tasks,
     swap_task_order,
     log_work_event,
-    reset_work_log
+    reset_work_log,
+    get_work_log
 )
 
 @pytest.fixture
@@ -121,22 +122,37 @@ def test_log_work_event(reset_memory):
     assert _global_memory['work_log'][2]['event'] == "Completed task"
 
 def test_get_work_log(reset_memory):
-    """Test work log formatting in markdown"""
+    """Test work log formatting with heading-based markdown"""
+    # Test empty log
+    assert get_work_log() == "No work log entries"
+    
     # Add some events
     log_work_event("First event")
     log_work_event("Second event")
     
     # Get formatted log
-    log = get_memory_value('work_log')
+    log = get_work_log()
     
-    # Verify events and timestamps exist
-    for event in _global_memory['work_log']:
-        assert isinstance(event['timestamp'], str)
-        assert isinstance(event['event'], str)
+    # Split into entries for detailed verification
+    entries = log.split('\n\n')  # Double newline separates entries
+    assert len(entries) == 2  # Should have two entries
     
-    # Verify events in chronological order
-    assert _global_memory['work_log'][0]['event'] == "First event"
-    assert _global_memory['work_log'][1]['event'] == "Second event"
+    # Verify first entry format
+    first_entry_lines = entries[0].split('\n')
+    assert first_entry_lines[0].startswith('## ')  # Level 2 heading
+    assert first_entry_lines[0][3:].strip() != ''  # Timestamp present
+    assert first_entry_lines[1] == "First event"  # Event text
+    
+    # Verify second entry format
+    second_entry_lines = entries[1].split('\n')
+    assert second_entry_lines[0].startswith('## ')  # Level 2 heading
+    assert second_entry_lines[0][3:].strip() != ''  # Timestamp present
+    assert second_entry_lines[1] == "Second event"  # Event text
+    
+    # Verify chronological order by comparing timestamps
+    first_timestamp = first_entry_lines[0][3:]  # Skip '## '
+    second_timestamp = second_entry_lines[0][3:]  # Skip '## '
+    assert first_timestamp < second_timestamp
 
 def test_reset_work_log(reset_memory):
     """Test resetting the work log"""
