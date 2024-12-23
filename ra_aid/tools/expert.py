@@ -128,7 +128,7 @@ def ask_expert(question: str) -> str:
     global expert_context
     
     # Get all content first
-    file_paths = expert_context['files'] + list(get_related_files())
+    file_paths = list(_global_memory['related_files'].values())
     related_contents = read_related_files(file_paths)
     key_snippets = get_memory_value('key_snippets')
     key_facts = get_memory_value('key_facts')
