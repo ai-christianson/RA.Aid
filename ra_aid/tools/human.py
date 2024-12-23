@@ -37,7 +37,7 @@ def ask_human(question: str) -> str:
     session = PromptSession(
         multiline=True,
         key_bindings=create_keybindings(),
-        prompt_continuation='.',
+        prompt_continuation='. ',
     )
 
     print()
