@@ -95,11 +95,11 @@ def validate_environment(args) -> Tuple[bool, List[str], bool, List[str]]:
 
     # Check web research dependencies
     web_research_missing = []
+    web_research_enabled = False
+    
     if not os.environ.get('TAVILY_API_KEY'):
         web_research_missing.append('TAVILY_API_KEY environment variable is not set')
-    
-    web_research_enabled = True
-    if web_research_missing:
-        web_research_enabled = False
+    else:
+        web_research_enabled = True
 
     return expert_enabled, expert_missing, web_research_enabled, web_research_missing

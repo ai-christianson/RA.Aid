@@ -188,10 +188,13 @@ def test_environment_variable_precedence(clean_env, mock_openai, monkeypatch):
     # Set up base environment first
     monkeypatch.setenv("OPENAI_API_KEY", "base-key") 
     monkeypatch.setenv("EXPERT_OPENAI_API_KEY", "expert-key")
+    monkeypatch.setenv("TAVILY_API_KEY", "tavily-key")
     args = Args(provider="openai", expert_provider="openai")
-    expert_enabled, missing = validate_environment(args)
+    expert_enabled, expert_missing, web_enabled, web_missing = validate_environment(args)
     assert expert_enabled
-    assert not missing
+    assert not expert_missing
+    assert web_enabled
+    assert not web_missing
 
     llm = initialize_expert_llm()
     mock_openai.assert_called_with(
@@ -202,12 +205,16 @@ def test_environment_variable_precedence(clean_env, mock_openai, monkeypatch):
     # Test empty key validation
     monkeypatch.setenv("EXPERT_OPENAI_API_KEY", "")
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)  # Remove fallback
+    monkeypatch.delenv("TAVILY_API_KEY", raising=False)  # Remove web research
     monkeypatch.setenv("ANTHROPIC_API_KEY", "anthropic-key")  # Add for provider validation
     args = Args(provider="anthropic", expert_provider="openai")  # Change base provider to avoid validation error
-    expert_enabled, missing = validate_environment(args)
+    expert_enabled, expert_missing, web_enabled, web_missing = validate_environment(args)
     assert not expert_enabled
-    assert len(missing) == 1
-    assert missing[0] == "EXPERT_OPENAI_API_KEY environment variable is not set"
+    assert len(expert_missing) == 1
+    assert expert_missing[0] == "EXPERT_OPENAI_API_KEY environment variable is not set"
+    assert not web_enabled
+    assert len(web_missing) == 1
+    assert web_missing[0] == "TAVILY_API_KEY environment variable is not set"
 
 @pytest.fixture
 def mock_anthropic():
