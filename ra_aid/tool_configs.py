@@ -1,4 +1,3 @@
-from typing import List
 from ra_aid.tools import (
     ask_expert, ask_human, run_shell_command, run_programming_task,
     emit_research_notes, emit_plan, emit_related_files, emit_task,

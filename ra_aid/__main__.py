@@ -8,7 +8,7 @@ from langgraph.prebuilt import create_react_agent
 from ra_aid.env import validate_environment
 from ra_aid.tools.memory import _global_memory
 from ra_aid.tools.human import ask_human
-from ra_aid import print_stage_header, print_error, print_interrupt
+from ra_aid import print_stage_header, print_error
 from ra_aid.tools.human import ask_human
 from ra_aid.agent_utils import (
     AgentInterrupt,

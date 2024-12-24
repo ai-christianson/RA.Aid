@@ -3,7 +3,7 @@
 import sys
 import time
 import uuid
-from typing import Optional, Any, List
+from typing import Optional, Any
 
 import signal
 import threading

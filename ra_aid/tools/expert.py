@@ -5,7 +5,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.markdown import Markdown
 from ..llm import initialize_expert_llm
-from .memory import get_memory_value, get_related_files, _global_memory
+from .memory import get_memory_value, _global_memory
 
 console = Console()
 _model = None

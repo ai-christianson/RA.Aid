@@ -1,4 +1,4 @@
-from typing import Dict, Union, Optional, List
+from typing import Dict, Union, List
 from langchain_core.tools import tool
 from rich.console import Console
 from rich.panel import Panel

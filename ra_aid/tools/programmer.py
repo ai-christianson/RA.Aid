@@ -1,9 +1,8 @@
 import os
-from typing import List, Optional, Dict, Union, Set
+from typing import List, Optional, Dict, Union
 from langchain_core.tools import tool
 from rich.console import Console
 from rich.panel import Panel
-from rich.syntax import Syntax
 from rich.markdown import Markdown
 from rich.text import Text
 from ra_aid.proc.interactive import run_interactive_command
