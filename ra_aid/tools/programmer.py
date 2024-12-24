@@ -1,5 +1,6 @@
 import os
 from typing import List, Optional, Dict, Union
+from ra_aid.tools.memory import _global_memory
 from langchain_core.tools import tool
 from rich.console import Console
 from rich.panel import Panel
@@ -36,6 +37,9 @@ Args: instructions: Programming task instructions files: Optional; if not provid
 
 Returns: { "output": stdout+stderr, "return_code": 0 if success, "success": True/False }
     """
+    # Get related files if no specific files provided
+    file_paths = list(_global_memory['related_files'].values()) if 'related_files' in _global_memory else []
+
     # Build command
     command = [
         "aider",
@@ -58,8 +62,10 @@ Returns: { "output": stdout+stderr, "return_code": 0 if success, "success": True
 
     command.append(input.instructions)
 
-    if input.files:
-        command.extend(input.files)
+    # Add files to command
+    files_to_use = file_paths + (input.files or [])
+    if files_to_use:
+        command.extend(files_to_use)
 
     # Create a pretty display of what we're doing
     task_display = [
@@ -67,10 +73,10 @@ Returns: { "output": stdout+stderr, "return_code": 0 if success, "success": True
         f"{input.instructions}\n"
     ]
 
-    if input.files:
+    if files_to_use:
         task_display.extend([
             "\n## Files\n",
-            *[f"- `{file}`\n" for file in input.files]
+            *[f"- `{file}`\n" for file in files_to_use]
         ])
 
     markdown_content = "".join(task_display)
