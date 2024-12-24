@@ -1,15 +1,15 @@
   ```ascii
 
-  ██▀███   ▄▄▄            ▄▄▄       ██▓▓█████▄ 
+  ██▀███   ▄▄▄            ▄▄▄       ██▓▓█████▄
  ▓██ ▒ ██▒▒████▄         ▒████▄    ▓██▒▒██▀ ██▌
  ▓██ ░▄█ ▒▒██  ▀█▄       ▒██  ▀█▄  ▒██▒░██   █▌
  ▒██▀▀█▄  ░██▄▄▄▄██      ░██▄▄▄▄██ ░██░░▓█▄   ▌
- ░██▓ ▒██▒ ▓█   ▓██▒ ██▓  ▓█   ▓██▒░██░░▒████▓ 
- ░ ▒▓ ░▒▓░ ▒▒   ▓▒█░ ▒▓▒  ▒▒   ▓▒█░░▓   ▒▒▓  ▒ 
-   ░▒ ░ ▒░  ▒   ▒▒ ░ ░▒    ▒   ▒▒ ░ ▒ ░ ░ ▒  ▒ 
-   ░░   ░   ░   ▒    ░     ░   ▒    ▒ ░ ░ ░  ░ 
-    ░           ░  ░  ░        ░  ░ ░     ░    
-                      ░                 ░      
+ ░██▓ ▒██▒ ▓█   ▓██▒ ██▓  ▓█   ▓██▒░██░░▒████▓
+ ░ ▒▓ ░▒▓░ ▒▒   ▓▒█░ ▒▓▒  ▒▒   ▓▒█░░▓   ▒▒▓  ▒
+   ░▒ ░ ▒░  ▒   ▒▒ ░ ░▒    ▒   ▒▒ ░ ▒ ░ ░ ▒  ▒
+   ░░   ░   ░   ▒    ░     ░   ▒    ▒ ░ ░ ░  ░
+    ░           ░  ░  ░        ░  ░ ░     ░
+                      ░                 ░
 ```
 
 [![Python Versions](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org)
@@ -76,7 +76,7 @@ What sets RA.Aid apart is its ability to handle complex programming tasks that e
   1. **Research** 🔍 - Gather and analyze information
   2. **Planning** 📋 - Develop execution strategy
   3. **Implementation** ⚡ - Execute the plan with AI assistance
-  
+
   Each stage is powered by dedicated AI agents and specialized toolsets.
 - **Advanced AI Integration**: Built on LangChain and leverages the latest LLMs for natural language understanding and generation.
 - **Human-in-the-Loop Interaction**: Optional mode that enables the agent to ask you questions during task execution, ensuring higher accuracy and better handling of complex tasks that may require your input or clarification
@@ -260,7 +260,7 @@ RA.Aid supports multiple providers through environment variables:
 Expert Tool Environment Variables:
 - `EXPERT_OPENAI_API_KEY`: API key for expert tool using OpenAI provider
 - `EXPERT_ANTHROPIC_API_KEY`: API key for expert tool using Anthropic provider
-- `EXPERT_OPENROUTER_API_KEY`: API key for expert tool using OpenRouter provider  
+- `EXPERT_OPENROUTER_API_KEY`: API key for expert tool using OpenRouter provider
 - `EXPERT_OPENAI_API_BASE`: Base URL for expert tool using OpenAI-compatible provider
 
 You can set these permanently in your shell's configuration file (e.g., `~/.bashrc` or `~/.zshrc`):
@@ -279,9 +279,7 @@ export OPENROUTER_API_KEY=your_api_key_here
 export OPENAI_API_BASE=your_api_base_url
 ```
 
-Note: The expert tool defaults to OpenAI's o1-preview model with the OpenAI provider, but this can be configured using the --expert-provider flag along with the corresponding EXPERT_*_KEY environment variables.
-
-#### Custom Model Examples
+### Custom Model Examples
 
 1. **Using Anthropic (Default)**
    ```bash
@@ -320,6 +318,17 @@ Note: The expert tool defaults to OpenAI's o1-preview model with the OpenAI prov
    ra-aid -m "Your task" --expert-provider openai --expert-model o1-preview
    ```
 
+Aider specific Environment Variables you can add:
+
+- `AIDER_FLAGS`: Optional comma-separated list of flags to pass to the underlying aider tool (e.g., "yes-always,dark-mode")
+
+```bash
+# Optional: Configure aider behavior
+export AIDER_FLAGS="yes-always,dark-mode,no-auto-commits"
+```
+
+Note: For `AIDER_FLAGS`, you can specify flags with or without the leading `--`. Multiple flags should be comma-separated, and spaces around flags are automatically handled. For example, both `"yes-always,dark-mode"` and `"--yes-always, --dark-mode"` are valid.
+
 **Important Notes:**
 - Performance varies between models. The default Claude 3 Sonnet model currently provides the best and most reliable results.
 - Model configuration is done via command line arguments: `--provider` and `--model`
@@ -329,7 +338,7 @@ Note: The expert tool defaults to OpenAI's o1-preview model with the OpenAI prov
 
 RA.Aid implements a three-stage architecture for handling development and research tasks:
 
-1. **Research Stage**: 
+1. **Research Stage**:
    - Gathers information and context
    - Analyzes requirements
    - Identifies key components and dependencies
