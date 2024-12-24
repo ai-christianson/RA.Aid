@@ -57,6 +57,8 @@ Here's a demo of RA.Aid adding a feature to itself:
 
 - **Ability to Leverage Expert Reasoning Models**: The agent can use advanced reasoning models such as OpenAI's o1 *just when needed*, e.g. to solve complex debugging problems or in planning for complex feature implementation.
 
+- **Web Research Capabilities**: Leverages Tavily API for intelligent web searches to enhance research and gather real-world context for development tasks
+
 - **Three-Stage Architecture**:
   1. **Research**: Analyzes codebases and gathers context
   2. **Planning**: Breaks down tasks into specific, actionable steps
@@ -124,6 +126,9 @@ export OPENROUTER_API_KEY=your_api_key_here
 
 # For OpenAI-compatible providers (optional)
 export OPENAI_API_BASE=your_api_base_url
+
+# For web research capabilities
+export TAVILY_API_KEY=your_api_key_here
 ```
 
 Note: The programmer tool (aider) will automatically select its model based on your available API keys:
@@ -208,6 +213,27 @@ This mode is particularly useful for:
 - Making architectural decisions
 - Validating critical changes
 - Providing domain-specific knowledge
+
+### Web Research
+
+<img src="assets/demo-web-research-1.gif" alt="RA.Aid Demo" autoplay loop style="width: 100%; max-width: 800px;">
+
+The agent features autonomous web research capabilities powered by the [Tavily](https://tavily.com/) API, seamlessly integrating real-world information into its problem-solving workflow. Web research is conducted automatically when the agent determines additional context would be valuable - no explicit configuration required.
+
+For example, when researching modern authentication practices or investigating new API requirements, the agent will autonomously:
+- Search for current best practices and security recommendations
+- Find relevant documentation and technical specifications
+- Gather real-world implementation examples
+- Stay updated on latest industry standards
+
+While web research happens automatically as needed, you can also explicitly request research-focused tasks:
+
+```bash
+# Focused research task with web search capabilities
+ra-aid -m "Research current best practices for API rate limiting" --research-only
+```
+
+Make sure to set your TAVILY_API_KEY environment variable to enable this feature.
 
 ### Chat Mode
 <img src="assets/demo-chat-mode-1.gif" alt="Chat Mode Demo" autoplay loop style="display: block; margin: 0 auto; width: 100%; max-width: 800px;">
@@ -364,6 +390,7 @@ RA.Aid implements a three-stage architecture for handling development and resear
 
 ### Core Dependencies
 - `langchain-anthropic`: LangChain integration with Anthropic's Claude
+- `tavily-python`: Tavily API client for web research
 - `langgraph`: Graph-based workflow management
 - `rich>=13.0.0`: Terminal formatting and output
 - `GitPython==3.1.41`: Git repository management
