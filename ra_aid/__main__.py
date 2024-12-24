@@ -161,7 +161,7 @@ def main():
             # Create chat agent with appropriate tools
             chat_agent = create_react_agent(
                 model,
-                get_chat_tools(expert_enabled=expert_enabled),
+                get_chat_tools(expert_enabled=expert_enabled, web_research_enabled=web_research_enabled),
                 checkpointer=MemorySaver()
             )
             

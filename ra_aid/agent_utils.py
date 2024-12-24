@@ -76,6 +76,7 @@ def run_research_agent(
     expert_enabled: bool = False,
     research_only: bool = False,
     hil: bool = False,
+    web_research_enabled: bool = False,
     memory: Optional[Any] = None,
     config: Optional[dict] = None,
     thread_id: Optional[str] = None,
@@ -89,6 +90,7 @@ def run_research_agent(
         expert_enabled: Whether expert mode is enabled
         research_only: Whether this is a research-only task
         hil: Whether human-in-the-loop mode is enabled
+        web_research_enabled: Whether web research is enabled
         memory: Optional memory instance to use
         config: Optional configuration dictionary
         thread_id: Optional thread ID (defaults to new UUID)
@@ -117,7 +119,8 @@ def run_research_agent(
     tools = get_research_tools(
         research_only=research_only,
         expert_enabled=expert_enabled,
-        human_interaction=hil
+        human_interaction=hil,
+        web_research_enabled=config.get('web_research', False)
     )
 
     # Create agent
@@ -166,6 +169,7 @@ def run_web_research_agent(
     *,
     expert_enabled: bool = False,
     hil: bool = False,
+    web_research_enabled: bool = False,
     memory: Optional[Any] = None,
     config: Optional[dict] = None,
     thread_id: Optional[str] = None,
@@ -178,6 +182,7 @@ def run_web_research_agent(
         model: The LLM model to use
         expert_enabled: Whether expert mode is enabled
         hil: Whether human-in-the-loop mode is enabled
+        web_research_enabled: Whether web research is enabled
         memory: Optional memory instance to use
         config: Optional configuration dictionary
         thread_id: Optional thread ID (defaults to new UUID)
@@ -274,7 +279,7 @@ def run_planning_agent(
         thread_id = str(uuid.uuid4())
 
     # Configure tools
-    tools = get_planning_tools(expert_enabled=expert_enabled)
+    tools = get_planning_tools(expert_enabled=expert_enabled, web_research_enabled=config.get('web_research', False))
 
     # Create agent
     agent = create_react_agent(model, tools, checkpointer=memory)
@@ -318,6 +323,7 @@ def run_task_implementation_agent(
     model,
     *,
     expert_enabled: bool = False,
+    web_research_enabled: bool = False,
     memory: Optional[Any] = None,
     config: Optional[dict] = None,
     thread_id: Optional[str] = None
@@ -331,6 +337,7 @@ def run_task_implementation_agent(
         related_files: List of related files
         model: The LLM model to use
         expert_enabled: Whether expert mode is enabled
+        web_research_enabled: Whether web research is enabled
         memory: Optional memory instance to use
         config: Optional configuration dictionary
         thread_id: Optional thread ID (defaults to new UUID)
@@ -347,7 +354,7 @@ def run_task_implementation_agent(
         thread_id = str(uuid.uuid4())
 
     # Configure tools
-    tools = get_implementation_tools(expert_enabled=expert_enabled)
+    tools = get_implementation_tools(expert_enabled=expert_enabled, web_research_enabled=config.get('web_research', False))
 
     # Create agent
     agent = create_react_agent(model, tools, checkpointer=memory)
