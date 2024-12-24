@@ -236,7 +236,7 @@ def run_web_research_agent(
 
     # Display console message if provided
     if console_message:
-        console.print(Panel(Markdown(console_message), title="🔍 Searching the Web..."))
+        console.print(Panel(Markdown(console_message), title="🔍 Starting Web Research..."))
 
     # Run agent with retry logic
     return run_agent_with_retry(agent, prompt, run_config)

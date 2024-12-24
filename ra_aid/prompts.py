@@ -67,38 +67,32 @@ Human Interaction:
     - Keep questions specific to the current task
     - Wait for responses before proceeding
 """
-
-# Web research prompt sections
 WEB_RESEARCH_PROMPT_SECTION_RESEARCH = """
 Web Research:
-    If you need additional information from web sources:
-    - Use request_web_research to search and gather relevant information
-    - Wait for web research results before proceeding with research
-    - The web research can help validate patterns, best practices, or documentation
+    - Scope: Whenever you have questions about the most recent standards, library versions, or if you want to verify a pattern or an approach, request_web_research to gather up-to-date, authoritative information.
+    - Action: Wait for the web research results before drawing conclusions or proceeding with your research.
+    - Purpose: Web research results can help you confirm patterns, best practices, official documentation references, and version-specific details to ensure your findings are accurate.
 """
 
 WEB_RESEARCH_PROMPT_SECTION_PLANNING = """
 Web Research:
-    If you need to confirm current best practices or implementation approaches:
-    - Use request_web_research to verify implementation patterns
-    - Wait for web research results before finalizing plans
-    - Web research can help validate architectural decisions and technical choices
+    - Scope: If you need to confirm the feasibility of a solution, compare approaches, or validate that a selected architecture aligns with current best practices, request_web_research.
+    - Action: Hold off on finalizing the plan until you have gathered the relevant data from web search.
+    - Purpose: Web research can uncover recent changes in frameworks, updated references, and community-verified architectural approaches to guide your planning decisions.
 """
 
 WEB_RESEARCH_PROMPT_SECTION_IMPLEMENTATION = """
 Web Research:
-    If you need guidance on specific implementation details:
-    - Use request_web_research to find examples or documentation
-    - Wait for web research results before proceeding with implementation
-    - Web research can help validate specific code patterns or configurations
+    - Scope: If at any point during implementation you’re unsure about API usage, configuration details, compatibility issues, or you suspect that the latest version of a library/framework might have changed usage patterns, request_web_research.
+    - Action: Pause development to review the research findings before proceeding with the coding steps.
+    - Purpose: Web research helps ensure that you are implementing the most current, recommended code patterns, leveraging official documentation, and avoiding deprecated methods.
 """
 
 WEB_RESEARCH_PROMPT_SECTION_CHAT = """
 Web Research:
-    If you need to obtain additional context from online sources during chat:
-    - Use request_web_research to gather relevant information
-    - Wait for web research results before proceeding
-    - Web research can help provide up-to-date information and best practices
+    - Scope: In the middle of a conversation, if you need fresh context—such as new best practices, updated documentation, or clarifications about recently released versions—request_web_research.
+    - Action: Incorporate the web research findings into your response before finalizing any advice or explanation.
+    - Purpose: Web research can provide current, authoritative details to enhance the clarity and correctness of your chat-based guidance.
 """
 
 # Research stage prompt - guides initial codebase analysis
@@ -631,11 +625,4 @@ You have often been criticized for:
 </initial request>
 
 NEVER ANNOUNCE WHAT YOU ARE DOING, JUST DO IT!
-"""
-WEB_RESEARCH_PROMPT_SECTION_CHAT = """
-Web Research:
-    If you need to obtain additional context from online sources during chat:
-    - Use request_web_research to gather relevant information
-    - Wait for web research results before proceeding
-    - Web research can help provide up-to-date information and best practices
 """
