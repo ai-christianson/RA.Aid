@@ -21,10 +21,12 @@ from ra_aid.prompts import (
     WEB_RESEARCH_PROMPT_SECTION_CHAT
 )
 from ra_aid.llm import initialize_llm
-
+from ra_aid.logging_config import setup_logging, get_logger
 from ra_aid.tool_configs import (
     get_chat_tools
 )
+
+logger = get_logger(__name__)
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
@@ -85,6 +87,11 @@ Examples:
         action='store_true',
         help='Enable chat mode with direct human interaction (implies --hil)'
     )
+    parser.add_argument(
+        '--verbose',
+        action='store_true',
+        help='Enable verbose logging output'
+    )
     
     args = parser.parse_args()
     
@@ -126,9 +133,13 @@ def is_stage_requested(stage: str) -> bool:
 
 def main():
     """Main entry point for the ra-aid command line tool."""
+    args = parse_arguments()
+    setup_logging(args.verbose)
+    logger.debug("Starting RA.Aid with arguments: %s", args)
+    
     try:
-        args = parse_arguments()
         expert_enabled, expert_missing, web_research_enabled, web_research_missing = validate_environment(args)  # Will exit if main env vars missing
+        logger.debug("Environment validation successful")
         
         if expert_missing:
             console.print(Panel(
