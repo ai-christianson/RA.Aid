@@ -1,4 +1,5 @@
-from typing import Dict, List, Any, Union, TypedDict, Optional, Set
+from typing import Dict, List, Any, Union, Optional, Set
+from typing_extensions import TypedDict
 
 class WorkLogEntry(TypedDict):
     timestamp: str
