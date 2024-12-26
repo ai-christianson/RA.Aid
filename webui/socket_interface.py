@@ -59,6 +59,12 @@ class SocketInterface:
             return False
         
         try:
+            # Ensure cowboy_mode is properly set in the config
+            if 'config' not in config:
+                config['config'] = {}
+            if 'cowboy_mode' not in config['config']:
+                config['config']['cowboy_mode'] = config.get('cowboy_mode', False)
+            
             message = {
                 "type": "task",
                 "content": task,

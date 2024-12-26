@@ -1,14 +1,25 @@
 import os
 from typing import Dict, Any
+import logging
+
+logger = logging.getLogger(__name__)
 
 def load_environment_status() -> Dict[str, bool]:
     """Load the environment status based on available API keys."""
+    # Debug: Print raw environment variable values
+    logger.debug(f"Raw ANTHROPIC_API_KEY: {os.getenv('ANTHROPIC_API_KEY')}")
+    logger.debug(f"Raw OPENAI_API_KEY: {os.getenv('OPENAI_API_KEY')}")
+    logger.debug(f"Raw OPENROUTER_API_KEY: {os.getenv('OPENROUTER_API_KEY')}")
+    
     status = {
         "openai": bool(os.getenv("OPENAI_API_KEY")),
         "anthropic": bool(os.getenv("ANTHROPIC_API_KEY")),
         "openrouter": bool(os.getenv("OPENROUTER_API_KEY")),
         "tavily": bool(os.getenv("TAVILY_API_KEY"))
     }
+    
+    # Debug: Print status after bool conversion
+    logger.debug(f"Status after bool conversion: {status}")
     return status
 
 class WebUIConfig:
