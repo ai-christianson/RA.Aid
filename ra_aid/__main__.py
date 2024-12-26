@@ -196,6 +196,8 @@ def main():
             
             # Store config in global memory
             _global_memory['config'] = config
+            _global_memory['config']['provider'] = args.provider
+            _global_memory['config']['model'] = args.model
             _global_memory['config']['expert_provider'] = args.expert_provider
             _global_memory['config']['expert_model'] = args.expert_model
             
