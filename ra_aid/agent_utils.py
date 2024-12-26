@@ -165,6 +165,8 @@ def run_research_agent(
         # Run agent with retry logic
         logger.debug("Research agent completed successfully")
         return run_agent_with_retry(agent, prompt, run_config)
+    except (KeyboardInterrupt, AgentInterrupt):
+        raise
     except Exception as e:
         logger.error("Research agent failed: %s", str(e), exc_info=True)
         raise
@@ -258,6 +260,8 @@ def run_web_research_agent(
         # Run agent with retry logic
         logger.debug("Web research agent completed successfully")
         return run_agent_with_retry(agent, prompt, run_config)
+    except (KeyboardInterrupt, AgentInterrupt):
+        raise
     except Exception as e:
         logger.error("Web research agent failed: %s", str(e), exc_info=True)
         raise
@@ -334,6 +338,8 @@ def run_planning_agent(
         print_stage_header("Planning Stage")
         logger.debug("Planning agent completed successfully")
         return run_agent_with_retry(agent, planning_prompt, run_config)
+    except (KeyboardInterrupt, AgentInterrupt):
+        raise
     except Exception as e:
         logger.error("Planning agent failed: %s", str(e), exc_info=True)
         raise
