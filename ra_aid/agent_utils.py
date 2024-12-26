@@ -15,6 +15,7 @@ from ra_aid.console.formatting import print_stage_header, print_error
 from ra_aid.console.output import print_agent_output
 from ra_aid.logging_config import get_logger
 from ra_aid.exceptions import AgentInterrupt
+from ra_aid.tracing import with_tracing
 from ra_aid.tool_configs import (
     get_implementation_tools,
     get_research_tools,
@@ -65,6 +66,7 @@ console = Console()
 
 logger = get_logger(__name__)
 
+@with_tracing("research_agent")
 def run_research_agent(
     base_task_or_query: str,
     model,
@@ -169,6 +171,7 @@ def run_research_agent(
         logger.error("Research agent failed: %s", str(e), exc_info=True)
         raise
 
+@with_tracing("web_research_agent")
 def run_web_research_agent(
     query: str,
     model,
@@ -262,6 +265,7 @@ def run_web_research_agent(
         logger.error("Web research agent failed: %s", str(e), exc_info=True)
         raise
 
+@with_tracing("planning_agent")
 def run_planning_agent(
     base_task: str,
     model,
@@ -338,6 +342,7 @@ def run_planning_agent(
         logger.error("Planning agent failed: %s", str(e), exc_info=True)
         raise
 
+@with_tracing("implementation_agent")
 def run_task_implementation_agent(
     base_task: str,
     tasks: list,

@@ -1,4 +1,5 @@
 import argparse
+import os
 import sys
 import uuid
 from rich.panel import Panel
@@ -22,6 +23,7 @@ from ra_aid.prompts import (
 )
 from ra_aid.llm import initialize_llm
 from ra_aid.logging_config import setup_logging, get_logger
+from ra_aid.langsmith_config import LangSmithConfig
 from ra_aid.tool_configs import (
     get_chat_tools
 )
@@ -131,6 +133,21 @@ def is_stage_requested(stage: str) -> bool:
         return _global_memory.get('implementation_requested', False)
     return False
 
+def get_langsmith_config() -> LangSmithConfig:
+    """Get LangSmith configuration from environment variables."""
+    api_key = os.getenv("LANGSMITH_API_KEY")
+    if not api_key:
+        return None
+        
+    project_name = os.getenv("LANGSMITH_PROJECT", "ra-aid")
+    trace_enabled = os.getenv("LANGSMITH_TRACING_ENABLED", "true").lower() == "true"
+    
+    return LangSmithConfig(
+        api_key=api_key,
+        project_name=project_name,
+        trace_enabled=trace_enabled
+    )
+
 def main():
     """Main entry point for the ra-aid command line tool."""
     args = parse_arguments()
@@ -223,6 +240,10 @@ def main():
         # Store expert provider and model in config
         _global_memory['config']['expert_provider'] = args.expert_provider
         _global_memory['config']['expert_model'] = args.expert_model
+        
+        langsmith_config = get_langsmith_config()
+        if langsmith_config:
+            config["langsmith"] = langsmith_config
         
         # Run research stage
         print_stage_header("Research Stage")
