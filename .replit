@@ -1,0 +1,27 @@
+
+modules = ["python-3.10:v18-20230807-322e88b"]
+run = "ra-aid --chat"
+
+[nix]
+channel = "stable-24_05"
+
+[deployment]
+run = ["sh", "-c", "ra-aid --chat"]
+
+[env]
+VIRTUAL_ENV = "/home/runner/${REPL_SLUG}/venv"
+PATH = "${VIRTUAL_ENV}/bin:/home/runner/${REPL_SLUG}/.config/npm/node_global/bin:${PATH}"
+PYTHONPATH = "$PYTHONPATH:/home/runner/${REPL_SLUG}"
+
+# Package installation
+[packager]
+language = "python3"
+ignoredPackages = ["unit_tests"]
+
+[packager.features]
+enabledForHosting = false
+packageSearch = true
+guessImports = true
+
+[unitTest]
+language = "python3"

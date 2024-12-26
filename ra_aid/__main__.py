@@ -10,6 +10,7 @@ from ra_aid.tools.memory import _global_memory
 from ra_aid.tools.human import ask_human
 from ra_aid import print_stage_header, print_error
 from ra_aid.tools.human import ask_human
+from ra_aid.__version__ import __version__
 from ra_aid.agent_utils import (
     AgentInterrupt,
     run_agent_with_retry,
@@ -21,10 +22,12 @@ from ra_aid.prompts import (
     WEB_RESEARCH_PROMPT_SECTION_CHAT
 )
 from ra_aid.llm import initialize_llm
-
+from ra_aid.logging_config import setup_logging, get_logger
 from ra_aid.tool_configs import (
     get_chat_tools
 )
+
+logger = get_logger(__name__)
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
@@ -40,6 +43,12 @@ Examples:
         '-m', '--message',
         type=str,
         help='The task or query to be executed by the agent'
+    )
+    parser.add_argument(
+        '--version',
+        action='version',
+        version=f'%(prog)s {__version__}',
+        help='Show program version number and exit'
     )
     parser.add_argument(
         '--research-only',
@@ -85,6 +94,11 @@ Examples:
         action='store_true',
         help='Enable chat mode with direct human interaction (implies --hil)'
     )
+    parser.add_argument(
+        '--verbose',
+        action='store_true',
+        help='Enable verbose logging output'
+    )
     
     args = parser.parse_args()
     
@@ -126,9 +140,13 @@ def is_stage_requested(stage: str) -> bool:
 
 def main():
     """Main entry point for the ra-aid command line tool."""
+    args = parse_arguments()
+    setup_logging(args.verbose)
+    logger.debug("Starting RA.Aid with arguments: %s", args)
+    
     try:
-        args = parse_arguments()
         expert_enabled, expert_missing, web_research_enabled, web_research_missing = validate_environment(args)  # Will exit if main env vars missing
+        logger.debug("Environment validation successful")
         
         if expert_missing:
             console.print(Panel(
@@ -178,6 +196,8 @@ def main():
             
             # Store config in global memory
             _global_memory['config'] = config
+            _global_memory['config']['provider'] = args.provider
+            _global_memory['config']['model'] = args.model
             _global_memory['config']['expert_provider'] = args.expert_provider
             _global_memory['config']['expert_model'] = args.expert_model
             

@@ -151,6 +151,9 @@ ra-aid -m "Your task or query here"
 
 # Research-only mode (no implementation)
 ra-aid -m "Explain the authentication flow" --research-only
+
+# Enable verbose logging for detailed execution information
+ra-aid -m "Add new feature" --verbose
 ```
 
 ### Command Line Options
@@ -164,6 +167,7 @@ ra-aid -m "Explain the authentication flow" --research-only
 - `--expert-provider`: Specify the provider for the expert tool (defaults to OpenAI)
 - `--expert-model`: Specify the model name for the expert tool (defaults to o1-preview for OpenAI)
 - `--chat`: Enable chat mode for interactive assistance
+- `--verbose`: Enable detailed logging output for debugging and monitoring
 
 ### Example Tasks
 
