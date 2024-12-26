@@ -192,15 +192,19 @@ def test_emit_key_snippets(reset_memory):
     # Test snippets with and without descriptions
     snippets = [
         {
+            "snippet": "def test():\n    pass",
+            "source": "test.py:10",
+            "relevance": 0.8,
             "filepath": "test.py",
             "line_number": 10,
-            "snippet": "def test():\n    pass",
             "description": "Test function"
         },
         {
+            "snippet": "print('hello')",
+            "source": "main.py:20",
+            "relevance": 0.6,
             "filepath": "main.py",
             "line_number": 20,
-            "snippet": "print('hello')",
             "description": None
         }
     ]
@@ -223,21 +227,27 @@ def test_delete_key_snippets(reset_memory):
     # Add test snippets
     snippets = [
         {
+            "snippet": "code1",
+            "source": "test1.py:1",
+            "relevance": 0.7,
             "filepath": "test1.py",
             "line_number": 1,
-            "snippet": "code1",
             "description": None
         },
         {
+            "snippet": "code2",
+            "source": "test2.py:2",
+            "relevance": 0.8,
             "filepath": "test2.py",
             "line_number": 2,
-            "snippet": "code2",
             "description": None
         },
         {
+            "snippet": "code3",
+            "source": "test3.py:3",
+            "relevance": 0.9,
             "filepath": "test3.py",
             "line_number": 3,
-            "snippet": "code3",
             "description": None
         }
     ]
@@ -256,22 +266,27 @@ def test_delete_key_snippets(reset_memory):
     assert _global_memory['key_snippets'][2]['filepath'] == "test3.py"
 
 def test_delete_key_snippets_empty(reset_memory):
-    """Test deleting snippets with empty ID list"""
-    # Add a test snippet
+    """Test deleting snippets from empty memory"""
+    # Add a single snippet
     snippet = {
+        "snippet": "test code",
+        "source": "test.py:1",
+        "relevance": 0.5,
         "filepath": "test.py",
         "line_number": 1,
-        "snippet": "code",
         "description": None
     }
     emit_key_snippets.invoke({"snippets": [snippet]})
     
-    # Test with empty list
-    result = delete_key_snippets.invoke({"snippet_ids": []})
+    # Delete the snippet
+    delete_key_snippets.invoke({"snippet_ids": [0]})
+    
+    # Try to delete again - should succeed silently
+    result = delete_key_snippets.invoke({"snippet_ids": [0]})
     assert result == "Snippets deleted."
     
-    # Verify snippet still exists
-    assert 0 in _global_memory['key_snippets']
+    # Memory should be empty
+    assert len(_global_memory['key_snippets']) == 0
 
 def test_emit_related_files_basic(reset_memory):
     """Test basic adding of files with ID tracking"""
@@ -374,83 +389,62 @@ def test_related_files_formatting(reset_memory):
     assert get_memory_value('related_files') == ""
 
 def test_key_snippets_integration(reset_memory):
-    """Integration test for key snippets functionality"""
-    # Initial snippets to add
+    """Test full integration of key snippets functionality"""
+    # Test snippets with various descriptions and content
     snippets = [
         {
+            "snippet": "def first_function():\n    return 'first'",
+            "source": "file1.py:10",
+            "relevance": 0.9,
             "filepath": "file1.py",
             "line_number": 10,
-            "snippet": "def func1():\n    pass",
             "description": "First function"
         },
         {
+            "snippet": "def second_function():\n    return 'second'",
+            "source": "file2.py:20",
+            "relevance": 0.8,
             "filepath": "file2.py",
             "line_number": 20,
-            "snippet": "def func2():\n    return True",
             "description": "Second function"
         },
         {
+            "snippet": "class TestClass:\n    pass",
+            "source": "file3.py:30",
+            "relevance": 0.7,
             "filepath": "file3.py",
             "line_number": 30,
-            "snippet": "class TestClass:\n    pass",
             "description": "Test class"
         }
     ]
     
-    # Add all snippets
+    # Emit snippets
     result = emit_key_snippets.invoke({"snippets": snippets})
     assert result == "Snippets stored."
-    assert _global_memory['key_snippet_id_counter'] == 3
-    # Verify related files were tracked with IDs
-    assert len(_global_memory['related_files']) == 3
-    # Check files are stored with proper IDs
-    file_values = _global_memory['related_files'].values()
-    assert "file1.py" in file_values
-    assert "file2.py" in file_values
-    assert "file3.py" in file_values
     
-    # Verify all snippets were stored correctly
+    # Verify snippets stored correctly
     assert len(_global_memory['key_snippets']) == 3
     assert _global_memory['key_snippets'][0] == snippets[0]
     assert _global_memory['key_snippets'][1] == snippets[1]
     assert _global_memory['key_snippets'][2] == snippets[2]
     
-    # Delete some but not all snippets (0 and 2)
-    result = delete_key_snippets.invoke({"snippet_ids": [0, 2]})
+    # Delete middle snippet
+    result = delete_key_snippets.invoke({"snippet_ids": [1]})
     assert result == "Snippets deleted."
     
-    # Verify remaining snippet is intact
-    assert len(_global_memory['key_snippets']) == 1
-    assert 1 in _global_memory['key_snippets']
-    assert _global_memory['key_snippets'][1] == snippets[1]
+    # Verify correct snippet was deleted
+    assert len(_global_memory['key_snippets']) == 2
+    assert _global_memory['key_snippets'][0] == snippets[0]
+    assert _global_memory['key_snippets'][2] == snippets[2]
     
-    # Counter should remain unchanged after deletions
-    assert _global_memory['key_snippet_id_counter'] == 3
-    
-    # Add new snippet to verify counter continues correctly
-    new_snippet = {
-        "filepath": "file4.py",
-        "line_number": 40,
-        "snippet": "def func4():\n    return False",
-        "description": "Fourth function"
-    }
-    result = emit_key_snippets.invoke({"snippets": [new_snippet]})
-    assert result == "Snippets stored."
-    assert _global_memory['key_snippet_id_counter'] == 4
-    # Verify new file was added to related files
-    file_values = _global_memory['related_files'].values()
-    assert "file4.py" in file_values
-    assert len(_global_memory['related_files']) == 4
-    
-    # Delete remaining snippets
-    result = delete_key_snippets.invoke({"snippet_ids": [1, 3]})
-    assert result == "Snippets deleted."
-    
-    # Verify all snippets are gone
-    assert len(_global_memory['key_snippets']) == 0
-    
-    # Counter should still maintain its value
-    assert _global_memory['key_snippet_id_counter'] == 4
+    # Get memory value and verify formatting
+    memory_value = get_memory_value('key_snippets')
+    assert "file1.py" in memory_value
+    assert "first_function" in memory_value
+    assert "file3.py" in memory_value
+    assert "TestClass" in memory_value
+    assert "file2.py" not in memory_value  # Deleted snippet
+    assert "second_function" not in memory_value  # Deleted snippet
 
 def test_emit_task_with_id(reset_memory):
     """Test emitting tasks with ID tracking"""

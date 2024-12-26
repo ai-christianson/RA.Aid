@@ -1,4 +1,5 @@
-from typing import Dict, List, Any, Union, TypedDict, Optional, Set
+from typing import Dict, List, Any, Union, Optional, Set
+from typing_extensions import TypedDict
 
 class WorkLogEntry(TypedDict):
     timestamp: str
@@ -13,6 +14,8 @@ class SnippetInfo(TypedDict):
     filepath: str
     line_number: int
     snippet: str
+    source: str
+    relevance: float
     description: Optional[str]
 
 console = Console()
@@ -196,10 +199,12 @@ def emit_key_snippets(snippets: List[SnippetInfo]) -> str:
                  - filepath: Path to the source file
                  - line_number: Line number where the snippet starts  
                  - snippet: The source code snippet text
+                 - source: Source location in format "file:line"
+                 - relevance: Relevance score between 0 and 1
                  - description: Optional description of the significance
                  
     Returns:
-        List of stored snippet confirmation messages
+        String confirmation message that snippets were stored
     """
     # First collect unique filepaths to add as related files
     emit_related_files.invoke({"files": [snippet_info['filepath'] for snippet_info in snippets]})
@@ -210,8 +215,15 @@ def emit_key_snippets(snippets: List[SnippetInfo]) -> str:
         snippet_id = _global_memory['key_snippet_id_counter']
         _global_memory['key_snippet_id_counter'] += 1
         
-        # Store snippet info
-        _global_memory['key_snippets'][snippet_id] = snippet_info
+        # Store snippet info with all fields
+        _global_memory['key_snippets'][snippet_id] = {
+            'filepath': snippet_info['filepath'],
+            'line_number': snippet_info['line_number'],
+            'snippet': snippet_info['snippet'],
+            'description': snippet_info['description'],
+            'source': snippet_info['source'],
+            'relevance': snippet_info['relevance']
+        }
         
         # Format display text as markdown
         display_text = [

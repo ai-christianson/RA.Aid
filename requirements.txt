@@ -1,0 +1,8 @@
+streamlit>=1.29.0
+python-socketio>=5.10.0
+flask>=3.0.0
+flask-socketio>=5.3.6
+openai>=1.6.0
+anthropic>=0.7.7
+requests>=2.31.0
+python-dotenv>=1.0.0 
