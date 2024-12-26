@@ -10,17 +10,11 @@ import threading
 import time
 from typing import Optional
 
-class AgentInterrupt(Exception):
-    """Exception raised when an agent's execution is interrupted.
-    
-    This exception is used for internal agent interruption handling,
-    separate from KeyboardInterrupt which is reserved for top-level handling.
-    """
-    pass
-
 from langgraph.prebuilt import create_react_agent
 from ra_aid.console.formatting import print_stage_header, print_error
 from ra_aid.console.output import print_agent_output
+from ra_aid.logging_config import get_logger
+from ra_aid.exceptions import AgentInterrupt
 from ra_aid.tool_configs import (
     get_implementation_tools,
     get_research_tools,
@@ -69,6 +63,8 @@ from ra_aid.prompts import (
 
 console = Console()
 
+logger = get_logger(__name__)
+
 def run_research_agent(
     base_task_or_query: str,
     model,
@@ -83,7 +79,7 @@ def run_research_agent(
     console_message: Optional[str] = None
 ) -> Optional[str]:
     """Run a research agent with the given configuration.
-    
+
     Args:
         base_task_or_query: The main task or query for research
         model: The LLM model to use
@@ -95,10 +91,10 @@ def run_research_agent(
         config: Optional configuration dictionary
         thread_id: Optional thread ID (defaults to new UUID)
         console_message: Optional message to display before running
-        
+
     Returns:
         Optional[str]: The completion message if task completed successfully
-        
+
     Example:
         result = run_research_agent(
             "Research Python async patterns",
@@ -107,6 +103,11 @@ def run_research_agent(
             research_only=True
         )
     """
+    thread_id = thread_id or str(uuid.uuid4())
+    logger.debug("Starting research agent with thread_id=%s", thread_id)
+    logger.debug("Research configuration: expert=%s, research_only=%s, hil=%s, web=%s",
+                expert_enabled, research_only, hil, web_research_enabled)
+
     # Initialize memory if not provided
     if memory is None:
         memory = MemorySaver()
@@ -130,12 +131,12 @@ def run_research_agent(
     expert_section = EXPERT_PROMPT_SECTION_RESEARCH if expert_enabled else ""
     human_section = HUMAN_PROMPT_SECTION_RESEARCH if hil else ""
     web_research_section = WEB_RESEARCH_PROMPT_SECTION_RESEARCH if config.get('web_research') else ""
-    
+
     # Get research context from memory
     key_facts = _global_memory.get("key_facts", "")
     code_snippets = _global_memory.get("code_snippets", "")
     related_files = _global_memory.get("related_files", "")
-    
+
     # Build prompt
     prompt = (RESEARCH_ONLY_PROMPT if research_only else RESEARCH_PROMPT).format(
         base_task=base_task_or_query,
@@ -156,12 +157,17 @@ def run_research_agent(
     if config:
         run_config.update(config)
 
-    # Display console message if provided
-    if console_message:
-        console.print(Panel(Markdown(console_message), title="🔬 Looking into it..."))
+    try:
+        # Display console message if provided
+        if console_message:
+            console.print(Panel(Markdown(console_message), title="🔬 Looking into it..."))
 
-    # Run agent with retry logic
-    return run_agent_with_retry(agent, prompt, run_config)
+        # Run agent with retry logic
+        logger.debug("Research agent completed successfully")
+        return run_agent_with_retry(agent, prompt, run_config)
+    except Exception as e:
+        logger.error("Research agent failed: %s", str(e), exc_info=True)
+        raise
 
 def run_web_research_agent(
     query: str,
@@ -176,7 +182,7 @@ def run_web_research_agent(
     console_message: Optional[str] = None
 ) -> Optional[str]:
     """Run a web research agent with the given configuration.
-    
+
     Args:
         query: The mainquery for web research
         model: The LLM model to use
@@ -187,10 +193,10 @@ def run_web_research_agent(
         config: Optional configuration dictionary
         thread_id: Optional thread ID (defaults to new UUID)
         console_message: Optional message to display before running
-        
+
     Returns:
         Optional[str]: The completion message if task completed successfully
-        
+
     Example:
         result = run_web_research_agent(
             "Research latest Python async patterns",
@@ -198,6 +204,11 @@ def run_web_research_agent(
             expert_enabled=True
         )
     """
+    thread_id = thread_id or str(uuid.uuid4())
+    logger.debug("Starting web research agent with thread_id=%s", thread_id)
+    logger.debug("Web research configuration: expert=%s, hil=%s, web=%s",
+                expert_enabled, hil, web_research_enabled)
+
     # Initialize memory if not provided
     if memory is None:
         memory = MemorySaver()
@@ -215,12 +226,12 @@ def run_web_research_agent(
     # Format prompt sections
     expert_section = EXPERT_PROMPT_SECTION_RESEARCH if expert_enabled else ""
     human_section = HUMAN_PROMPT_SECTION_RESEARCH if hil else ""
-    
+
     # Get research context from memory
     key_facts = _global_memory.get("key_facts", "")
     code_snippets = _global_memory.get("code_snippets", "")
     related_files = _global_memory.get("related_files", "")
-    
+
     # Build prompt
     prompt = WEB_RESEARCH_PROMPT.format(
         web_research_query=query,
@@ -239,12 +250,17 @@ def run_web_research_agent(
     if config:
         run_config.update(config)
 
-    # Display console message if provided
-    if console_message:
-        console.print(Panel(Markdown(console_message), title="🔍 Starting Web Research..."))
+    try:
+        # Display console message if provided
+        if console_message:
+            console.print(Panel(Markdown(console_message), title="🔍 Starting Web Research..."))
 
-    # Run agent with retry logic
-    return run_agent_with_retry(agent, prompt, run_config)
+        # Run agent with retry logic
+        logger.debug("Web research agent completed successfully")
+        return run_agent_with_retry(agent, prompt, run_config)
+    except Exception as e:
+        logger.error("Web research agent failed: %s", str(e), exc_info=True)
+        raise
 
 def run_planning_agent(
     base_task: str,
@@ -257,7 +273,7 @@ def run_planning_agent(
     thread_id: Optional[str] = None
 ) -> Optional[str]:
     """Run a planning agent to create implementation plans.
-    
+
     Args:
         base_task: The main task to plan implementation for
         model: The LLM model to use
@@ -266,10 +282,14 @@ def run_planning_agent(
         memory: Optional memory instance to use
         config: Optional configuration dictionary
         thread_id: Optional thread ID (defaults to new UUID)
-        
+
     Returns:
         Optional[str]: The completion message if planning completed successfully
     """
+    thread_id = thread_id or str(uuid.uuid4())
+    logger.debug("Starting planning agent with thread_id=%s", thread_id)
+    logger.debug("Planning configuration: expert=%s, hil=%s", expert_enabled, hil)
+
     # Initialize memory if not provided
     if memory is None:
         memory = MemorySaver()
@@ -288,7 +308,7 @@ def run_planning_agent(
     expert_section = EXPERT_PROMPT_SECTION_PLANNING if expert_enabled else ""
     human_section = HUMAN_PROMPT_SECTION_PLANNING if hil else ""
     web_research_section = WEB_RESEARCH_PROMPT_SECTION_PLANNING if config.get('web_research') else ""
-    
+
     # Build prompt
     planning_prompt = PLANNING_PROMPT.format(
         expert_section=expert_section,
@@ -310,9 +330,13 @@ def run_planning_agent(
     if config:
         run_config.update(config)
 
-    # Run agent with retry logic
-    print_stage_header("Planning Stage")
-    return run_agent_with_retry(agent, planning_prompt, run_config)
+    try:
+        print_stage_header("Planning Stage")
+        logger.debug("Planning agent completed successfully")
+        return run_agent_with_retry(agent, planning_prompt, run_config)
+    except Exception as e:
+        logger.error("Planning agent failed: %s", str(e), exc_info=True)
+        raise
 
 def run_task_implementation_agent(
     base_task: str,
@@ -329,7 +353,7 @@ def run_task_implementation_agent(
     thread_id: Optional[str] = None
 ) -> Optional[str]:
     """Run an implementation agent for a specific task.
-    
+
     Args:
         base_task: The main task being implemented
         tasks: List of tasks to implement
@@ -341,10 +365,16 @@ def run_task_implementation_agent(
         memory: Optional memory instance to use
         config: Optional configuration dictionary
         thread_id: Optional thread ID (defaults to new UUID)
-        
+
     Returns:
         Optional[str]: The completion message if task completed successfully
     """
+    thread_id = thread_id or str(uuid.uuid4())
+    logger.debug("Starting implementation agent with thread_id=%s", thread_id)
+    logger.debug("Implementation configuration: expert=%s, web=%s", expert_enabled, web_research_enabled)
+    logger.debug("Task details: base_task=%s, current_task=%s", base_task, task)
+    logger.debug("Related files: %s", related_files)
+
     # Initialize memory if not provided
     if memory is None:
         memory = MemorySaver()
@@ -382,8 +412,12 @@ def run_task_implementation_agent(
     if config:
         run_config.update(config)
 
-    # Run agent with retry logic
-    return run_agent_with_retry(agent, prompt, run_config)
+    try:
+        logger.debug("Implementation agent completed successfully")
+        return run_agent_with_retry(agent, prompt, run_config)
+    except Exception as e:
+        logger.error("Implementation agent failed: %s", str(e), exc_info=True)
+        raise
 
 _CONTEXT_STACK = []
 _INTERRUPT_CONTEXT = None
@@ -393,7 +427,7 @@ def _request_interrupt(signum, frame):
     global _INTERRUPT_CONTEXT
     if _CONTEXT_STACK:
         _INTERRUPT_CONTEXT = _CONTEXT_STACK[-1]
-    
+
     if _FEEDBACK_MODE:
         print()
         print(" 👋 Bye!")
@@ -404,7 +438,7 @@ class InterruptibleSection:
     def __enter__(self):
         _CONTEXT_STACK.append(self)
         return self
-    
+
     def __exit__(self, exc_type, exc_value, traceback):
         _CONTEXT_STACK.remove(self)
 
@@ -413,6 +447,8 @@ def check_interrupt():
         raise AgentInterrupt("Interrupt requested")
 
 def run_agent_with_retry(agent, prompt: str, config: dict) -> Optional[str]:
+    """Run an agent with retry logic for API errors."""
+    logger.debug("Running agent with prompt length: %d", len(prompt))
     original_handler = None
     if threading.current_thread() is threading.main_thread():
         original_handler = signal.getsignal(signal.SIGINT)
@@ -423,22 +459,27 @@ def run_agent_with_retry(agent, prompt: str, config: dict) -> Optional[str]:
 
     with InterruptibleSection():
         try:
+            logger.debug("Attempt %d/%d", attempt + 1, max_retries)
             # Track agent execution depth
             current_depth = _global_memory.get('agent_depth', 0)
             _global_memory['agent_depth'] = current_depth + 1
-            
+
             for attempt in range(max_retries):
                 check_interrupt()
                 try:
                     for chunk in agent.stream({"messages": [HumanMessage(content=prompt)]}, config):
+                        logger.debug("Agent output: %s", chunk)
                         check_interrupt()
                         print_agent_output(chunk)
+                        logger.debug("Agent run completed successfully")
                     return "Agent run completed successfully"
                 except (KeyboardInterrupt, AgentInterrupt):
                     raise
                 except (InternalServerError, APITimeoutError, RateLimitError, APIError) as e:
                     if attempt == max_retries - 1:
+                        logger.error("Max retries reached, failing: %s", str(e))
                         raise RuntimeError(f"Max retries ({max_retries}) exceeded. Last error: {e}")
+                    logger.warning("API error (attempt %d/%d): %s", attempt + 1, max_retries, str(e))
                     delay = base_delay * (2 ** attempt)
                     print_error(f"Encountered {e.__class__.__name__}: {e}. Retrying in {delay}s... (Attempt {attempt+1}/{max_retries})")
                     start = time.monotonic()
@@ -448,6 +489,6 @@ def run_agent_with_retry(agent, prompt: str, config: dict) -> Optional[str]:
         finally:
             # Reset depth tracking
             _global_memory['agent_depth'] = _global_memory.get('agent_depth', 1) - 1
-            
+
             if original_handler and threading.current_thread() is threading.main_thread():
                 signal.signal(signal.SIGINT, original_handler)
