@@ -10,6 +10,7 @@ from ra_aid.tools.memory import _global_memory
 from ra_aid.tools.human import ask_human
 from ra_aid import print_stage_header, print_error
 from ra_aid.tools.human import ask_human
+from ra_aid.__version__ import __version__
 from ra_aid.agent_utils import (
     AgentInterrupt,
     run_agent_with_retry,
@@ -42,6 +43,12 @@ Examples:
         '-m', '--message',
         type=str,
         help='The task or query to be executed by the agent'
+    )
+    parser.add_argument(
+        '--version',
+        action='version',
+        version=f'%(prog)s {__version__}',
+        help='Show program version number and exit'
     )
     parser.add_argument(
         '--research-only',
