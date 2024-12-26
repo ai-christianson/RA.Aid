@@ -459,12 +459,12 @@ def run_agent_with_retry(agent, prompt: str, config: dict) -> Optional[str]:
 
     with InterruptibleSection():
         try:
-            logger.debug("Attempt %d/%d", attempt + 1, max_retries)
             # Track agent execution depth
             current_depth = _global_memory.get('agent_depth', 0)
             _global_memory['agent_depth'] = current_depth + 1
 
             for attempt in range(max_retries):
+                logger.debug("Attempt %d/%d", attempt + 1, max_retries)
                 check_interrupt()
                 try:
                     for chunk in agent.stream({"messages": [HumanMessage(content=prompt)]}, config):
