@@ -1,21 +1,52 @@
 import os
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
+from langchain_core.tools import tool
 from langchain_core.messages import HumanMessage, SystemMessage
+from ra_aid.tools.list_directory import list_directory_tree
+from ra_aid.tool_configs import get_read_only_tools
+import inspect
 
 # Load environment variables
 load_dotenv()
 
+
+def get_function_info(func):
+    """
+    Returns a well-formatted string containing the function signature and docstring,
+    designed to be easily readable by both humans and LLMs.
+    """
+    # Get signature
+    signature = inspect.signature(func)
+    
+    # Get docstring - use getdoc to clean up indentation
+    docstring = inspect.getdoc(func)
+    if docstring is None:
+        docstring = "No docstring provided"
+        
+    # Format full signature including return type
+    full_signature = f"{func.__name__}{signature}"
+    
+    # Build the complete string
+    info = f"""{full_signature}
+\"\"\"
+{docstring}
+\"\"\"  """
+    
+    return info
+
+@tool
 def check_weather(location: str) -> str:
+    """
+    Gets the weather at the given location.
+    """
     return f"The weather in {location} is sunny!"
 
-def ask_human(query: str) -> str:
-    print()
-    print(f"Assistant: {query}")
-    user_input = input("\nYou: ").strip()
-    return user_input
-
+@tool
 def output_message(message: str, prompt_user_input: bool = False) -> str:
+    """
+    Outputs a message to the user, optionally prompting for input.
+    """
     print()
     print(f"Assistant: {message.strip()}")
     if prompt_user_input:
@@ -23,14 +54,21 @@ def output_message(message: str, prompt_user_input: bool = False) -> str:
         return user_input
     return ""
 
-def evaluate_response(code: str) -> any:
+def evaluate_response(code: str, tools: list) -> any:
     """
     Evaluates a single function call and returns its result
+    
+    Args:
+        code (str): The code to evaluate
+        tools (list): List of tool objects that have a .func property
+        
+    Returns:
+        any: Result of the code evaluation
     """
+    # Create globals dictionary from tool functions
     globals_dict = {
-        'check_weather': check_weather,
-        'ask_human': ask_human,
-        'output_message': output_message
+        tool.func.__name__: tool.func
+        for tool in tools
     }
     
     try:
@@ -57,6 +95,15 @@ def create_chat_interface():
     last_result = None
     first_iteration = True
     
+    tools = get_read_only_tools(True, True)
+    
+    tools.extend([output_message])
+    
+    available_functions = []
+    
+    for t in tools:
+        available_functions.append(get_function_info(t.func))
+    
     while True:
         base_prompt = ""
         
@@ -65,13 +112,9 @@ def create_chat_interface():
             base_prompt += f"\n<last result>{last_result}</last result>"
             
         # Construct the tool documentation and context
-        base_prompt += """
+        base_prompt += f"""
         <available functions>
-        # Get the weather at a location:
-        check_weather(location: str) -> str
-        
-        # Output a message and optionally get their response:
-        output_message(message: str, prompt_user_input: bool = False) -> str
+        {"\n\n".join(available_functions)}
         </available functions>
         """
         
@@ -112,14 +155,14 @@ def create_chat_interface():
             response = chat.invoke(chat_history)
             
             # # Print the code response
-            # print("\nAssistant generated code:")
-            # print(response.content)
+            print("\nAssistant generated code:")
+            print(response.content)
             
             # Evaluate the code
             # print("\nExecuting code:")
-            last_result = evaluate_response(response.content.strip())
-            # if last_result is not None:
-                # print(f"Result: {last_result}")
+            last_result = evaluate_response(response.content.strip(), tools)
+            if last_result is not None:
+                print(f"Result: {last_result}")
             
             # Add assistant response to history
             chat_history.append(response)
