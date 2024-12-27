@@ -12,7 +12,7 @@ These updated prompts include instructions to scale complexity:
 
 # Expert-specific prompt sections
 EXPERT_PROMPT_SECTION_RESEARCH = """
-Expert Consultation (if expert is available):
+Expert Consultation:
     If you need additional guidance, analysis, or verification (including code correctness checks and debugging):
     - Use emit_expert_context to provide all relevant context about what you've found
     - Wait for the expert response before proceeding with research
@@ -20,7 +20,7 @@ Expert Consultation (if expert is available):
 """
 
 EXPERT_PROMPT_SECTION_PLANNING = """
-Expert Consultation (if expert is available):
+Expert Consultation:
     If you need additional input, assistance, or any logic verification:
     - First use emit_expert_context to provide all relevant context
     - Wait for the expert's response before defining tasks in non-trivial scenarios
@@ -28,7 +28,7 @@ Expert Consultation (if expert is available):
 """
 
 EXPERT_PROMPT_SECTION_IMPLEMENTATION = """
-Expert Consultation (if expert is available):
+Expert Consultation:
     If you have any doubts about logic, debugging, or best approaches (or how to test something thoroughly):
     - Use emit_expert_context to provide context about your specific concern
     - Ask the expert to perform deep analysis or correctness checks
@@ -36,7 +36,7 @@ Expert Consultation (if expert is available):
 """
 
 EXPERT_PROMPT_SECTION_CHAT = """
-Expert Consultation (if expert is available):
+Expert Consultation:
     If you need expert input during the interactive chat phase, or if any aspect of the logic or debugging is uncertain:
     - Use emit_expert_context to provide the current conversation state, user requirements, and discovered details
     - Ask the expert for advice on handling ambiguous user requests or complex technical challenges, and to verify correctness
@@ -68,31 +68,41 @@ Human Interaction:
     - Wait for responses before proceeding
 """
 WEB_RESEARCH_PROMPT_SECTION_RESEARCH = """
-Web Research:
-    - Scope: Whenever you have questions about the most recent standards, library versions, or if you want to verify a pattern or an approach, request_web_research to gather up-to-date, authoritative information.
-    - Action: Wait for the web research results before drawing conclusions or proceeding with your research.
-    - Purpose: Web research results can help you confirm patterns, best practices, official documentation references, and version-specific details to ensure your findings are accurate.
+Request web research when working with:
+- Library/framework versions and compatibility
+- Current best practices and patterns 
+- API documentation and usage
+- Configuration options and defaults
+- Recently updated features
+Favor checking documentation over making assumptions.
 """
 
 WEB_RESEARCH_PROMPT_SECTION_PLANNING = """
-Web Research:
-    - Scope: If you need to confirm the feasibility of a solution, compare approaches, or validate that a selected architecture aligns with current best practices, request_web_research.
-    - Action: Hold off on finalizing the plan until you have gathered the relevant data from web search.
-    - Purpose: Web research can uncover recent changes in frameworks, updated references, and community-verified architectural approaches to guide your planning decisions.
+Request web research before finalizing technical plans:
+- Framework version compatibility
+- Architecture patterns and best practices
+- Breaking changes in recent versions
+- Community-verified approaches
+- Migration guides and upgrade paths
 """
 
 WEB_RESEARCH_PROMPT_SECTION_IMPLEMENTATION = """
-Web Research:
-    - Scope: If at any point during implementation you’re unsure about API usage, configuration details, compatibility issues, or you suspect that the latest version of a library/framework might have changed usage patterns, request_web_research.
-    - Action: Pause development to review the research findings before proceeding with the coding steps.
-    - Purpose: Web research helps ensure that you are implementing the most current, recommended code patterns, leveraging official documentation, and avoiding deprecated methods.
+Request web research before writing code involving:
+- Import statements and dependencies
+- API method calls and parameters
+- Configuration objects and options
+- Environment setup requirements
+- Package version specifications
 """
 
 WEB_RESEARCH_PROMPT_SECTION_CHAT = """
-Web Research:
-    - Scope: In the middle of a conversation, if you need fresh context—such as new best practices, updated documentation, or clarifications about recently released versions—request_web_research.
-    - Action: Incorporate the web research findings into your response before finalizing any advice or explanation.
-    - Purpose: Web research can provide current, authoritative details to enhance the clarity and correctness of your chat-based guidance.
+Request web research when discussing:
+- Package versions and compatibility
+- API usage and patterns
+- Configuration details
+- Best practices
+- Recent changes
+Prioritize checking current documentation for technical advice.
 """
 
 # Research stage prompt - guides initial codebase analysis
@@ -223,6 +233,7 @@ You have often been criticized for:
 
 {expert_section}
 {human_section}
+{web_research_section}
 
 NEVER ANNOUNCE WHAT YOU ARE DOING, JUST DO IT!
 """
@@ -468,6 +479,7 @@ Guidelines:
 
 {expert_section}
 {human_section}
+{web_research_section}
 
 You have often been criticized for:
   - Overcomplicating things.
@@ -525,12 +537,15 @@ Testing:
   - If the tests have not already been run, run them using run_shell_command to get a baseline of functionality (e.g. were any tests failing before we started working? Do they all pass?)
 - If you add or change any unit tests, run them using run_shell_command and ensure they pass (check docs or analyze directory structure/test files to infer how to run them.)
   - Start with running very specific tests, then move to more general/complete test suites.
-{expert_section}
-{human_section}
+
 - Only test UI components if there is already a UI testing system in place.
 - Only test things that can be tested by an automated process.
 
 Once the task is complete, ensure all updated files are emitted.
+
+{expert_section}
+{human_section}
+{web_research_section}
 
 You have often been criticized for:
   - Overcomplicating things.

@@ -121,7 +121,7 @@ def run_research_agent(
         research_only=research_only,
         expert_enabled=expert_enabled,
         human_interaction=hil,
-        web_research_enabled=config.get('web_research', False)
+        web_research_enabled=config.get('web_research_enabled', False)
     )
 
     # Create agent
@@ -130,7 +130,7 @@ def run_research_agent(
     # Format prompt sections
     expert_section = EXPERT_PROMPT_SECTION_RESEARCH if expert_enabled else ""
     human_section = HUMAN_PROMPT_SECTION_RESEARCH if hil else ""
-    web_research_section = WEB_RESEARCH_PROMPT_SECTION_RESEARCH if config.get('web_research') else ""
+    web_research_section = WEB_RESEARCH_PROMPT_SECTION_RESEARCH if config.get('web_research_enabled') else ""
 
     # Get research context from memory
     key_facts = _global_memory.get("key_facts", "")
@@ -303,7 +303,7 @@ def run_planning_agent(
         thread_id = str(uuid.uuid4())
 
     # Configure tools
-    tools = get_planning_tools(expert_enabled=expert_enabled, web_research_enabled=config.get('web_research', False))
+    tools = get_planning_tools(expert_enabled=expert_enabled, web_research_enabled=config.get('web_research_enabled', False))
 
     # Create agent
     agent = create_react_agent(model, tools, checkpointer=memory)
@@ -311,7 +311,7 @@ def run_planning_agent(
     # Format prompt sections
     expert_section = EXPERT_PROMPT_SECTION_PLANNING if expert_enabled else ""
     human_section = HUMAN_PROMPT_SECTION_PLANNING if hil else ""
-    web_research_section = WEB_RESEARCH_PROMPT_SECTION_PLANNING if config.get('web_research') else ""
+    web_research_section = WEB_RESEARCH_PROMPT_SECTION_PLANNING if config.get('web_research_enabled') else ""
 
     # Build prompt
     planning_prompt = PLANNING_PROMPT.format(
@@ -390,7 +390,7 @@ def run_task_implementation_agent(
         thread_id = str(uuid.uuid4())
 
     # Configure tools
-    tools = get_implementation_tools(expert_enabled=expert_enabled, web_research_enabled=config.get('web_research', False))
+    tools = get_implementation_tools(expert_enabled=expert_enabled, web_research_enabled=config.get('web_research_enabled', False))
 
     # Create agent
     agent = create_react_agent(model, tools, checkpointer=memory)
@@ -407,7 +407,7 @@ def run_task_implementation_agent(
         work_log=get_memory_value('work_log'),
         expert_section=EXPERT_PROMPT_SECTION_IMPLEMENTATION if expert_enabled else "",
         human_section=HUMAN_PROMPT_SECTION_IMPLEMENTATION if _global_memory.get('config', {}).get('hil', False) else "",
-        web_research_section=WEB_RESEARCH_PROMPT_SECTION_CHAT if config.get('web_research') else ""
+        web_research_section=WEB_RESEARCH_PROMPT_SECTION_CHAT if config.get('web_research_enabled') else ""
     )
 
     # Set up configuration

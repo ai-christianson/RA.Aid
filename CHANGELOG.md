@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 - Fix logging on interrupt.
+- Fix web research prompt.
 
 ## [0.10.2] - 2024-12-26
 
