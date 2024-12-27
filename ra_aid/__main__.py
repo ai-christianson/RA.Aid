@@ -166,11 +166,15 @@ def main():
                 style="yellow"
             ))
         
-        # Create the base model after validation
-        model = initialize_llm(args.provider, args.model)
+        # Create the base model after validation, skip if research_only
+        model = None if args.research_only else initialize_llm(args.provider, args.model)
 
         # Handle chat mode
         if args.chat:
+            if args.research_only:
+                print_error("Chat mode cannot be used with --research-only")
+                sys.exit(1)
+
             print_stage_header("Chat Mode")
             
             # Get initial request from user
@@ -246,8 +250,8 @@ def main():
             config=config
         )
         
-        # Proceed with planning and implementation if not an informational query
-        if not is_informational_query():
+        # Proceed with planning and implementation if not an informational query and not research_only
+        if not args.research_only and not is_informational_query():
             # Run planning agent
             run_planning_agent(
                 base_task,

@@ -130,24 +130,27 @@ def get_implementation_tools(expert_enabled: bool = True, web_research_enabled: 
     
     return tools
 
-def get_web_research_tools(expert_enabled: bool = True) -> list:
+def get_web_research_tools(expert_enabled: bool = True, human_interaction: bool = False, web_research_enabled: bool = False) -> list:
     """Get the list of tools available for web research.
     
     Args:
         expert_enabled: Whether expert tools should be included
+        human_interaction: Whether to include human interaction tools
+        web_research_enabled: Whether to include web research tools
         
     Returns:
         list: List of tools configured for web research
     """
     tools = [
         web_search_tavily,
-        emit_research_notes,
-        task_completed
+        emit_research_notes
     ]
 
     if expert_enabled:
-        tools.append(emit_expert_context)
-        tools.append(ask_expert)
+        tools.extend([
+            emit_expert_context,
+            ask_expert
+        ])
 
     return tools
 
