@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Fix logging on interrupt.
 - Fix web research prompt.
+- Simplify planning stage by executing tasks directly.
+- Make research notes available to more agents/tools.
 
 ## [0.10.2] - 2024-12-26
 
