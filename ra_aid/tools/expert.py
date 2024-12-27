@@ -132,6 +132,7 @@ def ask_expert(question: str) -> str:
     related_contents = read_related_files(file_paths)
     key_snippets = get_memory_value('key_snippets')
     key_facts = get_memory_value('key_facts')
+    research_notes = get_memory_value('research_notes')
     
     # Build display query (just question)
     display_query = "# Question\n" + question
@@ -152,6 +153,9 @@ def ask_expert(question: str) -> str:
     
     if related_contents:
         query_parts.extend(['# Related Files', related_contents])
+        
+    if related_contents:
+        query_parts.extend(['# Research Notes', research_notes])
         
     if key_snippets and len(key_snippets) > 0:
         query_parts.extend(['# Key Snippets', key_snippets])
