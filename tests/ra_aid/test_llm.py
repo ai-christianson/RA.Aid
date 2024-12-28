@@ -81,6 +81,7 @@ def test_initialize_expert_openai_compatible(clean_env, mock_openai, monkeypatch
     mock_openai.assert_called_once_with(
         api_key="test-key",
         base_url="http://test-url",
+        temperature=0.3,
         model="local-model"
     )
 
