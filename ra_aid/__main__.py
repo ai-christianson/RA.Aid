@@ -4,7 +4,6 @@ import uuid
 from rich.panel import Panel
 from rich.console import Console
 from langgraph.checkpoint.memory import MemorySaver
-from langgraph.prebuilt import create_react_agent
 from ra_aid.env import validate_environment
 from ra_aid.tools.memory import _global_memory
 from ra_aid.tools.human import ask_human
@@ -15,7 +14,8 @@ from ra_aid.agent_utils import (
     AgentInterrupt,
     run_agent_with_retry,
     run_research_agent,
-    run_planning_agent
+    run_planning_agent,
+    create_agent
 )
 from ra_aid.prompts import (
     CHAT_PROMPT,
@@ -177,7 +177,7 @@ def main():
             initial_request = ask_human.invoke({"question": "What would you like help with?"})
 
             # Create chat agent with appropriate tools
-            chat_agent = create_react_agent(
+            chat_agent = create_agent(
                 model,
                 get_chat_tools(expert_enabled=expert_enabled, web_research_enabled=web_research_enabled),
                 checkpointer=MemorySaver()
