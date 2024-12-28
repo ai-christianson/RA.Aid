@@ -12,7 +12,7 @@
                       ░                 ░
 ```
 
-[![Python Versions](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org)
+[![Python Versions](https://img.shields.io/badge/python-3.13%2B-blue)](https://www.python.org)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 [![Status](https://img.shields.io/badge/status-Beta-yellow)]()
 
@@ -105,12 +105,14 @@ pip install ra-aid
 
 Before using RA.Aid, you'll need:
 
-1. Python package `aider` installed and available in your PATH:
+1. Python 3.13 or higher installed on your system
+
+2. Python package `aider` installed and available in your PATH:
 ```bash
 pip install aider-chat
 ```
 
-2. API keys for the required AI services:
+3. API keys for the required AI services:
 
 ```bash
 # Set up API keys based on your preferred provider:
@@ -183,7 +185,7 @@ ra-aid -m "Add new feature" --verbose
 
 3. Automated Updates:
    ```bash
-   ra-aid -m "Update deprecated API calls across the entire codebase" --cowboy-mode
+   ra-aid -m "Update all deprecated API calls across the entire codebase" --cowboy-mode
    ```
 
 4. Code Research:
@@ -308,6 +310,36 @@ export OPENROUTER_API_KEY=your_api_key_here
 # For OpenAI-compatible providers
 export OPENAI_API_BASE=your_api_base_url
 ```
+
+### LangSmith Integration
+
+RA.Aid includes built-in support for LangSmith tracing and monitoring. This integration helps you track, debug, and optimize your agent runs.
+
+1. **Setup LangSmith**
+   ```bash
+   # Set your LangSmith API key
+   export LANGSMITH_API_KEY=your_langsmith_api_key
+   
+   # Optional: Set project name (defaults to "ra-aid")
+   export LANGSMITH_PROJECT=your_project_name
+   
+   # Optional: Enable/disable tracing (defaults to "true")
+   export LANGSMITH_TRACING_ENABLED=true
+   ```
+
+2. **View Traces**
+   After running RA.Aid commands, you can view the traces in your [LangSmith Dashboard](https://smith.langchain.com/). The traces include:
+   - Input messages and parameters
+   - Agent thought process and decisions
+   - Tool usage and outputs
+   - Error states and debugging information
+
+3. **Benefits**
+   - Monitor agent performance and behavior
+   - Debug complex workflows
+   - Optimize prompts and tool usage
+   - Track API usage and costs
+   - Share traces with your team
 
 ### Custom Model Examples
 
