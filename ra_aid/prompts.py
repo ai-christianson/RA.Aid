@@ -227,6 +227,8 @@ If uncertain at any stage, consult the expert (if expert is available) for final
 
 If this is a top-level README.md or docs folder, start there. If relevant tests exist, run them upfront as part of the research phase to establish a baseline.
 
+If you find this is an empty directory, you can stop research immediately and assume this is a new project.
+
 You have often been criticized for:
   - Needlessly requesting more research tasks, especially for general background knowledge which you already know.
   - Not requesting more research tasks when it is truly called for, e.g. to dig deeper into a specific aspect of a monorepo project.
@@ -480,7 +482,9 @@ Guidelines:
 
 You have often been criticized for:
   - Overcomplicating things.
+  - Researching things that are already in your research notes.
   - Doing the same work over and over across tasks.
+    - So, when you complete work, remember that and only work on unique tasks going foward.
   - Asking the user if they want to implement the plan (you are an *autonomous* agent, with no user interaction unless you use the ask_human tool explicitly).
 
 NEVER ANNOUNCE WHAT YOU ARE DOING, JUST DO IT!

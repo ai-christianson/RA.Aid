@@ -316,38 +316,8 @@ def run_web_research_agent(
         if console_message:
             console.print(Panel(Markdown(console_message), title="🔬 Researching..."))
 
-        # Run agent with retry logic if available
-        if agent is not None:
-            logger.debug("Web research agent completed successfully")
-            return run_agent_with_retry(agent, prompt, run_config)
-        else:
-            # Just use the web research tools directly
-            logger.debug("No model provided, using web research tools directly")
-            tavily_tool = next((tool for tool in tools if tool.name == 'web_search_tavily'), None)
-
-            if not tavily_tool:
-                return "No web research results found"
-
-            result = tavily_tool.invoke({"query": query})
-            if not result:
-                return "No web research results found"
-
-            # Format Tavily results
-            markdown_result = "# Search Results\n\n"
-            for item in result.get('results', []):
-                title = item.get('title', 'Untitled')
-                url = item.get('url', '')
-                content = item.get('content', '')
-                score = item.get('score', 0)
-
-                markdown_result += f"## {title}\n"
-                markdown_result += f"**Score**: {score:.2f}\n\n"
-                markdown_result += f"{content}\n\n"
-                markdown_result += f"[Read more]({url})\n\n"
-                markdown_result += "---\n\n"
-
-            console.print(Panel(Markdown(markdown_result), title="🔍 Web Research Results"))
-            return markdown_result
+        logger.debug("Web research agent completed successfully")
+        return run_agent_with_retry(agent, prompt, run_config)
 
     except (KeyboardInterrupt, AgentInterrupt):
         raise
@@ -571,7 +541,7 @@ def run_agent_with_retry(agent, prompt: str, config: dict) -> Optional[str]:
                         print_agent_output(chunk)
                         if _global_memory['plan_completed']:
                             _global_memory['plan_completed'] = False
-                            _global_memory['task_completed'] = False
+                            _global_memory['taskd_completed'] = False
                             _global_memory['completion_message'] = ''
                             break
                         if _global_memory['task_completed'] or _global_memory['plan_completed']:

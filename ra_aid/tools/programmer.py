@@ -12,14 +12,9 @@ from ra_aid.text.processing import truncate_output
 
 console = Console()
 
-
-class RunProgrammingTaskInput(BaseModel):
-    instructions: str = Field(description="Instructions for the programming task")
-    files: Optional[List[str]] = Field(None, description="Optional list of files for Aider to examine")
-
 @tool
-def run_programming_task(input: RunProgrammingTaskInput) -> Dict[str, Union[str, int, bool]]:
-    """Assign a programming task to a human programmer.
+def run_programming_task(instructions: str, files: List[str] = []) -> Dict[str, Union[str, int, bool]]:
+    """Assign a programming task to a human programmer. Use this instead of trying to write code to files yourself.
 
 Before using this tool, ensure all related files have been emitted with emit_related_files.
 
@@ -60,17 +55,17 @@ Returns: { "output": stdout+stderr, "return_code": 0 if success, "success": True
     # ensure message aider argument is always present
     command.append("-m")
 
-    command.append(input.instructions)
+    command.append(instructions)
 
     # Add files to command
-    files_to_use = file_paths + (input.files or [])
+    files_to_use = file_paths + (files or [])
     if files_to_use:
         command.extend(files_to_use)
 
     # Create a pretty display of what we're doing
     task_display = [
         "## Instructions\n",
-        f"{input.instructions}\n"
+        f"{instructions}\n"
     ]
 
     if files_to_use:
