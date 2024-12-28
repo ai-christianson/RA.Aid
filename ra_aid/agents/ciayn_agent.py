@@ -20,7 +20,7 @@ class CiaynAgent:
 \"\"\""""
         return info
 
-    def __init__(self, model, tools: list, max_history_messages: int = 50, max_tokens: Optional[int] = None):
+    def __init__(self, model, tools: list, max_history_messages: int = 50, max_tokens: Optional[int] = 100000):
         """Initialize the agent with a model and list of tools.
         
         Args:
