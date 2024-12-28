@@ -15,22 +15,13 @@ CHUNK_SIZE = 8192
 @tool
 def read_file_tool(
     filepath: str,
-    verbose: bool = True,
     encoding: str = 'utf-8'
 ) -> Dict[str, str]:
     """Read and return the contents of a text file.
 
     Args:
         filepath: Path to the file to read
-        verbose: Whether to display a Rich panel with read statistics (default: True)
         encoding: File encoding to use (default: utf-8)
-
-    Returns:
-        Dict containing:
-            - content: The file contents as a string (truncated if needed)
-
-    Raises:
-        RuntimeError: If file cannot be read or does not exist
     """
     start_time = time.time()
     try:
@@ -60,12 +51,11 @@ def read_file_tool(
         logging.debug(f"File read complete: {total_bytes} bytes in {elapsed:.2f}s")
         logging.debug(f"Pre-truncation stats: {total_bytes} bytes, {line_count} lines")
 
-        if verbose:
-            console.print(Panel(
-                f"Read {line_count} lines ({total_bytes} bytes) from {filepath} in {elapsed:.2f}s",
-                title="📄 File Read",
-                border_style="bright_blue"
-            ))
+        console.print(Panel(
+            f"Read {line_count} lines ({total_bytes} bytes) from {filepath} in {elapsed:.2f}s",
+            title="📄 File Read",
+            border_style="bright_blue"
+        ))
         
         # Truncate if needed
         truncated = truncate_output(full_content) if full_content else ""

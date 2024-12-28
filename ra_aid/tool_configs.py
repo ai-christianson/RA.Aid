@@ -96,10 +96,7 @@ def get_planning_tools(expert_enabled: bool = True, web_research_enabled: bool =
     
     # Add planning-specific tools
     planning_tools = [
-        delete_tasks,
         emit_plan,
-        emit_task,
-        swap_task_order,
         request_task_implementation,
         plan_implementation_completed
     ]
@@ -144,7 +141,8 @@ def get_web_research_tools(expert_enabled: bool = True) -> list:
     """
     tools = [
         web_search_tavily,
-        emit_research_notes
+        emit_research_notes,
+        task_completed
     ]
 
     if expert_enabled:

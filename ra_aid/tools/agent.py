@@ -111,12 +111,10 @@ def request_web_research(query: str) -> ResearchResult:
     
     success = True
     reason = None
-    web_research_notes = []
     
     try:
         # Run web research agent
         from ..agent_utils import run_web_research_agent
-        original_research_notes = _global_memory.get('research_notes', [])
         result = run_web_research_agent(
             query,
             model,
@@ -125,7 +123,6 @@ def request_web_research(query: str) -> ResearchResult:
             console_message=query,
             config=config
         )
-        web_research_notes = _global_memory.get('research_notes', [])
     except AgentInterrupt:
         print()
         response = ask_human.invoke({"question": "Why did you interrupt me?"})
@@ -138,7 +135,6 @@ def request_web_research(query: str) -> ResearchResult:
         success = False
         reason = f"error: {str(e)}"
     finally:
-        _global_memory['research_notes'] = original_research_notes
         # Get completion message if available
         completion_message = _global_memory.get('completion_message', 'Task was completed successfully.' if success else None)
         
@@ -155,8 +151,8 @@ def request_web_research(query: str) -> ResearchResult:
     return {
         "work_log": work_log,
         "completion_message": completion_message,
-        "web_research_notes": web_research_notes,
         "key_snippets": get_memory_value("key_snippets"),
+        "research_notes": get_memory_value("research_notes"),
         "success": success,
         "reason": reason
     }
