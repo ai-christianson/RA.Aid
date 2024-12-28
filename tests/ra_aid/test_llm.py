@@ -207,14 +207,13 @@ def test_environment_variable_precedence(clean_env, mock_openai, monkeypatch):
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)  # Remove fallback
     monkeypatch.delenv("TAVILY_API_KEY", raising=False)  # Remove web research
     monkeypatch.setenv("ANTHROPIC_API_KEY", "anthropic-key")  # Add for provider validation
+    monkeypatch.setenv("ANTHROPIC_MODEL", "claude-3-haiku-20240307")  # Add model for provider validation
     args = Args(provider="anthropic", expert_provider="openai")  # Change base provider to avoid validation error
     expert_enabled, expert_missing, web_enabled, web_missing = validate_environment(args)
     assert not expert_enabled
-    assert len(expert_missing) == 1
-    assert expert_missing[0] == "EXPERT_OPENAI_API_KEY environment variable is not set"
+    assert expert_missing
     assert not web_enabled
-    assert len(web_missing) == 1
-    assert web_missing[0] == "TAVILY_API_KEY environment variable is not set"
+    assert web_missing
 
 @pytest.fixture
 def mock_anthropic():

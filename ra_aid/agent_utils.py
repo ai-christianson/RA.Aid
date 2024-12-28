@@ -162,9 +162,24 @@ def run_research_agent(
         if console_message:
             console.print(Panel(Markdown(console_message), title="🔬 Looking into it..."))
 
-        # Run agent with retry logic
-        logger.debug("Research agent completed successfully")
-        return run_agent_with_retry(agent, prompt, run_config)
+        # Run agent with retry logic if available
+        if agent is not None:
+            logger.debug("Research agent completed successfully")
+            return run_agent_with_retry(agent, prompt, run_config)
+        else:
+            # Just run web research tools directly if no agent
+            logger.debug("No model provided, running web research tools directly")
+            return run_web_research_agent(
+                base_task_or_query,
+                model=None,
+                expert_enabled=expert_enabled,
+                hil=hil,
+                web_research_enabled=web_research_enabled,
+                memory=memory,
+                config=config,
+                thread_id=thread_id,
+                console_message=console_message
+            )
     except (KeyboardInterrupt, AgentInterrupt):
         raise
     except Exception as e:
@@ -255,11 +270,41 @@ def run_web_research_agent(
     try:
         # Display console message if provided
         if console_message:
-            console.print(Panel(Markdown(console_message), title="🔍 Starting Web Research..."))
+            console.print(Panel(Markdown(console_message), title="🔬 Researching..."))
 
-        # Run agent with retry logic
-        logger.debug("Web research agent completed successfully")
-        return run_agent_with_retry(agent, prompt, run_config)
+        # Run agent with retry logic if available
+        if agent is not None:
+            logger.debug("Web research agent completed successfully")
+            return run_agent_with_retry(agent, prompt, run_config)
+        else:
+            # Just use the web research tools directly
+            logger.debug("No model provided, using web research tools directly")
+            tavily_tool = next((tool for tool in tools if tool.name == 'web_search_tavily'), None)
+
+            if not tavily_tool:
+                return "No web research results found"
+
+            result = tavily_tool.invoke({"query": query})
+            if not result:
+                return "No web research results found"
+
+            # Format Tavily results
+            markdown_result = "# Search Results\n\n"
+            for item in result.get('results', []):
+                title = item.get('title', 'Untitled')
+                url = item.get('url', '')
+                content = item.get('content', '')
+                score = item.get('score', 0)
+
+                markdown_result += f"## {title}\n"
+                markdown_result += f"**Score**: {score:.2f}\n\n"
+                markdown_result += f"{content}\n\n"
+                markdown_result += f"[Read more]({url})\n\n"
+                markdown_result += "---\n\n"
+
+            console.print(Panel(Markdown(markdown_result), title="🔍 Web Research Results"))
+            return markdown_result
+
     except (KeyboardInterrupt, AgentInterrupt):
         raise
     except Exception as e:

@@ -13,11 +13,11 @@ keywords = ["langchain", "ai", "agent", "tools", "development"]
 authors = [{name = "AI Christianson", email = "ai.christianson@christianson.ai"}]
 classifiers = [
     "Development Status :: 4 - Beta",
-    "Intended Audience :: Developers", 
+    "Intended Audience :: Developers",
     "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9", 
+    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Topic :: Software Development :: Libraries :: Python Modules"
 ]
@@ -31,7 +31,7 @@ dependencies = [
     "langchain>=0.3.13",
     "rich>=13.0.0",
     "GitPython>=3.1",
-    "fuzzywuzzy==0.18.0", 
+    "fuzzywuzzy==0.18.0",
     "python-Levenshtein==0.23.0",
     "pathspec>=0.11.0",
     "aider-chat>=0.69.1",
