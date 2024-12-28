@@ -1,11 +1,7 @@
 import inspect
 from typing import Dict, Any, Generator, List, Optional
 from langchain_core.messages import AIMessage, HumanMessage
-from rich.panel import Panel
-from rich.markdown import Markdown
-from rich.console import Console
-
-console = Console()
+from ra_aid.exceptions import ToolExecutionError
 
 class CiaynAgent:
     def _get_function_info(self, func):
@@ -78,7 +74,7 @@ Output **ONLY THE CODE** and **NO MARKDOWN BACKTICKS**"""
         except Exception as e:
             error_msg = f"Error executing code: {str(e)}"
             console.print(f"[red]Error:[/red] {error_msg}")
-            return error_msg
+            raise ToolExecutionError(error_msg)
 
     def _create_agent_chunk(self, content: str) -> Dict[str, Any]:
         """Create an agent chunk in the format expected by print_agent_output."""
@@ -107,16 +103,15 @@ Output **ONLY THE CODE** and **NO MARKDOWN BACKTICKS**"""
             base_prompt = self._build_prompt(None if first_iteration else last_result)
             chat_history.append(HumanMessage(content=base_prompt))
             
-            try:
-                full_history = initial_messages + chat_history
-                response = self.model.invoke(full_history)
+            full_history = initial_messages + chat_history
+            response = self.model.invoke(full_history)
                 
+            try:
                 last_result = self._execute_tool(response.content)
                 chat_history.append(response)
                 first_iteration = False
                 yield {}
-                
-            except Exception as e:
-                error_msg = f"Error: {str(e)}"
-                yield self._create_error_chunk(error_msg)
+
+            except ToolExecutionError as e:
+                yield self._create_error_chunk(str(e))
                 break
