@@ -13,6 +13,9 @@ It handles the following core functionalities:
 import streamlit as st
 import threading
 from queue import Queue, Empty
+import logging
+import sys
+from datetime import datetime
 from webui.socket_interface import SocketInterface
 from components.memory import initialize_memory, _global_memory
 from components.research import research_component
@@ -33,14 +36,65 @@ from typing import Dict, Any
 # Load environment variables
 load_dotenv()
 
+# Configure logging
+def setup_logging():
+    """Configure logging with a clean, informative format"""
+    class ColoredFormatter(logging.Formatter):
+        """Custom formatter with colors and emojis for different log levels"""
+        COLORS = {
+            'DEBUG': '\033[36m',  # Cyan
+            'INFO': '\033[32m',   # Green
+            'WARNING': '\033[33m', # Yellow
+            'ERROR': '\033[31m',   # Red
+            'CRITICAL': '\033[41m' # Red background
+        }
+        EMOJIS = {
+            'DEBUG': '🔍',
+            'INFO': '📝',
+            'WARNING': '⚠️',
+            'ERROR': '❌',
+            'CRITICAL': '🚨'
+        }
+        RESET = '\033[0m'
+
+        def format(self, record):
+            # Add emoji and color based on log level
+            color = self.COLORS.get(record.levelname, '')
+            emoji = self.EMOJIS.get(record.levelname, '')
+            reset = self.RESET
+            
+            # Format timestamp
+            timestamp = datetime.fromtimestamp(record.created).strftime('%H:%M:%S')
+            
+            # Format the message
+            message = super().format(record)
+            return f"{color}{emoji} [{timestamp}] {record.levelname:<8} | {message}{reset}"
+
+    # Create logger
+    ui_logger = logging.getLogger('streamlit_ui')
+    ui_logger.setLevel(logging.INFO)
+    
+    # Remove existing handlers
+    ui_logger.handlers = []
+    
+    # Create console handler with custom formatter
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setFormatter(ColoredFormatter('%(message)s'))
+    ui_logger.addHandler(console_handler)
+    
+    return ui_logger
+
+# Initialize logger
+ui_logger = setup_logging()
+
 # Initialize global components for WebSocket communication
 socket_interface = SocketInterface()
 message_queue = Queue()
 
 # Debug environment variables
-logger.info("Initial Environment Check:")
-logger.info(f"ANTHROPIC_API_KEY present: {bool(os.getenv('ANTHROPIC_API_KEY'))}")
-logger.info(f"ANTHROPIC_API_KEY value: {os.getenv('ANTHROPIC_API_KEY')[:10]}..." if os.getenv('ANTHROPIC_API_KEY') else "None")
+ui_logger.info("Starting RA.Aid WebUI")
+ui_logger.info(f"ANTHROPIC_API_KEY configured: {bool(os.getenv('ANTHROPIC_API_KEY'))}")
+ui_logger.info(f"ANTHROPIC_API_KEY value: {os.getenv('ANTHROPIC_API_KEY')[:10]}..." if os.getenv('ANTHROPIC_API_KEY') else "None")
 
 def handle_output(message: dict):
     """
@@ -50,10 +104,11 @@ def handle_output(message: dict):
     Args:
         message (dict): The message received from the WebSocket server
     """
-    logger.info(f"Received message: {message}")
+    ui_logger.debug(f"Received WebSocket message: {message}")
     if isinstance(message, dict):
         # Format the message for display
         if 'content' in message:
+            ui_logger.info(f"Processing message: {message.get('type', 'text')}")
             st.session_state.messages.append({
                 "role": "assistant",
                 "content": message['content'],
@@ -65,33 +120,25 @@ def handle_output(message: dict):
 def websocket_thread():
     """
     Background thread function that manages WebSocket connection and message handling.
-    Handles:
-    - Server connection with retry logic
-    - Message handler registration
-    - Asyncio event loop management
-    - Connection status updates
     """
     try:
-        # Register the message handler for incoming WebSocket messages
+        ui_logger.info("Starting WebSocket thread")
         socket_interface.register_handler("message", handle_output)
         
-        # Setup asyncio event loop for WebSocket operations
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         
-        # Attempt connection with retry logic
+        ui_logger.info("Attempting WebSocket connection...")
         connected = loop.run_until_complete(socket_interface.connect_server())
         st.session_state.connected = connected
         
         if connected:
-            logger.info("WebSocket connected successfully.")
+            ui_logger.info("✅ WebSocket connected successfully")
+            loop.run_until_complete(socket_interface.setup_handlers())
         else:
-            logger.error("Failed to connect to WebSocket server.")
-        
-        # Start listening for incoming messages
-        loop.run_until_complete(socket_interface.setup_handlers())
+            ui_logger.error("❌ Failed to connect to WebSocket server")
     except Exception as e:
-        logger.error(f"WebSocket thread encountered an error: {str(e)}")
+        ui_logger.error(f"WebSocket thread error: {str(e)}")
         st.session_state.connected = False
 
 def initialize_session_state():
@@ -351,26 +398,26 @@ def send_task(task: str, config: dict):
 def research_component(task: str, config: Dict[str, Any]) -> Dict[str, Any]:
     """Handle the research stage of RA.Aid."""
     try:
+        ui_logger.info("Starting research phase")
+        
         # Validate required config fields
         required_fields = ["provider", "model", "research_only", "hil"]
         for field in required_fields:
             if field not in config:
                 raise ValueError(f"Missing required configuration field: {field}")
 
-        # Initialize model
+        ui_logger.info(f"Initializing LLM: {config['provider']}/{config['model']}")
         model = initialize_llm(config["provider"], config["model"])
         
-        # Update global memory configuration
         _global_memory['config'] = config.copy()
         
-        # Add status message
         st.session_state.messages.append({
             "role": "assistant",
             "type": "info",
             "content": "🔍 Starting Research Phase..."
         })
         
-        # Run research agent
+        ui_logger.info("Running research agent")
         raw_results = run_research_agent(
             task,
             model,
@@ -381,14 +428,11 @@ def research_component(task: str, config: Dict[str, Any]) -> Dict[str, Any]:
             config=config
         )
         
-        # Debug logging
-        logger.debug(f"Research agent raw results: {raw_results}")
+        ui_logger.debug(f"Research agent raw results: {raw_results}")
         
-        # Format results
         if raw_results is None:
             raise ValueError("Research agent returned no results")
             
-        # Parse research notes and key facts from the raw results
         results = {
             "success": True,
             "research_notes": [],
@@ -396,15 +440,14 @@ def research_component(task: str, config: Dict[str, Any]) -> Dict[str, Any]:
             "related_files": _global_memory.get('related_files', {})
         }
         
-        # Extract research notes and key facts from raw results
         if isinstance(raw_results, str):
-            # Split the results into sections
+            ui_logger.info("Processing research results")
             sections = raw_results.split('\n\n')
             for section in sections:
                 if section.startswith('Research Notes:'):
+                    ui_logger.debug("Processing research notes")
                     notes = section.replace('Research Notes:', '').strip().split('\n')
                     results['research_notes'].extend([note.strip('- ') for note in notes if note.strip()])
-                    # Add research notes to messages
                     if results['research_notes']:
                         st.session_state.messages.append({
                             "role": "assistant",
@@ -412,12 +455,12 @@ def research_component(task: str, config: Dict[str, Any]) -> Dict[str, Any]:
                             "content": "\n".join([f"- {note}" for note in results['research_notes']])
                         })
                 elif section.startswith('Key Facts:'):
+                    ui_logger.debug("Processing key facts")
                     facts = section.replace('Key Facts:', '').strip().split('\n')
                     for fact in facts:
                         if ':' in fact:
                             key, value = fact.strip('- ').split(':', 1)
                             results['key_facts'][key.strip()] = value.strip()
-                    # Add key facts to messages
                     if results['key_facts']:
                         st.session_state.messages.append({
                             "role": "assistant",
@@ -425,21 +468,20 @@ def research_component(task: str, config: Dict[str, Any]) -> Dict[str, Any]:
                             "content": "\n".join([f"- **{key}**: {value}" for key, value in results['key_facts'].items()])
                         })
                 else:
-                    # Add any other content as regular messages
                     content = section.strip()
                     if content:
+                        ui_logger.debug(f"Processing additional content: {content[:100]}...")
                         st.session_state.messages.append({
                             "role": "assistant",
                             "type": "text",
                             "content": content
                         })
         
-        # Update global memory with research results
         _global_memory['research_notes'] = results['research_notes']
         _global_memory['key_facts'] = results['key_facts']
         _global_memory['implementation_requested'] = False
         
-        # Add success message
+        ui_logger.info("✅ Research phase completed successfully")
         st.session_state.messages.append({
             "role": "assistant",
             "type": "success",
@@ -449,7 +491,7 @@ def research_component(task: str, config: Dict[str, Any]) -> Dict[str, Any]:
         return results
 
     except ValueError as e:
-        logger.error(f"Research Configuration Error: {str(e)}")
+        ui_logger.error(f"Research Configuration Error: {str(e)}")
         st.session_state.messages.append({
             "role": "assistant",
             "type": "error",
@@ -457,7 +499,7 @@ def research_component(task: str, config: Dict[str, Any]) -> Dict[str, Any]:
         })
         return {"success": False, "error": str(e)}
     except Exception as e:
-        logger.error(f"Research Error: {str(e)}")
+        ui_logger.error(f"Research Error: {str(e)}")
         st.session_state.messages.append({
             "role": "assistant",
             "type": "error",
@@ -483,7 +525,8 @@ def main():
     6. Task input and execution
     7. Message processing and display
     """
-    # Configure the Streamlit page
+    ui_logger.info("Initializing RA.Aid WebUI")
+    
     st.set_page_config(
         page_title="RA.Aid WebUI",
         page_icon="🤖",
@@ -492,23 +535,21 @@ def main():
 
     st.title("RA.Aid - AI Development Assistant")
     
-    # Initialize core components
+    ui_logger.info("Initializing core components")
     initialize_session_state()
     initialize_memory()
 
-    # Sidebar Configuration Section
     with st.sidebar:
+        ui_logger.debug("Rendering sidebar configuration")
         st.header("Configuration")
-        
-        # Minimal environment status
         render_environment_status()
         
-        # Mode Selection
         mode = st.radio(
             "Mode",
             ["Research Only", "Full Development"],
             index=0
         )
+        ui_logger.info(f"Selected mode: {mode}")
 
         # Get available providers (only those with valid API keys)
         available_providers = list(st.session_state.models.keys())
