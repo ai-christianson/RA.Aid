@@ -99,6 +99,12 @@ You must ONLY use ONE of the following functions (these are the ONLY functions t
 {"\n\n".join(self.available_functions)}
 </available functions>
 
+<example output>
+request_research_and_implementation(\"\"\"
+Example query.
+\"\"\")
+</example output>
+
 Output **ONLY THE CODE** and **NO MARKDOWN BACKTICKS**"""
         return base_prompt
 

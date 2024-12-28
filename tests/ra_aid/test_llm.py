@@ -81,7 +81,6 @@ def test_initialize_expert_openai_compatible(clean_env, mock_openai, monkeypatch
     mock_openai.assert_called_once_with(
         api_key="test-key",
         base_url="http://test-url",
-        temperature=0.3,
         model="local-model"
     )
 
@@ -145,7 +144,8 @@ def test_initialize_openai_compatible(clean_env, mock_openai):
     mock_openai.assert_called_once_with(
         api_key="test-key",
         base_url="https://custom-endpoint/v1",
-        model="local-model"
+        model="local-model",
+        temperature=0.3,
     )
 
 def test_initialize_unsupported_provider(clean_env):
