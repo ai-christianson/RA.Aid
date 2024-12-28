@@ -1,6 +1,7 @@
 import argparse
 import sys
 import uuid
+from datetime import datetime
 from rich.panel import Panel
 from rich.console import Console
 from langgraph.checkpoint.memory import MemorySaver
@@ -191,6 +192,10 @@ def main():
             # Get initial request from user
             initial_request = ask_human.invoke({"question": "What would you like help with?"})
 
+            # Get working directory and current date
+            working_directory = os.getcwd()
+            current_date = datetime.now().strftime("%Y-%m-%d")
+
             # Run chat agent with CHAT_PROMPT
             config = {
                 "configurable": {"thread_id": uuid.uuid4()},
@@ -219,7 +224,9 @@ def main():
             # Run chat agent and exit
             run_agent_with_retry(chat_agent, CHAT_PROMPT.format(
                     initial_request=initial_request,
-                    web_research_section=WEB_RESEARCH_PROMPT_SECTION_CHAT if web_research_enabled else ""
+                    web_research_section=WEB_RESEARCH_PROMPT_SECTION_CHAT if web_research_enabled else "",
+                    working_directory=working_directory,
+                    current_date=current_date
                 ), config)
             return
 

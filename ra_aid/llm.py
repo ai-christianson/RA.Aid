@@ -39,6 +39,7 @@ def initialize_llm(provider: str, model_name: str) -> BaseChatModel:
         return ChatOpenAI(
             api_key=os.getenv("OPENAI_API_KEY"),
             base_url=os.getenv("OPENAI_API_BASE"),
+            temperature=0.3,
             model=model_name,
         )
     else:

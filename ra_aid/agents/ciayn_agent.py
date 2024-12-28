@@ -91,6 +91,7 @@ Start by asking the user what they want.
 </agent instructions>
 
 You must carefully review the conversation history, which functions were called so far, returned results, etc., and make sure the very next function call you make makes sense in order to achieve the original goal.
+You must achieve the goal in as few steps possible, but no fewer.
 
 You must ONLY use ONE of the following functions (these are the ONLY functions that exist):
 

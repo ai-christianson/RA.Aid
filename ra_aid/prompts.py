@@ -557,7 +557,8 @@ NEVER ANNOUNCE WHAT YOU ARE DOING, JUST DO IT!
 """
 
 # New agentic chat prompt for interactive mode
-CHAT_PROMPT = """
+CHAT_PROMPT = """Working Directory: {working_directory}
+Current Date: {current_date}
 Agentic Chat Mode Instructions:
 
 Overview:
