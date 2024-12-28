@@ -26,10 +26,14 @@ from ra_aid.logging_config import setup_logging, get_logger
 from ra_aid.tool_configs import (
     get_chat_tools
 )
+import os
 
 logger = get_logger(__name__)
 
-def parse_arguments():
+def parse_arguments(args=None):
+    VALID_PROVIDERS = ['anthropic', 'openai', 'openrouter', 'openai-compatible']
+    ANTHROPIC_DEFAULT_MODEL = 'claude-3-5-sonnet-20241022'
+
     parser = argparse.ArgumentParser(
         description='RA.Aid - AI Agent for executing programming and research tasks',
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -58,13 +62,14 @@ Examples:
     parser.add_argument(
         '--provider',
         type=str,
-        default='anthropic',
-        choices=['anthropic', 'openai', 'openrouter', 'openai-compatible'],
+        default=os.environ.get('RA_AID_DEFAULT_PROVIDER', 'anthropic'),
+        choices=VALID_PROVIDERS,
         help='The LLM provider to use'
     )
     parser.add_argument(
         '--model',
         type=str,
+        default=os.environ.get('RA_AID_DEFAULT_MODEL'),
         help='The model name to use (required for non-Anthropic providers)'
     )
     parser.add_argument(
@@ -76,7 +81,7 @@ Examples:
         '--expert-provider',
         type=str,
         default='openai',
-        choices=['anthropic', 'openai', 'openrouter', 'openai-compatible'],
+        choices=VALID_PROVIDERS,
         help='The LLM provider to use for expert knowledge queries (default: openai)'
     )
     parser.add_argument(
@@ -99,25 +104,32 @@ Examples:
         action='store_true',
         help='Enable verbose logging output'
     )
-    
-    args = parser.parse_args()
-    
+
+    if args is None:
+        args = sys.argv[1:]
+    parsed_args = parser.parse_args(args)
+
     # Set hil=True when chat mode is enabled
-    if args.chat:
-        args.hil = True
-    
-    # Set default model for Anthropic, require model for other providers
-    if args.provider == 'anthropic':
-        if not args.model:
-            args.model = 'claude-3-5-sonnet-20241022'
-    elif not args.model:
-        parser.error(f"--model is required when using provider '{args.provider}'")
-    
+    if parsed_args.chat:
+        parsed_args.hil = True
+
+    # Validate provider
+    if parsed_args.provider not in VALID_PROVIDERS:
+        parser.error(f"Invalid provider: {parsed_args.provider}")
+
+    # Handle model defaults and requirements
+    if parsed_args.provider == 'anthropic':
+        # Always use default model for Anthropic
+        parsed_args.model = ANTHROPIC_DEFAULT_MODEL
+    elif not parsed_args.model and not parsed_args.research_only:
+        # Require model for other providers unless in research mode
+        parser.error(f"--model is required when using provider '{parsed_args.provider}'")
+
     # Validate expert model requirement
-    if args.expert_provider != 'openai' and not args.expert_model:
-        parser.error(f"--expert-model is required when using expert provider '{args.expert_provider}'")
-    
-    return args
+    if parsed_args.expert_provider != 'openai' and not parsed_args.expert_model and not parsed_args.research_only:
+        parser.error(f"--expert-model is required when using expert provider '{parsed_args.expert_provider}'")
+
+    return parsed_args
 
 # Create console instance
 console = Console()
