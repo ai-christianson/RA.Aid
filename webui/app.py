@@ -50,7 +50,17 @@ def handle_output(message: dict):
     Args:
         message (dict): The message received from the WebSocket server
     """
-    message_queue.put(message)
+    logger.info(f"Received message: {message}")
+    if isinstance(message, dict):
+        # Format the message for display
+        if 'content' in message:
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": message['content'],
+                "type": message.get('type', 'text')
+            })
+        # Add to queue for processing
+        message_queue.put(message)
 
 def websocket_thread():
     """
@@ -262,61 +272,60 @@ def process_message_queue():
     Handles different message types and updates the UI accordingly.
     Messages are processed until the queue is empty.
     """
-    progress_container = st.empty()
-    
-    while True:
-        try:
+    try:
+        while True:
             message = message_queue.get_nowait()
             if isinstance(message, dict):
-                # Add message to session state
-                st.session_state.messages.append(message)
-                
-                # Display message based on type
-                msg_type = message.get('type', 'text')
                 content = message.get('content', '')
+                msg_type = message.get('type', 'text')
                 
-                if msg_type == 'error':
-                    st.error(content)
-                elif msg_type == 'status':
-                    st.write(content)
-                elif msg_type == 'progress':
-                    progress_container.text(content)
-                elif msg_type == 'research':
-                    st.markdown(content)
-                elif msg_type == 'success':
-                    st.success(content)
-                else:
-                    st.write(content)
-        except Empty:
-            break
+                # Add message to session state if not already there
+                if content and not any(m.get('content') == content for m in st.session_state.messages):
+                    st.session_state.messages.append({
+                        "role": "assistant",
+                        "content": content,
+                        "type": msg_type
+                    })
+    except Empty:
+        pass
 
 def render_messages():
     """
     Render all messages in the chat interface.
-    Handles different message types with appropriate styling:
-    - Error messages are displayed with error styling
-    - Status messages are displayed with write()
-    - Research messages are displayed with markdown
-    - Progress messages are displayed in a progress container
+    Handles different message types with appropriate styling.
     """
-    progress_container = st.empty()
-    
-    for message in st.session_state.messages:
-        msg_type = message.get('type', 'text')
-        content = message.get('content', '')
+    if not st.session_state.messages:
+        return
         
-        if msg_type == 'error':
-            st.error(content)
-        elif msg_type == 'status':
-            st.write(content)
-        elif msg_type == 'progress':
-            progress_container.text(content)
-        elif msg_type == 'research':
-            st.markdown(content)
-        elif msg_type == 'success':
-            st.success(content)
+    for message in st.session_state.messages:
+        role = message.get('role', 'system')
+        content = message.get('content', '')
+        msg_type = message.get('type', 'text')
+        
+        if not content:
+            continue
+            
+        if role == "user":
+            st.markdown(f"**You:** {content}")
+        elif role == "assistant":
+            if msg_type == 'error':
+                st.error(content)
+            elif msg_type == 'success':
+                st.success(content)
+            elif msg_type == 'info':
+                st.info(content)
+            elif msg_type == 'warning':
+                st.warning(content)
+            elif msg_type == 'research':
+                st.markdown(f"🔍 **Research:**\n{content}")
+            elif msg_type == 'plan':
+                st.markdown(f"📋 **Plan:**\n{content}")
+            elif msg_type == 'implementation':
+                st.markdown(f"⚙️ **Implementation:**\n{content}")
+            else:
+                st.markdown(f"**Assistant:** {content}")
         else:
-            st.write(content)
+            st.text(content)
 
 def send_task(task: str, config: dict):
     """
@@ -356,7 +365,8 @@ def research_component(task: str, config: Dict[str, Any]) -> Dict[str, Any]:
         
         # Add status message
         st.session_state.messages.append({
-            "type": "status",
+            "role": "assistant",
+            "type": "info",
             "content": "🔍 Starting Research Phase..."
         })
         
@@ -397,8 +407,9 @@ def research_component(task: str, config: Dict[str, Any]) -> Dict[str, Any]:
                     # Add research notes to messages
                     if results['research_notes']:
                         st.session_state.messages.append({
+                            "role": "assistant",
                             "type": "research",
-                            "content": "### Research Notes\n" + "\n".join([f"- {note}" for note in results['research_notes']])
+                            "content": "\n".join([f"- {note}" for note in results['research_notes']])
                         })
                 elif section.startswith('Key Facts:'):
                     facts = section.replace('Key Facts:', '').strip().split('\n')
@@ -409,8 +420,18 @@ def research_component(task: str, config: Dict[str, Any]) -> Dict[str, Any]:
                     # Add key facts to messages
                     if results['key_facts']:
                         st.session_state.messages.append({
+                            "role": "assistant",
                             "type": "research",
-                            "content": "### Key Facts\n" + "\n".join([f"- **{key}**: {value}" for key, value in results['key_facts'].items()])
+                            "content": "\n".join([f"- **{key}**: {value}" for key, value in results['key_facts'].items()])
+                        })
+                else:
+                    # Add any other content as regular messages
+                    content = section.strip()
+                    if content:
+                        st.session_state.messages.append({
+                            "role": "assistant",
+                            "type": "text",
+                            "content": content
                         })
         
         # Update global memory with research results
@@ -420,6 +441,7 @@ def research_component(task: str, config: Dict[str, Any]) -> Dict[str, Any]:
         
         # Add success message
         st.session_state.messages.append({
+            "role": "assistant",
             "type": "success",
             "content": "✅ Research phase complete"
         })
@@ -429,6 +451,7 @@ def research_component(task: str, config: Dict[str, Any]) -> Dict[str, Any]:
     except ValueError as e:
         logger.error(f"Research Configuration Error: {str(e)}")
         st.session_state.messages.append({
+            "role": "assistant",
             "type": "error",
             "content": f"Research Configuration Error: {str(e)}"
         })
@@ -436,6 +459,7 @@ def research_component(task: str, config: Dict[str, Any]) -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"Research Error: {str(e)}")
         st.session_state.messages.append({
+            "role": "assistant",
             "type": "error",
             "content": f"Research Error: {str(e)}"
         })
@@ -586,6 +610,10 @@ def main():
         thread.start()
         st.session_state.websocket_thread_started = True
 
+    # Display conversation history
+    st.markdown("### Conversation")
+    render_messages()
+    
     # Task Input and Execution Section
     task = st.text_area("Enter your task or query:", height=150)
     
@@ -594,6 +622,13 @@ def main():
             st.error("Please enter a valid task or query.")
             return
 
+        # Add user message to conversation
+        st.session_state.messages.append({
+            "role": "user",
+            "content": task,
+            "type": "text"
+        })
+        
         # Update global memory with current configuration
         _global_memory['config'] = {
             "provider": provider,
