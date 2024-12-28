@@ -73,7 +73,6 @@ Output **ONLY THE CODE** and **NO MARKDOWN BACKTICKS**"""
             return result
         except Exception as e:
             error_msg = f"Error executing code: {str(e)}"
-            console.print(f"[red]Error:[/red] {error_msg}")
             raise ToolExecutionError(error_msg)
 
     def _create_agent_chunk(self, content: str) -> Dict[str, Any]:
