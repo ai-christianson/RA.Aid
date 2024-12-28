@@ -3,7 +3,9 @@ import pytest
 from unittest.mock import patch, Mock
 from langchain_openai.chat_models import ChatOpenAI
 from langchain_anthropic.chat_models import ChatAnthropic
+from langchain_core.messages import HumanMessage
 from dataclasses import dataclass
+from ra_aid.agents.ciayn_agent import CiaynAgent
 
 from ra_aid.env import validate_environment
 from ra_aid.llm import initialize_llm, initialize_expert_llm
@@ -86,6 +88,21 @@ def test_initialize_expert_unsupported_provider(clean_env):
     """Test error handling for unsupported provider in expert mode."""
     with pytest.raises(ValueError, match=r"Unsupported provider: unknown"):
         initialize_expert_llm("unknown", "model")
+
+def test_estimate_tokens():
+    """Test token estimation functionality."""
+    # Test empty/None cases
+    assert CiaynAgent._estimate_tokens(None) == 0
+    assert CiaynAgent._estimate_tokens('') == 0
+    
+    # Test string content
+    assert CiaynAgent._estimate_tokens('test') == 1  # 4 bytes
+    assert CiaynAgent._estimate_tokens('hello world') == 2  # 11 bytes
+    assert CiaynAgent._estimate_tokens('🚀') == 1  # 4 bytes
+    
+    # Test message content
+    msg = HumanMessage(content='test message')
+    assert CiaynAgent._estimate_tokens(msg) == 3  # 11 bytes
 
 def test_initialize_openai(clean_env, mock_openai):
     """Test OpenAI provider initialization"""

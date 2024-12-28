@@ -11,7 +11,12 @@ import time
 from typing import Optional
 
 from langgraph.prebuilt import create_react_agent
+from ra_aid.agents.ciayn_agent import CiaynAgent
+from ra_aid.agents.ciayn_agent import CiaynAgent
 from ra_aid.console.formatting import print_stage_header, print_error
+from langchain_core.language_models import BaseChatModel
+from langchain_core.tools import tool
+from typing import List, Any
 from ra_aid.console.output import print_agent_output
 from ra_aid.logging_config import get_logger
 from ra_aid.exceptions import AgentInterrupt
@@ -41,7 +46,6 @@ from ra_aid.prompts import (
 from langgraph.checkpoint.memory import MemorySaver
 
 from langchain_core.messages import HumanMessage
-from langchain_core.messages import BaseMessage
 from anthropic import APIError, APITimeoutError, RateLimitError, InternalServerError
 from rich.console import Console
 from rich.markdown import Markdown
@@ -64,6 +68,50 @@ from ra_aid.prompts import (
 console = Console()
 
 logger = get_logger(__name__)
+
+@tool
+def output_markdown_message(message: str) -> str:
+    """Outputs a message to the user, optionally prompting for input."""
+    console.print(Panel(Markdown(message.strip()), title="🤖 Assistant"))
+    return "Message output."
+
+def create_agent(
+    model: BaseChatModel,
+    tools: List[Any],
+    *,
+    checkpointer: Any = None
+) -> Any:
+    """Create a react agent with the given configuration.
+    
+    Args:
+        model: The LLM model to use
+        tools: List of tools to provide to the agent
+        checkpointer: Optional memory checkpointer
+        
+    Returns:
+        The created agent instance
+    """
+    try:
+        # Extract model info from module path
+        module_path = model.__class__.__module__.split('.')
+        if len(module_path) > 1:
+            provider = module_path[1] # e.g. anthropic from langchain_anthropic
+        else:
+            provider = None
+            
+        # Get model name if available
+        model_name = getattr(model, 'model_name', '').lower()
+        
+        # Use REACT agent for Anthropic Claude models, otherwise use CIAYN
+        if provider == 'anthropic' and 'claude' in model_name:
+            return create_react_agent(model, tools, checkpointer=checkpointer)
+        else:
+            return CiaynAgent(model, tools)
+            
+    except Exception as e:
+        # Default to REACT agent if provider/model detection fails
+        logger.warning(f"Failed to detect model type: {e}. Defaulting to REACT agent.")
+        return create_react_agent(model, tools, checkpointer=checkpointer)
 
 def run_research_agent(
     base_task_or_query: str,
@@ -125,7 +173,7 @@ def run_research_agent(
     )
 
     # Create agent
-    agent = create_react_agent(model, tools, checkpointer=memory)
+    agent = create_agent(model, tools, checkpointer=memory)
 
     # Format prompt sections
     expert_section = EXPERT_PROMPT_SECTION_RESEARCH if expert_enabled else ""
@@ -238,7 +286,7 @@ def run_web_research_agent(
     tools = get_web_research_tools(expert_enabled=expert_enabled)
 
     # Create agent
-    agent = create_react_agent(model, tools, checkpointer=memory)
+    agent = create_agent(model, tools, checkpointer=memory)
 
     # Format prompt sections
     expert_section = EXPERT_PROMPT_SECTION_RESEARCH if expert_enabled else ""
@@ -351,7 +399,7 @@ def run_planning_agent(
     tools = get_planning_tools(expert_enabled=expert_enabled, web_research_enabled=config.get('web_research_enabled', False))
 
     # Create agent
-    agent = create_react_agent(model, tools, checkpointer=memory)
+    agent = create_agent(model, tools, checkpointer=memory)
 
     # Format prompt sections
     expert_section = EXPERT_PROMPT_SECTION_PLANNING if expert_enabled else ""
@@ -438,7 +486,7 @@ def run_task_implementation_agent(
     tools = get_implementation_tools(expert_enabled=expert_enabled, web_research_enabled=config.get('web_research_enabled', False))
 
     # Create agent
-    agent = create_react_agent(model, tools, checkpointer=memory)
+    agent = create_agent(model, tools, checkpointer=memory)
 
     # Build prompt
     prompt = IMPLEMENTATION_PROMPT.format(
@@ -467,6 +515,8 @@ def run_task_implementation_agent(
     try:
         logger.debug("Implementation agent completed successfully")
         return run_agent_with_retry(agent, prompt, run_config)
+    except (KeyboardInterrupt, AgentInterrupt):
+        raise
     except Exception as e:
         logger.error("Implementation agent failed: %s", str(e), exc_info=True)
         raise
@@ -523,7 +573,11 @@ def run_agent_with_retry(agent, prompt: str, config: dict) -> Optional[str]:
                         logger.debug("Agent output: %s", chunk)
                         check_interrupt()
                         print_agent_output(chunk)
-                        logger.debug("Agent run completed successfully")
+                        if _global_memory['task_completed']:
+                            _global_memory['task_completed'] = False
+                            _global_memory['completion_message'] = ''
+                            break
+                    logger.debug("Agent run completed successfully")
                     return "Agent run completed successfully"
                 except (KeyboardInterrupt, AgentInterrupt):
                     raise

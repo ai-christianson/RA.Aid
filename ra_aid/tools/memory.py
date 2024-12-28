@@ -192,6 +192,8 @@ def emit_key_snippets(snippets: List[SnippetInfo]) -> str:
     """Store multiple key source code snippets in global memory.
     Automatically adds the filepaths of the snippets to related files.
     
+    This is for **existing**, or **just-written** files, not for things to be created in the future.
+    
     Args:
         snippets: List of snippet information dictionaries containing:
                  - filepath: Path to the source file

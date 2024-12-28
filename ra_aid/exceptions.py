@@ -7,3 +7,12 @@ class AgentInterrupt(Exception):
     separate from KeyboardInterrupt which is reserved for top-level handling.
     """
     pass
+
+
+class ToolExecutionError(Exception):
+    """Exception raised when a tool execution fails.
+    
+    This exception is used to distinguish tool execution failures
+    from other types of errors in the agent system.
+    """
+    pass
