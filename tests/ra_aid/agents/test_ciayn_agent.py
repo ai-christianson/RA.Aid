@@ -98,3 +98,59 @@ def test_trim_chat_history_empty_chat(agent):
     # Verify initial messages are preserved and no trimming occurred
     assert result == initial_messages
     assert len(result) == 2
+
+def test_trim_chat_history_token_limit():
+    """Test trimming based on token limit."""
+    agent = CiaynAgent(Mock(), [], max_history_messages=10, max_tokens=20)
+    
+    initial_messages = [HumanMessage(content="Initial")] # ~2 tokens
+    chat_history = [
+        HumanMessage(content="A" * 40),  # ~10 tokens
+        AIMessage(content="B" * 40),     # ~10 tokens
+        HumanMessage(content="C" * 40)   # ~10 tokens
+    ]
+    
+    result = agent._trim_chat_history(initial_messages, chat_history)
+    
+    # Should keep initial message (~2 tokens) and last message (~10 tokens)
+    assert len(result) == 2
+    assert result[0] == initial_messages[0]
+    assert result[1] == chat_history[-1]
+
+def test_trim_chat_history_no_token_limit():
+    """Test trimming with no token limit set."""
+    agent = CiaynAgent(Mock(), [], max_history_messages=2, max_tokens=None)
+    
+    initial_messages = [HumanMessage(content="Initial")]
+    chat_history = [
+        HumanMessage(content="A" * 1000),
+        AIMessage(content="B" * 1000),
+        HumanMessage(content="C" * 1000)
+    ]
+    
+    result = agent._trim_chat_history(initial_messages, chat_history)
+    
+    # Should keep initial message and last 2 messages (max_history_messages=2)
+    assert len(result) == 3
+    assert result[0] == initial_messages[0]
+    assert result[1:] == chat_history[-2:]
+
+def test_trim_chat_history_both_limits():
+    """Test trimming with both message count and token limits."""
+    agent = CiaynAgent(Mock(), [], max_history_messages=3, max_tokens=15)
+    
+    initial_messages = [HumanMessage(content="Init")] # ~1 token
+    chat_history = [
+        HumanMessage(content="A" * 40),  # ~10 tokens
+        AIMessage(content="B" * 40),     # ~10 tokens
+        HumanMessage(content="C" * 40),  # ~10 tokens
+        AIMessage(content="D" * 40)      # ~10 tokens
+    ]
+    
+    result = agent._trim_chat_history(initial_messages, chat_history)
+    
+    # Should first apply message limit (keeping last 3)
+    # Then token limit should further reduce to fit under 15 tokens
+    assert len(result) == 2  # Initial message + 1 message under token limit
+    assert result[0] == initial_messages[0]
+    assert result[1] == chat_history[-1]
