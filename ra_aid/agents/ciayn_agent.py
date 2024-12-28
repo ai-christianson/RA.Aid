@@ -1,7 +1,12 @@
 import inspect
+from dataclasses import dataclass
 from typing import Dict, Any, Generator, List, Optional, Union
 from langchain_core.messages import AIMessage, HumanMessage, BaseMessage
 from ra_aid.exceptions import ToolExecutionError
+@dataclass
+class ChunkMessage:
+    content: str
+    status: str
 
 class CiaynAgent:
     """Code Is All You Need (CIAYN) agent that uses generated Python code for tool interaction.
@@ -74,9 +79,6 @@ class CiaynAgent:
             base_prompt += f"\n<last result>{last_result}</last result>"
             
         base_prompt += f"""
-<available functions>
-{"\n\n".join(self.available_functions)}
-</available functions>
 
 <agent instructions>
 You are a ReAct agent. You run in a loop and use ONE of the available functions per iteration.
@@ -89,13 +91,13 @@ Use as many steps as you need to in order to fully complete the task.
 Start by asking the user what they want.
 </agent instructions>
 
-<example response>
-check_weather("London")
-</example response>
-    
-<example response>
-output_message(\"\"\"How can I help you today?\"\"\", True)
-</example response>
+You must carefully review the conversation history, which functions were called so far, returned results, etc., and make sure the very next function call you make makes sense in order to achieve the original goal.
+
+You must ONLY use ONE of the following functions (these are the ONLY functions that exist):
+
+<available functions>
+{"\n\n".join(self.available_functions)}
+</available functions>
 
 Output **ONLY THE CODE** and **NO MARKDOWN BACKTICKS**"""
         return base_prompt
@@ -124,9 +126,10 @@ Output **ONLY THE CODE** and **NO MARKDOWN BACKTICKS**"""
 
     def _create_error_chunk(self, content: str) -> Dict[str, Any]:
         """Create an error chunk in the format expected by print_agent_output."""
+        message = ChunkMessage(content=content, status="error")
         return {
             "tools": {
-                "messages": [{"status": "error", "content": content}]
+                "messages": [message]
             }
         }
 
@@ -209,5 +212,5 @@ Output **ONLY THE CODE** and **NO MARKDOWN BACKTICKS**"""
                 yield {}
 
             except ToolExecutionError as e:
+                chat_history.append(HumanMessage(content=f"Your tool call caused an error: {e}\n\nPlease correct your tool call and try again."))
                 yield self._create_error_chunk(str(e))
-                break

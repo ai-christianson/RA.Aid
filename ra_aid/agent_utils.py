@@ -10,9 +10,12 @@ import threading
 import time
 from typing import Optional
 
-from langgraph.prebuilt import create_react_agent 
+from langgraph.prebuilt import create_react_agent
+from ra_aid.agents.ciayn_agent import CiaynAgent
+from ra_aid.agents.ciayn_agent import CiaynAgent
 from ra_aid.console.formatting import print_stage_header, print_error
 from langchain_core.language_models import BaseChatModel
+from langchain_core.tools import tool
 from typing import List, Any
 from ra_aid.console.output import print_agent_output
 from ra_aid.logging_config import get_logger
@@ -66,6 +69,12 @@ console = Console()
 
 logger = get_logger(__name__)
 
+@tool
+def output_markdown_message(message: str) -> str:
+    """Outputs a message to the user, optionally prompting for input."""
+    console.print(Panel(Markdown(message.strip()), title="🤖 Assistant"))
+    return "Message output."
+
 def create_agent(
     model: BaseChatModel,
     tools: List[Any],
@@ -82,7 +91,27 @@ def create_agent(
     Returns:
         The created agent instance
     """
-    return create_react_agent(model, tools, checkpointer=checkpointer)
+    try:
+        # Extract model info from module path
+        module_path = model.__class__.__module__.split('.')
+        if len(module_path) > 1:
+            provider = module_path[1] # e.g. anthropic from langchain_anthropic
+        else:
+            provider = None
+            
+        # Get model name if available
+        model_name = getattr(model, 'model_name', '').lower()
+        
+        # Use REACT agent for Anthropic Claude models, otherwise use CIAYN
+        if provider == 'anthropic' and 'claude' in model_name:
+            return create_react_agent(model, tools, checkpointer=checkpointer)
+        else:
+            return CiaynAgent(model, tools)
+            
+    except Exception as e:
+        # Default to REACT agent if provider/model detection fails
+        logger.warning(f"Failed to detect model type: {e}. Defaulting to REACT agent.")
+        return create_react_agent(model, tools, checkpointer=checkpointer)
 
 def run_research_agent(
     base_task_or_query: str,
@@ -499,7 +528,11 @@ def run_agent_with_retry(agent, prompt: str, config: dict) -> Optional[str]:
                         logger.debug("Agent output: %s", chunk)
                         check_interrupt()
                         print_agent_output(chunk)
-                        logger.debug("Agent run completed successfully")
+                        if _global_memory['task_completed']:
+                            _global_memory['task_completed'] = False
+                            _global_memory['completion_message'] = ''
+                            break
+                    logger.debug("Agent run completed successfully")
                     return "Agent run completed successfully"
                 except (KeyboardInterrupt, AgentInterrupt):
                     raise
