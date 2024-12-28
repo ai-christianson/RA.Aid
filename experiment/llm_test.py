@@ -6,6 +6,11 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from ra_aid.tools.list_directory import list_directory_tree
 from ra_aid.tool_configs import get_read_only_tools
 import inspect
+from rich.panel import Panel
+from rich.markdown import Markdown
+from rich.console import Console
+
+console = Console()
 
 # Load environment variables
 load_dotenv()
@@ -48,9 +53,10 @@ def output_message(message: str, prompt_user_input: bool = False) -> str:
     Outputs a message to the user, optionally prompting for input.
     """
     print()
-    print(f"Assistant: {message.strip()}")
+    console.print(Panel(Markdown(message.strip())))
     if prompt_user_input:
-        user_input = input("\nYou: ").strip()
+        user_input = input("\n> ").strip()
+        print()
         return user_input
     return ""
 
@@ -76,16 +82,23 @@ def evaluate_response(code: str, tools: list) -> any:
         result = eval(code, globals_dict)
         return result
     except Exception as e:
+        print(f"Code:\n\n{code}\n\n")
+        print(f"Error executing code: {str(e)}")
         return f"Error executing code: {str(e)}"
 
 def create_chat_interface():
     # Initialize the chat model
     chat = ChatOpenAI(
-        api_key=os.getenv("OPENROUTER_API_KEY"),
-        temperature=0.3,
-        base_url="https://openrouter.ai/api/v1",
+        # api_key=os.getenv("OPENROUTER_API_KEY"),
+        api_key=os.getenv("DEEPSEEK_API_KEY"),
+        temperature=0.7 ,
+        # base_url="https://openrouter.ai/api/v1",
+        base_url="https://api.deepseek.com/v1",
         # model="deepseek/deepseek-chat"
-        model="qwen/qwen-2.5-coder-32b-instruct"
+        model="deepseek-chat"
+        # model="openai/gpt-4o-mini"
+        # model="qwen/qwen-2.5-coder-32b-instruct"
+        # model="qwen/qwen-2.5-72b-instruct"
     )
     
     # Chat loop
@@ -126,6 +139,7 @@ def create_chat_interface():
             Call one function at a time. Function arguments can be complex objects, long strings, etc. if needed.
             The user cannot see the results of function calls, so you have to explicitly call output_message if you want them to see something.
             You must always respond with a single line of python that calls one of the available tools.
+            Use as many steps as you need to in order to fully complete the task.
             Start by asking the user what they want.
         </agent instructions>
         
@@ -152,23 +166,28 @@ def create_chat_interface():
         
         try:
             # Get response from model
+            # print("PRECHAT")
             response = chat.invoke(chat_history)
+            # print("POSTCHAT")
             
             # # Print the code response
-            print("\nAssistant generated code:")
-            print(response.content)
+            # print("\nAssistant generated code:")
+            # print(response.content)
             
             # Evaluate the code
             # print("\nExecuting code:")
+            # print("PREEVAL")
             last_result = evaluate_response(response.content.strip(), tools)
-            if last_result is not None:
-                print(f"Result: {last_result}")
+            # print("POSTEVAL")
+            # if last_result is not None:
+            #     print(f"Result: {last_result}")
             
             # Add assistant response to history
             chat_history.append(response)
             
             # Set first_iteration to False after the first loop
             first_iteration = False
+            # print("LOOP")
             
         except Exception as e:
             print(f"\nError: {str(e)}")
