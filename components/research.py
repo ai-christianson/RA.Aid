@@ -24,7 +24,7 @@ def research_component(task: str, config: Dict[str, Any]) -> Dict[str, Any]:
         st.write("🔍 Starting Research Phase...")
         
         # Run research agent
-        results = run_research_agent(
+        raw_results = run_research_agent(
             task,
             model,
             expert_enabled=True,
@@ -35,35 +35,56 @@ def research_component(task: str, config: Dict[str, Any]) -> Dict[str, Any]:
         )
         
         # Debug logging
-        logger.debug(f"Research agent results type: {type(results)}")
-        logger.debug(f"Research agent results: {results}")
+        logger.debug(f"Research agent raw results: {raw_results}")
         
-        # Ensure results is a dictionary
-        if not isinstance(results, dict):
-            raise ValueError("Research agent returned invalid results format")
-
+        # Format results
+        if raw_results is None:
+            raise ValueError("Research agent returned no results")
+            
+        # Parse research notes and key facts from the raw results
+        results = {
+            "success": True,
+            "research_notes": [],
+            "key_facts": {},
+            "related_files": _global_memory.get('related_files', {})
+        }
+        
+        # Extract research notes and key facts from raw results
+        if isinstance(raw_results, str):
+            # Split the results into sections
+            sections = raw_results.split('\n\n')
+            for section in sections:
+                if section.startswith('Research Notes:'):
+                    notes = section.replace('Research Notes:', '').strip().split('\n')
+                    results['research_notes'].extend([note.strip('- ') for note in notes if note.strip()])
+                elif section.startswith('Key Facts:'):
+                    facts = section.replace('Key Facts:', '').strip().split('\n')
+                    for fact in facts:
+                        if ':' in fact:
+                            key, value = fact.strip('- ').split(':', 1)
+                            results['key_facts'][key.strip()] = value.strip()
+        
         # Update global memory with research results
-        _global_memory['related_files'] = results.get("related_files", {})
+        _global_memory['research_notes'] = results['research_notes']
+        _global_memory['key_facts'] = results['key_facts']
         _global_memory['implementation_requested'] = False
         
         # Display research results
-        if results.get("research_notes"):
+        if results['research_notes']:
             st.markdown("### Research Notes")
-            st.markdown(results["research_notes"])
+            for note in results['research_notes']:
+                st.markdown(f"- {note}")
             
-        if results.get("key_facts"):
+        if results['key_facts']:
             st.markdown("### Key Facts")
-            st.markdown(results["key_facts"])
+            for key, value in results['key_facts'].items():
+                st.markdown(f"- **{key}**: {value}")
             
-        if results.get("related_files"):
+        if results['related_files']:
             st.markdown("### Related Files")
-            for file in results["related_files"]:
+            for file in results['related_files']:
                 st.code(file)
         
-        # Ensure success field is present
-        if "success" not in results:
-            results["success"] = True
-            
         return results
 
     except ValueError as e:

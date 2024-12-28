@@ -46,11 +46,15 @@ class SocketInterface:
     async def disconnect(self) -> None:
         """Disconnect from the WebSocket server."""
         if self.websocket:
-            await self.websocket.close()
-            self.websocket = None
-            self.connected = False
-            self._connection_count = 0
-            logger.info("Disconnected from server")
+            try:
+                await self.websocket.close()
+            except Exception as e:
+                logger.error(f"Error closing connection: {str(e)}")
+            finally:
+                self.websocket = None
+                self.connected = False
+                self._connection_count = 0
+                logger.info("Disconnected from server")
     
     async def send_task(self, task: str, config: Dict[str, Any]) -> bool:
         """Send a task to the server."""

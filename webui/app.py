@@ -20,12 +20,15 @@ from components.planning import planning_component
 from components.implementation import implementation_component
 from webui.config import WebUIConfig, load_environment_status
 from ra_aid.logger import logger
+from ra_aid.llm import initialize_llm
+from ra_aid.agent_utils import run_research_agent
 import asyncio
 import os
 import anthropic
 from openai import OpenAI
 from dotenv import load_dotenv
 import requests
+from typing import Dict, Any
 
 # Load environment variables
 load_dotenv()
@@ -249,24 +252,41 @@ def render_environment_status():
     """
     st.sidebar.subheader("Environment Status")
     env_status = load_environment_status()
-    status_text = " | ".join([f"{provider}: {'✓' if status else '��'}" 
+    status_text = " | ".join([f"{provider}: {'✓' if status else '×'}" 
                              for provider, status in env_status.items()])
     st.sidebar.caption(f"API Status: {status_text}")
 
 def process_message_queue():
     """
     Process messages from the WebSocket message queue.
-    Handles different message types (error, standard) and updates the UI accordingly.
+    Handles different message types and updates the UI accordingly.
     Messages are processed until the queue is empty.
     """
+    progress_container = st.empty()
+    
     while True:
         try:
             message = message_queue.get_nowait()
             if isinstance(message, dict):
-                if message.get('type') == 'error':
-                    st.session_state.messages.append({'type': 'error', 'content': message.get('content', 'An error occurred.')})
+                # Add message to session state
+                st.session_state.messages.append(message)
+                
+                # Display message based on type
+                msg_type = message.get('type', 'text')
+                content = message.get('content', '')
+                
+                if msg_type == 'error':
+                    st.error(content)
+                elif msg_type == 'status':
+                    st.write(content)
+                elif msg_type == 'progress':
+                    progress_container.text(content)
+                elif msg_type == 'research':
+                    st.markdown(content)
+                elif msg_type == 'success':
+                    st.success(content)
                 else:
-                    st.session_state.messages.append(message)
+                    st.write(content)
         except Empty:
             break
 
@@ -275,13 +295,28 @@ def render_messages():
     Render all messages in the chat interface.
     Handles different message types with appropriate styling:
     - Error messages are displayed with error styling
-    - Standard messages are displayed normally
+    - Status messages are displayed with write()
+    - Research messages are displayed with markdown
+    - Progress messages are displayed in a progress container
     """
+    progress_container = st.empty()
+    
     for message in st.session_state.messages:
-        if message.get('type') == 'error':
-            st.error(message['content'])
+        msg_type = message.get('type', 'text')
+        content = message.get('content', '')
+        
+        if msg_type == 'error':
+            st.error(content)
+        elif msg_type == 'status':
+            st.write(content)
+        elif msg_type == 'progress':
+            progress_container.text(content)
+        elif msg_type == 'research':
+            st.markdown(content)
+        elif msg_type == 'success':
+            st.success(content)
         else:
-            st.write(message['content'])
+            st.write(content)
 
 def send_task(task: str, config: dict):
     """
@@ -303,6 +338,108 @@ def send_task(task: str, config: dict):
             st.error(f"Failed to send task: {str(e)}")
     else:
         st.error("Not connected to server")
+
+def research_component(task: str, config: Dict[str, Any]) -> Dict[str, Any]:
+    """Handle the research stage of RA.Aid."""
+    try:
+        # Validate required config fields
+        required_fields = ["provider", "model", "research_only", "hil"]
+        for field in required_fields:
+            if field not in config:
+                raise ValueError(f"Missing required configuration field: {field}")
+
+        # Initialize model
+        model = initialize_llm(config["provider"], config["model"])
+        
+        # Update global memory configuration
+        _global_memory['config'] = config.copy()
+        
+        # Add status message
+        st.session_state.messages.append({
+            "type": "status",
+            "content": "🔍 Starting Research Phase..."
+        })
+        
+        # Run research agent
+        raw_results = run_research_agent(
+            task,
+            model,
+            expert_enabled=True,
+            research_only=config["research_only"],
+            hil=config["hil"],
+            web_research_enabled=config.get("web_research_enabled", False),
+            config=config
+        )
+        
+        # Debug logging
+        logger.debug(f"Research agent raw results: {raw_results}")
+        
+        # Format results
+        if raw_results is None:
+            raise ValueError("Research agent returned no results")
+            
+        # Parse research notes and key facts from the raw results
+        results = {
+            "success": True,
+            "research_notes": [],
+            "key_facts": {},
+            "related_files": _global_memory.get('related_files', {})
+        }
+        
+        # Extract research notes and key facts from raw results
+        if isinstance(raw_results, str):
+            # Split the results into sections
+            sections = raw_results.split('\n\n')
+            for section in sections:
+                if section.startswith('Research Notes:'):
+                    notes = section.replace('Research Notes:', '').strip().split('\n')
+                    results['research_notes'].extend([note.strip('- ') for note in notes if note.strip()])
+                    # Add research notes to messages
+                    if results['research_notes']:
+                        st.session_state.messages.append({
+                            "type": "research",
+                            "content": "### Research Notes\n" + "\n".join([f"- {note}" for note in results['research_notes']])
+                        })
+                elif section.startswith('Key Facts:'):
+                    facts = section.replace('Key Facts:', '').strip().split('\n')
+                    for fact in facts:
+                        if ':' in fact:
+                            key, value = fact.strip('- ').split(':', 1)
+                            results['key_facts'][key.strip()] = value.strip()
+                    # Add key facts to messages
+                    if results['key_facts']:
+                        st.session_state.messages.append({
+                            "type": "research",
+                            "content": "### Key Facts\n" + "\n".join([f"- **{key}**: {value}" for key, value in results['key_facts'].items()])
+                        })
+        
+        # Update global memory with research results
+        _global_memory['research_notes'] = results['research_notes']
+        _global_memory['key_facts'] = results['key_facts']
+        _global_memory['implementation_requested'] = False
+        
+        # Add success message
+        st.session_state.messages.append({
+            "type": "success",
+            "content": "✅ Research phase complete"
+        })
+        
+        return results
+
+    except ValueError as e:
+        logger.error(f"Research Configuration Error: {str(e)}")
+        st.session_state.messages.append({
+            "type": "error",
+            "content": f"Research Configuration Error: {str(e)}"
+        })
+        return {"success": False, "error": str(e)}
+    except Exception as e:
+        logger.error(f"Research Error: {str(e)}")
+        st.session_state.messages.append({
+            "type": "error",
+            "content": f"Research Error: {str(e)}"
+        })
+        return {"success": False, "error": str(e)}
 
 def main():
     """
@@ -475,6 +612,17 @@ def main():
             research_results = research_component(task, _global_memory['config'])
             st.session_state.research_results = research_results
             logger.info(f"Research results: {research_results}")
+            
+            # Store error in memory if research fails
+            if not research_results.get("success"):
+                _global_memory['error'] = research_results.get("error", "Research failed")
+                st.error(_global_memory['error'])
+            else:
+                # Store research results in memory
+                _global_memory['research_notes'] = research_results.get('research_notes', [])
+                _global_memory['key_facts'] = research_results.get('key_facts', {})
+                if _global_memory['config']['research_only']:
+                    st.success("Research completed successfully!")
 
         # 2. Planning Phase (if not research-only mode)
         logger.info(f"Mode: {'Research Only' if _global_memory['config']['research_only'] else 'Full Development'}, Research success: {research_results.get('success')}")
@@ -485,10 +633,20 @@ def main():
                 planning_results = planning_component(task, _global_memory['config'])
                 st.session_state.planning_results = planning_results
                 logger.info(f"Planning results: {planning_results}")
+                
+                # Display planning results
+                if planning_results.get('plan'):
+                    st.write("Implementation Plan:")
+                    st.write(planning_results['plan'])
+                if planning_results.get('tasks'):
+                    st.write("Planned Tasks:")
+                    for task in planning_results['tasks']:
+                        st.write(f"- {task}")
 
             # 3. Implementation Phase
             if planning_results.get("success"):
                 logger.info("Starting implementation phase...")
+                st.info("Starting implementation phase...")
                 st.session_state.execution_stage = "implementation"
                 with st.spinner("Implementing Changes..."):
                     implementation_results = implementation_component(
@@ -498,8 +656,20 @@ def main():
                         _global_memory['config']
                     )
                     logger.info(f"Implementation results: {implementation_results}")
+                    
+                    # Display implementation results
+                    if implementation_results.get('implemented_tasks'):
+                        st.write("Completed Tasks:")
+                        for task in implementation_results['implemented_tasks']:
+                            st.write(f"- {task}")
+                    if implementation_results.get('success'):
+                        st.success("Implementation completed successfully!")
         else:
             logger.info("Skipping planning phase - research-only mode or research failed")
+            if _global_memory['config']['research_only']:
+                st.info("Skipping planning phase - Research Only mode")
+            else:
+                st.warning("Skipping planning phase - Research failed")
     
     # Process and Display Messages
     process_message_queue()
