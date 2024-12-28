@@ -5,12 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.10.3] - 1024-12-27
 
 - Fix logging on interrupt.
 - Fix web research prompt.
 - Simplify planning stage by executing tasks directly.
 - Make research notes available to more agents/tools.
+- Make read_file always output status panel.
 
 ## [0.10.2] - 2024-12-26
 

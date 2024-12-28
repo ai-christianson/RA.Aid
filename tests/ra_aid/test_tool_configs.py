@@ -54,19 +54,19 @@ def test_get_implementation_tools():
 def test_get_web_research_tools():
     # Test with expert enabled
     tools = get_web_research_tools(expert_enabled=True)
-    assert len(tools) == 4
+    assert len(tools) == 5
     assert all(callable(tool) for tool in tools)
     
     # Get tool names and verify exact matches
     tool_names = [tool.name for tool in tools]
-    expected_names = ['emit_expert_context', 'ask_expert', 'web_search_tavily', 'emit_research_notes']
+    expected_names = ['emit_expert_context', 'ask_expert', 'web_search_tavily', 'emit_research_notes', 'task_completed']
     assert sorted(tool_names) == sorted(expected_names)
     
     # Test without expert enabled
     tools_no_expert = get_web_research_tools(expert_enabled=False)
-    assert len(tools_no_expert) == 2
+    assert len(tools_no_expert) == 3
     assert all(callable(tool) for tool in tools_no_expert)
     
     # Verify exact tool names when expert is disabled
     tool_names_no_expert = [tool.name for tool in tools_no_expert]
-    assert sorted(tool_names_no_expert) == sorted(['web_search_tavily', 'emit_research_notes'])
+    assert sorted(tool_names_no_expert) == sorted(['web_search_tavily', 'emit_research_notes', 'task_completed'])
