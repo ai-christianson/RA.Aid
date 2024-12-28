@@ -422,6 +422,8 @@ def run_task_implementation_agent(
     try:
         logger.debug("Implementation agent completed successfully")
         return run_agent_with_retry(agent, prompt, run_config)
+    except (KeyboardInterrupt, AgentInterrupt):
+        raise
     except Exception as e:
         logger.error("Implementation agent failed: %s", str(e), exc_info=True)
         raise

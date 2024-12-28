@@ -4,6 +4,36 @@ from langchain_core.messages import AIMessage, HumanMessage, BaseMessage
 from ra_aid.exceptions import ToolExecutionError
 
 class CiaynAgent:
+    """Code Is All You Need (CIAYN) agent that uses generated Python code for tool interaction.
+
+    The CIAYN philosophy emphasizes direct code generation and execution over structured APIs:
+    - Language model generates executable Python code snippets
+    - Tools are invoked through natural Python code rather than fixed schemas
+    - Flexible and adaptable approach to tool usage through dynamic code
+    - Complex workflows emerge from composing code segments
+
+    Code Generation & Function Calling:
+    - Dynamic generation of Python code for tool invocation
+    - Handles complex nested function calls and argument structures
+    - Natural integration of tool outputs into Python data flow
+    - Runtime code composition for multi-step operations
+
+    ReAct Pattern Implementation:
+    - Observation: Captures tool execution results
+    - Reasoning: Analyzes outputs to determine next steps
+    - Action: Generates and executes appropriate code
+    - Reflection: Updates state and plans next iteration
+    - Maintains conversation context across iterations
+
+    Core Capabilities:
+    - Dynamic tool registration with automatic documentation
+    - Sandboxed code execution environment
+    - Token-aware chat history management
+    - Comprehensive error handling and recovery
+    - Streaming interface for real-time interaction
+    - Memory management with configurable limits
+    """
+
     def _get_function_info(self, func):
         """
         Returns a well-formatted string containing the function signature and docstring,
