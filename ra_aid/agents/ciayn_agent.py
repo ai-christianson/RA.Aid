@@ -82,10 +82,9 @@ class CiaynAgent:
 
 <agent instructions>
 You are a ReAct agent. You run in a loop and use ONE of the available functions per iteration.
-If the current query does not require a function call, just use output_message to say what you would normally say.
 The result of that function call will be given to you in the next message.
 Call one function at a time. Function arguments can be complex objects, long strings, etc. if needed.
-The user cannot see the results of function calls, so you have to explicitly call output_message if you want them to see something.
+The user cannot see the results of function calls, so you have to explicitly use a tool like ask_human if you want them to see something.
 You must always respond with a single line of python that calls one of the available tools.
 Use as many steps as you need to in order to fully complete the task.
 Start by asking the user what they want.

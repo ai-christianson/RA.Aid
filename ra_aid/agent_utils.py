@@ -92,20 +92,16 @@ def create_agent(
         The created agent instance
     """
     try:
-        # Extract model info from module path
-        module_path = model.__class__.__module__.split('.')
-        if len(module_path) > 1:
-            provider = module_path[1] # e.g. anthropic from langchain_anthropic
-        else:
-            provider = None
-            
         # Get model name if available
-        model_name = getattr(model, 'model_name', '').lower()
+        provider = _global_memory.get('config', {}).get('provider')
+        model_name = _global_memory.get('config', {}).get('model')
         
         # Use REACT agent for Anthropic Claude models, otherwise use CIAYN
         if provider == 'anthropic' and 'claude' in model_name:
+            logger.debug("Using create_react_agent to instantiate agent.")
             return create_react_agent(model, tools, checkpointer=checkpointer)
         else:
+            logger.debug("Using CiaynAgent agent instance.")
             return CiaynAgent(model, tools)
             
     except Exception as e:

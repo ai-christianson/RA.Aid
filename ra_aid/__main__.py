@@ -191,13 +191,6 @@ def main():
             # Get initial request from user
             initial_request = ask_human.invoke({"question": "What would you like help with?"})
 
-            # Create chat agent with appropriate tools
-            chat_agent = create_agent(
-                model,
-                get_chat_tools(expert_enabled=expert_enabled, web_research_enabled=web_research_enabled),
-                checkpointer=MemorySaver()
-            )
-
             # Run chat agent with CHAT_PROMPT
             config = {
                 "configurable": {"thread_id": uuid.uuid4()},
@@ -215,6 +208,13 @@ def main():
             _global_memory['config']['model'] = args.model
             _global_memory['config']['expert_provider'] = args.expert_provider
             _global_memory['config']['expert_model'] = args.expert_model
+
+            # Create chat agent with appropriate tools
+            chat_agent = create_agent(
+                model,
+                get_chat_tools(expert_enabled=expert_enabled, web_research_enabled=web_research_enabled),
+                checkpointer=MemorySaver()
+            )
 
             # Run chat agent and exit
             run_agent_with_retry(chat_agent, CHAT_PROMPT.format(
