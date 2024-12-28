@@ -470,19 +470,25 @@ def main():
         # Execute Task Pipeline
         # 1. Research Phase
         st.session_state.execution_stage = "research"
+        logger.info("Starting research phase...")
         with st.spinner("Conducting Research..."):
             research_results = research_component(task, _global_memory['config'])
             st.session_state.research_results = research_results
+            logger.info(f"Research results: {research_results}")
 
         # 2. Planning Phase (if not research-only mode)
-        if mode != "Research Only" and research_results.get("success"):
+        logger.info(f"Mode: {'Research Only' if _global_memory['config']['research_only'] else 'Full Development'}, Research success: {research_results.get('success')}")
+        if not _global_memory['config']['research_only'] and research_results.get("success"):
+            logger.info("Starting planning phase...")
             st.session_state.execution_stage = "planning"
             with st.spinner("Planning Implementation..."):
                 planning_results = planning_component(task, _global_memory['config'])
                 st.session_state.planning_results = planning_results
+                logger.info(f"Planning results: {planning_results}")
 
             # 3. Implementation Phase
             if planning_results.get("success"):
+                logger.info("Starting implementation phase...")
                 st.session_state.execution_stage = "implementation"
                 with st.spinner("Implementing Changes..."):
                     implementation_results = implementation_component(
@@ -491,6 +497,9 @@ def main():
                         st.session_state.planning_results,
                         _global_memory['config']
                     )
+                    logger.info(f"Implementation results: {implementation_results}")
+        else:
+            logger.info("Skipping planning phase - research-only mode or research failed")
     
     # Process and Display Messages
     process_message_queue()

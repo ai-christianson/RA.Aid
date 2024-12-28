@@ -36,6 +36,7 @@ def mock_memory():
 @pytest.fixture(autouse=True)
 def reset_mock_global_memory():
     """Reset mock_global_memory before each test."""
+    mock_global_memory.clear()  # Clear existing data
     mock_global_memory['config'] = {
         'provider': 'anthropic',
         'model': 'claude-3',
@@ -50,6 +51,7 @@ def reset_mock_global_memory():
     mock_global_memory['key_facts'] = {}
     mock_global_memory['key_snippets'] = {}
     mock_global_memory['related_files'] = {}
+    mock_global_memory['implementation_requested'] = False
     yield
 
 @pytest.fixture(autouse=True)
@@ -197,48 +199,83 @@ def test_main_success(mock_streamlit, mock_env_vars, mock_session_state, mock_me
     """Test successful main flow."""
     # Set up initial state
     mock_streamlit['text_area'].return_value = "test task"
-    mock_streamlit['radio'].return_value = "Full Development"
-    mock_streamlit['selectbox'].return_value = "anthropic"
-    mock_streamlit['checkbox'].side_effect = [True, True, True]  # cowboy_mode, hil_mode, web_research
+    mock_streamlit['radio'].return_value = "Full Development"  # Set mode to Full Development
+    mock_streamlit['selectbox'].side_effect = ["anthropic", "claude-3", "anthropic", "claude-3"]  # provider, model for both calls
+    mock_streamlit['checkbox'].side_effect = [True, True, True, True, True, True]  # cowboy_mode, hil_mode, web_research for both calls
     mock_streamlit['text_input'].return_value = "test_key"
-    
+
     st.session_state.messages = []
     st.session_state.connected = True
     st.session_state.models = {'anthropic': ['claude-3'], 'openai': ['gpt-4']}
     st.session_state.websocket_thread_started = True
-    
+    st.session_state.execution_stage = None  # Reset execution stage
+    st.session_state.research_results = None  # Reset research results
+    st.session_state.planning_results = None  # Reset planning results
+
+    # Initialize mock memory
+    mock_memory.clear()
+    mock_memory.update({
+        'config': {
+            'provider': 'anthropic',
+            'model': 'claude-3',
+            'research_only': False,  # Ensure research_only is False for Full Development mode
+            'cowboy_mode': True,
+            'hil': True,
+            'web_research_enabled': True
+        },
+        'related_files': {},
+        'implementation_requested': False,
+        'research_notes': ["Test note"],
+        'plans': [],
+        'tasks': {},
+        'key_facts': {},
+        'key_snippets': {}
+    })
+
     # Create a new mock for research component to ensure clean state
     research_mock = MagicMock()
     research_mock.return_value = {"success": True, "research_notes": ["Test note"], "key_facts": {}}
-    
+
+    # Create a new mock for planning component to ensure clean state
+    planning_mock = MagicMock()
+    planning_mock.return_value = {"success": True, "plan": "Test plan", "tasks": ["Task 1"]}
+
+    # Create a new mock for implementation component to ensure clean state
+    implementation_mock = MagicMock()
+    implementation_mock.return_value = {"success": True, "implemented_tasks": ["Task 1"]}
+
     with patch('webui.app.research_component', research_mock), \
-         patch('webui.app.planning_component', mock_planning), \
-         patch('webui.app.implementation_component', mock_implementation), \
-         patch('webui.app.load_environment_status') as mock_env_status:
-        
+         patch('webui.app.planning_component', planning_mock), \
+         patch('webui.app.implementation_component', implementation_mock), \
+         patch('webui.app.load_environment_status') as mock_env_status, \
+         patch('webui.app.initialize_memory') as mock_init_memory:  # Mock initialize_memory
+
         mock_env_status.return_value = {
             'anthropic': True,
             'openai': True,
             'web_research_enabled': True
         }
-        
+
         # First call to set up the UI
         mock_streamlit['button'].return_value = False
+        mock_streamlit['radio'].return_value = "Full Development"  # Set mode to Full Development
         main()
-        
+
         # Second call to simulate clicking the Start button
         mock_streamlit['button'].return_value = True
+        mock_streamlit['radio'].return_value = "Full Development"  # Ensure mode is set to Full Development
         main()
-        
+
         # Verify configuration was set correctly
         assert mock_memory['config']['cowboy_mode'] == True
         assert mock_memory['config']['hil'] == True
         assert mock_memory['config']['web_research_enabled'] == True
-        
+        assert mock_memory['config']['research_only'] == False  # Verify research_only is False
+
         # Verify components were called
         research_mock.assert_called_once()
-        mock_planning.assert_called_once()
-        mock_implementation.assert_called_once()
+        planning_mock.assert_called_once()
+        implementation_mock.assert_called_once()
         mock_streamlit['spinner'].assert_called()
 
 def test_main_no_task(mock_streamlit, mock_env_vars, mock_session_state):
@@ -259,43 +296,67 @@ def test_main_research_only(mock_streamlit, mock_env_vars, mock_session_state, m
     # Set up initial state
     mock_streamlit['text_area'].return_value = "test task"
     mock_streamlit['radio'].return_value = "Research Only"
-    mock_streamlit['selectbox'].return_value = "anthropic"
+    mock_streamlit['selectbox'].side_effect = ["anthropic", "claude-3"]  # provider, model
     mock_streamlit['checkbox'].side_effect = [True, True, True]  # cowboy_mode, hil_mode, web_research
     mock_streamlit['text_input'].return_value = "test_key"
-    
+
     st.session_state.messages = []
     st.session_state.connected = True
     st.session_state.models = {'anthropic': ['claude-3'], 'openai': ['gpt-4']}
     st.session_state.websocket_thread_started = True
-    
+
+    # Initialize mock memory
+    mock_memory.clear()
+    mock_memory.update({
+        'config': {
+            'provider': 'anthropic',
+            'model': 'claude-3',
+            'research_only': True,
+            'cowboy_mode': True,
+            'hil': True,
+            'web_research_enabled': True
+        },
+        'related_files': {},
+        'implementation_requested': False,
+        'research_notes': [],
+        'plans': [],
+        'tasks': {},
+        'key_facts': {},
+        'key_snippets': {}
+    })
+
     # Create a new mock for research component to ensure clean state
     research_mock = MagicMock()
     research_mock.return_value = {"success": True, "research_notes": ["Test note"], "key_facts": {}}
-    
+
     with patch('webui.app.research_component', research_mock), \
-         patch('webui.app.load_environment_status') as mock_env_status:
-        
+         patch('webui.app.load_environment_status') as mock_env_status, \
+         patch('webui.app.initialize_memory') as mock_init_memory:  # Mock initialize_memory
+
         mock_env_status.return_value = {
             'anthropic': True,
             'openai': True,
             'web_research_enabled': True
         }
-        
+
         # First call to set up the UI
         mock_streamlit['button'].return_value = False
         main()
-        
+
         # Second call to simulate clicking the Start button
         mock_streamlit['button'].return_value = True
         main()
-        
+
         # Verify only research was called once
         research_mock.assert_called_once()
         mock_planning.assert_not_called()
         mock_implementation.assert_not_called()
-        
+
         # Verify research only mode was set
         assert mock_memory['config']['research_only'] == True
+        assert mock_memory['config']['cowboy_mode'] == True
+        assert mock_memory['config']['hil'] == True
+        assert mock_memory['config']['web_research_enabled'] == True
 
 def test_websocket_thread_success(mock_session_state):
     """Test successful websocket thread execution."""
