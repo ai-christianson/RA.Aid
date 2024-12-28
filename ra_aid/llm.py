@@ -3,7 +3,7 @@ from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
 from langchain_core.language_models import BaseChatModel
 
-def initialize_llm(provider: str, model_name: str) -> BaseChatModel:
+def initialize_llm(provider: str, model_name: str, temperature: float | None = None) -> BaseChatModel:
     """Initialize a language model client based on the specified provider and model.
 
     Note: Environment variables must be validated before calling this function.
@@ -12,6 +12,8 @@ def initialize_llm(provider: str, model_name: str) -> BaseChatModel:
     Args:
         provider: The LLM provider to use ('openai', 'anthropic', 'openrouter', 'openai-compatible')
         model_name: Name of the model to use
+        temperature: Optional temperature setting for controlling randomness (0.0-2.0).
+                    If not specified, provider-specific defaults are used.
 
     Returns:
         BaseChatModel: Configured language model client
@@ -23,23 +25,26 @@ def initialize_llm(provider: str, model_name: str) -> BaseChatModel:
         return ChatOpenAI(
             api_key=os.getenv("OPENAI_API_KEY"),
             model=model_name,
+            **({"temperature": temperature} if temperature is not None else {})
         )
     elif provider == "anthropic":
         return ChatAnthropic(
             api_key=os.getenv("ANTHROPIC_API_KEY"),
             model_name=model_name,
+            **({"temperature": temperature} if temperature is not None else {})
         )
     elif provider == "openrouter":
         return ChatOpenAI(
             api_key=os.getenv("OPENROUTER_API_KEY"),
             base_url="https://openrouter.ai/api/v1",
             model=model_name,
+            **({"temperature": temperature} if temperature is not None else {})
         )
     elif provider == "openai-compatible":
         return ChatOpenAI(
             api_key=os.getenv("OPENAI_API_KEY"),
             base_url=os.getenv("OPENAI_API_BASE"),
-            temperature=0.3,
+            temperature=temperature if temperature is not None else 0.3,
             model=model_name,
         )
     else:

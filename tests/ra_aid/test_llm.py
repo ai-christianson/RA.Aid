@@ -154,6 +154,83 @@ def test_initialize_unsupported_provider(clean_env):
         initialize_llm("unsupported", "model")
     assert str(exc_info.value) == "Unsupported provider: unsupported"
 
+def test_temperature_defaults(clean_env, mock_openai, mock_anthropic):
+    """Test default temperature behavior for different providers."""
+    os.environ["OPENAI_API_KEY"] = "test-key"
+    os.environ["ANTHROPIC_API_KEY"] = "test-key"
+    os.environ["OPENAI_API_BASE"] = "http://test-url"
+    
+    # Test openai-compatible default temperature
+    initialize_llm("openai-compatible", "test-model")
+    mock_openai.assert_called_with(
+        api_key="test-key",
+        base_url="http://test-url",
+        model="test-model",
+        temperature=0.3
+    )
+    
+    # Test other providers don't set temperature by default
+    initialize_llm("openai", "test-model")
+    mock_openai.assert_called_with(
+        api_key="test-key",
+        model="test-model"
+    )
+    
+    initialize_llm("anthropic", "test-model")
+    mock_anthropic.assert_called_with(
+        api_key="test-key",
+        model_name="test-model"
+    )
+
+def test_explicit_temperature(clean_env, mock_openai, mock_anthropic):
+    """Test explicit temperature setting for each provider."""
+    os.environ["OPENAI_API_KEY"] = "test-key"
+    os.environ["ANTHROPIC_API_KEY"] = "test-key"
+    os.environ["OPENROUTER_API_KEY"] = "test-key"
+    
+    test_temp = 0.7
+    
+    # Test OpenAI
+    initialize_llm("openai", "test-model", temperature=test_temp)
+    mock_openai.assert_called_with(
+        api_key="test-key",
+        model="test-model",
+        temperature=test_temp
+    )
+    
+    # Test Anthropic
+    initialize_llm("anthropic", "test-model", temperature=test_temp)
+    mock_anthropic.assert_called_with(
+        api_key="test-key",
+        model_name="test-model",
+        temperature=test_temp
+    )
+    
+    # Test OpenRouter
+    initialize_llm("openrouter", "test-model", temperature=test_temp)
+    mock_openai.assert_called_with(
+        api_key="test-key",
+        base_url="https://openrouter.ai/api/v1",
+        model="test-model",
+        temperature=test_temp
+    )
+
+def test_temperature_validation(clean_env, mock_openai):
+    """Test temperature validation in command line arguments."""
+    from ra_aid.__main__ import parse_arguments
+    
+    # Test temperature below minimum
+    with pytest.raises(SystemExit):
+        parse_arguments(['--message', 'test', '--temperature', '-0.1'])
+    
+    # Test temperature above maximum
+    with pytest.raises(SystemExit):
+        parse_arguments(['--message', 'test', '--temperature', '2.1'])
+    
+    # Test valid temperature
+    args = parse_arguments(['--message', 'test', '--temperature', '0.7'])
+    assert args.temperature == 0.7
+
 def test_provider_name_validation():
     """Test provider name validation and normalization."""
     # Test all supported providers

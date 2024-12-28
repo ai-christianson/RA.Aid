@@ -104,6 +104,12 @@ Examples:
         action='store_true',
         help='Enable verbose logging output'
     )
+    parser.add_argument(
+        '--temperature',
+        type=float,
+        help='LLM temperature (0.0-2.0). Controls randomness in responses',
+        default=None
+    )
 
     if args is None:
         args = sys.argv[1:]
@@ -128,6 +134,10 @@ Examples:
     # Validate expert model requirement
     if parsed_args.expert_provider != 'openai' and not parsed_args.expert_model and not parsed_args.research_only:
         parser.error(f"--expert-model is required when using expert provider '{parsed_args.expert_provider}'")
+
+    # Validate temperature range if provided
+    if parsed_args.temperature is not None and not (0.0 <= parsed_args.temperature <= 2.0):
+        parser.error('Temperature must be between 0.0 and 2.0')
 
     return parsed_args
 
@@ -179,7 +189,7 @@ def main():
             ))
 
         # Create the base model after validation
-        model = initialize_llm(args.provider, args.model)
+        model = initialize_llm(args.provider, args.model, temperature=args.temperature)
 
         # Handle chat mode
         if args.chat:

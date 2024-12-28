@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add CiaynAgent to support models that do not have, or are not good at, agentic function calling.
 - Improve env var validation.
+- Add --temperature CLI parameter.
 
 ## [0.10.3] - 2024-12-27
 
