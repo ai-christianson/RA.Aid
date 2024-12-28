@@ -20,7 +20,7 @@ def test_implementation_success(mock_initialize_llm, mock_run_task_implementatio
     task = "test task"
     research_results = {'key_facts': ['fact1']}
     planning_results = {'tasks': ['task1', 'task2']}
-    config = {"provider": "test-provider", "model": "test-model"}
+    config = {"provider": "test-provider", "model": "test-model", "hil": False}
 
     with patch('streamlit.write') as mock_write, \
          patch('streamlit.header') as mock_header:
@@ -66,7 +66,7 @@ def test_implementation_failure(mock_initialize_llm, mock_run_task_implementatio
     task = "test task"
     research_results = {'key_facts': ['fact1']}
     planning_results = {'tasks': ['task1', 'task2']}
-    config = {"provider": "test-provider", "model": "test-model"}
+    config = {"provider": "test-provider", "model": "test-model", "hil": False}
 
     with patch('streamlit.write') as mock_write, \
          patch('streamlit.header') as mock_header:
@@ -92,7 +92,7 @@ def test_implementation_display(mock_initialize_llm, mock_run_task_implementatio
     task = "test task"
     research_results = {'key_facts': ['fact1']}
     planning_results = {'tasks': ['task1', 'task2']}
-    config = {"provider": "test-provider", "model": "test-model"}
+    config = {"provider": "test-provider", "model": "test-model", "hil": False}
 
     with patch('streamlit.write') as mock_write, \
          patch('streamlit.header') as mock_header:
@@ -136,7 +136,8 @@ def test_implementation_config_handling(mock_initialize_llm, mock_run_task_imple
     config = {
         "provider": "test-provider",
         "model": "test-model",
-        "max_tokens": 2000
+        "max_tokens": 2000,
+        "hil": False
     }
 
     with patch('streamlit.write') as mock_write, \

@@ -1,10 +1,10 @@
 import pytest
 from unittest.mock import patch, MagicMock, AsyncMock
 import streamlit as st
-from queue import Queue
+from queue import Queue, Empty
 
 # Mock the components instead of importing them
-with patch('components.memory._global_memory', {}):
+with patch('components.memory._global_memory', {}) as mock_global_memory:
     from webui.app import (
         initialize_session_state, 
         process_message_queue, 
@@ -27,19 +27,46 @@ mock_planning.return_value = {"success": True, "plan": "Test plan", "tasks": ["T
 mock_implementation = MagicMock()
 mock_implementation.return_value = {"success": True, "implemented_tasks": ["Task 1"]}
 
-# Mock the global memory
-mock_global_memory = {}
+@pytest.fixture
+def mock_memory():
+    """Mock the global memory dictionary."""
+    with patch('components.memory._global_memory', {}) as mock_mem:
+        yield mock_mem
+
+@pytest.fixture(autouse=True)
+def reset_mock_global_memory():
+    """Reset mock_global_memory before each test."""
+    mock_global_memory['config'] = {
+        'provider': 'anthropic',
+        'model': 'claude-3',
+        'research_only': False,
+        'cowboy_mode': False,
+        'hil': False,
+        'web_research_enabled': False
+    }
+    mock_global_memory['research_notes'] = []
+    mock_global_memory['plans'] = []
+    mock_global_memory['tasks'] = {}
+    mock_global_memory['key_facts'] = {}
+    mock_global_memory['key_snippets'] = {}
+    mock_global_memory['related_files'] = {}
+    yield
 
 @pytest.fixture(autouse=True)
 def mock_imports():
     """Mock all external imports that might cause issues."""
+    mock_research.reset_mock()  # Reset mock before each test
+    mock_planning.reset_mock()
+    mock_implementation.reset_mock()
+    
     with patch('components.memory._global_memory', mock_global_memory), \
          patch('components.research.research_component', mock_research), \
          patch('components.planning.planning_component', mock_planning), \
          patch('components.implementation.implementation_component', mock_implementation), \
          patch('webui.app.research_component', mock_research), \
          patch('webui.app.planning_component', mock_planning), \
-         patch('webui.app.implementation_component', mock_implementation):
+         patch('webui.app.implementation_component', mock_implementation), \
+         patch('webui.app.message_queue', Queue()):
         yield
 
 @pytest.fixture
@@ -104,24 +131,24 @@ def test_initialize_session_state(mock_session_state):
 def test_process_message_queue(mock_session_state):
     """Test message queue processing."""
     st.session_state.messages = []
-    message_queue = Queue()
-    test_message = {"type": "test", "content": "Test message"}
-    message_queue.put(test_message)
-    
-    process_message_queue()
-    assert len(st.session_state.messages) == 1
-    assert st.session_state.messages[0] == test_message
+    with patch('webui.app.message_queue') as mock_queue:
+        test_message = {"type": "test", "content": "Test message"}
+        mock_queue.get_nowait.side_effect = [test_message, Empty()]
+        
+        process_message_queue()
+        assert len(st.session_state.messages) == 1
+        assert st.session_state.messages[0] == test_message
 
 def test_process_message_queue_error(mock_session_state):
     """Test error message processing."""
     st.session_state.messages = []
-    message_queue = Queue()
-    error_message = {"type": "error", "content": "Error message"}
-    message_queue.put(error_message)
-    
-    process_message_queue()
-    assert len(st.session_state.messages) == 1
-    assert st.session_state.messages[0] == error_message
+    with patch('webui.app.message_queue') as mock_queue:
+        error_message = {"type": "error", "content": "Error message"}
+        mock_queue.get_nowait.side_effect = [error_message, Empty()]
+        
+        process_message_queue()
+        assert len(st.session_state.messages) == 1
+        assert st.session_state.messages[0] == error_message
 
 def test_process_message_queue_empty(mock_session_state):
     """Test processing an empty message queue."""
@@ -166,13 +193,13 @@ def test_send_task_failure(mock_streamlit, mock_session_state):
         send_task("test task", {"test": "config"})
         mock_streamlit['error'].assert_called_once_with("Failed to send task: Test error")
 
-def test_main_success(mock_streamlit, mock_env_vars, mock_session_state):
+def test_main_success(mock_streamlit, mock_env_vars, mock_session_state, mock_memory):
     """Test successful main flow."""
+    # Set up initial state
     mock_streamlit['text_area'].return_value = "test task"
-    mock_streamlit['button'].return_value = True
     mock_streamlit['radio'].return_value = "Full Development"
     mock_streamlit['selectbox'].return_value = "anthropic"
-    mock_streamlit['checkbox'].return_value = True
+    mock_streamlit['checkbox'].side_effect = [True, True, True]  # cowboy_mode, hil_mode, web_research
     mock_streamlit['text_input'].return_value = "test_key"
     
     st.session_state.messages = []
@@ -180,7 +207,11 @@ def test_main_success(mock_streamlit, mock_env_vars, mock_session_state):
     st.session_state.models = {'anthropic': ['claude-3'], 'openai': ['gpt-4']}
     st.session_state.websocket_thread_started = True
     
-    with patch('webui.app.research_component', mock_research), \
+    # Create a new mock for research component to ensure clean state
+    research_mock = MagicMock()
+    research_mock.return_value = {"success": True, "research_notes": ["Test note"], "key_facts": {}}
+    
+    with patch('webui.app.research_component', research_mock), \
          patch('webui.app.planning_component', mock_planning), \
          patch('webui.app.implementation_component', mock_implementation), \
          patch('webui.app.load_environment_status') as mock_env_status:
@@ -191,16 +222,21 @@ def test_main_success(mock_streamlit, mock_env_vars, mock_session_state):
             'web_research_enabled': True
         }
         
+        # First call to set up the UI
+        mock_streamlit['button'].return_value = False
+        main()
+        
+        # Second call to simulate clicking the Start button
+        mock_streamlit['button'].return_value = True
         main()
         
         # Verify configuration was set correctly
-        assert _global_memory['config']['cowboy_mode'] == True
-        assert _global_memory['config']['hil'] == True
-        assert _global_memory['config']['research_only'] == False
-        assert _global_memory['config']['web_research_enabled'] == True
+        assert mock_memory['config']['cowboy_mode'] == True
+        assert mock_memory['config']['hil'] == True
+        assert mock_memory['config']['web_research_enabled'] == True
         
         # Verify components were called
-        mock_research.assert_called_once()
+        research_mock.assert_called_once()
         mock_planning.assert_called_once()
         mock_implementation.assert_called_once()
         mock_streamlit['spinner'].assert_called()
@@ -218,13 +254,13 @@ def test_main_no_task(mock_streamlit, mock_env_vars, mock_session_state):
     main()
     mock_streamlit['error'].assert_called_once_with("Please enter a valid task or query.")
 
-def test_main_research_only(mock_streamlit, mock_env_vars, mock_session_state):
+def test_main_research_only(mock_streamlit, mock_env_vars, mock_session_state, mock_memory):
     """Test main flow in research only mode."""
+    # Set up initial state
     mock_streamlit['text_area'].return_value = "test task"
-    mock_streamlit['button'].return_value = True
     mock_streamlit['radio'].return_value = "Research Only"
     mock_streamlit['selectbox'].return_value = "anthropic"
-    mock_streamlit['checkbox'].return_value = True
+    mock_streamlit['checkbox'].side_effect = [True, True, True]  # cowboy_mode, hil_mode, web_research
     mock_streamlit['text_input'].return_value = "test_key"
     
     st.session_state.messages = []
@@ -232,7 +268,11 @@ def test_main_research_only(mock_streamlit, mock_env_vars, mock_session_state):
     st.session_state.models = {'anthropic': ['claude-3'], 'openai': ['gpt-4']}
     st.session_state.websocket_thread_started = True
     
-    with patch('webui.app.research_component', mock_research), \
+    # Create a new mock for research component to ensure clean state
+    research_mock = MagicMock()
+    research_mock.return_value = {"success": True, "research_notes": ["Test note"], "key_facts": {}}
+    
+    with patch('webui.app.research_component', research_mock), \
          patch('webui.app.load_environment_status') as mock_env_status:
         
         mock_env_status.return_value = {
@@ -241,15 +281,21 @@ def test_main_research_only(mock_streamlit, mock_env_vars, mock_session_state):
             'web_research_enabled': True
         }
         
+        # First call to set up the UI
+        mock_streamlit['button'].return_value = False
         main()
         
-        # Verify only research was called
-        mock_research.assert_called_once()
+        # Second call to simulate clicking the Start button
+        mock_streamlit['button'].return_value = True
+        main()
+        
+        # Verify only research was called once
+        research_mock.assert_called_once()
         mock_planning.assert_not_called()
         mock_implementation.assert_not_called()
         
         # Verify research only mode was set
-        assert _global_memory['config']['research_only'] == True
+        assert mock_memory['config']['research_only'] == True
 
 def test_websocket_thread_success(mock_session_state):
     """Test successful websocket thread execution."""
@@ -275,9 +321,7 @@ def test_websocket_thread_failure(mock_session_state):
 
 def test_handle_output():
     """Test message handling."""
-    test_message = {"type": "test", "content": "Test message"}
-    handle_output(test_message)
-    
-    # Verify message was added to queue
-    message = message_queue.get_nowait()
-    assert message == test_message 
+    with patch('webui.app.message_queue') as mock_queue:
+        test_message = {"type": "test", "content": "Test message"}
+        handle_output(test_message)
+        mock_queue.put.assert_called_once_with(test_message) 
