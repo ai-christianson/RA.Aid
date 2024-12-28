@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix web research prompt.
 - Simplify planning stage by executing tasks directly.
 - Make research notes available to more agents/tools.
+- Make read_file always output status panel.
 
 ## [0.10.2] - 2024-12-26
 
