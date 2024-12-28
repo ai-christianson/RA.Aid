@@ -32,8 +32,6 @@ def clean_env(monkeypatch):
         "EXPERT_OPENAI_API_BASE",
         "TAVILY_API_KEY",
         "ANTHROPIC_MODEL",
-        "RA_AID_DEFAULT_PROVIDER",
-        "RA_AID_DEFAULT_MODEL"
     ]
     for var in env_vars:
         monkeypatch.delenv(var, raising=False)
@@ -45,57 +43,71 @@ def test_default_anthropic_provider(clean_env, monkeypatch):
     assert args.provider == "anthropic"
     assert args.model == "claude-3-5-sonnet-20241022"
 
-def test_default_provider_from_env(clean_env, monkeypatch):
-    """Test that RA_AID_DEFAULT_PROVIDER is used when set."""
-    monkeypatch.setenv("RA_AID_DEFAULT_PROVIDER", "openai")
-    monkeypatch.setenv("RA_AID_DEFAULT_MODEL", "gpt-4")
-    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
-    args = parse_arguments(["-m", "test message"])
-    assert args.provider == "openai"
-    assert args.model == "gpt-4"
 
-def test_default_model_from_env(clean_env, monkeypatch):
-    """Test that RA_AID_DEFAULT_MODEL is used when set."""
-    monkeypatch.setenv("RA_AID_DEFAULT_PROVIDER", "openai")
-    monkeypatch.setenv("RA_AID_DEFAULT_MODEL", "gpt-4")
-    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
-    args = parse_arguments(["-m", "test message"])
-    assert args.provider == "openai"
-    assert args.model == "gpt-4"
+"""Unit tests for provider and model validation in research-only mode."""
 
-def test_cli_overrides_default_provider(clean_env, monkeypatch):
-    """Test that CLI arguments override environment defaults."""
-    monkeypatch.setenv("RA_AID_DEFAULT_PROVIDER", "openai")
-    monkeypatch.setenv("RA_AID_DEFAULT_MODEL", "gpt-4")
-    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
-    
-    args = parse_arguments(["-m", "test message", "--provider", "anthropic"])
-    assert args.provider == "anthropic"
-    assert args.model == "claude-3-5-sonnet-20241022"
+import pytest
+from dataclasses import dataclass
+from argparse import Namespace
+from ra_aid.env import validate_environment
 
-def test_cli_overrides_default_model(clean_env, monkeypatch):
-    """Test that CLI model argument overrides environment default."""
-    monkeypatch.setenv("RA_AID_DEFAULT_PROVIDER", "openai")
-    monkeypatch.setenv("RA_AID_DEFAULT_MODEL", "gpt-4")
-    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
-    
-    args = parse_arguments(["-m", "test message", "--model", "gpt-3.5-turbo"])
-    assert args.provider == "openai"
-    assert args.model == "gpt-3.5-turbo"
 
-def test_invalid_default_provider(clean_env, monkeypatch):
-    """Test that invalid default provider raises error."""
-    monkeypatch.setenv("RA_AID_DEFAULT_PROVIDER", "invalid")
-    with pytest.raises(SystemExit):
-        parse_arguments(["-m", "test message"])
+@dataclass
+class MockArgs:
+    """Mock command line arguments."""
+    research_only: bool = False
+    provider: str = None
+    model: str = None
+    expert_provider: str = None
 
-def test_research_only_ignores_provider(clean_env, monkeypatch):
-    """Test that --research-only ignores provider validation."""
-    monkeypatch.setenv("RA_AID_DEFAULT_PROVIDER", "openai")
-    monkeypatch.setenv("TAVILY_API_KEY", "test-key")
-    args = parse_arguments(["-m", "test message", "--research-only"])
-    assert args.research_only is True
-    expert_enabled, expert_missing, web_research_enabled, web_research_missing = validate_environment(args)
-    assert web_research_enabled
-    assert not web_research_missing
+
+TEST_CASES = [
+    pytest.param(
+        "research_only_no_provider",
+        MockArgs(research_only=True),
+        {},
+        "No provider specified",
+        id="research_only_no_provider"
+    ),
+    pytest.param(
+        "research_only_anthropic",
+        MockArgs(research_only=True, provider="anthropic"),
+        {},
+        None,
+        id="research_only_anthropic"
+    ),
+    pytest.param(
+        "research_only_non_anthropic_no_model",
+        MockArgs(research_only=True, provider="openai"),
+        {},
+        "Model is required for non-Anthropic providers",
+        id="research_only_non_anthropic_no_model"
+    ),
+    pytest.param(
+        "research_only_non_anthropic_with_model",
+        MockArgs(research_only=True, provider="openai", model="gpt-4"),
+        {},
+        None,
+        id="research_only_non_anthropic_with_model"
+    )
+]
+
+
+@pytest.mark.parametrize("test_name,args,env_vars,expected_error", TEST_CASES)
+def test_research_only_provider_validation(
+    test_name: str,
+    args: MockArgs,
+    env_vars: dict,
+    expected_error: str,
+    monkeypatch
+):
+    """Test provider and model validation in research-only mode."""
+    # Set test environment variables
+    for key, value in env_vars.items():
+        monkeypatch.setenv(key, value)
+
+    if expected_error:
+        with pytest.raises(SystemExit, match=expected_error):
+            validate_environment(args)
+    else:
+        validate_environment(args)

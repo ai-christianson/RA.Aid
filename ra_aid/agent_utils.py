@@ -124,10 +124,8 @@ def run_research_agent(
         web_research_enabled=config.get('web_research_enabled', False)
     )
 
-    # Create agent if model is provided
-    agent = None
-    if model is not None:
-        agent = create_react_agent(model, tools, checkpointer=memory)
+    # Create agent
+    agent = create_react_agent(model, tools, checkpointer=memory)
 
     # Format prompt sections
     expert_section = EXPERT_PROMPT_SECTION_RESEARCH if expert_enabled else ""
@@ -225,22 +223,22 @@ def run_web_research_agent(
     """
     thread_id = thread_id or str(uuid.uuid4())
     logger.debug("Starting web research agent with thread_id=%s", thread_id)
+    logger.debug("Web research configuration: expert=%s, hil=%s, web=%s",
+                expert_enabled, hil, web_research_enabled)
 
     # Initialize memory if not provided
     if memory is None:
         memory = MemorySaver()
 
-    # Configure tools
-    tools = get_web_research_tools(
-        expert_enabled=expert_enabled,
-        human_interaction=hil,
-        web_research_enabled=web_research_enabled
-    )
+    # Set up thread ID
+    if thread_id is None:
+        thread_id = str(uuid.uuid4())
 
-    # Create agent if model is provided
-    agent = None
-    if model is not None:
-        agent = create_react_agent(model, tools, checkpointer=memory)
+    # Configure tools using restricted web research toolset
+    tools = get_web_research_tools(expert_enabled=expert_enabled)
+
+    # Create agent
+    agent = create_react_agent(model, tools, checkpointer=memory)
 
     # Format prompt sections
     expert_section = EXPERT_PROMPT_SECTION_RESEARCH if expert_enabled else ""
@@ -282,26 +280,30 @@ def run_web_research_agent(
             # Just use the web research tools directly
             logger.debug("No model provided, using web research tools directly")
             tavily_tool = next((tool for tool in tools if tool.name == 'web_search_tavily'), None)
-            if tavily_tool:
-                result = tavily_tool.invoke({"query": query})
-                if result:
-                    # Format Tavily results
-                    markdown_result = "# Search Results\n\n"
-                    for item in result.get('results', []):
-                        title = item.get('title', 'Untitled')
-                        url = item.get('url', '')
-                        content = item.get('content', '')
-                        score = item.get('score', 0)
-                        
-                        markdown_result += f"## {title}\n"
-                        markdown_result += f"**Score**: {score:.2f}\n\n"
-                        markdown_result += f"{content}\n\n"
-                        markdown_result += f"[Read more]({url})\n\n"
-                        markdown_result += "---\n\n"
-                    
-                    console.print(Panel(Markdown(markdown_result), title="🔍 Web Research Results"))
-                    return markdown_result
-            return "No web research results found"
+
+            if not tavily_tool:
+                return "No web research results found"
+
+            result = tavily_tool.invoke({"query": query})
+            if not result:
+                return "No web research results found"
+
+            # Format Tavily results
+            markdown_result = "# Search Results\n\n"
+            for item in result.get('results', []):
+                title = item.get('title', 'Untitled')
+                url = item.get('url', '')
+                content = item.get('content', '')
+                score = item.get('score', 0)
+
+                markdown_result += f"## {title}\n"
+                markdown_result += f"**Score**: {score:.2f}\n\n"
+                markdown_result += f"{content}\n\n"
+                markdown_result += f"[Read more]({url})\n\n"
+                markdown_result += "---\n\n"
+
+            console.print(Panel(Markdown(markdown_result), title="🔍 Web Research Results"))
+            return markdown_result
 
     except (KeyboardInterrupt, AgentInterrupt):
         raise

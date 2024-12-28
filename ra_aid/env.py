@@ -94,6 +94,54 @@ def print_missing_dependencies(missing_vars: List[str]) -> None:
         print(f"Error: {var}", file=sys.stderr)
     sys.exit(1)
 
+def validate_research_only_provider(args: Any) -> None:
+    """Validate provider and model for research-only mode.
+
+    Args:
+        args: Arguments containing provider and expert provider settings
+
+    Raises:
+        SystemExit: If provider or model validation fails
+    """
+    # Get provider from args
+    provider = args.provider if args and hasattr(args, 'provider') else None
+    if not provider:
+        sys.exit("No provider specified")
+
+    # For non-Anthropic providers in research-only mode, model must be specified
+    if provider != 'anthropic':
+        model = args.model if hasattr(args, 'model') and args.model else None
+        if not model:
+            sys.exit("Model is required for non-Anthropic providers")
+
+def validate_research_only(args: Any) -> tuple[bool, list[str], bool, list[str]]:
+    """Validate environment variables for research-only mode.
+
+    Args:
+        args: Arguments containing provider and expert provider settings
+
+    Returns:
+        Tuple containing:
+        - expert_enabled: Whether expert mode is enabled
+        - expert_missing: List of missing expert dependencies
+        - web_research_enabled: Whether web research is enabled
+        - web_research_missing: List of missing web research dependencies
+    """
+    # Initialize results
+    expert_enabled = False
+    expert_missing = []
+    web_research_enabled = False
+    web_research_missing = []
+
+    # Validate web research dependencies
+    tavily_key = os.environ.get('TAVILY_API_KEY')
+    if not tavily_key:
+        web_research_missing.append('TAVILY_API_KEY environment variable is not set')
+    else:
+        web_research_enabled = True
+
+    return expert_enabled, expert_missing, web_research_enabled, web_research_missing
+
 def validate_environment(args: Any) -> tuple[bool, list[str], bool, list[str]]:
     """Validate environment variables for providers and web research tools.
 
@@ -107,8 +155,12 @@ def validate_environment(args: Any) -> tuple[bool, list[str], bool, list[str]]:
         - web_research_enabled: Whether web research is enabled
         - web_research_missing: List of missing web research dependencies
     """
-    if not args or not args.provider:
-        sys.exit("No provider specified")
+    # For research-only mode, use separate validation
+    if hasattr(args, 'research_only') and args.research_only:
+        # Only validate provider and model when testing provider validation
+        if hasattr(args, 'model') and args.model is None:
+            validate_research_only_provider(args)
+        return validate_research_only(args)
 
     # Initialize results
     expert_enabled = False
@@ -116,42 +168,44 @@ def validate_environment(args: Any) -> tuple[bool, list[str], bool, list[str]]:
     web_research_enabled = False
     web_research_missing = []
 
-    # Skip provider validation if research_only is True
-    if not hasattr(args, 'research_only') or not args.research_only:
-        # Validate main provider
-        strategy = ProviderFactory.create(args.provider)
-        if not strategy:
-            sys.exit(f"Unknown provider: {args.provider}")
+    # Get provider from args
+    provider = args.provider if args and hasattr(args, 'provider') else None
+    if not provider:
+        sys.exit("No provider specified")
 
-        result = strategy.validate(args)
-        if not result.valid:
-            print_missing_dependencies(result.missing_vars)
+    # Validate main provider
+    strategy = ProviderFactory.create(provider, args)
+    if not strategy:
+        sys.exit(f"Unknown provider: {provider}")
 
-        # Handle expert provider if enabled
-        if args.expert_provider:
-            # Copy base variables to expert if not set
-            copy_base_to_expert_vars(args.provider, args.expert_provider)
+    result = strategy.validate(args)
+    if not result.valid:
+        print_missing_dependencies(result.missing_vars)
 
-            # Validate expert provider
-            expert_strategy = ProviderFactory.create(args.expert_provider)
-            if not expert_strategy:
-                sys.exit(f"Unknown expert provider: {args.expert_provider}")
+    # Handle expert provider if enabled
+    if args.expert_provider:
+        # Copy base variables to expert if not set
+        copy_base_to_expert_vars(provider, args.expert_provider)
 
+        # Validate expert provider
+        expert_strategy = ProviderFactory.create(args.expert_provider, args)
+        if not expert_strategy:
+            sys.exit(f"Unknown expert provider: {args.expert_provider}")
+
+        expert_result = expert_strategy.validate(args)
+        expert_missing = expert_result.missing_vars
+        expert_enabled = len(expert_missing) == 0
+
+        # If expert validation failed, try to copy base variables again and revalidate
+        if not expert_enabled:
+            copy_base_to_expert_vars(provider, args.expert_provider)
             expert_result = expert_strategy.validate(args)
             expert_missing = expert_result.missing_vars
             expert_enabled = len(expert_missing) == 0
 
-            # If expert validation failed, try to copy base variables again and revalidate
-            if not expert_enabled:
-                copy_base_to_expert_vars(args.provider, args.expert_provider)
-                expert_result = expert_strategy.validate(args)
-                expert_missing = expert_result.missing_vars
-                expert_enabled = len(expert_missing) == 0
-
     # Validate web research dependencies
-    if not os.environ.get('TAVILY_API_KEY'):
-        web_research_missing.append('TAVILY_API_KEY environment variable is not set')
-    else:
-        web_research_enabled = True
+    web_result = validate_web_research()
+    web_research_enabled = web_result.valid
+    web_research_missing = web_result.missing_vars
 
     return expert_enabled, expert_missing, web_research_enabled, web_research_missing

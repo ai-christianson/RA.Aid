@@ -62,14 +62,13 @@ Examples:
     parser.add_argument(
         '--provider',
         type=str,
-        default=os.environ.get('RA_AID_DEFAULT_PROVIDER', 'anthropic'),
+        default='anthropic',
         choices=VALID_PROVIDERS,
         help='The LLM provider to use'
     )
     parser.add_argument(
         '--model',
         type=str,
-        default=os.environ.get('RA_AID_DEFAULT_MODEL'),
         help='The model name to use (required for non-Anthropic providers)'
     )
     parser.add_argument(
@@ -155,14 +154,14 @@ def main():
     args = parse_arguments()
     setup_logging(args.verbose)
     logger.debug("Starting RA.Aid with arguments: %s", args)
-    
+
     try:
         expert_enabled, expert_missing, web_research_enabled, web_research_missing = validate_environment(args)  # Will exit if main env vars missing
         logger.debug("Environment validation successful")
-        
+
         if expert_missing:
             console.print(Panel(
-                f"[yellow]Expert tools disabled due to missing configuration:[/yellow]\n" + 
+                f"[yellow]Expert tools disabled due to missing configuration:[/yellow]\n" +
                 "\n".join(f"- {m}" for m in expert_missing) +
                 "\nSet the required environment variables or args to enable expert mode.",
                 title="Expert Tools Disabled",
@@ -171,15 +170,15 @@ def main():
 
         if web_research_missing:
             console.print(Panel(
-                f"[yellow]Web research disabled due to missing configuration:[/yellow]\n" + 
+                f"[yellow]Web research disabled due to missing configuration:[/yellow]\n" +
                 "\n".join(f"- {m}" for m in web_research_missing) +
                 "\nSet the required environment variables to enable web research.",
                 title="Web Research Disabled",
                 style="yellow"
             ))
-        
-        # Create the base model after validation, skip if research_only
-        model = None if args.research_only else initialize_llm(args.provider, args.model)
+
+        # Create the base model after validation
+        model = initialize_llm(args.provider, args.model)
 
         # Handle chat mode
         if args.chat:
@@ -188,7 +187,7 @@ def main():
                 sys.exit(1)
 
             print_stage_header("Chat Mode")
-            
+
             # Get initial request from user
             initial_request = ask_human.invoke({"question": "What would you like help with?"})
 
@@ -198,7 +197,7 @@ def main():
                 get_chat_tools(expert_enabled=expert_enabled, web_research_enabled=web_research_enabled),
                 checkpointer=MemorySaver()
             )
-            
+
             # Run chat agent with CHAT_PROMPT
             config = {
                 "configurable": {"thread_id": uuid.uuid4()},
@@ -209,14 +208,14 @@ def main():
                 "web_research_enabled": web_research_enabled,
                 "initial_request": initial_request
             }
-            
+
             # Store config in global memory
             _global_memory['config'] = config
             _global_memory['config']['provider'] = args.provider
             _global_memory['config']['model'] = args.model
             _global_memory['config']['expert_provider'] = args.expert_provider
             _global_memory['config']['expert_model'] = args.expert_model
-            
+
             # Run chat agent and exit
             run_agent_with_retry(chat_agent, CHAT_PROMPT.format(
                     initial_request=initial_request,
@@ -228,7 +227,7 @@ def main():
         if not args.message:
             print_error("--message is required")
             sys.exit(1)
-            
+
         base_task = args.message
         config = {
             "configurable": {"thread_id": uuid.uuid4()},
@@ -237,21 +236,21 @@ def main():
             "cowboy_mode": args.cowboy_mode,
             "web_research_enabled": web_research_enabled
         }
-    
+
         # Store config in global memory for access by is_informational_query
         _global_memory['config'] = config
-        
+
         # Store model configuration
         _global_memory['config']['provider'] = args.provider
         _global_memory['config']['model'] = args.model
-        
+
         # Store expert provider and model in config
         _global_memory['config']['expert_provider'] = args.expert_provider
         _global_memory['config']['expert_model'] = args.expert_model
-        
+
         # Run research stage
         print_stage_header("Research Stage")
-        
+
         run_research_agent(
             base_task,
             model,
@@ -261,9 +260,9 @@ def main():
             memory=research_memory,
             config=config
         )
-        
-        # Proceed with planning and implementation if not an informational query and not research_only
-        if not args.research_only and not is_informational_query():
+
+        # Proceed with planning and implementation if not an informational query
+        if not is_informational_query():
             # Run planning agent
             run_planning_agent(
                 base_task,
