@@ -29,8 +29,35 @@ app.add_middleware(
 # Store active connections
 active_connections = []
 
-async def handle_task(websocket: WebSocket, task: str, config: dict):
-    """Handle a task request"""
+@app.get("/health")
+async def health_check():
+    """Health check endpoint."""
+    return {"status": "healthy"}
+
+@app.get("/models")
+async def get_models():
+    """Get available models."""
+    try:
+        models = {
+            "openai": ["gpt-4", "gpt-3.5-turbo"],
+            "anthropic": ["claude-2.1", "claude-instant"],
+            "openrouter": ["openai/gpt-4", "anthropic/claude-2.1"]
+        }
+        return models
+    except Exception as e:
+        logger.error(f"Error getting models: {e}")
+        return {"error": str(e)}
+
+async def handle_task(task: str, config: dict) -> dict:
+    """Handle a task request
+    
+    Args:
+        task: The task description
+        config: Configuration dictionary
+        
+    Returns:
+        dict: Response containing task results
+    """
     try:
         # Extract configuration
         provider = config.get("provider", "anthropic")
@@ -52,12 +79,6 @@ async def handle_task(websocket: WebSocket, task: str, config: dict):
             "max_tokens": 4096
         }
         
-        # Send status update
-        await websocket.send_json({
-            "type": "status",
-            "content": "🔍 Starting Research Phase..."
-        })
-        
         try:
             # Call LLM using litellm
             response = completion(**model_params)
@@ -67,55 +88,40 @@ async def handle_task(websocket: WebSocket, task: str, config: dict):
             
             # Format research results
             research_results = {
-                "success": True,
+                "status": "success",
                 "research_notes": [],
-                "key_facts": {}
+                "key_facts": {},
+                "response": result
             }
             
             # Parse response into sections
             sections = result.split('\n\n')
             for section in sections:
                 if section.lower().startswith('research notes:'):
-                    notes = section.replace('Research Notes:', '', flags=re.IGNORECASE).strip().split('\n')
+                    notes = section[len('research notes:'):].strip().split('\n')
                     research_results['research_notes'].extend([note.strip('- ') for note in notes if note.strip()])
                 elif section.lower().startswith('key facts:'):
-                    facts = section.replace('Key Facts:', '', flags=re.IGNORECASE).strip().split('\n')
+                    facts = section[len('key facts:'):].strip().split('\n')
                     for fact in facts:
                         if ':' in fact:
                             key, value = fact.strip('- ').split(':', 1)
                             research_results['key_facts'][key.strip()] = value.strip()
             
-            # Send research results
-            if research_results['research_notes']:
-                await websocket.send_json({
-                    "type": "research",
-                    "content": "### Research Notes\n" + "\n".join([f"- {note}" for note in research_results['research_notes']])
-                })
-                
-            if research_results['key_facts']:
-                await websocket.send_json({
-                    "type": "research",
-                    "content": "### Key Facts\n" + "\n".join([f"- **{key}**: {value}" for key, value in research_results['key_facts'].items()])
-                })
-            
-            await websocket.send_json({
-                "type": "success",
-                "content": "✅ Research completed successfully!"
-            })
+            return research_results
                 
         except Exception as e:
             logger.error(f"Error calling LLM API: {e}")
-            await websocket.send_json({
-                "type": "error",
-                "content": f"Error: {str(e)}"
-            })
+            return {
+                "status": "error",
+                "error": str(e)
+            }
             
     except Exception as e:
         logger.error(f"Error in handle_task: {e}")
-        await websocket.send_json({
-            "type": "error",
-            "content": f"Error: {str(e)}"
-        })
+        return {
+            "status": "error",
+            "error": str(e)
+        }
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -132,11 +138,34 @@ async def websocket_endpoint(websocket: WebSocket):
                 
                 if message.get("type") == "task":
                     # Handle task request
-                    await handle_task(
-                        websocket,
+                    result = await handle_task(
                         message.get("content"),
                         message.get("config", {})
                     )
+                    
+                    # Send results back
+                    if result.get("status") == "success":
+                        if result.get("research_notes"):
+                            await websocket.send_json({
+                                "type": "research",
+                                "content": "### Research Notes\n" + "\n".join([f"- {note}" for note in result["research_notes"]])
+                            })
+                            
+                        if result.get("key_facts"):
+                            await websocket.send_json({
+                                "type": "research",
+                                "content": "### Key Facts\n" + "\n".join([f"- **{key}**: {value}" for key, value in result["key_facts"].items()])
+                            })
+                            
+                        await websocket.send_json({
+                            "type": "success",
+                            "content": "✅ Research completed successfully!"
+                        })
+                    else:
+                        await websocket.send_json({
+                            "type": "error",
+                            "content": result.get("error", "Unknown error")
+                        })
                 else:
                     # Echo other messages back
                     await websocket.send_json({

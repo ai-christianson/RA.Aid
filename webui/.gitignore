@@ -4,7 +4,6 @@ __pycache__/
 *$py.class
 *.so
 .Python
-env/
 build/
 develop-eggs/
 dist/
@@ -16,17 +15,22 @@ lib64/
 parts/
 sdist/
 var/
+wheels/
 *.egg-info/
 .installed.cfg
 *.egg
 
-# Virtual Environment
-venv/
-.env
-
 # Logs
 logs/
 *.log
+ra_aid.log*
+
+# Environment
+.env
+.venv
+env/
+venv/
+ENV/
 
 # IDE
 .idea/
@@ -34,9 +38,11 @@ logs/
 *.swp
 *.swo
 
-# Streamlit
-.streamlit/
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
 
-# System
-.DS_Store
-Thumbs.db 
+# Streamlit
+.streamlit/ 

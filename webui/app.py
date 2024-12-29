@@ -135,7 +135,7 @@ def websocket_thread():
         asyncio.set_event_loop(loop)
         
         ui_logger.info("Attempting WebSocket connection...")
-        connected = loop.run_until_complete(socket_interface.connect_server())
+        connected = loop.run_until_complete(socket_interface.connect())
         st.session_state.connected = connected
         
         if connected:
@@ -834,16 +834,10 @@ async def main():
             # Show model count
             st.caption(f"Available models: {len(available_models)}")
             
-            # Model search box
-            model_search = st.text_input("Search Models", "")
-            
-            # Filter models based on search
-            filtered_models = filter_models(available_models, model_search)
-            
             # Model selection
             model = st.selectbox(
                 "Model",
-                filtered_models,
+                available_models,
                 format_func=lambda x: x.split('/')[-1] if '/' in x else x
             )
             
@@ -910,7 +904,12 @@ async def main():
         if interaction_type == 'conversation':
             st.session_state.execution_stage = "conversation"
             with st.spinner("Processing..."):
-                await handle_task(task, config)
+                response = await handle_conversation(task, config)
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": response,
+                    "type": "text"
+                })
         else:
             if research_only:
                 st.session_state.execution_stage = "research"
