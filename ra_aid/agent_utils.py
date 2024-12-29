@@ -541,7 +541,7 @@ def run_agent_with_retry(agent, prompt: str, config: dict) -> Optional[str]:
                         print_agent_output(chunk)
                         if _global_memory['plan_completed']:
                             _global_memory['plan_completed'] = False
-                            _global_memory['taskd_completed'] = False
+                            _global_memory['task_completed'] = False
                             _global_memory['completion_message'] = ''
                             break
                         if _global_memory['task_completed'] or _global_memory['plan_completed']:
