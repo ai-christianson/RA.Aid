@@ -411,7 +411,7 @@ RA.Aid implements a three-stage architecture for handling development and resear
 1. Clone the repository:
 ```bash
 git clone https://github.com/ai-christianson/RA.Aid.git
-cd ra-aid
+cd RA.Aid
 ```
 
 2. Create and activate a virtual environment:
