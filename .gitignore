@@ -4,7 +4,6 @@ __pycache__/
 *$py.class
 *.so
 .Python
-env/
 build/
 develop-eggs/
 dist/
@@ -16,22 +15,15 @@ lib64/
 parts/
 sdist/
 var/
+wheels/
 *.egg-info/
 .installed.cfg
 *.egg
 
-# Environment variables
-.env
-.env.*
-!.env.template
-
 # Virtual Environment
 venv/
+env/
 ENV/
-
-# Logs
-logs/
-*.log
 
 # IDE
 .idea/
@@ -39,14 +31,21 @@ logs/
 *.swp
 *.swo
 
-# Streamlit
-.streamlit/
+# Logs
+logs/
+*.log
 
-# Coverage
+# Local development
+.env
+.env.local
+.env.*
+
+# Cache
+.cache/
+.pytest_cache/
 .coverage
-coverage.xml
 htmlcov/
 
-# System
+# Misc
 .DS_Store
 Thumbs.db
