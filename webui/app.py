@@ -32,6 +32,7 @@ from openai import OpenAI
 from dotenv import load_dotenv
 import requests
 from typing import Dict, Any
+from litellm import completion
 
 # Load environment variables
 load_dotenv()
@@ -151,7 +152,11 @@ def initialize_session_state():
     - WebSocket thread status
     """
     if 'messages' not in st.session_state:
-        st.session_state.messages = []
+        st.session_state.messages = [{
+            "role": "assistant",
+            "content": "👋 Welcome to RA.Aid! I'm your AI Development Assistant. How can I help you today?",
+            "type": "text"
+        }]
     if 'connected' not in st.session_state:
         st.session_state.connected = False
     if 'models' not in st.session_state:
@@ -679,6 +684,113 @@ def execute_full_pipeline(task: str) -> None:
         else:
             ui_logger.error("Implementation phase failed")
             st.error("Implementation phase failed")
+
+def handle_llm_task(task: str, config: Dict[str, Any]) -> None:
+    """Handle a task using LLM."""
+    try:
+        # Prepare model parameters
+        model_params = {
+            "model": config.get("model", "claude-2.1"),
+            "messages": [{"role": "user", "content": task}],
+            "temperature": 0.7,
+            "max_tokens": 2000
+        }
+        
+        # Call LLM
+        response = completion(**model_params)
+        result = response.choices[0].message.content
+        
+        # Add response to messages
+        st.session_state.messages.append({
+            "role": "assistant",
+            "type": "text",
+            "content": result
+        })
+        
+    except Exception as e:
+        st.session_state.messages.append({
+            "role": "assistant",
+            "type": "error",
+            "content": f"LLM Error: {str(e)}"
+        })
+
+async def handle_task(task: str, config: Dict[str, Any]) -> None:
+    """
+    Handle a task by sending it through the pipeline.
+    
+    Args:
+        task: The task description
+        config: Configuration dictionary
+    """
+    # Add user message to conversation
+    st.session_state.messages.append({
+        "role": "user",
+        "content": task,
+        "type": "text"
+    })
+    
+    try:
+        # Check if this is a shell command
+        if task.startswith("run "):
+            if not config.get("cowboy_mode", False):
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "type": "error",
+                    "content": "Shell commands are only allowed in cowboy mode"
+                })
+                return
+                
+            command = task[4:].strip()  # Remove "run " prefix
+            try:
+                import subprocess
+                result = subprocess.run(
+                    command,
+                    shell=True,
+                    capture_output=True,
+                    text=True,
+                    check=True
+                )
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "type": "success",
+                    "content": result.stdout
+                })
+                return {"success": True}
+            except subprocess.CalledProcessError as e:
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "type": "error",
+                    "content": f"Command failed: {e.stderr}"
+                })
+                return {"success": False, "error": str(e)}
+            
+        # Determine interaction type
+        interaction_type = determine_interaction_type(task)
+        ui_logger.info(f"Determined interaction type: {interaction_type}")
+        
+        if interaction_type == 'conversation':
+            handle_llm_task(task, config)
+            return {"success": True}
+        else:
+            # Execute appropriate pipeline based on interaction type
+            if interaction_type == 'research':
+                ui_logger.info("Starting research pipeline")
+                research_results = research_component(task, config)
+                handle_research_results(research_results)
+            else:
+                ui_logger.info("Starting full development pipeline")
+                execute_full_pipeline(task)
+                
+        return {"success": True}
+    except Exception as e:
+        error_msg = f"Error processing task: {str(e)}"
+        ui_logger.error(error_msg)
+        st.session_state.messages.append({
+            "role": "assistant",
+            "type": "error",
+            "content": error_msg
+        })
+        return {"success": False, "error": error_msg}
 
 def main():
     """
