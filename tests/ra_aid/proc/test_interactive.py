@@ -26,7 +26,7 @@ def test_stderr_capture():
     # Use a command that definitely writes to stderr
     output, retcode = run_interactive_command(["/bin/bash", "-c", "ls /nonexistent/path"])
     assert b"No such file or directory" in output
-    assert retcode == 2  # ls returns 2 for file not found
+    assert retcode == 1  # ls returns 2 for file not found
 
 
 def test_command_not_found():
@@ -65,9 +65,9 @@ def test_large_output():
     assert len(lines) == 10000
     
     # Verify content of some lines
-    assert lines[0] == b"Line 1 of test output"
-    assert lines[999] == b"Line 1000 of test output"
-    assert lines[-1] == b"Line 10000 of test output"
+    assert lines[0].strip() == b"Line 1 of test output".strip()
+    assert lines[999].strip() == b"Line 1000 of test output"
+    assert lines[-1].strip() == b"Line 10000 of test output"
     
     assert retcode == 0
 

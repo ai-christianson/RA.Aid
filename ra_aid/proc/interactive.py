@@ -57,7 +57,7 @@ def run_interactive_command(cmd: List[str]) -> Tuple[bytes, int]:
         os.environ['PAGER'] = ''
         
         # Run command with script for TTY and output capture
-        os.system(f"script -q -c {shlex.quote(shell_cmd)} {shlex.quote(output_path)}")
+        os.system(f"script -q {shlex.quote(output_path)} {shell_cmd}")
 
         # Read and clean the output
         with open(output_path, "rb") as f:

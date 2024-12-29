@@ -7,3 +7,6 @@ __pycache__/
 /dist
 /.ra-aid
 .coverage
+/.venv
+/venv
+/.idea
