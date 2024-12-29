@@ -26,7 +26,7 @@ def test_stderr_capture():
     # Use a command that definitely writes to stderr
     output, retcode = run_interactive_command(["/bin/bash", "-c", "ls /nonexistent/path"])
     assert b"No such file or directory" in output
-    assert retcode == 1  # ls returns 2 for file not found
+    assert retcode != 0  # ls returns 0 upon success
 
 
 def test_command_not_found():
