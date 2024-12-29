@@ -676,8 +676,11 @@ async def handle_llm_task(task: str, config: Dict[str, Any]) -> None:
     """Handle a task using LLM."""
     try:
         # Prepare model parameters
+        # Extract provider and model name from config
+        provider, model_name = config.model.split('/')
+        
         model_params = {
-            "model": config.model,
+            "model": f"{provider}/{model_name}",  # Format as provider/model
             "messages": [{"role": "user", "content": task}],
             "temperature": 0.7,
             "max_tokens": 2000
