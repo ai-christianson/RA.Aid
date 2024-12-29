@@ -619,71 +619,97 @@ def handle_research_results(research_results: Dict[str, Any]) -> None:
 
 def execute_full_pipeline(task: str) -> None:
     """
-    Execute the full development pipeline (research -> planning -> implementation).
+    Execute the full RA.Aid pipeline (research -> planning -> implementation)
+    with proper agent coordination and memory management.
     
     Args:
         task (str): The user's task
     """
-    ui_logger.info("Starting full development pipeline")
+    ui_logger.info("Starting RA.Aid pipeline")
     
-    # 1. Research Phase
-    st.session_state.execution_stage = "research"
-    with st.spinner("Conducting Research..."):
-        research_results = research_component(task, _global_memory['config'])
-        st.session_state.research_results = research_results
+    try:
+        # Initialize memory for this task
+        initialize_memory()
+        _global_memory['current_task'] = task
         
-        if not research_results.get("success"):
-            handle_research_results(research_results)
-            return
+        # 1. Research Phase
+        st.session_state.execution_stage = "research"
+        with st.spinner("🔍 Conducting Research..."):
+            research_results = run_research_agent(
+                task,
+                initialize_llm(_global_memory['config']["provider"], _global_memory['config']["model"]),
+                expert_enabled=True,
+                research_only=_global_memory['config']["research_only"],
+                hil=_global_memory['config']["hil"],
+                web_research_enabled=_global_memory['config'].get("web_research_enabled", False),
+                config=_global_memory['config']
+            )
             
-        # Store research results
-        _global_memory['research_notes'] = research_results.get('research_notes', [])
-        _global_memory['key_facts'] = research_results.get('key_facts', {})
-    
-    # 2. Planning Phase
-    ui_logger.info("Starting planning phase")
-    st.session_state.execution_stage = "planning"
-    with st.spinner("Planning Implementation..."):
-        planning_results = planning_component(task, _global_memory['config'])
-        st.session_state.planning_results = planning_results
-        
-        # Display planning results
-        if planning_results.get('plan'):
-            st.write("Implementation Plan:")
-            st.write(planning_results['plan'])
-        if planning_results.get('tasks'):
-            st.write("Planned Tasks:")
-            for planned_task in planning_results['tasks']:
-                st.write(f"- {planned_task}")
+            if not research_results:
+                raise ValueError("Research agent returned no results")
                 
-        if not planning_results.get("success"):
-            ui_logger.error("Planning phase failed")
-            st.error("Planning phase failed")
-            return
-    
-    # 3. Implementation Phase
-    ui_logger.info("Starting implementation phase")
-    st.session_state.execution_stage = "implementation"
-    with st.spinner("Implementing Changes..."):
-        implementation_results = implementation_component(
-            task,
-            st.session_state.research_results,
-            st.session_state.planning_results,
-            _global_memory['config']
-        )
+            # Store research results in memory
+            _global_memory['research_results'] = research_results
+            st.session_state.messages.append({
+                "role": "assistant",
+                "type": "research",
+                "content": "Research completed successfully"
+            })
         
-        # Display implementation results
-        if implementation_results.get('implemented_tasks'):
-            st.write("Completed Tasks:")
-            for implemented_task in implementation_results['implemented_tasks']:
-                st.write(f"- {implemented_task}")
+        # 2. Planning Phase  
+        st.session_state.execution_stage = "planning"
+        with st.spinner("📋 Planning Implementation..."):
+            planning_results = run_planning_agent(
+                task,
+                initialize_llm(_global_memory['config']["provider"], _global_memory['config']["model"]),
+                expert_enabled=True,
+                hil=_global_memory['config']["hil"],
+                config=_global_memory['config']
+            )
+            
+            if not planning_results:
+                raise ValueError("Planning agent returned no results")
                 
-        if implementation_results.get('success'):
-            ui_logger.info("Implementation completed successfully")
-            st.success("Implementation completed successfully!")
-        else:
-            ui_logger.error("Implementation phase failed")
-            st.error("Implementation phase failed")
+            # Store planning results in memory
+            _global_memory['planning_results'] = planning_results
+            st.session_state.messages.append({
+                "role": "assistant",
+                "type": "plan",
+                "content": "Implementation plan created"
+            })
+        
+        # 3. Implementation Phase
+        st.session_state.execution_stage = "implementation"
+        with st.spinner("⚙️ Implementing Changes..."):
+            implementation_results = run_task_implementation_agent(
+                task,
+                planning_results.get('tasks', []),
+                task,
+                planning_results.get('plan', ''),
+                _global_memory.get('related_files', []),
+                initialize_llm(_global_memory['config']["provider"], _global_memory['config']["model"]),
+                expert_enabled=True,
+                web_research_enabled=_global_memory['config'].get("web_research_enabled", False)
+            )
+            
+            if not implementation_results:
+                raise ValueError("Implementation agent returned no results")
+                
+            # Store implementation results in memory
+            _global_memory['implementation_results'] = implementation_results
+            st.session_state.messages.append({
+                "role": "assistant",
+                "type": "success",
+                "content": "Implementation completed successfully"
+            })
+            
+    except Exception as e:
+        ui_logger.error(f"Pipeline error: {str(e)}")
+        st.session_state.messages.append({
+            "role": "assistant",
+            "type": "error",
+            "content": f"Pipeline error: {str(e)}"
+        })
 
 def handle_llm_task(task: str, config: Dict[str, Any]) -> None:
     """Handle a task using LLM."""
