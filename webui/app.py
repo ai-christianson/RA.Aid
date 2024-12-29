@@ -551,8 +551,11 @@ def determine_interaction_type(task: str) -> str:
 async def handle_conversation(task: str, config: Dict[str, Any]) -> str:
     """Handle a conversation task by calling the LLM."""
     try:
+        # Extract provider and model name from config
+        provider, model_name = config.model.split('/')
+            
         response = completion(
-            model=config.model,  # Access as attribute
+            model=f"{provider}/{model_name}",  # Format as provider/model
             messages=[{"role": "user", "content": task}],
             temperature=0.7,
             max_tokens=2000
