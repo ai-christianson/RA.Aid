@@ -507,6 +507,179 @@ def research_component(task: str, config: Dict[str, Any]) -> Dict[str, Any]:
         })
         return {"success": False, "error": str(e)}
 
+def determine_interaction_type(task: str) -> str:
+    """
+    Determine the type of interaction based on the task content.
+    
+    Args:
+        task (str): The user's input task/message
+        
+    Returns:
+        str: The type of interaction ('conversation', 'research', 'implementation')
+    """
+    # Simple conversation patterns
+    conversation_patterns = [
+        'hi', 'hello', 'hey', 'thanks', 'thank you', 'bye', 'goodbye',
+        'how are you', 'nice to meet you', 'good morning', 'good afternoon',
+        'good evening', 'what can you do', 'help'
+    ]
+    
+    task_lower = task.lower().strip()
+    
+    # Check for conversation patterns
+    if any(pattern in task_lower for pattern in conversation_patterns):
+        return 'conversation'
+    
+    # Check for research indicators
+    research_indicators = [
+        'what', 'how', 'why', 'when', 'where', 'who',
+        'explain', 'describe', 'tell me about', 'find',
+        'search', 'look up', 'research', 'investigate'
+    ]
+    if any(indicator in task_lower for indicator in research_indicators):
+        return 'research'
+        
+    # Default to implementation for other tasks
+    return 'implementation'
+
+def handle_conversation(task: str) -> None:
+    """
+    Handle simple conversation interactions.
+    
+    Args:
+        task (str): The user's message
+    """
+    ui_logger.info("Handling conversation interaction")
+    
+    # Add user message
+    st.session_state.messages.append({
+        "role": "user",
+        "content": task,
+        "type": "text"
+    })
+    
+    # Generate appropriate response
+    task_lower = task.lower().strip()
+    if any(greeting in task_lower for greeting in ['hi', 'hello', 'hey']):
+        response = "Hello! How can I help you today?"
+    elif 'thank' in task_lower:
+        response = "You're welcome! Let me know if you need anything else."
+    elif any(goodbye in task_lower for goodbye in ['bye', 'goodbye']):
+        response = "Goodbye! Have a great day!"
+    elif 'how are you' in task_lower:
+        response = "I'm functioning well and ready to assist you! What would you like to work on?"
+    elif any(help_req in task_lower for help_req in ['help', 'what can you do']):
+        response = """I can help you with various tasks:
+- Research and analyze codebases
+- Implement new features
+- Debug issues
+- Answer questions about code
+- And much more!
+
+Just let me know what you'd like to work on."""
+    else:
+        response = "I'm here to help! What would you like to work on?"
+    
+    # Add assistant response
+    st.session_state.messages.append({
+        "role": "assistant",
+        "content": response,
+        "type": "text"
+    })
+
+def handle_research_results(research_results: Dict[str, Any]) -> None:
+    """
+    Handle the results from the research phase.
+    
+    Args:
+        research_results (Dict[str, Any]): Results from research component
+    """
+    ui_logger.info("Processing research results")
+    
+    if not research_results.get("success"):
+        error_msg = research_results.get("error", "Research failed")
+        ui_logger.error(f"Research failed: {error_msg}")
+        _global_memory['error'] = error_msg
+        st.error(error_msg)
+        return
+        
+    # Store research results in memory
+    _global_memory['research_notes'] = research_results.get('research_notes', [])
+    _global_memory['key_facts'] = research_results.get('key_facts', {})
+    
+    # Display success message for research-only mode
+    if _global_memory['config']['research_only']:
+        ui_logger.info("Research completed successfully")
+        st.success("Research completed successfully!")
+
+def execute_full_pipeline(task: str) -> None:
+    """
+    Execute the full development pipeline (research -> planning -> implementation).
+    
+    Args:
+        task (str): The user's task
+    """
+    ui_logger.info("Starting full development pipeline")
+    
+    # 1. Research Phase
+    st.session_state.execution_stage = "research"
+    with st.spinner("Conducting Research..."):
+        research_results = research_component(task, _global_memory['config'])
+        st.session_state.research_results = research_results
+        
+        if not research_results.get("success"):
+            handle_research_results(research_results)
+            return
+            
+        # Store research results
+        _global_memory['research_notes'] = research_results.get('research_notes', [])
+        _global_memory['key_facts'] = research_results.get('key_facts', {})
+    
+    # 2. Planning Phase
+    ui_logger.info("Starting planning phase")
+    st.session_state.execution_stage = "planning"
+    with st.spinner("Planning Implementation..."):
+        planning_results = planning_component(task, _global_memory['config'])
+        st.session_state.planning_results = planning_results
+        
+        # Display planning results
+        if planning_results.get('plan'):
+            st.write("Implementation Plan:")
+            st.write(planning_results['plan'])
+        if planning_results.get('tasks'):
+            st.write("Planned Tasks:")
+            for planned_task in planning_results['tasks']:
+                st.write(f"- {planned_task}")
+                
+        if not planning_results.get("success"):
+            ui_logger.error("Planning phase failed")
+            st.error("Planning phase failed")
+            return
+    
+    # 3. Implementation Phase
+    ui_logger.info("Starting implementation phase")
+    st.session_state.execution_stage = "implementation"
+    with st.spinner("Implementing Changes..."):
+        implementation_results = implementation_component(
+            task,
+            st.session_state.research_results,
+            st.session_state.planning_results,
+            _global_memory['config']
+        )
+        
+        # Display implementation results
+        if implementation_results.get('implemented_tasks'):
+            st.write("Completed Tasks:")
+            for implemented_task in implementation_results['implemented_tasks']:
+                st.write(f"- {implemented_task}")
+                
+        if implementation_results.get('success'):
+            ui_logger.info("Implementation completed successfully")
+            st.success("Implementation completed successfully!")
+        else:
+            ui_logger.error("Implementation phase failed")
+            st.error("Implementation phase failed")
+
 def main():
     """
     Main application function that sets up and runs the Streamlit interface.
@@ -662,90 +835,42 @@ def main():
         if not task.strip():
             st.error("Please enter a valid task or query.")
             return
-
-        # Add user message to conversation
-        st.session_state.messages.append({
-            "role": "user",
-            "content": task,
-            "type": "text"
-        })
-        
-        # Update global memory with current configuration
-        _global_memory['config'] = {
-            "provider": provider,
-            "model": model,
-            "research_only": mode == "Research Only",
-            "cowboy_mode": cowboy_mode,
-            "hil": hil_mode,
-            "web_research_enabled": web_research
-        }
-
-        # Execute Task Pipeline
-        # 1. Research Phase
-        st.session_state.execution_stage = "research"
-        logger.info("Starting research phase...")
-        with st.spinner("Conducting Research..."):
-            research_results = research_component(task, _global_memory['config'])
-            st.session_state.research_results = research_results
-            logger.info(f"Research results: {research_results}")
             
-            # Store error in memory if research fails
-            if not research_results.get("success"):
-                _global_memory['error'] = research_results.get("error", "Research failed")
-                st.error(_global_memory['error'])
-            else:
-                # Store research results in memory
-                _global_memory['research_notes'] = research_results.get('research_notes', [])
-                _global_memory['key_facts'] = research_results.get('key_facts', {})
-                if _global_memory['config']['research_only']:
-                    st.success("Research completed successfully!")
-
-        # 2. Planning Phase (if not research-only mode)
-        logger.info(f"Mode: {'Research Only' if _global_memory['config']['research_only'] else 'Full Development'}, Research success: {research_results.get('success')}")
-        if not _global_memory['config']['research_only'] and research_results.get("success"):
-            logger.info("Starting planning phase...")
-            st.session_state.execution_stage = "planning"
-            with st.spinner("Planning Implementation..."):
-                planning_results = planning_component(task, _global_memory['config'])
-                st.session_state.planning_results = planning_results
-                logger.info(f"Planning results: {planning_results}")
-                
-                # Display planning results
-                if planning_results.get('plan'):
-                    st.write("Implementation Plan:")
-                    st.write(planning_results['plan'])
-                if planning_results.get('tasks'):
-                    st.write("Planned Tasks:")
-                    for task in planning_results['tasks']:
-                        st.write(f"- {task}")
-
-            # 3. Implementation Phase
-            if planning_results.get("success"):
-                logger.info("Starting implementation phase...")
-                st.info("Starting implementation phase...")
-                st.session_state.execution_stage = "implementation"
-                with st.spinner("Implementing Changes..."):
-                    implementation_results = implementation_component(
-                        task,
-                        st.session_state.research_results,
-                        st.session_state.planning_results,
-                        _global_memory['config']
-                    )
-                    logger.info(f"Implementation results: {implementation_results}")
-                    
-                    # Display implementation results
-                    if implementation_results.get('implemented_tasks'):
-                        st.write("Completed Tasks:")
-                        for task in implementation_results['implemented_tasks']:
-                            st.write(f"- {task}")
-                    if implementation_results.get('success'):
-                        st.success("Implementation completed successfully!")
+        # Determine interaction type
+        interaction_type = determine_interaction_type(task)
+        ui_logger.info(f"Determined interaction type: {interaction_type}")
+        
+        if interaction_type == 'conversation':
+            handle_conversation(task)
         else:
-            logger.info("Skipping planning phase - research-only mode or research failed")
-            if _global_memory['config']['research_only']:
-                st.info("Skipping planning phase - Research Only mode")
+            # Add user message to conversation
+            st.session_state.messages.append({
+                "role": "user",
+                "content": task,
+                "type": "text"
+            })
+            
+            # Update global memory with current configuration
+            _global_memory['config'] = {
+                "provider": provider,
+                "model": model,
+                "research_only": mode == "Research Only" or interaction_type == 'research',
+                "cowboy_mode": cowboy_mode,
+                "hil": hil_mode,
+                "web_research_enabled": web_research
+            }
+            
+            # Execute appropriate pipeline based on interaction type
+            if interaction_type == 'research':
+                ui_logger.info("Starting research pipeline")
+                st.session_state.execution_stage = "research"
+                with st.spinner("Conducting Research..."):
+                    research_results = research_component(task, _global_memory['config'])
+                    handle_research_results(research_results)
             else:
-                st.warning("Skipping planning phase - Research failed")
+                ui_logger.info("Starting full development pipeline")
+                # Execute full pipeline (research -> planning -> implementation)
+                execute_full_pipeline(task)
     
     # Process and Display Messages
     process_message_queue()
