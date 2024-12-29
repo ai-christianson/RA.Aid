@@ -15,6 +15,7 @@ import threading
 from queue import Queue, Empty
 import logging
 import sys
+import subprocess
 from datetime import datetime
 from webui.socket_interface import SocketInterface
 from components.memory import initialize_memory, _global_memory
@@ -404,13 +405,13 @@ def send_task(task: str, config: dict):
     else:
         st.error("Not connected to server")
 
-def research_component(task: str, config: Dict[str, Any]) -> Dict[str, Any]:
+async def research_component(task: str, config: Dict[str, Any]) -> Dict[str, Any]:
     """Handle the research stage of RA.Aid."""
     try:
         ui_logger.info("Starting research phase")
         
         # Validate required config fields
-        required_fields = ["provider", "model", "research_only", "hil"]
+        required_fields = ["provider", "model"]
         for field in required_fields:
             if field not in config:
                 raise ValueError(f"Missing required configuration field: {field}")
@@ -427,13 +428,13 @@ def research_component(task: str, config: Dict[str, Any]) -> Dict[str, Any]:
         })
         
         ui_logger.info("Running research agent")
-        raw_results = run_research_agent(
+        raw_results = await run_research_agent(
             task,
             model,
             expert_enabled=True,
-            research_only=config["research_only"],
-            hil=config["hil"],
-            web_research_enabled=config.get("web_research_enabled", False),
+            research_only=getattr(config, "research_only", True),
+            hil=getattr(config, "hil", False),
+            web_research_enabled=getattr(config, "web_research_enabled", False),
             config=config
         )
         
@@ -498,229 +499,182 @@ def research_component(task: str, config: Dict[str, Any]) -> Dict[str, Any]:
         })
         
         return results
-
-    except ValueError as e:
-        ui_logger.error(f"Research Configuration Error: {str(e)}")
-        st.session_state.messages.append({
-            "role": "assistant",
-            "type": "error",
-            "content": f"Research Configuration Error: {str(e)}"
-        })
-        return {"success": False, "error": str(e)}
     except Exception as e:
         ui_logger.error(f"Research Error: {str(e)}")
         st.session_state.messages.append({
             "role": "assistant",
             "type": "error",
-            "content": f"Research Error: {str(e)}"
+            "content": f"Research failed: {str(e)}"
         })
-        return {"success": False, "error": str(e)}
+        raise
 
 def determine_interaction_type(task: str) -> str:
     """
-    Determine the type of interaction based on the task content.
+    Determine the type of interaction based on the task description.
     
     Args:
-        task (str): The user's input task/message
+        task (str): The task description
         
     Returns:
-        str: The type of interaction ('conversation', 'research', 'implementation')
+        str: The interaction type ('research', 'development', 'conversation', or 'shell')
     """
-    # Simple conversation patterns
-    conversation_patterns = [
-        'hi', 'hello', 'hey', 'thanks', 'thank you', 'bye', 'goodbye',
-        'how are you', 'nice to meet you', 'good morning', 'good afternoon',
-        'good evening', 'what can you do', 'help'
+    # Check for shell command first
+    if task.startswith("run "):
+        return "shell"
+    
+    # Keywords that indicate research tasks
+    research_keywords = [
+        'research', 'find', 'search', 'look up', 'investigate',
+        'analyze', 'study', 'explore', 'learn about', 'understand'
     ]
     
-    task_lower = task.lower().strip()
-    
-    # Check for conversation patterns
-    if any(pattern in task_lower for pattern in conversation_patterns):
-        return 'conversation'
-    
-    # Check for research indicators
-    research_indicators = [
-        'what', 'how', 'why', 'when', 'where', 'who',
-        'explain', 'describe', 'tell me about', 'find',
-        'search', 'look up', 'research', 'investigate'
+    # Keywords that indicate development tasks
+    development_keywords = [
+        'create', 'build', 'implement', 'develop', 'make',
+        'code', 'program', 'write', 'add', 'update', 'modify',
+        'fix', 'debug', 'change', 'refactor'
     ]
-    if any(indicator in task_lower for indicator in research_indicators):
+    
+    task_lower = task.lower()
+    
+    # Check for research keywords
+    if any(keyword in task_lower for keyword in research_keywords):
         return 'research'
-        
-    # Default to implementation for other tasks
-    return 'implementation'
+    
+    # Check for development keywords
+    if any(keyword in task_lower for keyword in development_keywords):
+        return 'development'
+    
+    # Default to conversation
+    return 'conversation'
 
-def handle_conversation(task: str) -> None:
-    """
-    Handle simple conversation interactions.
-    
-    Args:
-        task (str): The user's message
-    """
-    ui_logger.info("Handling conversation interaction")
-    
-    # Add user message
-    st.session_state.messages.append({
-        "role": "user",
-        "content": task,
-        "type": "text"
-    })
-    
-    # Generate appropriate response
-    task_lower = task.lower().strip()
-    if any(greeting in task_lower for greeting in ['hi', 'hello', 'hey']):
-        response = "Hello! How can I help you today?"
-    elif 'thank' in task_lower:
-        response = "You're welcome! Let me know if you need anything else."
-    elif any(goodbye in task_lower for goodbye in ['bye', 'goodbye']):
-        response = "Goodbye! Have a great day!"
-    elif 'how are you' in task_lower:
-        response = "I'm functioning well and ready to assist you! What would you like to work on?"
-    elif any(help_req in task_lower for help_req in ['help', 'what can you do']):
-        response = """I can help you with various tasks:
-- Research and analyze codebases
-- Implement new features
-- Debug issues
-- Answer questions about code
-- And much more!
-
-Just let me know what you'd like to work on."""
-    else:
-        response = "I'm here to help! What would you like to work on?"
-    
-    # Add assistant response
-    st.session_state.messages.append({
-        "role": "assistant",
-        "content": response,
-        "type": "text"
-    })
-
-def handle_research_results(research_results: Dict[str, Any]) -> None:
-    """
-    Handle the results from the research phase.
-    
-    Args:
-        research_results (Dict[str, Any]): Results from research component
-    """
-    ui_logger.info("Processing research results")
-    
-    if not research_results.get("success"):
-        error_msg = research_results.get("error", "Research failed")
-        ui_logger.error(f"Research failed: {error_msg}")
-        _global_memory['error'] = error_msg
-        st.error(error_msg)
-        return
-        
-    # Store research results in memory
-    _global_memory['research_notes'] = research_results.get('research_notes', [])
-    _global_memory['key_facts'] = research_results.get('key_facts', {})
-    
-    # Display success message for research-only mode
-    if _global_memory['config']['research_only']:
-        ui_logger.info("Research completed successfully")
-        st.success("Research completed successfully!")
-
-def execute_full_pipeline(task: str) -> None:
-    """
-    Execute the full RA.Aid pipeline (research -> planning -> implementation)
-    with proper agent coordination and memory management.
-    
-    Args:
-        task (str): The user's task
-    """
-    ui_logger.info("Starting RA.Aid pipeline")
-    
+async def handle_conversation(task: str, config: Dict[str, Any]) -> str:
+    """Handle a conversation task by calling the LLM."""
     try:
-        # Initialize memory for this task
-        initialize_memory()
-        _global_memory['current_task'] = task
-        
-        # 1. Research Phase
-        st.session_state.execution_stage = "research"
-        with st.spinner("🔍 Conducting Research..."):
-            research_results = run_research_agent(
-                task,
-                initialize_llm(_global_memory['config']["provider"], _global_memory['config']["model"]),
-                expert_enabled=True,
-                research_only=_global_memory['config']["research_only"],
-                hil=_global_memory['config']["hil"],
-                web_research_enabled=_global_memory['config'].get("web_research_enabled", False),
-                config=_global_memory['config']
-            )
-            
-            if not research_results:
-                raise ValueError("Research agent returned no results")
-                
-            # Store research results in memory
-            _global_memory['research_results'] = research_results
-            st.session_state.messages.append({
-                "role": "assistant",
-                "type": "research",
-                "content": "Research completed successfully"
-            })
-        
-        # 2. Planning Phase  
-        st.session_state.execution_stage = "planning"
-        with st.spinner("📋 Planning Implementation..."):
-            planning_results = run_planning_agent(
-                task,
-                initialize_llm(_global_memory['config']["provider"], _global_memory['config']["model"]),
-                expert_enabled=True,
-                hil=_global_memory['config']["hil"],
-                config=_global_memory['config']
-            )
-            
-            if not planning_results:
-                raise ValueError("Planning agent returned no results")
-                
-            # Store planning results in memory
-            _global_memory['planning_results'] = planning_results
-            st.session_state.messages.append({
-                "role": "assistant",
-                "type": "plan",
-                "content": "Implementation plan created"
-            })
-        
-        # 3. Implementation Phase
-        st.session_state.execution_stage = "implementation"
-        with st.spinner("⚙️ Implementing Changes..."):
-            implementation_results = run_task_implementation_agent(
-                task,
-                planning_results.get('tasks', []),
-                task,
-                planning_results.get('plan', ''),
-                _global_memory.get('related_files', []),
-                initialize_llm(_global_memory['config']["provider"], _global_memory['config']["model"]),
-                expert_enabled=True,
-                web_research_enabled=_global_memory['config'].get("web_research_enabled", False)
-            )
-            
-            if not implementation_results:
-                raise ValueError("Implementation agent returned no results")
-                
-            # Store implementation results in memory
-            _global_memory['implementation_results'] = implementation_results
-            st.session_state.messages.append({
-                "role": "assistant",
-                "type": "success",
-                "content": "Implementation completed successfully"
-            })
-            
+        response = completion(
+            model=config.model,  # Access as attribute
+            messages=[{"role": "user", "content": task}],
+            temperature=0.7,
+            max_tokens=2000
+        )
+        return response.choices[0].message.content
     except Exception as e:
-        ui_logger.error(f"Pipeline error: {str(e)}")
+        error_message = f"LLM Error: {str(e)}"
+        ui_logger.error(error_message)
+        raise Exception(error_message)
+
+async def handle_research_results(results: Dict[str, Any]) -> None:
+    """Handle the results from the research phase."""
+    if results.get("success"):
         st.session_state.messages.append({
             "role": "assistant",
-            "type": "error",
-            "content": f"Pipeline error: {str(e)}"
+            "content": results.get("findings", "Research completed successfully"),
+            "type": "text"
         })
+    else:
+        error_message = f"Research failed: {results.get('error', 'Unknown error')}"
+        ui_logger.error(error_message)
+        st.session_state.messages.append({
+            "role": "assistant",
+            "content": error_message,
+            "type": "error"
+        })
+        raise Exception(error_message)
 
-def handle_llm_task(task: str, config: Dict[str, Any]) -> None:
+async def handle_planning_results(results: Dict[str, Any]) -> None:
+    """Handle the results from the planning phase."""
+    if results.get("success"):
+        st.session_state.messages.append({
+            "role": "assistant",
+            "content": results.get("plan", "Planning completed successfully"),
+            "type": "text"
+        })
+    else:
+        error_message = f"Planning failed: {results.get('error', 'Unknown error')}"
+        ui_logger.error(error_message)
+        st.session_state.messages.append({
+            "role": "assistant",
+            "content": error_message,
+            "type": "error"
+        })
+        raise Exception(error_message)
+
+async def handle_implementation_results(results: Dict[str, Any]) -> None:
+    """Handle the results from the implementation phase."""
+    if results.get("success"):
+        st.session_state.messages.append({
+            "role": "assistant",
+            "content": results.get("result", "Implementation completed successfully"),
+            "type": "text"
+        })
+    else:
+        error_message = f"Implementation failed: {results.get('error', 'Unknown error')}"
+        ui_logger.error(error_message)
+        st.session_state.messages.append({
+            "role": "assistant",
+            "content": error_message,
+            "type": "error"
+        })
+        raise Exception(error_message)
+
+async def execute_full_pipeline(task: str, config: Dict[str, Any]) -> None:
+    """
+    Execute the full development pipeline (Research -> Planning -> Implementation).
+    
+    Args:
+        task (str): The task description
+        config (Dict[str, Any]): Configuration for the task
+    """
+    try:
+        ui_logger.info("Starting full development pipeline")
+        
+        # Research phase
+        st.session_state.execution_stage = "research"
+        with st.spinner("Conducting Research..."):
+            research_results = await research_component(task, config)
+            await handle_research_results(research_results)
+        
+        # Planning phase
+        st.session_state.execution_stage = "planning"
+        with st.spinner("Planning Implementation..."):
+            planning_results = await planning_component(task, research_results, config)
+            await handle_planning_results(planning_results)
+        
+        # Implementation phase
+        st.session_state.execution_stage = "implementation"
+        with st.spinner("Implementing Solution..."):
+            implementation_results = await implementation_component(task, planning_results, config)
+            await handle_implementation_results(implementation_results)
+        
+        # Update WebSocket if connected
+        if hasattr(socket_interface, 'connected') and socket_interface.connected:
+            await socket_interface.send({
+                "type": "pipeline_complete",
+                "content": "Pipeline execution completed successfully"
+            })
+        
+        st.session_state.messages.append({
+            "role": "assistant",
+            "content": "Pipeline execution completed successfully",
+            "type": "success"
+        })
+        
+    except Exception as e:
+        error_message = f"Pipeline error: {str(e)}"
+        ui_logger.error(error_message)
+        st.session_state.messages.append({
+            "role": "assistant",
+            "content": error_message,
+            "type": "error"
+        })
+        raise
+
+async def handle_llm_task(task: str, config: Dict[str, Any]) -> None:
     """Handle a task using LLM."""
     try:
         # Prepare model parameters
         model_params = {
-            "model": config.get("model", "claude-2.1"),
+            "model": config.model,
             "messages": [{"role": "user", "content": task}],
             "temperature": 0.7,
             "max_tokens": 2000
@@ -737,21 +691,27 @@ def handle_llm_task(task: str, config: Dict[str, Any]) -> None:
             "content": result
         })
         
+        return {"success": True, "response": result}
+        
     except Exception as e:
         st.session_state.messages.append({
             "role": "assistant",
             "type": "error",
             "content": f"LLM Error: {str(e)}"
         })
+        return {"success": False, "error": str(e)}
 
 async def handle_task(task: str, config: Dict[str, Any]) -> None:
     """
-    Handle a task by sending it through the pipeline.
+    Handle a task from the user. This can be either a shell command or an LLM interaction.
     
     Args:
-        task: The task description
-        config: Configuration dictionary
+        task (str): The task to handle
+        config (Dict[str, Any]): Configuration for the task
     """
+    # Initialize session state if needed
+    initialize_session_state()
+    
     # Add user message to conversation
     st.session_state.messages.append({
         "role": "user",
@@ -760,69 +720,42 @@ async def handle_task(task: str, config: Dict[str, Any]) -> None:
     })
     
     try:
-        # Check if this is a shell command
-        if task.startswith("run "):
-            if not config.get("cowboy_mode", False):
-                st.session_state.messages.append({
-                    "role": "assistant",
-                    "type": "error",
-                    "content": "Shell commands are only allowed in cowboy mode"
-                })
-                return
-                
-            command = task[4:].strip()  # Remove "run " prefix
-            try:
-                import subprocess
-                result = subprocess.run(
-                    command,
-                    shell=True,
-                    capture_output=True,
-                    text=True,
-                    check=True
-                )
-                st.session_state.messages.append({
-                    "role": "assistant",
-                    "type": "success",
-                    "content": result.stdout
-                })
-                return {"success": True}
-            except subprocess.CalledProcessError as e:
-                st.session_state.messages.append({
-                    "role": "assistant",
-                    "type": "error",
-                    "content": f"Command failed: {e.stderr}"
-                })
-                return {"success": False, "error": str(e)}
-            
-        # Determine interaction type
         interaction_type = determine_interaction_type(task)
-        ui_logger.info(f"Determined interaction type: {interaction_type}")
         
-        if interaction_type == 'conversation':
-            handle_llm_task(task, config)
-            return {"success": True}
+        if interaction_type == "shell":
+            # Handle shell command
+            command = task[4:]  # Remove "run " prefix
+            result = subprocess.run(
+                command,
+                shell=True,
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": result.stdout,
+                "type": "text"
+            })
+        elif interaction_type == "conversation":
+            response = await handle_conversation(task, config)
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": response,
+                "type": "text"
+            })
         else:
-            # Execute appropriate pipeline based on interaction type
-            if interaction_type == 'research':
-                ui_logger.info("Starting research pipeline")
-                research_results = research_component(task, config)
-                handle_research_results(research_results)
-            else:
-                ui_logger.info("Starting full development pipeline")
-                execute_full_pipeline(task)
-                
-        return {"success": True}
+            await execute_full_pipeline(task, config)
     except Exception as e:
-        error_msg = f"Error processing task: {str(e)}"
-        ui_logger.error(error_msg)
+        error_message = f"Error processing task: {str(e)}"
+        ui_logger.error(error_message)
         st.session_state.messages.append({
             "role": "assistant",
-            "type": "error",
-            "content": error_msg
+            "content": error_message,
+            "type": "error"
         })
-        return {"success": False, "error": error_msg}
 
-def main():
+async def main():
     """
     Main application function that sets up and runs the Streamlit interface.
     
@@ -895,128 +828,104 @@ def main():
             # Show model count
             st.caption(f"Available models: {len(available_models)}")
             
-            # Group models by sub-provider (for OpenRouter and similar cases)
-            def group_models(models):
-                grouped = {}
-                for model in models:
-                    provider_name = model.split('/')[0]
-                    if provider_name not in grouped:
-                        grouped[provider_name] = []
-                    grouped[provider_name].append(model)
-                return grouped
+            # Model search box
+            model_search = st.text_input("Search Models", "")
             
-            # Get grouped models if needed
-            if provider == 'openrouter':
-                grouped_models = group_models(available_models)
-                # Flatten but keep grouping order
-                model_list = []
-                for provider_name in sorted(grouped_models.keys()):
-                    model_list.extend(sorted(grouped_models[provider_name], reverse=True))
-                available_models = model_list
-            else:
-                available_models = sorted(available_models, reverse=True)
+            # Filter models based on search
+            filtered_models = filter_models(available_models, model_search)
             
-            # Integrated search and select with model grouping display
+            # Model selection
             model = st.selectbox(
-                "Select a model",
-                available_models,
-                index=0 if available_models else None,
-                format_func=lambda x: x.split('/')[-1] if '/' in x else x,  # Show only model name in dropdown
-                placeholder="Start typing to search models...",
-                help="Type to quickly filter models"
+                "Model",
+                filtered_models,
+                format_func=lambda x: x.split('/')[-1] if '/' in x else x
             )
             
-            # Show model info if selected
             if model:
-                # Show provider/model hierarchy
-                provider_name, model_name = model.split('/') if '/' in model else (provider, model)
-                st.caption(f"Provider: {provider_name}")
-                
-                model_info = {
-                    "openai/gpt-4-turbo": "Latest GPT-4 model with improved performance",
-                    "openai/gpt-4": "Most capable GPT-4 model",
-                    "anthropic/claude-3-opus": "Most capable Claude model",
-                    "anthropic/claude-3-sonnet": "Balanced Claude model",
-                    "google/gemini-pro": "Google's latest language model",
-                    "meta-llama/llama-2-70b-chat": "Meta's largest open LLM",
-                    "mistral/mixtral-8x7b": "Mistral's mixture of experts model"
-                }
-                if model in model_info:
-                    st.caption(f"Description: {model_info[model]}")
-                else:
-                    st.caption(f"Model: {model_name}")
-        else:
-            model = ""
-
-        # Feature Toggles
+                st.session_state.selected_model = model
+                st.session_state.selected_provider = provider
+        
+        # Feature toggles
         st.subheader("Features")
-        cowboy_mode = st.checkbox("Cowboy Mode", help="Skip interactive approval for shell commands")
-        hil_mode = st.checkbox("Human-in-the-Loop", help="Enable human interaction during execution")
-        web_research = st.checkbox("Enable Web Research")
+        research_only = st.toggle("Research Only Mode", value=True)
+        cowboy_mode = st.toggle("Cowboy Mode", value=False)
+        hil = st.toggle("Human-in-the-Loop", value=False)
+        web_research = st.toggle("Enable Web Research", value=False)
+        
+        # Create config object
+        config = WebUIConfig(
+            provider=provider,
+            model=model,
+            research_only=research_only,
+            cowboy_mode=cowboy_mode,
+            hil=hil,
+            web_research_enabled=web_research
+        )
+        
+        # Store config in memory
+        _global_memory['config'] = config
+        
+        # Display current configuration
+        with st.expander("Current Configuration"):
+            st.code(str(config))
     
-    # Display WebSocket Connection Status
-    if st.session_state.connected:
-        st.sidebar.success("Connected to server")
-    else:
-        st.sidebar.warning("Not connected to server")
-
-    # Initialize WebSocket Connection
+    # Start WebSocket thread if not already started
     if not st.session_state.websocket_thread_started:
+        ui_logger.info("Starting WebSocket thread")
         thread = threading.Thread(target=websocket_thread, daemon=True)
         thread.start()
         st.session_state.websocket_thread_started = True
-
-    # Display conversation history
-    st.markdown("### Conversation")
+    
+    # Process any pending messages
+    process_message_queue()
+    
+    # Display Messages
     render_messages()
     
-    # Task Input and Execution Section
-    task = st.text_area("Enter your task or query:", height=150)
+    # Task Input
+    task = st.text_area("Enter your task or question:", height=100)
     
-    if st.button("Start"):
-        if not task.strip():
-            st.error("Please enter a valid task or query.")
+    if st.button("Submit", type="primary"):
+        if not task:
+            st.warning("Please enter a task or question")
             return
             
+        if not provider or not model:
+            st.error("Please select a provider and model")
+            return
+            
+        ui_logger.info(f"Processing task: {task}")
+        
         # Determine interaction type
         interaction_type = determine_interaction_type(task)
         ui_logger.info(f"Determined interaction type: {interaction_type}")
         
+        # Execute task based on interaction type
         if interaction_type == 'conversation':
-            handle_conversation(task)
+            st.session_state.execution_stage = "conversation"
+            with st.spinner("Processing..."):
+                await handle_task(task, config)
         else:
-            # Add user message to conversation
-            st.session_state.messages.append({
-                "role": "user",
-                "content": task,
-                "type": "text"
-            })
-            
-            # Update global memory with current configuration
-            _global_memory['config'] = {
-                "provider": provider,
-                "model": model,
-                "research_only": mode == "Research Only" or interaction_type == 'research',
-                "cowboy_mode": cowboy_mode,
-                "hil": hil_mode,
-                "web_research_enabled": web_research
-            }
-            
-            # Execute appropriate pipeline based on interaction type
-            if interaction_type == 'research':
-                ui_logger.info("Starting research pipeline")
+            if research_only:
                 st.session_state.execution_stage = "research"
                 with st.spinner("Conducting Research..."):
-                    research_results = research_component(task, _global_memory['config'])
-                    handle_research_results(research_results)
+                    research_results = await research_component(task, _global_memory['config'])
+                    await handle_research_results(research_results)
             else:
                 ui_logger.info("Starting full development pipeline")
                 # Execute full pipeline (research -> planning -> implementation)
-                execute_full_pipeline(task)
+                await execute_full_pipeline(task)
     
     # Process and Display Messages
     process_message_queue()
     render_messages()
 
 if __name__ == "__main__":
-    main()
+    import asyncio
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        ui_logger.info("Application terminated by user")
+    except Exception as e:
+        ui_logger.error(f"Application error: {str(e)}")
+        raise
