@@ -83,7 +83,11 @@ class CiaynAgent:
         if last_result is not None:
             base_prompt += f"\n<last result>{last_result}</last result>"
             
-        base_prompt += f"""
+        # Add available functions section
+        functions_list = "\n\n".join(self.available_functions)
+        
+        # Build the complete prompt without f-strings for the static parts
+        base_prompt += """
 
 <agent instructions>
 You are a ReAct agent. You run in a loop and use ONE of the available functions per iteration.
@@ -101,8 +105,7 @@ You typically don't want to keep calling the same function over and over with th
 
 You must ONLY use ONE of the following functions (these are the ONLY functions that exist):
 
-<available functions>
-{"\n\n".join(self.available_functions)}
+<available functions>""" + functions_list + """
 </available functions>
 
 You may use ANY of the above functions to complete your job. Use the best one for the current step you are on. Be efficient, avoid getting stuck in repetitive loops, and do not hesitate to call functions which delegate your work to make your life easier.
