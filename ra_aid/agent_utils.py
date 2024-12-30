@@ -11,7 +11,12 @@ import time
 from typing import Optional
 
 from langgraph.prebuilt import create_react_agent
+from ra_aid.agents.ciayn_agent import CiaynAgent
+from ra_aid.agents.ciayn_agent import CiaynAgent
 from ra_aid.console.formatting import print_stage_header, print_error
+from langchain_core.language_models import BaseChatModel
+from langchain_core.tools import tool
+from typing import List, Any
 from ra_aid.console.output import print_agent_output
 from ra_aid.logging_config import get_logger
 from ra_aid.exceptions import AgentInterrupt
@@ -41,7 +46,6 @@ from ra_aid.prompts import (
 from langgraph.checkpoint.memory import MemorySaver
 
 from langchain_core.messages import HumanMessage
-from langchain_core.messages import BaseMessage
 from anthropic import APIError, APITimeoutError, RateLimitError, InternalServerError
 from rich.console import Console
 from rich.markdown import Markdown
@@ -64,6 +68,46 @@ from ra_aid.prompts import (
 console = Console()
 
 logger = get_logger(__name__)
+
+@tool
+def output_markdown_message(message: str) -> str:
+    """Outputs a message to the user, optionally prompting for input."""
+    console.print(Panel(Markdown(message.strip()), title="🤖 Assistant"))
+    return "Message output."
+
+def create_agent(
+    model: BaseChatModel,
+    tools: List[Any],
+    *,
+    checkpointer: Any = None
+) -> Any:
+    """Create a react agent with the given configuration.
+    
+    Args:
+        model: The LLM model to use
+        tools: List of tools to provide to the agent
+        checkpointer: Optional memory checkpointer
+        
+    Returns:
+        The created agent instance
+    """
+    try:
+        # Get model name if available
+        provider = _global_memory.get('config', {}).get('provider')
+        model_name = _global_memory.get('config', {}).get('model')
+        
+        # Use REACT agent for Anthropic Claude models, otherwise use CIAYN
+        if provider == 'anthropic' and 'claude' in model_name:
+            logger.debug("Using create_react_agent to instantiate agent.")
+            return create_react_agent(model, tools, checkpointer=checkpointer)
+        else:
+            logger.debug("Using CiaynAgent agent instance.")
+            return CiaynAgent(model, tools)
+            
+    except Exception as e:
+        # Default to REACT agent if provider/model detection fails
+        logger.warning(f"Failed to detect model type: {e}. Defaulting to REACT agent.")
+        return create_react_agent(model, tools, checkpointer=checkpointer)
 
 def run_research_agent(
     base_task_or_query: str,
@@ -125,7 +169,7 @@ def run_research_agent(
     )
 
     # Create agent
-    agent = create_react_agent(model, tools, checkpointer=memory)
+    agent = create_agent(model, tools, checkpointer=memory)
 
     # Format prompt sections
     expert_section = EXPERT_PROMPT_SECTION_RESEARCH if expert_enabled else ""
@@ -162,9 +206,24 @@ def run_research_agent(
         if console_message:
             console.print(Panel(Markdown(console_message), title="🔬 Looking into it..."))
 
-        # Run agent with retry logic
-        logger.debug("Research agent completed successfully")
-        return run_agent_with_retry(agent, prompt, run_config)
+        # Run agent with retry logic if available
+        if agent is not None:
+            logger.debug("Research agent completed successfully")
+            return run_agent_with_retry(agent, prompt, run_config)
+        else:
+            # Just run web research tools directly if no agent
+            logger.debug("No model provided, running web research tools directly")
+            return run_web_research_agent(
+                base_task_or_query,
+                model=None,
+                expert_enabled=expert_enabled,
+                hil=hil,
+                web_research_enabled=web_research_enabled,
+                memory=memory,
+                config=config,
+                thread_id=thread_id,
+                console_message=console_message
+            )
     except (KeyboardInterrupt, AgentInterrupt):
         raise
     except Exception as e:
@@ -223,7 +282,7 @@ def run_web_research_agent(
     tools = get_web_research_tools(expert_enabled=expert_enabled)
 
     # Create agent
-    agent = create_react_agent(model, tools, checkpointer=memory)
+    agent = create_agent(model, tools, checkpointer=memory)
 
     # Format prompt sections
     expert_section = EXPERT_PROMPT_SECTION_RESEARCH if expert_enabled else ""
@@ -255,11 +314,11 @@ def run_web_research_agent(
     try:
         # Display console message if provided
         if console_message:
-            console.print(Panel(Markdown(console_message), title="🔍 Starting Web Research..."))
+            console.print(Panel(Markdown(console_message), title="🔬 Researching..."))
 
-        # Run agent with retry logic
         logger.debug("Web research agent completed successfully")
         return run_agent_with_retry(agent, prompt, run_config)
+
     except (KeyboardInterrupt, AgentInterrupt):
         raise
     except Exception as e:
@@ -306,7 +365,7 @@ def run_planning_agent(
     tools = get_planning_tools(expert_enabled=expert_enabled, web_research_enabled=config.get('web_research_enabled', False))
 
     # Create agent
-    agent = create_react_agent(model, tools, checkpointer=memory)
+    agent = create_agent(model, tools, checkpointer=memory)
 
     # Format prompt sections
     expert_section = EXPERT_PROMPT_SECTION_PLANNING if expert_enabled else ""
@@ -393,7 +452,7 @@ def run_task_implementation_agent(
     tools = get_implementation_tools(expert_enabled=expert_enabled, web_research_enabled=config.get('web_research_enabled', False))
 
     # Create agent
-    agent = create_react_agent(model, tools, checkpointer=memory)
+    agent = create_agent(model, tools, checkpointer=memory)
 
     # Build prompt
     prompt = IMPLEMENTATION_PROMPT.format(
@@ -422,6 +481,8 @@ def run_task_implementation_agent(
     try:
         logger.debug("Implementation agent completed successfully")
         return run_agent_with_retry(agent, prompt, run_config)
+    except (KeyboardInterrupt, AgentInterrupt):
+        raise
     except Exception as e:
         logger.error("Implementation agent failed: %s", str(e), exc_info=True)
         raise
@@ -478,7 +539,16 @@ def run_agent_with_retry(agent, prompt: str, config: dict) -> Optional[str]:
                         logger.debug("Agent output: %s", chunk)
                         check_interrupt()
                         print_agent_output(chunk)
-                        logger.debug("Agent run completed successfully")
+                        if _global_memory['plan_completed']:
+                            _global_memory['plan_completed'] = False
+                            _global_memory['task_completed'] = False
+                            _global_memory['completion_message'] = ''
+                            break
+                        if _global_memory['task_completed'] or _global_memory['plan_completed']:
+                            _global_memory['task_completed'] = False
+                            _global_memory['completion_message'] = ''
+                            break
+                    logger.debug("Agent run completed successfully")
                     return "Agent run completed successfully"
                 except (KeyboardInterrupt, AgentInterrupt):
                     raise

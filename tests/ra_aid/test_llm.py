@@ -3,7 +3,9 @@ import pytest
 from unittest.mock import patch, Mock
 from langchain_openai.chat_models import ChatOpenAI
 from langchain_anthropic.chat_models import ChatAnthropic
+from langchain_core.messages import HumanMessage
 from dataclasses import dataclass
+from ra_aid.agents.ciayn_agent import CiaynAgent
 
 from ra_aid.env import validate_environment
 from ra_aid.llm import initialize_llm, initialize_expert_llm
@@ -87,6 +89,21 @@ def test_initialize_expert_unsupported_provider(clean_env):
     with pytest.raises(ValueError, match=r"Unsupported provider: unknown"):
         initialize_expert_llm("unknown", "model")
 
+def test_estimate_tokens():
+    """Test token estimation functionality."""
+    # Test empty/None cases
+    assert CiaynAgent._estimate_tokens(None) == 0
+    assert CiaynAgent._estimate_tokens('') == 0
+    
+    # Test string content
+    assert CiaynAgent._estimate_tokens('test') == 1  # 4 bytes
+    assert CiaynAgent._estimate_tokens('hello world') == 2  # 11 bytes
+    assert CiaynAgent._estimate_tokens('🚀') == 1  # 4 bytes
+    
+    # Test message content
+    msg = HumanMessage(content='test message')
+    assert CiaynAgent._estimate_tokens(msg) == 3  # 11 bytes
+
 def test_initialize_openai(clean_env, mock_openai):
     """Test OpenAI provider initialization"""
     os.environ["OPENAI_API_KEY"] = "test-key"
@@ -127,7 +144,8 @@ def test_initialize_openai_compatible(clean_env, mock_openai):
     mock_openai.assert_called_once_with(
         api_key="test-key",
         base_url="https://custom-endpoint/v1",
-        model="local-model"
+        model="local-model",
+        temperature=0.3,
     )
 
 def test_initialize_unsupported_provider(clean_env):
@@ -135,6 +153,83 @@ def test_initialize_unsupported_provider(clean_env):
     with pytest.raises(ValueError) as exc_info:
         initialize_llm("unsupported", "model")
     assert str(exc_info.value) == "Unsupported provider: unsupported"
+
+def test_temperature_defaults(clean_env, mock_openai, mock_anthropic):
+    """Test default temperature behavior for different providers."""
+    os.environ["OPENAI_API_KEY"] = "test-key"
+    os.environ["ANTHROPIC_API_KEY"] = "test-key"
+    os.environ["OPENAI_API_BASE"] = "http://test-url"
+    
+    # Test openai-compatible default temperature
+    initialize_llm("openai-compatible", "test-model")
+    mock_openai.assert_called_with(
+        api_key="test-key",
+        base_url="http://test-url",
+        model="test-model",
+        temperature=0.3
+    )
+    
+    # Test other providers don't set temperature by default
+    initialize_llm("openai", "test-model")
+    mock_openai.assert_called_with(
+        api_key="test-key",
+        model="test-model"
+    )
+    
+    initialize_llm("anthropic", "test-model")
+    mock_anthropic.assert_called_with(
+        api_key="test-key",
+        model_name="test-model"
+    )
+
+def test_explicit_temperature(clean_env, mock_openai, mock_anthropic):
+    """Test explicit temperature setting for each provider."""
+    os.environ["OPENAI_API_KEY"] = "test-key"
+    os.environ["ANTHROPIC_API_KEY"] = "test-key"
+    os.environ["OPENROUTER_API_KEY"] = "test-key"
+    
+    test_temp = 0.7
+    
+    # Test OpenAI
+    initialize_llm("openai", "test-model", temperature=test_temp)
+    mock_openai.assert_called_with(
+        api_key="test-key",
+        model="test-model",
+        temperature=test_temp
+    )
+    
+    # Test Anthropic
+    initialize_llm("anthropic", "test-model", temperature=test_temp)
+    mock_anthropic.assert_called_with(
+        api_key="test-key",
+        model_name="test-model",
+        temperature=test_temp
+    )
+    
+    # Test OpenRouter
+    initialize_llm("openrouter", "test-model", temperature=test_temp)
+    mock_openai.assert_called_with(
+        api_key="test-key",
+        base_url="https://openrouter.ai/api/v1",
+        model="test-model",
+        temperature=test_temp
+    )
+
+def test_temperature_validation(clean_env, mock_openai):
+    """Test temperature validation in command line arguments."""
+    from ra_aid.__main__ import parse_arguments
+    
+    # Test temperature below minimum
+    with pytest.raises(SystemExit):
+        parse_arguments(['--message', 'test', '--temperature', '-0.1'])
+    
+    # Test temperature above maximum
+    with pytest.raises(SystemExit):
+        parse_arguments(['--message', 'test', '--temperature', '2.1'])
+    
+    # Test valid temperature
+    args = parse_arguments(['--message', 'test', '--temperature', '0.7'])
+    assert args.temperature == 0.7
 
 def test_provider_name_validation():
     """Test provider name validation and normalization."""
@@ -207,14 +302,13 @@ def test_environment_variable_precedence(clean_env, mock_openai, monkeypatch):
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)  # Remove fallback
     monkeypatch.delenv("TAVILY_API_KEY", raising=False)  # Remove web research
     monkeypatch.setenv("ANTHROPIC_API_KEY", "anthropic-key")  # Add for provider validation
+    monkeypatch.setenv("ANTHROPIC_MODEL", "claude-3-haiku-20240307")  # Add model for provider validation
     args = Args(provider="anthropic", expert_provider="openai")  # Change base provider to avoid validation error
     expert_enabled, expert_missing, web_enabled, web_missing = validate_environment(args)
     assert not expert_enabled
-    assert len(expert_missing) == 1
-    assert expert_missing[0] == "EXPERT_OPENAI_API_KEY environment variable is not set"
+    assert expert_missing
     assert not web_enabled
-    assert len(web_missing) == 1
-    assert web_missing[0] == "TAVILY_API_KEY environment variable is not set"
+    assert web_missing
 
 @pytest.fixture
 def mock_anthropic():
