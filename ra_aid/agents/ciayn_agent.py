@@ -80,7 +80,6 @@ class CiaynAgent:
     def _build_prompt(self, last_result: Optional[str] = None) -> str:
         """Build the prompt for the agent including available tools and context."""
         base_prompt = ""
-        available_functions_str = "\n\n".join(self.available_functions)
         if last_result is not None:
             base_prompt += f"\n<last result>{last_result}</last result>"
             
