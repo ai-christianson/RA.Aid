@@ -80,6 +80,7 @@ class CiaynAgent:
     def _build_prompt(self, last_result: Optional[str] = None) -> str:
         """Build the prompt for the agent including available tools and context."""
         base_prompt = ""
+        available_functions_str = "\n\n".join(self.available_functions)
         if last_result is not None:
             base_prompt += f"\n<last result>{last_result}</last result>"
             
@@ -102,7 +103,7 @@ You typically don't want to keep calling the same function over and over with th
 You must ONLY use ONE of the following functions (these are the ONLY functions that exist):
 
 <available functions>
-{" ".join(self.available_functions)}
+{available_functions_str}
 </available functions>
 
 You may use ANY of the above functions to complete your job. Use the best one for the current step you are on. Be efficient, avoid getting stuck in repetitive loops, and do not hesitate to call functions which delegate your work to make your life easier.
