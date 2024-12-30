@@ -83,7 +83,7 @@ class CiaynAgent:
         if last_result is not None:
             base_prompt += f"\n<last result>{last_result}</last result>"
             
-        base_prompt += f"""
+        base_prompt += """
 
 <agent instructions>
 You are a ReAct agent. You run in a loop and use ONE of the available functions per iteration.
