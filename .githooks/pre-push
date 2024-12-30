@@ -1,0 +1,12 @@
+#!/bin/bash
+
+echo "Running tests before push..."
+make test
+RESULT=$?
+
+if [ $RESULT -ne 0 ]; then
+    echo "Tests failed. Push aborted."
+    exit 1
+fi
+
+exit 0
