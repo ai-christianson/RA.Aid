@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Script to generate predictions for SWE-bench Lite (princeton-nlp/SWE-bench_Lite).
 This version uses 'uv venv' and 'uv pip' / 'uv run ra-aid' commands to manage everything in the environment.
@@ -8,6 +7,7 @@ It:
 - For each instance, clones (or reuses) the repo at the specified commit
 - Creates or reuses a dedicated Python virtual environment via `uv venv`
 - Installs `ra-aid` in editable mode + any project dependencies via `uv pip`
+- Also installs the cloned project itself in editable mode if it appears to be a Python package
 - Calls `uv run ra-aid` to generate a patch
 - Writes out predictions in JSON format
 
@@ -172,36 +172,46 @@ def setup_venv_and_deps(repo_dir: Path, repo_name: str, force_venv: bool) -> Non
     """
     - uv venv .venv --python=xxx (optional)
     - uv pip install --upgrade pip
+    - uv pip install --upgrade setuptools wheel  (so pkg_resources etc. are available)
     - uv pip install -e <ra-aid local path>
     - If pyproject.toml -> uv pip install .
     - If requirements.txt -> uv pip install -r requirements.txt
     - If requirements-dev.txt -> uv pip install -r requirements-dev.txt
+    - If there's a setup.py or pyproject => uv pip install -e .
     """
     uv_venv(repo_dir, repo_name, force_venv)
 
-    # Now uv pip install ...
     # 1) upgrade pip
     uv_pip_install(repo_dir, ["--upgrade", "pip"])
 
-    # 2) install ra-aid from local path
+    # 2) ensure setuptools & wheel are installed/up to date
+    uv_pip_install(repo_dir, ["--upgrade", "setuptools", "wheel"])
+
+    # 3) install ra-aid from local path
     script_dir = Path(__file__).resolve().parent
     ra_aid_root = script_dir.parent  # one level up from scripts
     uv_pip_install(repo_dir, ["-e", str(ra_aid_root)])
 
-    # 3) optional pyproject
+    # 4) optional pyproject
     pyproject_path = repo_dir / "pyproject.toml"
     if pyproject_path.is_file():
         uv_pip_install(repo_dir, ["."])
 
-    # 4) optional requirements.txt
+    # 5) optional requirements.txt
     req_file = repo_dir / "requirements.txt"
     if req_file.is_file():
         uv_pip_install(repo_dir, ["-r", "requirements.txt"])
 
-    # 5) optional requirements-dev.txt
+    # 6) optional requirements-dev.txt
     req_dev_file = repo_dir / "requirements-dev.txt"
     if req_dev_file.is_file():
         uv_pip_install(repo_dir, ["-r", "requirements-dev.txt"])
+
+    # 7) install the cloned project in editable mode if it's a Python package
+    setup_path = repo_dir / "setup.py"
+    if pyproject_path.is_file() or setup_path.is_file():
+        logging.info("Installing cloned project in editable mode.")
+        uv_pip_install(repo_dir, ["-e", "."])
 
 
 def build_prompt(problem_statement: str, fail_tests: List[str], pass_tests: List[str]) -> str:
@@ -217,7 +227,7 @@ def build_prompt(problem_statement: str, fail_tests: List[str], pass_tests: List
         for t in pass_tests:
             prompt += f"- {t}\n"
         prompt += "```\n\n"
-    prompt += "\n\nYou must run all relevant tests both before and after making changes, and ensure they pass as you do your work."
+    prompt += "\n\nYou must run all above tests both **before and after** making changes, and ensure they pass as you do your work. Do not write any new test cases."
     return prompt
 
 
