@@ -71,7 +71,7 @@ Examples:
     parser.add_argument(
         '--model',
         type=str,
-        help='The model name to use (required for non-Anthropic providers)'
+        help='The model name to use'
     )
     parser.add_argument(
         '--cowboy-mode',
@@ -123,10 +123,10 @@ Examples:
     # Validate provider
     if parsed_args.provider not in VALID_PROVIDERS:
         parser.error(f"Invalid provider: {parsed_args.provider}")
+    # Handle model defaults and requirements
 
     if parsed_args.provider == "openai":
         parsed_args.model = parsed_args.model or OPENAI_DEFAULT_MODEL
-    # Handle model defaults and requirements
     if parsed_args.provider == 'anthropic':
         # Always use default model for Anthropic
         parsed_args.model = ANTHROPIC_DEFAULT_MODEL
