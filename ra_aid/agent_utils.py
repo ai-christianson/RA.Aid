@@ -123,7 +123,7 @@ def check_interrupt():
     if _CONTEXT_STACK and _INTERRUPT_CONTEXT is _CONTEXT_STACK[-1]:
         raise AgentInterrupt("Interrupt requested")
 
-def run_agent_with_retry(agent, prompt: str, config: dict) -> Optional[str]:
+async def run_agent_with_retry(agent, prompt: str, config: dict) -> Optional[str]:
     """Run an agent with retry logic for API errors."""
     logger.debug("Running agent with prompt length: %d", len(prompt))
     original_handler = None
@@ -134,6 +134,7 @@ def run_agent_with_retry(agent, prompt: str, config: dict) -> Optional[str]:
     max_retries = 20
     base_delay = 1
     response_content = None
+    last_chunk = None
 
     with InterruptibleSection():
         try:
@@ -145,15 +146,23 @@ def run_agent_with_retry(agent, prompt: str, config: dict) -> Optional[str]:
                 logger.debug("Attempt %d/%d", attempt + 1, max_retries)
                 check_interrupt()
                 try:
-                    for chunk in agent.stream({"messages": [HumanMessage(content=prompt)]}, config):
+                    async for chunk in agent.stream({"messages": [HumanMessage(content=prompt)]}, config):
                         check_interrupt()
                         # Only print non-empty chunks
                         if chunk:
                             logger.debug("Agent output: %s", chunk)
-                            print_agent_output(chunk)
+                            await print_agent_output(chunk)
+                            last_chunk = chunk
                             # Store response content for conversations
                             if "content" in chunk:
                                 response_content = chunk["content"]
+                            elif "tools" in chunk and "messages" in chunk["tools"]:
+                                # Store tool execution response
+                                for msg in chunk["tools"]["messages"]:
+                                    if isinstance(msg, dict) and msg.get("content"):
+                                        response_content = msg["content"]
+                                    elif hasattr(msg, "content") and msg.content:
+                                        response_content = msg.content
                         
                         # Check for completion flags
                         if any(flag in _global_memory and _global_memory[flag] 
@@ -162,7 +171,7 @@ def run_agent_with_retry(agent, prompt: str, config: dict) -> Optional[str]:
                             _global_memory['plan_completed'] = False
                             _global_memory['task_completed'] = False
                             _global_memory['completion_message'] = ''
-                            return "Agent run completed successfully"
+                            return response_content if response_content else "Agent run completed successfully"
                             
                     logger.debug("Agent run completed successfully")
                     # Return response content for conversations, otherwise success message
@@ -182,7 +191,7 @@ def run_agent_with_retry(agent, prompt: str, config: dict) -> Optional[str]:
                     start = time.monotonic()
                     while time.monotonic() - start < delay:
                         check_interrupt()
-                        time.sleep(0.1)
+                        await asyncio.sleep(0.1)
         finally:
             # Reset depth tracking
             _global_memory['agent_depth'] = _global_memory.get('agent_depth', 1) - 1
@@ -190,7 +199,7 @@ def run_agent_with_retry(agent, prompt: str, config: dict) -> Optional[str]:
             if original_handler and threading.current_thread() is threading.main_thread():
                 signal.signal(signal.SIGINT, original_handler)
 
-def run_research_agent(
+async def run_research_agent(
     base_task_or_query: str,
     model,
     *,
@@ -269,11 +278,12 @@ def run_research_agent(
         # Run agent with retry logic if available
         if agent is not None:
             logger.debug("Research agent completed successfully")
-            return run_agent_with_retry(agent, prompt, run_config)
+            result = await run_agent_with_retry(agent, prompt, run_config)
+            return result
         else:
             # Just run web research tools directly if no agent
             logger.debug("No model provided, running web research tools directly")
-            return run_web_research_agent(
+            return await run_web_research_agent(
                 base_task_or_query,
                 model=None,
                 expert_enabled=expert_enabled,
