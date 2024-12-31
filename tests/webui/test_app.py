@@ -1,7 +1,7 @@
 import pytest
 import streamlit as st
-from unittest.mock import MagicMock, patch
-from webui.app import main, initialize_session_state, get_configured_providers, load_available_models, filter_models
+from unittest.mock import MagicMock, patch, Mock
+from webui.app import main, initialize_session_state, get_configured_providers, load_available_models, filter_models, handle_conversation, WebUIConfig
 from components.memory import _global_memory
 
 @pytest.fixture
@@ -48,6 +48,14 @@ def mock_memory():
     """Mock global memory"""
     _global_memory.clear()
     return _global_memory
+
+@pytest.fixture
+def mock_config():
+    """Create a mock WebUI configuration."""
+    config = Mock(spec=WebUIConfig)
+    config.temperature = 0.7
+    config.max_tokens = 2000
+    return config
 
 def test_initialize_session_state(mock_session_state):
     """Test session state initialization"""
@@ -258,3 +266,59 @@ def test_main_no_providers(mock_streamlit, mock_session_state):
     
     main()
     mock_streamlit['error'].assert_called_once_with("No API providers configured. Please check your .env file.") 
+
+@pytest.mark.asyncio
+async def test_handle_conversation_with_provider_prefix(mock_config):
+    """Test conversation handling with provider/model format."""
+    mock_config.model = "anthropic/claude-3"
+    mock_config.provider = "anthropic"
+    
+    with patch('webui.app.create_model') as mock_create_model, \
+         patch('webui.app.run_conversation_agent') as mock_run_agent:
+        mock_run_agent.return_value = "Test response"
+        
+        result = await handle_conversation("Test task", mock_config)
+        
+        assert result == "Test response"
+        mock_create_model.assert_called_once_with(
+            provider="anthropic",
+            model_name="claude-3",
+            temperature=0.7,
+            max_tokens=2000
+        )
+
+@pytest.mark.asyncio
+async def test_handle_conversation_without_provider_prefix(mock_config):
+    """Test conversation handling with model name only."""
+    mock_config.model = "claude-3"
+    mock_config.provider = "anthropic"
+    
+    with patch('webui.app.create_model') as mock_create_model, \
+         patch('webui.app.run_conversation_agent') as mock_run_agent:
+        mock_run_agent.return_value = "Test response"
+        
+        result = await handle_conversation("Test task", mock_config)
+        
+        assert result == "Test response"
+        mock_create_model.assert_called_once_with(
+            provider="anthropic",
+            model_name="claude-3",
+            temperature=0.7,
+            max_tokens=2000
+        )
+
+@pytest.mark.asyncio
+async def test_handle_conversation_error_handling(mock_config):
+    """Test error handling in conversation handler."""
+    mock_config.model = "claude-3"
+    mock_config.provider = "anthropic"
+    
+    with patch('webui.app.create_model') as mock_create_model, \
+         patch('webui.app.logger') as mock_logger:
+        mock_create_model.side_effect = Exception("Test error")
+        
+        with pytest.raises(Exception) as exc_info:
+            await handle_conversation("Test task", mock_config)
+        
+        assert "LLM Error: Test error" in str(exc_info.value)
+        mock_logger.error.assert_called_once() 

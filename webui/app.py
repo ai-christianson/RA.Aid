@@ -24,11 +24,12 @@ from components.planning import planning_component
 from components.implementation import implementation_component
 from webui.config import WebUIConfig, load_environment_status
 from ra_aid.logger import logger
-from ra_aid.llm import initialize_llm
+from ra_aid.llm import initialize_llm, create_model
 from ra_aid.agent_utils import (
     run_research_agent,
     run_planning_agent, 
-    run_task_implementation_agent
+    run_task_implementation_agent,
+    run_conversation_agent
 )
 import asyncio
 import os
@@ -36,7 +37,7 @@ import anthropic
 from openai import OpenAI
 from dotenv import load_dotenv
 import requests
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from litellm import completion
 
 # Load environment variables
@@ -548,22 +549,31 @@ def determine_interaction_type(task: str) -> str:
     # Default to conversation
     return 'conversation'
 
-async def handle_conversation(task: str, config: Dict[str, Any]) -> str:
-    """Handle a conversation task by calling the LLM."""
+async def handle_conversation(task: str, config: WebUIConfig) -> str:
+    """Handle a conversation task."""
     try:
-        # Extract provider and model name from config
-        provider, model_name = config.model.split('/')
-            
-        response = completion(
-            model=f"{provider}/{model_name}",  # Format as provider/model
-            messages=[{"role": "user", "content": task}],
-            temperature=0.7,
-            max_tokens=2000
+        # Get model configuration
+        model_name = config.model
+        provider = config.provider
+        
+        # If model name includes provider prefix, extract it
+        if '/' in model_name:
+            provider, model_name = model_name.split('/')
+        
+        # Create model instance
+        model = create_model(
+            provider=provider,
+            model_name=model_name,
+            temperature=config.temperature,
+            max_tokens=config.max_tokens
         )
-        return response.choices[0].message.content
+        
+        # Run conversation agent
+        return await run_conversation_agent(task, model, config)
+        
     except Exception as e:
         error_message = f"LLM Error: {str(e)}"
-        ui_logger.error(error_message)
+        logger.error(error_message)
         raise Exception(error_message)
 
 async def handle_research_results(results: Dict[str, Any]) -> None:

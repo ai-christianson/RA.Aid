@@ -2,7 +2,13 @@ from .__version__ import __version__
 from .console.formatting import print_stage_header, print_task_header, print_error, print_interrupt
 from .console.output import print_agent_output
 from .text.processing import truncate_output
-from .agent_utils import run_agent_with_retry
+from .agent_utils import (
+    run_agent_with_retry,
+    run_research_agent,
+    run_web_research_agent,
+    run_planning_agent,
+    run_task_implementation_agent,
+)
 
 __all__ = [
     'print_stage_header',
@@ -12,5 +18,9 @@ __all__ = [
     'print_error',
     'print_interrupt',
     'run_agent_with_retry',
+    'run_research_agent',
+    'run_web_research_agent',
+    'run_planning_agent',
+    'run_task_implementation_agent',
     '__version__'
 ]
