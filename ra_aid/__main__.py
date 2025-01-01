@@ -27,6 +27,7 @@ from ra_aid.logging_config import setup_logging, get_logger
 from ra_aid.tool_configs import (
     get_chat_tools
 )
+from ra_aid.dependencies import check_dependencies
 import os
 
 logger = get_logger(__name__)
@@ -170,6 +171,9 @@ def main():
     logger.debug("Starting RA.Aid with arguments: %s", args)
 
     try:
+        # Check dependencies before proceeding
+        check_dependencies()
+
         expert_enabled, expert_missing, web_research_enabled, web_research_missing = validate_environment(args)  # Will exit if main env vars missing
         logger.debug("Environment validation successful")
 
