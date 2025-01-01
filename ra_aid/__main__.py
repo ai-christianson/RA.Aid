@@ -34,6 +34,7 @@ logger = get_logger(__name__)
 def parse_arguments(args=None):
     VALID_PROVIDERS = ['anthropic', 'openai', 'openrouter', 'openai-compatible']
     ANTHROPIC_DEFAULT_MODEL = 'claude-3-5-sonnet-20241022'
+    OPENAI_DEFAULT_MODEL = 'gpt-4o'
 
     parser = argparse.ArgumentParser(
         description='RA.Aid - AI Agent for executing programming and research tasks',
@@ -63,14 +64,14 @@ Examples:
     parser.add_argument(
         '--provider',
         type=str,
-        default='anthropic',
+        default='openai' if (os.getenv('OPENAI_API_KEY') and not os.getenv('ANTHROPIC_API_KEY')) else 'anthropic',
         choices=VALID_PROVIDERS,
         help='The LLM provider to use'
     )
     parser.add_argument(
         '--model',
         type=str,
-        help='The model name to use (required for non-Anthropic providers)'
+        help='The model name to use'
     )
     parser.add_argument(
         '--cowboy-mode',
@@ -122,8 +123,10 @@ Examples:
     # Validate provider
     if parsed_args.provider not in VALID_PROVIDERS:
         parser.error(f"Invalid provider: {parsed_args.provider}")
-
     # Handle model defaults and requirements
+
+    if parsed_args.provider == "openai":
+        parsed_args.model = parsed_args.model or OPENAI_DEFAULT_MODEL
     if parsed_args.provider == 'anthropic':
         # Always use default model for Anthropic
         parsed_args.model = ANTHROPIC_DEFAULT_MODEL
