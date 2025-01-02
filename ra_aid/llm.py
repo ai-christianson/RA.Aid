@@ -17,10 +17,12 @@ MODEL_CONTEXT_LENGTHS = {
     "gpt-4-32k": 32768,
     "gpt-3.5-turbo": 4096,
     "gpt-3.5-turbo-16k": 16384,
+    "gpt-4o": 128000,
     
     # Anthropic models  
     "claude-3-opus-20240229": 200000,
     "claude-3-sonnet-20240229": 200000,
+    "claude-3-5-sonnet-20241022": 200000,
     "claude-2.1": 200000,
     "claude-2.0": 100000,
     "claude-instant-1.2": 100000,
@@ -73,27 +75,12 @@ def check_message_tokens(content: Union[str, BaseMessage], model_name: str) -> i
 def get_model_context_limit(model_name: str) -> int:
     """Get the context length limit for a model.
     
-    The limit can be overridden by setting environment variable MODEL_NAME_CONTEXT_LENGTH
-    where MODEL_NAME has dashes replaced by underscores and is uppercase.
-    
-    Example:
-        GPT_4_CONTEXT_LENGTH=16000 would set GPT-4's limit to 16000
-    
     Args:
         model_name: Name of the model
         
     Returns:
         Context length limit for the model. If model is unknown, returns default limit.
     """
-    # Check for environment variable override
-    env_var = f"{model_name.upper().replace('-', '_')}_CONTEXT_LENGTH"
-    if os.getenv(env_var):
-        try:
-            return int(os.getenv(env_var))
-        except ValueError:
-            pass
-            
-    # Return model limit or default
     return MODEL_CONTEXT_LENGTHS.get(model_name, MODEL_CONTEXT_LENGTHS["default"])
 
 def initialize_llm(provider: str, model_name: str, temperature: float | None = None) -> BaseChatModel:
@@ -118,6 +105,9 @@ def initialize_llm(provider: str, model_name: str, temperature: float | None = N
     # Validate we can determine context length for this model
     if get_model_context_limit(model_name) == MODEL_CONTEXT_LENGTHS["default"]:
         raise ValueError(f"Unknown context length for model: {model_name}")
+    
+    # Validate token handling works for this model
+    check_message_tokens("", model_name)
     """Initialize a language model client based on the specified provider and model.
 
     Note: Environment variables must be validated before calling this function.
