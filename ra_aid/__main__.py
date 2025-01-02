@@ -4,6 +4,7 @@ import uuid
 from datetime import datetime
 from rich.panel import Panel
 from rich.console import Console
+from ra_aid.agents.ciayn_agent import CiaynAgent
 from langgraph.checkpoint.memory import MemorySaver
 from ra_aid.env import validate_environment
 from ra_aid.tools.memory import _global_memory
@@ -173,6 +174,20 @@ def main():
     try:
         # Check dependencies before proceeding
         check_dependencies()
+
+        # Add token limit check for cowboy mode
+        if args.cowboy_mode:
+            agent = CiaynAgent(None, [])  # Initialize with empty model and tools just for token estimation
+            estimated_tokens = agent.estimate_repo_tokens()
+            
+            # Use 250k token limit to leave room for messages
+            if estimated_tokens > 250000:
+                print_error(
+                    "Repository size exceeds safe token limit for headless mode.\n"
+                    f"Estimated tokens: {estimated_tokens:,}\n"
+                    "Please use interactive mode for large repositories."
+                )
+                sys.exit(1)
 
         expert_enabled, expert_missing, web_research_enabled, web_research_missing = validate_environment(args)  # Will exit if main env vars missing
         logger.debug("Environment validation successful")
