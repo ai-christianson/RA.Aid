@@ -125,16 +125,21 @@ def initialize_llm(provider: str, model_name: str, temperature: float | None = N
     Raises:
         ValueError: If the provider is not supported
     """
+    # Get max tokens for the model
+    max_tokens = get_model_context_limit(model_name)
+    
     if provider == "openai":
         return ChatOpenAI(
             api_key=os.getenv("OPENAI_API_KEY"),
             model=model_name,
+            max_tokens=max_tokens,
             **({"temperature": temperature} if temperature is not None else {})
         )
     elif provider == "anthropic":
         return ChatAnthropic(
             api_key=os.getenv("ANTHROPIC_API_KEY"),
             model_name=model_name,
+            max_tokens=max_tokens,
             **({"temperature": temperature} if temperature is not None else {})
         )
     elif provider == "openrouter":
@@ -171,15 +176,20 @@ def initialize_expert_llm(provider: str = "openai", model_name: str = "o1-previe
     Raises:
         ValueError: If the provider is not supported
     """
+    # Get max tokens for the model
+    max_tokens = get_model_context_limit(model_name)
+    
     if provider == "openai":
         return ChatOpenAI(
             api_key=os.getenv("EXPERT_OPENAI_API_KEY"),
             model=model_name,
+            max_tokens=max_tokens,
         )
     elif provider == "anthropic":
         return ChatAnthropic(
             api_key=os.getenv("EXPERT_ANTHROPIC_API_KEY"),
             model_name=model_name,
+            max_tokens=max_tokens,
         )
     elif provider == "openrouter":
         return ChatOpenAI(
