@@ -213,6 +213,19 @@ class OpenRouterStrategy(ProviderStrategy):
 
         return ValidationResult(valid=len(missing) == 0, missing_vars=missing)
 
+class OllamaStrategy(ProviderStrategy):
+    """Ollama provider validation strategy."""
+
+    def validate(self, args: Optional[Any] = None) -> ValidationResult:
+        """Validate Ollama environment variables."""
+        missing = []
+        
+        base_url = os.environ.get('OLLAMA_BASE_URL')
+        if not base_url:
+            missing.append('OLLAMA_BASE_URL environment variable is not set')
+
+        return ValidationResult(valid=len(missing) == 0, missing_vars=missing)
+
 class ProviderFactory:
     """Factory for creating provider validation strategies."""
 
@@ -231,7 +244,8 @@ class ProviderFactory:
             'openai': OpenAIStrategy(),
             'openai-compatible': OpenAICompatibleStrategy(),
             'anthropic': AnthropicStrategy(),
-            'openrouter': OpenRouterStrategy()
+            'openrouter': OpenRouterStrategy(),
+            'ollama': OllamaStrategy()
         }
         strategy = strategies.get(provider)
         return strategy

@@ -1,13 +1,17 @@
-#!/usr/bin/env python3
 """
-Script to generate SWE-bench dataset for RA.Aid evaluation.
-This is a work in progress and is not yet functional.
+Script to generate predictions for SWE-bench Lite (princeton-nlp/SWE-bench_Lite).
+This version uses 'uv venv' and 'uv pip' / 'uv run ra-aid' commands to manage everything in the environment.
 
-This script handles:
-- Loading the SWE-bench Lite dataset
-- Creating dated output directories
-- Setting up logging infrastructure
-- Processing dataset instances (placeholder)
+It:
+- Loads the SWE-bench Lite dataset
+- For each instance, clones (or reuses) the repo at the specified commit
+- Creates or reuses a dedicated Python virtual environment via `uv venv`
+- Installs `ra-aid` in editable mode + any project dependencies via `uv pip`
+- Also installs the cloned project itself in editable mode if it appears to be a Python package
+- Calls `uv run ra-aid` to generate a patch
+- Writes out predictions in JSON format
+
+No progress bar or spinner is used, allowing `ra-aid` output to stream directly.
 """
 
 import argparse
@@ -16,31 +20,27 @@ import logging
 import shutil
 import subprocess
 import sys
-import tempfile
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Tuple, Dict, Any
+from typing import Optional, Tuple, Dict, Any, List
 
-from datasets import load_dataset
 from git import Repo
 from rich.logging import RichHandler
-from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
+
+# If you'd like to override Python versions for specific repos:
+PYTHON_VERSION_OVERRIDES = {
+    # "someorg/somerepo": "3.9",
+}
+
 
 def setup_logging(log_dir: Path, verbose: bool = False) -> None:
-    """Configure logging with both file and console handlers.
-    
-    Args:
-        log_dir: Directory to store log files
-        verbose: Whether to enable debug logging
-    """
+    """Configure logging with both file and console handlers."""
     log_dir.mkdir(parents=True, exist_ok=True)
     log_file = log_dir / "generate_dataset.log"
-    
-    # Configure root logger
+
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.DEBUG if verbose else logging.INFO)
-    
-    # File handler with detailed formatting
+
     file_handler = logging.FileHandler(log_file)
     file_handler.setLevel(logging.DEBUG)
     file_formatter = logging.Formatter(
@@ -48,8 +48,7 @@ def setup_logging(log_dir: Path, verbose: bool = False) -> None:
     )
     file_handler.setFormatter(file_formatter)
     root_logger.addHandler(file_handler)
-    
-    # Console handler with rich formatting
+
     console_handler = RichHandler(
         rich_tracebacks=True,
         show_time=False,
@@ -58,317 +57,266 @@ def setup_logging(log_dir: Path, verbose: bool = False) -> None:
     console_handler.setLevel(logging.DEBUG if verbose else logging.INFO)
     root_logger.addHandler(console_handler)
 
-def load_dataset_safely() -> Optional[dict]:
-    """Load SWE-bench dataset with error handling.
-    
-    Returns:
-        Dataset object if successful, None otherwise
-    """
+
+def load_dataset_safely() -> Optional[Any]:
+    """Load SWE-bench Lite dataset with error handling."""
     try:
-        dataset = load_dataset("princeton-nlp/SWE-bench", "default")
+        from datasets import load_dataset
+        dataset = load_dataset("princeton-nlp/SWE-bench_Lite")
         return dataset
     except Exception as e:
         logging.error(f"Failed to load dataset: {e}")
         return None
 
+
 def create_output_dirs() -> Tuple[Path, Path]:
-    """Create dated output directory structure.
-    
-    Returns:
-        Tuple of (output_dir, log_dir) paths
-    """
+    """Create base/log directory structure."""
     date_str = datetime.now().strftime("%Y%m%d")
     base_dir = Path("evaluation") / "default" / f"{date_str}_raaid"
     log_dir = base_dir / "logs"
-    
     base_dir.mkdir(parents=True, exist_ok=True)
     log_dir.mkdir(parents=True, exist_ok=True)
-    
     return base_dir, log_dir
 
-def process_dataset_instance(instance: Dict[str, Any], output_dir: Path) -> bool:
-    """Process a single dataset instance.
-    
-    Args:
-        instance: Dataset instance containing problem information
-        output_dir: Directory to store output files
-        
-    Returns:
-        bool: True if processing was successful, False otherwise
-    """
-    try:
-        # Required fields
-        logging.debug(f"Instance data: {instance}")
-        logging.debug(f"Instance keys: {instance.keys()}")
-        
-        instance_id = str(instance['id'])  # Use id as unique identifier
-        repo_url = instance['repo_url']
-        commit_id = instance['code_before']['revision']
-        
-        # Issue description
-        issue_title = instance['issue_title']
-        issue_body = instance.get('issue_body', '')  # Optional with default
-        issue_desc = f"{issue_title}\n\n{issue_body}"
-        
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp_path = Path(temp_dir)
-            
-            # Clone repository
-            repo = Repo.clone_from(repo_url, temp_path)
-            repo.git.checkout(commit_id)
-            
-            # Format input for ra-aid
-            issue_desc = instance['problem_statement']
-            test_info = instance.get('test_information', '')
-            
-            # Run ra-aid
-            patch = run_raaid(temp_path, issue_desc, test_info)
-            if not patch:
-                return False
-                
-            # Write prediction
-            write_prediction(output_dir, instance_id, patch)
-            return True
-            
-    except Exception as e:
-        # Use instance.get() to avoid KeyError in error logging
-        instance_id = instance.get('id', '<unknown>')
-        logging.error(f"Failed to process instance {instance_id}: {e}")
-        return False
 
-def parse_test_information(test_info: str) -> Tuple[list, list]:
-    """Parse test information into failing and passing test lists.
-    
-    Args:
-        test_info: Raw test information string
-        
-    Returns:
-        Tuple[list, list]: Lists of (fail_to_pass, pass_to_pass) tests
-        
-    Raises:
-        ValueError: If required test sections are missing or malformed
+def uv_venv(repo_dir: Path, repo_name: str, force_venv: bool) -> None:
     """
-    fail_to_pass = []
-    pass_to_pass = []
-    
-    # Split into sections
-    sections = test_info.split('\n\n')
-    current_section = None
-    
-    for section in sections:
-        section = section.strip()
-        if not section:
-            continue
-            
-        if section.startswith('FAIL_TO_PASS:'):
-            current_section = 'fail'
-            tests = section.replace('FAIL_TO_PASS:', '').strip().split('\n')
-            fail_to_pass.extend(test.strip() for test in tests if test.strip())
-            
-        elif section.startswith('PASS_TO_PASS:'):
-            current_section = 'pass'
-            tests = section.replace('PASS_TO_PASS:', '').strip().split('\n')
-            pass_to_pass.extend(test.strip() for test in tests if test.strip())
-    
-    if not fail_to_pass:
-        raise ValueError("No FAIL_TO_PASS tests found in test information")
-        
-    return fail_to_pass, pass_to_pass
+    Create (or reuse) a .venv in 'repo_dir' using 'uv venv'.
+    If force_venv is True, we remove .venv first.
 
-def run_raaid(repo_dir: Path, issue_desc: str, test_info: str) -> Optional[str]:
-    """Run ra-aid on the problem and capture output.
-    
-    Args:
-        repo_dir: Path to repository directory
-        issue_desc: Problem description
-        test_info: Additional test information
-        
-    Returns:
-        Optional[str]: Generated patch if successful, None otherwise
+    Example command:
+      uv venv .venv --python=3.9
     """
+    venv_dir = repo_dir / ".venv"
+    if venv_dir.exists() and force_venv:
+        logging.info(f"Removing existing .venv at {venv_dir}")
+        shutil.rmtree(venv_dir)
+
+    python_version = PYTHON_VERSION_OVERRIDES.get(repo_name, None) or "3.12"
+    cmd = ["uv", "venv"]
+    if python_version:
+        cmd.append(f"--python={python_version}")
+    cmd.append(".venv")
+
     try:
-        # Parse test information
-        fail_to_pass, pass_to_pass = parse_test_information(test_info)
-        
-        # Format prompt with clear sections
-        prompt = (
-            f"{issue_desc}\n\n"
-            "Tests that need to be fixed:\n"
-            "```\n"
-            + "\n".join(f"- {test}" for test in fail_to_pass)
-            + "\n```\n\n"
-        )
-        
-        if pass_to_pass:
-            prompt += (
-                "Tests that must remain passing:\n"
-                "```\n"
-                + "\n".join(f"- {test}" for test in pass_to_pass)
-                + "\n```\n\n"
-            )
-            
-    except ValueError as e:
-        logging.error(f"Invalid test information format: {e}")
-        return None
+        subprocess.run(cmd, cwd=repo_dir, check=True)
     except Exception as e:
-        logging.error(f"Error parsing test information: {e}")
-        return None
-    
+        logging.error(f"Failed to create venv in {repo_dir}: {e}")
+
+
+def uv_pip_install(repo_dir: Path, args: List[str]) -> None:
+    """
+    Run 'uv pip install ...' in the specified repo_dir.
+    Example: uv_pip_install(repo_dir, ["--upgrade", "pip"])
+    """
+    cmd = ["uv", "pip", "install"] + args
     try:
-        # Configure ra-aid with appropriate flags
-        cmd = [
-            'ra-aid',
-            '-m', prompt,
-            '--research-only',  # First analyze without implementation
-            '--expert-provider', 'openai',  # Use OpenAI for expert knowledge
-            '--verbose'  # Enable detailed logging
-        ]
-        
-        # First run - research phase
+        subprocess.run(cmd, cwd=repo_dir, check=True)
+    except Exception as e:
+        logging.error(f"Failed to run uv pip install {args}: {e}")
+
+
+def uv_run_raaid(repo_dir: Path, prompt: str) -> Optional[str]:
+    """
+    Call 'uv run ra-aid' with the given prompt in the environment,
+    streaming output directly to the console (capture_output=False).
+    Returns the patch if successful, else None.
+    """
+    cmd = [
+        "uv", "run", "ra-aid",
+        "--cowboy-mode",
+        "-m", prompt
+    ]
+    # We are NOT capturing output, so it streams live:
+    try:
         result = subprocess.run(
             cmd,
             cwd=repo_dir,
-            capture_output=True,
             text=True,
-            timeout=300  # 5 minute timeout for research
+            check=False,   # We manually handle exit code
         )
-        
         if result.returncode != 0:
-            logging.error("Research phase failed")
+            logging.error("ra-aid returned non-zero exit code.")
             return None
-            
-        # Second run - implementation phase
-        cmd = [
-            'ra-aid',
-            '-m', prompt,
-            '--expert-provider', 'openai',
-            '--verbose'
-        ]
-        
-        result = subprocess.run(
-            cmd,
-            cwd=repo_dir,
-            capture_output=True,
-            text=True,
-            timeout=600  # 10 minute timeout for implementation
-        )
-        
-        if result.returncode == 0:
-            repo = Repo(repo_dir)
-            return get_git_patch(repo)
-            
-        logging.error(f"ra-aid failed with exit code {result.returncode}")
-        logging.debug(f"stdout: {result.stdout}")
-        logging.debug(f"stderr: {result.stderr}")
-        return None
-        
     except subprocess.TimeoutExpired:
         logging.error("ra-aid timed out")
         return None
     except Exception as e:
-        logging.error(f"Error running ra-aid: {e}")
+        logging.error(f"ra-aid error: {e}")
         return None
 
-def get_git_patch(repo: Repo) -> Optional[str]:
-    """Generate a git patch from the current changes.
-    
-    Args:
-        repo: GitPython Repo object
-        
-    Returns:
-        Optional[str]: Formatted patch if valid changes exist
-    """
-    if not repo.is_dirty():
-        logging.error("No changes detected in repository")
-        return None
-        
+    # Collect patch
+    patch = get_git_patch(repo_dir)
+    return patch
+
+
+def get_git_patch(repo_dir: Path) -> Optional[str]:
+    """Generate a git patch from the current changes in `repo_dir`."""
     try:
-        # Get diff in patch format
-        patch = repo.git.diff(unified=3)
-        
-        # Basic validation
-        if not patch or not patch.strip():
+        repo = Repo(repo_dir)
+        if not repo.is_dirty():
+            logging.info("No changes detected in repository.")
             return None
-            
-        if not any(line.startswith('+') for line in patch.splitlines()):
+        patch_text = repo.git.diff(unified=3)
+        if not patch_text.strip():
             return None
-            
-        return patch
-        
+        if not any(line.startswith('+') for line in patch_text.splitlines()):
+            return None
+        return patch_text
     except Exception as e:
         logging.error(f"Failed to generate patch: {e}")
         return None
 
-def write_prediction(output_dir: Path, instance_id: str, patch: str) -> None:
-    """Write prediction entry to JSONL file.
-    
-    Args:
-        output_dir: Output directory path
-        instance_id: Dataset instance ID
-        patch: Generated patch content
+
+def setup_venv_and_deps(repo_dir: Path, repo_name: str, force_venv: bool) -> None:
     """
-    prediction_file = output_dir / "all_preds.jsonl"
-    
-    entry = {
-        "id": instance_id,
-        "patch": patch,
-        "timestamp": datetime.now().isoformat(),
-        "metadata": {
-            "ra_aid_version": subprocess.check_output(
-                ['ra-aid', '--version'],
-                text=True
-            ).strip(),
-            "git_hash": subprocess.check_output(
-                ['git', 'rev-parse', 'HEAD'],
-                text=True
-            ).strip()
+    - uv venv .venv --python=xxx (optional)
+    - uv pip install --upgrade pip
+    - uv pip install --upgrade setuptools wheel  (so pkg_resources etc. are available)
+    - uv pip install -e <ra-aid local path>
+    - If pyproject.toml -> uv pip install .
+    - If requirements.txt -> uv pip install -r requirements.txt
+    - If requirements-dev.txt -> uv pip install -r requirements-dev.txt
+    - If there's a setup.py or pyproject => uv pip install -e .
+    """
+    uv_venv(repo_dir, repo_name, force_venv)
+
+    # 1) upgrade pip
+    uv_pip_install(repo_dir, ["--upgrade", "pip"])
+
+    # 2) ensure setuptools & wheel are installed/up to date
+    uv_pip_install(repo_dir, ["--upgrade", "setuptools", "wheel"])
+
+    # 3) install ra-aid from local path
+    script_dir = Path(__file__).resolve().parent
+    ra_aid_root = script_dir.parent  # one level up from scripts
+    uv_pip_install(repo_dir, ["-e", str(ra_aid_root)])
+
+    # 4) optional pyproject
+    pyproject_path = repo_dir / "pyproject.toml"
+    if pyproject_path.is_file():
+        uv_pip_install(repo_dir, ["."])
+
+    # 5) optional requirements.txt
+    req_file = repo_dir / "requirements.txt"
+    if req_file.is_file():
+        uv_pip_install(repo_dir, ["-r", "requirements.txt"])
+
+    # 6) optional requirements-dev.txt
+    req_dev_file = repo_dir / "requirements-dev.txt"
+    if req_dev_file.is_file():
+        uv_pip_install(repo_dir, ["-r", "requirements-dev.txt"])
+
+    # 7) install the cloned project in editable mode if it's a Python package
+    setup_path = repo_dir / "setup.py"
+    if pyproject_path.is_file() or setup_path.is_file():
+        logging.info("Installing cloned project in editable mode.")
+        uv_pip_install(repo_dir, ["-e", "."])
+
+
+def build_prompt(problem_statement: str, fail_tests: List[str], pass_tests: List[str]) -> str:
+    """
+    Construct the prompt text from problem_statement, FAIL_TO_PASS, PASS_TO_PASS.
+    """
+    prompt = f"{problem_statement}\n\nTests that need to be fixed:\n```\n"
+    for t in fail_tests:
+        prompt += f"- {t}\n"
+    prompt += "```\n\n"
+    if pass_tests:
+        prompt += "Tests that must remain passing:\n```\n"
+        for t in pass_tests:
+            prompt += f"- {t}\n"
+        prompt += "```\n\n"
+    prompt += "\n\nYou must run all above tests both **before and after** making changes, and ensure they pass as you do your work. Do not write any new test cases."
+    return prompt
+
+
+def process_instance(
+    instance: Dict[str, Any],
+    projects_dir: Path,
+    reuse_repo: bool,
+    force_venv: bool
+) -> Dict[str, Any]:
+    """
+    Process a single dataset instance without a progress bar/spinner.
+    - Clone or reuse the repo at projects_dir/<instance_id>
+    - Checkout commit
+    - Create or reuse a .venv in that repo
+    - Install ra-aid + any project dependencies
+    - Build prompt, run ra-aid (output streamed to console)
+    - Return prediction dict
+    """
+    inst_id = instance.get("instance_id", "<unknown>")
+    repo_name = instance["repo"]
+    commit = instance["base_commit"]
+    problem_statement = instance["problem_statement"]
+    fail_tests = instance.get("FAIL_TO_PASS", [])
+    pass_tests = instance.get("PASS_TO_PASS", [])
+
+    if isinstance(fail_tests, str):
+        fail_tests = [fail_tests]
+    if isinstance(pass_tests, str):
+        pass_tests = [pass_tests]
+
+    if "github.com" not in repo_name:
+        repo_url = f"https://github.com/{repo_name}.git"
+    else:
+        repo_url = repo_name
+
+    checkout_dir = projects_dir / f"{inst_id}"
+
+    try:
+        if not checkout_dir.exists():
+            logging.info(f"Cloning {repo_url} -> {checkout_dir}")
+            repo = Repo.clone_from(repo_url, checkout_dir)
+        else:
+            if reuse_repo:
+                logging.info(f"Reusing existing directory: {checkout_dir}")
+                repo = Repo(checkout_dir)
+            else:
+                logging.info(f"Deleting existing directory: {checkout_dir}")
+                shutil.rmtree(checkout_dir)
+                repo = Repo.clone_from(repo_url, checkout_dir)
+
+        # checkout correct commit
+        repo.git.checkout(commit)
+
+        # set up venv + deps
+        setup_venv_and_deps(checkout_dir, repo_name, force_venv)
+
+        # build prompt, run ra-aid
+        prompt_text = build_prompt(problem_statement, fail_tests, pass_tests)
+        patch = uv_run_raaid(checkout_dir, prompt_text)
+
+        return {
+            "instance_id": inst_id,
+            "model_patch": patch if patch else "",
+            "model_name_or_path": "ra-aid"
         }
-    }
-    
-    with open(prediction_file, "a") as f:
-        json.dump(entry, f)
-        f.write("\n")
-        
-    # Also save individual prediction files for easier inspection
-    instance_dir = output_dir / "predictions" / instance_id
-    instance_dir.mkdir(parents=True, exist_ok=True)
-    
-    with open(instance_dir / "prediction.json", "w") as f:
-        json.dump(entry, f, indent=2)
 
-def cleanup_temp_files(temp_dir: Path) -> None:
-    """Remove temporary processing files.
-    
-    Args:
-        temp_dir: Directory containing temporary files
-    """
-    if temp_dir.exists():
-        shutil.rmtree(temp_dir)
-        logging.debug(f"Cleaned up temporary directory: {temp_dir}")
+    except Exception as e:
+        logging.error(f"Failed to process {repo_url}:{commit} - {e}")
+        return {
+            "instance_id": inst_id,
+            "model_patch": "",
+            "model_name_or_path": "ra-aid"
+        }
 
-def parse_args() -> argparse.Namespace:
-    """Parse command line arguments.
-    
-    Returns:
-        Parsed argument namespace
-    """
+
+def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Generate SWE-bench dataset for RA.Aid evaluation"
+        description="Generate predictions for SWE-bench Lite using uv + ra-aid (no progress bar)."
     )
     parser.add_argument(
         "output_dir",
         type=Path,
-        help="Directory to store processed dataset"
+        help="Directory to store prediction file"
     )
     parser.add_argument(
-        "--verbose",
-        action="store_true",
-        help="Enable verbose logging output"
-    )
-    parser.add_argument(
-        "--continue-on-error",
-        action="store_true",
-        help="Continue processing if individual instances fail"
+        "--projects-dir",
+        type=Path,
+        required=True,
+        help="Directory where projects will be cloned."
     )
     parser.add_argument(
         "--num-instances",
@@ -376,63 +324,71 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Number of instances to process (default: all)"
     )
-    
-    return parser.parse_args()
+    parser.add_argument(
+        "--reuse-repo",
+        action="store_true",
+        help="If set, do not delete an existing repo directory. We'll reuse it."
+    )
+    parser.add_argument(
+        "--force-venv",
+        action="store_true",
+        help="If set, recreate the .venv even if it exists."
+    )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Enable verbose logging"
+    )
+    args = parser.parse_args()
 
-def main() -> None:
-    """Main entry point for dataset generation script."""
-    args = parse_args()
-    
-    # Create directory structure
+    from datasets import load_dataset
+
+    # Create base/log dirs and set up logging
     base_dir, log_dir = create_output_dirs()
-    
-    # Initialize logging
     setup_logging(log_dir, args.verbose)
-    logging.info("Starting dataset generation")
-    
+    logging.info("Starting script")
+
+    # Ensure projects dir
+    args.projects_dir.mkdir(parents=True, exist_ok=True)
+
     # Load dataset
     dataset = load_dataset_safely()
     if dataset is None:
         sys.exit(1)
-    
-    # Create output directory
+
+    # Combine dev + test
+    all_data = list(dataset["dev"]) + list(dataset["test"])
+
+    # Ensure output dir
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    
-    # Process dataset
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        TimeElapsedColumn(),
-        transient=False,
-    ) as progress:
-        total_instances = len(dataset['train'])
-        task = progress.add_task("Processing dataset...", total=total_instances)
-        
-        success_count = 0
-        for idx, instance in enumerate(dataset['train']):
-            try:
-                if process_dataset_instance(instance, args.output_dir):
-                    success_count += 1
-            except Exception as e:
-                # Use instance.get() to avoid KeyError in error logging
-                instance_id = instance.get('id', '<unknown>')
-                logging.error(f"Failed to process instance {instance_id}: {e}")
-            finally:
-                progress.advance(task)
-                
-            if args.num_instances is not None and idx + 1 >= args.num_instances:
-                break
-                
-        progress.stop()
-    
-    logging.info(f"Dataset generation complete. Processed {success_count}/{total_instances} instances successfully")
+    predictions_file = args.output_dir / "predictions.json"
+    predictions: List[Dict[str, str]] = []
+
+    limit = args.num_instances if args.num_instances else len(all_data)
+
+    # Just a simple for loop - no progress bar
+    logging.info(f"Processing up to {limit} instances.")
+    for i, inst in enumerate(all_data):
+        if i >= limit:
+            break
+
+        logging.info(f"=== Instance {i+1}/{limit}, ID={inst.get('instance_id')} ===")
+        pred = process_instance(inst, args.projects_dir, args.reuse_repo, args.force_venv)
+        predictions.append(pred)
+
+    # Save predictions
+    with open(predictions_file, "w", encoding="utf-8") as f:
+        json.dump(predictions, f, indent=2)
+
+    logging.info("Done generating predictions.")
+
 
 if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("\nOperation cancelled by user")
+        print("\nOperation cancelled by user.")
         sys.exit(1)
     except Exception as e:
-        logging.exception("Unhandled error occurred")
+        logging.exception("Unhandled error occurred.")
         sys.exit(1)
