@@ -1,6 +1,9 @@
 import inspect
+import os
 from dataclasses import dataclass
 from typing import Dict, Any, Generator, List, Optional, Union
+
+from ra_aid.tools.ripgrep import ripgrep_search
 
 from langchain_core.messages import AIMessage, HumanMessage, BaseMessage, SystemMessage
 from ra_aid.exceptions import ToolExecutionError
@@ -192,6 +195,56 @@ Output **ONLY THE CODE** and **NO MARKDOWN BACKTICKS**"""
             return 0
             
         return len(text.encode('utf-8')) // 4
+
+    def estimate_repo_tokens(self) -> int:
+        """Estimate total tokens in repository code files using ripgrep.
+        
+        Uses ripgrep to find relevant code files while excluding common 
+        directories like .git, node_modules etc. Applies existing token
+        estimation logic to calculate total tokens.
+
+        Returns:
+            int: Estimated total tokens in repository code files, 0 for empty/inaccessible dirs
+        """
+        # Common code file extensions to include
+        extensions = ["py", "js", "ts", "java", "cpp", "c", "h", "hpp", "cs", "go", "rs",
+                     "rb", "php", "scala", "kt", "swift", "m", "sql", "R", "jl"]
+                     
+        total_tokens = 0
+        for ext in extensions:
+            # Ripgrep with type flag to find files
+            result = ripgrep_search(
+                pattern=".",  # Match any content
+                file_type=ext,
+                exclude_dirs=[".git", "node_modules", "vendor", ".venv", "__pycache__", 
+                            "dist", "build", ".env", "venv", "env", ".idea", ".vscode"],
+                case_sensitive=False
+            )
+            
+            if not result["success"]:
+                continue
+                
+            # Process each matched file
+            for line in result["output"].splitlines():
+                try:
+                    # Extract filename from ripgrep output
+                    filename = line.split(":", 1)[0].strip()
+                    
+                    # Skip files > 1MB to avoid huge binary files
+                    try:
+                        if os.path.getsize(filename) > 1_000_000:
+                            continue
+                    except OSError:
+                        continue
+                        
+                    with open(filename, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                        total_tokens += self._estimate_tokens(content)
+                except (OSError, UnicodeDecodeError):
+                    # Skip files we can't read
+                    continue
+                    
+        return total_tokens
 
     def _trim_chat_history(self, initial_messages: List[Any], chat_history: List[Any]) -> List[Any]:
         """Trim chat history based on message count and token limits while preserving initial messages.
