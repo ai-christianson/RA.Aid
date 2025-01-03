@@ -2,7 +2,8 @@ from collections import deque
 from dataclasses import dataclass
 from datetime import datetime
 from threading import Lock
-from typing import Dict, Deque, Optional, Tuple
+from typing import Dict, Deque, Optional, Tuple, Union
+import time
 
 # Default rate limits in tokens per minute
 DEFAULT_RATE_LIMITS = {
@@ -110,6 +111,58 @@ class RateLimiter:
         with self.lock:
             usage = self._get_provider_usage(provider)
             usage.add_usage(tokens)
+            
+    def wait_for_capacity(self, provider: str, tokens: int) -> float:
+        """Wait until rate limit capacity is available.
+        
+        Args:
+            provider: Provider to wait for capacity
+            tokens: Number of tokens needed
+            
+        Returns:
+            Time waited in seconds
+        """
+        with self.lock:
+            usage = self._get_provider_usage(provider)
+            limit = self.rate_limits.get(provider, self.rate_limits["default"])
+            
+            # Get current usage and clean up expired entries
+            current = usage.get_current_usage()
+            
+            # If we have capacity, return immediately
+            if current + tokens <= limit:
+                return 0.0
+                
+            # Calculate required wait based on oldest entry that needs to expire
+            required_tokens = (current + tokens) - limit
+            total_wait = 0.0
+            
+            while required_tokens > 0:
+                # Get oldest entry still in window
+                if not usage.usage_history:
+                    break
+                    
+                oldest = usage.usage_history[0]
+                age = (datetime.now() - oldest.timestamp).total_seconds()
+                wait_time = self.window_seconds - age
+                
+                if wait_time <= 0:
+                    # Entry expired, clean up and recheck
+                    usage._cleanup_expired()
+                    current = usage.get_current_usage()
+                    required_tokens = (current + tokens) - limit
+                    continue
+                
+                # Wait for oldest entry to expire
+                time.sleep(wait_time)
+                total_wait += wait_time
+                
+                # Cleanup and recalculate required tokens
+                usage._cleanup_expired() 
+                current = usage.get_current_usage()
+                required_tokens = (current + tokens) - limit
+            
+            return total_wait
     
     def _get_provider_usage(self, provider: str) -> TokenUsage:
         """Get or create TokenUsage tracker for provider.
