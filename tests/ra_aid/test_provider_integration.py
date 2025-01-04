@@ -199,20 +199,12 @@ def test_incomplete_gemini_config(clean_env):
     result = strategy.validate()
     assert not result.valid
     assert "GEMINI_API_KEY environment variable is not set" in result.missing_vars
-    assert "GEMINI_MODEL environment variable is not set" in result.missing_vars
     
-    # Only API key
+    # Valid API key
     os.environ["GEMINI_API_KEY"] = "test-key"
     result = strategy.validate()
-    assert not result.valid
-    assert "GEMINI_MODEL environment variable is not set" in result.missing_vars
-    
-    # Only model
-    os.environ.pop("GEMINI_API_KEY")
-    os.environ["GEMINI_MODEL"] = "gemini-2.0-flash-exp"
-    result = strategy.validate()
-    assert not result.valid
-    assert "GEMINI_API_KEY environment variable is not set" in result.missing_vars
+    assert result.valid
+    assert not result.missing_vars
 
 def test_incomplete_expert_config(clean_env):
     """Test expert provider with incomplete configuration."""

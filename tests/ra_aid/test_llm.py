@@ -175,7 +175,7 @@ def test_initialize_unsupported_provider(clean_env):
         initialize_llm("unsupported", "model")
     assert str(exc_info.value) == "Unsupported provider: unsupported"
 
-def test_temperature_defaults(clean_env, mock_openai, mock_anthropic):
+def test_temperature_defaults(clean_env, mock_openai, mock_anthropic, mock_gemini):
     """Test default temperature behavior for different providers."""
     os.environ["OPENAI_API_KEY"] = "test-key"
     os.environ["ANTHROPIC_API_KEY"] = "test-key"
@@ -209,11 +209,11 @@ def test_temperature_defaults(clean_env, mock_openai, mock_anthropic):
         model="test-model"
     )
 
-def test_explicit_temperature(clean_env, mock_openai, mock_anthropic):
+def test_explicit_temperature(clean_env, mock_openai, mock_anthropic, mock_gemini):
     """Test explicit temperature setting for each provider."""
     os.environ["OPENAI_API_KEY"] = "test-key"
     os.environ["ANTHROPIC_API_KEY"] = "test-key"
-    os.environ["OPENROUTER_API_KEY"] = "test-key",
+    os.environ["OPENROUTER_API_KEY"] = "test-key"
     os.environ["GEMINI_API_KEY"] = "test-key"
     
     test_temp = 0.7
@@ -307,6 +307,10 @@ def test_initialize_llm_cross_provider(clean_env, mock_openai, mock_anthropic, m
         model_name="claude-3"
     )
     mock_gemini.assert_called_once_with(
+        api_key="gemini-key",
+        model="gemini-2.0-flash-thinking-exp-1219"
+    )
+
 def test_environment_variable_precedence(clean_env, mock_openai, monkeypatch):
     """Test environment variable precedence and fallback."""
     from ra_aid.env import validate_environment
