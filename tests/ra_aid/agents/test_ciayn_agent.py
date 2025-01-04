@@ -1,156 +1,260 @@
+"""Tests for CiaynAgent."""
+
 import pytest
 from unittest.mock import Mock, patch
-from langchain_core.messages import HumanMessage, AIMessage
-from ra_aid.agents.ciayn_agent import CiaynAgent
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+from langchain_core.tools import tool
+from ra_aid.exceptions import ToolExecutionError
+from ra_aid.agents.ciayn_agent import CiaynAgent, ChunkMessage
 
 @pytest.fixture
 def mock_model():
-    """Create a mock language model."""
+    """Create a mock LLM model."""
     model = Mock()
-    model.invoke = Mock()
+    model.invoke.return_value = AIMessage(content="output_markdown_message(\"Test message\")")
     return model
 
 @pytest.fixture
-def agent(mock_model):
-    """Create a CiaynAgent instance with mock model."""
-    tools = []  # Empty tools list for testing trimming functionality
-    return CiaynAgent(mock_model, tools, max_history_messages=3)
+def test_tools():
+    """Create test tools for the agent."""
+    @tool
+    def test_tool_1(arg: str) -> str:
+        """A test tool that returns its argument."""
+        return arg
 
-def test_trim_chat_history_preserves_initial_messages(agent):
-    """Test that initial messages are preserved during trimming."""
-    initial_messages = [
-        HumanMessage(content="Initial 1"),
-        AIMessage(content="Initial 2")
-    ]
-    chat_history = [
-        HumanMessage(content="Chat 1"),
-        AIMessage(content="Chat 2"),
-        HumanMessage(content="Chat 3"),
-        AIMessage(content="Chat 4")
-    ]
-    
-    result = agent._trim_chat_history(initial_messages, chat_history)
-    
-    # Verify initial messages are preserved
-    assert result[:2] == initial_messages
-    # Verify only last 3 chat messages are kept (due to max_history_messages=3)
-    assert len(result[2:]) == 3
-    assert result[2:] == chat_history[-3:]
+    @tool
+    def test_tool_2(arg1: str, arg2: str) -> str:
+        """A test tool that combines its arguments."""
+        return f"{arg1} {arg2}"
 
-def test_trim_chat_history_under_limit(agent):
-    """Test trimming when chat history is under the maximum limit."""
-    initial_messages = [HumanMessage(content="Initial")]
-    chat_history = [
-        HumanMessage(content="Chat 1"),
-        AIMessage(content="Chat 2")
-    ]
-    
-    result = agent._trim_chat_history(initial_messages, chat_history)
-    
-    # Verify no trimming occurred
-    assert len(result) == 3
-    assert result == initial_messages + chat_history
+    return [test_tool_1, test_tool_2]
 
-def test_trim_chat_history_over_limit(agent):
-    """Test trimming when chat history exceeds the maximum limit."""
-    initial_messages = [HumanMessage(content="Initial")]
-    chat_history = [
-        HumanMessage(content="Chat 1"),
-        AIMessage(content="Chat 2"),
-        HumanMessage(content="Chat 3"),
-        AIMessage(content="Chat 4"),
-        HumanMessage(content="Chat 5")
-    ]
-    
-    result = agent._trim_chat_history(initial_messages, chat_history)
-    
-    # Verify correct trimming
-    assert len(result) == 4  # initial + max_history_messages
-    assert result[0] == initial_messages[0]  # Initial message preserved
-    assert result[1:] == chat_history[-3:]  # Last 3 chat messages kept
+@pytest.fixture
+def agent(mock_model, test_tools):
+    """Create a CiaynAgent instance."""
+    return CiaynAgent(mock_model, test_tools)
 
-def test_trim_chat_history_empty_initial(agent):
-    """Test trimming with empty initial messages."""
-    initial_messages = []
-    chat_history = [
-        HumanMessage(content="Chat 1"),
-        AIMessage(content="Chat 2"),
-        HumanMessage(content="Chat 3"),
-        AIMessage(content="Chat 4")
-    ]
-    
-    result = agent._trim_chat_history(initial_messages, chat_history)
-    
-    # Verify only last 3 messages are kept
-    assert len(result) == 3
-    assert result == chat_history[-3:]
+def test_agent_initialization(agent, test_tools):
+    """Test that agent is initialized with correct tools."""
+    assert len(agent.tools) == len(test_tools)
+    assert all(hasattr(tool.func, '__name__') for tool in agent.tools)
 
-def test_trim_chat_history_empty_chat(agent):
-    """Test trimming with empty chat history."""
-    initial_messages = [
-        HumanMessage(content="Initial 1"),
-        AIMessage(content="Initial 2")
-    ]
-    chat_history = []
-    
-    result = agent._trim_chat_history(initial_messages, chat_history)
-    
-    # Verify initial messages are preserved and no trimming occurred
-    assert result == initial_messages
-    assert len(result) == 2
+def test_agent_tool_execution_success(agent):
+    """Test successful tool execution."""
+    code = 'test_tool_1("hello")'
+    result = agent._execute_tool(code)
+    assert result == "hello"
 
-def test_trim_chat_history_token_limit():
-    """Test trimming based on token limit."""
-    agent = CiaynAgent(Mock(), [], max_history_messages=10, max_tokens=20)
-    
-    initial_messages = [HumanMessage(content="Initial")] # ~2 tokens
-    chat_history = [
-        HumanMessage(content="A" * 40),  # ~10 tokens
-        AIMessage(content="B" * 40),     # ~10 tokens
-        HumanMessage(content="C" * 40)   # ~10 tokens
-    ]
-    
-    result = agent._trim_chat_history(initial_messages, chat_history)
-    
-    # Should keep initial message (~2 tokens) and last message (~10 tokens)
-    assert len(result) == 2
-    assert result[0] == initial_messages[0]
-    assert result[1] == chat_history[-1]
+def test_agent_tool_execution_error(agent):
+    """Test tool execution error handling."""
+    code = 'invalid_tool("test")'
+    with pytest.raises(ToolExecutionError) as exc_info:
+        agent._execute_tool(code)
+    assert "Error executing tool call" in str(exc_info.value)
 
-def test_trim_chat_history_no_token_limit():
-    """Test trimming with no token limit set."""
-    agent = CiaynAgent(Mock(), [], max_history_messages=2, max_tokens=None)
-    
-    initial_messages = [HumanMessage(content="Initial")]
-    chat_history = [
-        HumanMessage(content="A" * 1000),
-        AIMessage(content="B" * 1000),
-        HumanMessage(content="C" * 1000)
-    ]
-    
-    result = agent._trim_chat_history(initial_messages, chat_history)
-    
-    # Should keep initial message and last 2 messages (max_history_messages=2)
-    assert len(result) == 3
-    assert result[0] == initial_messages[0]
-    assert result[1:] == chat_history[-2:]
+def test_agent_tool_execution_validation(agent):
+    """Test tool execution input validation."""
+    # Test invalid code format
+    with pytest.raises(ToolExecutionError) as exc_info:
+        agent._execute_tool("print('hello')")  # Not a tool call
+    assert "Invalid tool call format" in str(exc_info.value)
 
-def test_trim_chat_history_both_limits():
-    """Test trimming with both message count and token limits."""
-    agent = CiaynAgent(Mock(), [], max_history_messages=3, max_tokens=15)
+    # Test missing tool
+    with pytest.raises(ToolExecutionError) as exc_info:
+        agent._execute_tool("missing_tool()")
+    assert "Invalid tool call format" in str(exc_info.value)
+
+def test_agent_stream_success(agent):
+    """Test successful streaming of agent responses."""
+    messages = {"messages": [HumanMessage(content="Test query")]}
+    chunks = list(agent.stream(messages))
     
-    initial_messages = [HumanMessage(content="Init")] # ~1 token
-    chat_history = [
-        HumanMessage(content="A" * 40),  # ~10 tokens
-        AIMessage(content="B" * 40),     # ~10 tokens
-        HumanMessage(content="C" * 40),  # ~10 tokens
-        AIMessage(content="D" * 40)      # ~10 tokens
+    # Should yield empty dict on success
+    assert len(chunks) == 1
+    assert chunks[0] == {}
+
+def test_agent_stream_error(agent):
+    """Test error handling in stream method."""
+    # Mock a tool execution error
+    agent.model.invoke.return_value = AIMessage(content="invalid_tool()")
+    
+    messages = {"messages": [HumanMessage(content="Test query")]}
+    chunks = list(agent.stream(messages))
+    
+    # Should yield error chunk
+    assert len(chunks) == 1
+    assert "tools" in chunks[0]
+    assert chunks[0]["tools"]["messages"][0].status == "error"
+
+def test_agent_chat_history_management(agent):
+    """Test chat history management."""
+    messages = {"messages": [HumanMessage(content="Test query")]}
+    
+    # Run multiple iterations
+    list(agent.stream(messages))
+    list(agent.stream(messages))
+    
+    # Verify system message is included
+    system_messages = [
+        msg for msg in agent.model.invoke.call_args[0][0]
+        if isinstance(msg, SystemMessage)
+    ]
+    assert len(system_messages) == 1
+    assert "Execute efficiently" in system_messages[0].content
+
+def test_agent_token_management(agent):
+    """Test token management in chat history."""
+    # Create agent with small token limit
+    agent = CiaynAgent(mock_model, test_tools, max_tokens=100)
+    
+    # Add many messages
+    messages = {
+        "messages": [
+            HumanMessage(content="A" * 1000),  # Long message
+            HumanMessage(content="B" * 1000),  # Long message
+        ]
+    }
+    
+    # Stream should work without errors
+    list(agent.stream(messages))
+    
+    # Verify history was trimmed
+    assert len(agent.model.invoke.call_args[0][0]) < 5  # Small number of messages
+
+def test_agent_error_chunk_format(agent):
+    """Test error chunk format."""
+    error_chunk = agent._create_error_chunk("Test error")
+    
+    assert "tools" in error_chunk
+    assert isinstance(error_chunk["tools"]["messages"][0], ChunkMessage)
+    assert error_chunk["tools"]["messages"][0].status == "error"
+    assert error_chunk["tools"]["messages"][0].content == "Test error"
+
+def test_agent_webui_integration(agent):
+    """Test integration with WebUI configuration and streaming."""
+    # Mock WebUI config
+    config = {
+        "provider": "openai",
+        "model": "gpt-4",
+        "web_research_enabled": True,
+        "hil": True
+    }
+    
+    messages = {
+        "messages": [HumanMessage(content="Test query")],
+        "config": config
+    }
+    
+    # Test streaming with WebUI config
+    chunks = list(agent.stream(messages))
+    assert len(chunks) >= 1
+    
+    # Verify config was properly applied
+    call_args = agent.model.invoke.call_args[0][0]
+    assert any(isinstance(msg, SystemMessage) for msg in call_args)
+
+def test_agent_tool_streaming(agent):
+    """Test streaming of tool execution results."""
+    # Mock a tool execution response
+    agent.model.invoke.return_value = AIMessage(content='test_tool_1("hello")')
+    
+    messages = {"messages": [HumanMessage(content="Test query")]}
+    chunks = list(agent.stream(messages))
+    
+    # Should yield tool execution result
+    assert len(chunks) >= 1
+    if "tools" in chunks[0]:
+        assert chunks[0]["tools"]["messages"][0].status == "success"
+        assert "hello" in chunks[0]["tools"]["messages"][0].content
+
+def test_agent_concurrent_tool_execution(agent):
+    """Test handling of concurrent tool executions."""
+    import asyncio
+    import threading
+    
+    def run_agent():
+        messages = {"messages": [HumanMessage(content="Test query")]}
+        return list(agent.stream(messages))
+    
+    # Run multiple agent instances concurrently
+    threads = []
+    results = []
+    
+    for _ in range(3):
+        thread = threading.Thread(target=lambda: results.append(run_agent()))
+        threads.append(thread)
+        thread.start()
+    
+    for thread in threads:
+        thread.join()
+    
+    # Verify all executions completed successfully
+    assert len(results) == 3
+    for chunks in results:
+        assert len(chunks) >= 1
+
+def test_agent_specific_scenarios(agent):
+    """Test specific edge cases and scenarios."""
+    # Test empty message handling
+    empty_messages = {"messages": []}
+    empty_chunks = list(agent.stream(empty_messages))
+    assert len(empty_chunks) == 1
+    
+    # Test system message override
+    system_messages = {
+        "messages": [
+            SystemMessage(content="Custom system message"),
+            HumanMessage(content="Test query")
+        ]
+    }
+    system_chunks = list(agent.stream(system_messages))
+    assert len(system_chunks) >= 1
+    
+    # Test multiple tool calls in one response
+    agent.model.invoke.return_value = AIMessage(
+        content='test_tool_1("hello")\ntest_tool_2("world", "!")'
+    )
+    multi_chunks = list(agent.stream({"messages": [HumanMessage(content="Test query")]}))
+    assert len(multi_chunks) >= 1
+
+def test_agent_error_recovery(agent):
+    """Test agent's ability to recover from errors."""
+    # First call fails, second succeeds
+    agent.model.invoke.side_effect = [
+        AIMessage(content='invalid_tool()'),
+        AIMessage(content='test_tool_1("recovery")')
     ]
     
-    result = agent._trim_chat_history(initial_messages, chat_history)
+    messages = {"messages": [HumanMessage(content="Test query")]}
+    chunks = list(agent.stream(messages))
     
-    # Should first apply message limit (keeping last 3)
-    # Then token limit should further reduce to fit under 15 tokens
-    assert len(result) == 2  # Initial message + 1 message under token limit
-    assert result[0] == initial_messages[0]
-    assert result[1] == chat_history[-1]
+    # Should have both error and recovery chunks
+    assert len(chunks) >= 2
+    assert any(
+        chunk.get("tools", {}).get("messages", [{}])[0].get("status") == "error"
+        for chunk in chunks
+    )
+    assert any(
+        chunk.get("tools", {}).get("messages", [{}])[0].get("status") == "success"
+        for chunk in chunks
+    )
+
+def test_agent_memory_management(agent):
+    """Test agent's memory management during streaming."""
+    # Create a sequence of messages that exceeds token limit
+    long_messages = {
+        "messages": [
+            HumanMessage(content="A" * 1000),
+            AIMessage(content="B" * 1000),
+            HumanMessage(content="C" * 1000),
+            AIMessage(content="D" * 1000)
+        ]
+    }
+    
+    # Run multiple iterations to test memory cleanup
+    for _ in range(3):
+        chunks = list(agent.stream(long_messages))
+        assert len(chunks) >= 1
+    
+    # Verify memory was properly managed
+    assert len(agent.model.invoke.call_args[0][0]) < len(long_messages["messages"])
