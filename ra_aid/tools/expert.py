@@ -15,7 +15,7 @@ def get_model():
     try:
         if _model is None:
             provider = _global_memory['config']['expert_provider'] or 'openai'
-            model = _global_memory['config']['expert_model'] or 'o1-preview'
+            model = _global_memory['config']['expert_model'] or 'o1'
             _model = initialize_expert_llm(provider, model)
     except Exception as e:
         _model = None

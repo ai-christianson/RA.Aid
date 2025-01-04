@@ -24,6 +24,7 @@ classifiers = [
 dependencies = [
     "langchain-anthropic>=0.3.1",
     "langchain-openai",
+    "langchain-google-genai",
     "langgraph>=0.2.60",
     "langgraph-checkpoint>=2.0.9",
     "langgraph-sdk>=0.1.48",

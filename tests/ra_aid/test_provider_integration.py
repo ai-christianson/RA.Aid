@@ -12,7 +12,8 @@ from ra_aid.provider_strategy import (
     AnthropicStrategy,
     OpenAIStrategy,
     OpenAICompatibleStrategy,
-    OpenRouterStrategy
+    OpenRouterStrategy,
+    GeminiStrategy
 )
 
 @dataclass
@@ -35,7 +36,10 @@ def clean_env():
         "EXPERT_OPENAI_API_KEY",
         "EXPERT_OPENAI_API_BASE",
         "TAVILY_API_KEY",
-        "ANTHROPIC_MODEL"
+        "ANTHROPIC_MODEL",
+        "GEMINI_API_KEY",
+        "EXPERT_GEMINI_API_KEY",
+        "GEMINI_MODEL"
     ]
     
     # Store original values
@@ -186,6 +190,30 @@ def test_incomplete_openai_compatible_config(clean_env):
     assert not result.valid
     assert "OPENAI_API_KEY environment variable is not set" in result.missing_vars
 
+
+def test_incomplete_gemini_config(clean_env):
+    """Test Gemini provider with incomplete configuration."""
+    strategy = GeminiStrategy()
+    
+    # No configuration
+    result = strategy.validate()
+    assert not result.valid
+    assert "GEMINI_API_KEY environment variable is not set" in result.missing_vars
+    assert "GEMINI_MODEL environment variable is not set" in result.missing_vars
+    
+    # Only API key
+    os.environ["GEMINI_API_KEY"] = "test-key"
+    result = strategy.validate()
+    assert not result.valid
+    assert "GEMINI_MODEL environment variable is not set" in result.missing_vars
+    
+    # Only model
+    os.environ.pop("GEMINI_API_KEY")
+    os.environ["GEMINI_MODEL"] = "gemini-2.0-flash-exp"
+    result = strategy.validate()
+    assert not result.valid
+    assert "GEMINI_API_KEY environment variable is not set" in result.missing_vars
+
 def test_incomplete_expert_config(clean_env):
     """Test expert provider with incomplete configuration."""
     # Set main provider but not expert
@@ -203,6 +231,7 @@ def test_incomplete_expert_config(clean_env):
     assert not expert_enabled
     assert len(expert_missing) == 1
     assert "EXPERT_OPENAI_API_BASE" in expert_missing[0]
+
 
 def test_empty_environment_variables(clean_env):
     """Test handling of empty environment variables."""
@@ -257,3 +286,4 @@ def test_multiple_expert_providers(clean_env):
     expert_enabled, expert_missing, _, _ = validate_environment(args)
     assert not expert_enabled
     assert expert_missing
+

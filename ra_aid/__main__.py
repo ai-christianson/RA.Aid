@@ -33,7 +33,7 @@ import os
 logger = get_logger(__name__)
 
 def parse_arguments(args=None):
-    VALID_PROVIDERS = ['anthropic', 'openai', 'openrouter', 'openai-compatible']
+    VALID_PROVIDERS = ['anthropic', 'openai', 'openrouter', 'openai-compatible', 'gemini']
     ANTHROPIC_DEFAULT_MODEL = 'claude-3-5-sonnet-20241022'
     OPENAI_DEFAULT_MODEL = 'gpt-4o'
 

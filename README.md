@@ -127,6 +127,9 @@ export OPENROUTER_API_KEY=your_api_key_here
 # For OpenAI-compatible providers (optional)
 export OPENAI_API_BASE=your_api_base_url
 
+# For Gemini provider (optional)
+export GEMINI_API_KEY=your_api_key_here
+
 # For web research capabilities
 export TAVILY_API_KEY=your_api_key_here
 ```
@@ -140,6 +143,7 @@ You can get your API keys from:
 - Anthropic API key: https://console.anthropic.com/
 - OpenAI API key: https://platform.openai.com/api-keys
 - OpenRouter API key: https://openrouter.ai/keys
+- Gemini API key: https://aistudio.google.com/app/apikey
 
 ## Usage
 
@@ -165,7 +169,7 @@ ra-aid -m "Add new feature" --verbose
 - `--provider`: Specify the model provider (See Model Configuration section)
 - `--model`: Specify the model name (See Model Configuration section)
 - `--expert-provider`: Specify the provider for the expert tool (defaults to OpenAI)
-- `--expert-model`: Specify the model name for the expert tool (defaults to o1-preview for OpenAI)
+- `--expert-model`: Specify the model name for the expert tool (defaults to o1 for OpenAI)
 - `--chat`: Enable chat mode for interactive assistance
 - `--verbose`: Enable detailed logging output for debugging and monitoring
 
@@ -276,7 +280,7 @@ RA.Aid supports multiple AI providers and models. The default model is Anthropic
 
 The programmer tool (aider) automatically selects its model based on your available API keys. It will use Claude models if ANTHROPIC_API_KEY is set, or fall back to OpenAI models if only OPENAI_API_KEY is available.
 
-Note: The expert tool can be configured to use different providers (OpenAI, Anthropic, OpenRouter) using the --expert-provider flag along with the corresponding EXPERT_*API_KEY environment variables. Each provider requires its own API key set through the appropriate environment variable.
+Note: The expert tool can be configured to use different providers (OpenAI, Anthropic, OpenRouter, Gemini) using the --expert-provider flag along with the corresponding EXPERT_*API_KEY environment variables. Each provider requires its own API key set through the appropriate environment variable.
 
 #### Environment Variables
 
@@ -286,12 +290,14 @@ RA.Aid supports multiple providers through environment variables:
 - `OPENAI_API_KEY`: Required for OpenAI provider
 - `OPENROUTER_API_KEY`: Required for OpenRouter provider
 - `OPENAI_API_BASE`: Required for OpenAI-compatible providers along with `OPENAI_API_KEY`
+- `GEMINI_API_KEY`: Required for Gemini provider
 
 Expert Tool Environment Variables:
 - `EXPERT_OPENAI_API_KEY`: API key for expert tool using OpenAI provider
 - `EXPERT_ANTHROPIC_API_KEY`: API key for expert tool using Anthropic provider
 - `EXPERT_OPENROUTER_API_KEY`: API key for expert tool using OpenRouter provider
 - `EXPERT_OPENAI_API_BASE`: Base URL for expert tool using OpenAI-compatible provider
+- `EXPERT_GEMINI_API_KEY`: API key for expert tool using Gemini provider
 
 You can set these permanently in your shell's configuration file (e.g., `~/.bashrc` or `~/.zshrc`):
 
@@ -307,6 +313,9 @@ export OPENROUTER_API_KEY=your_api_key_here
 
 # For OpenAI-compatible providers
 export OPENAI_API_BASE=your_api_base_url
+
+# For Gemini provider
+export GEMINI_API_KEY=your_api_key_here
 ```
 
 ### Custom Model Examples
@@ -332,7 +341,7 @@ export OPENAI_API_BASE=your_api_base_url
 
 4. **Configuring Expert Provider**
 
-   The expert tool is used by the agent for complex logic and debugging tasks. It can be configured to use different providers (OpenAI, Anthropic, OpenRouter) using the --expert-provider flag along with the corresponding EXPERT_*API_KEY environment variables.
+   The expert tool is used by the agent for complex logic and debugging tasks. It can be configured to use different providers (OpenAI, Anthropic, OpenRouter, Gemini, openai-compatible) using the --expert-provider flag along with the corresponding EXPERT_*API_KEY environment variables.
 
    ```bash
    # Use Anthropic for expert tool
@@ -345,7 +354,11 @@ export OPENAI_API_BASE=your_api_base_url
 
    # Use default OpenAI for expert tool
    export EXPERT_OPENAI_API_KEY=your_openai_api_key
-   ra-aid -m "Your task" --expert-provider openai --expert-model o1-preview
+   ra-aid -m "Your task" --expert-provider openai --expert-model o1
+
+   # Use Gemini for expert tool
+   export EXPERT_GEMINI_API_KEY=your_gemini_api_key
+   ra-aid -m "Your task" --expert-provider gemini --expert-model gemini-2.0-flash-thinking-exp-1219
    ```
 
 Aider specific Environment Variables you can add:
