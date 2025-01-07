@@ -145,10 +145,17 @@ Output **ONLY THE CODE** and **NO MARKDOWN BACKTICKS**"""
         }
         
         try:
+            # Validate the code before execution
+            compile(code.strip(), '<string>', 'exec')
             result = eval(code.strip(), globals_dict)
             return result
+        except SyntaxError as se:
+            error_msg = f"Syntax error in generated code: {str(se)}"
+            logger.error(error_msg)
+            raise ToolExecutionError(error_msg)
         except Exception as e:
             error_msg = f"Error executing code: {str(e)}"
+            logger.error(error_msg)
             raise ToolExecutionError(error_msg)
 
     def _create_agent_chunk(self, content: str) -> Dict[str, Any]:
