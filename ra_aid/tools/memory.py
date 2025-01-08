@@ -1,3 +1,5 @@
+import os
+import os
 from typing import Dict, List, Any, Union, Optional, Set
 from typing_extensions import TypedDict
 
@@ -369,9 +371,28 @@ def emit_related_files(files: List[str]) -> str:
     """
     results = []
     added_files = []
+    invalid_paths = []
     
     # Process files
     for file in files:
+        # First check if path exists
+        if not os.path.exists(file):
+            invalid_paths.append(file)
+            results.append(f"Error: Path '{file}' does not exist")
+            continue
+            
+        # Then check if it's a directory
+        if os.path.isdir(file):
+            invalid_paths.append(file)
+            results.append(f"Error: Path '{file}' is a directory, not a file")
+            continue
+            
+        # Finally validate it's a regular file
+        if not os.path.isfile(file):
+            invalid_paths.append(file)
+            results.append(f"Error: Path '{file}' exists but is not a regular file")
+            continue
+            
         # Check if file path already exists in values
         existing_id = None
         for fid, fpath in _global_memory['related_files'].items():
