@@ -225,7 +225,7 @@ def request_task_implementation(task_spec: str) -> Dict[str, Any]:
     """Spawn an implementation agent to execute the given task.
     
     Args:
-        task_spec: The full task specification
+        task_spec: The full task specification (markdown format, typically one part of the overall plan)
     """
     # Initialize model from config
     config = _global_memory.get('config', {})

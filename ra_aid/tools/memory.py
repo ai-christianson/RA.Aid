@@ -59,7 +59,7 @@ def emit_plan(plan: str) -> str:
     """Store a plan step in global memory.
     
     Args:
-        plan: The plan step to store
+        plan: The plan step to store (markdown format; be clear, complete, use newlines, and use as many tokens as you need)
         
     Returns:
         The stored plan

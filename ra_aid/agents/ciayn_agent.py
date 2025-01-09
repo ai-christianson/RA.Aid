@@ -109,19 +109,72 @@ You must ONLY use ONE of the following functions (these are the ONLY functions t
 <available functions>""" + functions_list + """
 </available functions>
 
-You may use ANY of the above functions to complete your job. Use the best one for the current step you are on. Be efficient, avoid getting stuck in repetitive loops, and do not hesitate to call functions which delegate your work to make your life easier.
+You may use any of the above functions to complete your job. Use the best one for the current step you are on. Be efficient, avoid getting stuck in repetitive loops, and do not hesitate to call functions which delegate your work to make your life easier.
 But you MUST NOT assume tools exist that are not in the above list, e.g. write_file_tool.
 Consider your task done only once you have taken *ALL* the steps required to complete it.
+
+--- EXAMPLE BAD OUTPUTS ---
+
+This tool is not in available functions, so this is a bad tool call:
 
 <example bad output>
 write_file_tool(...)
 </example bad output>
 
+This tool call has a syntax error (unclosed parenthesis, quotes), so it is bad:
+
+<example bad output>
+write_file_tool("asdf
+</example bad output>
+
+This tool call is bad because it includes a message as well as backticks:
+
+<example bad output>
+Sure, I'll make the following tool call to accomplish what you asked me:
+
+```
+list_directory_tree('.')
+```
+</example bad output>
+
+This tool call is bad because the output code is surrounded with backticks:
+
+<example bad output>
+```
+list_directory_tree('.')
+```
+</example bad output>
+
+The following is bad becasue it makes the same tool call multiple times in a row with the exact same parameters, for no reason, getting stuck in a loop:
+
+<example bad output>
+<response 1>
+list_directory_tree('.')
+</response 1>
+<response 2>
+list_directory_tree('.')
+</response 2>
+</example bad output>
+
+The following is bad because it makes more than one tool call in one response:
+
+<example bad output>
+list_directory_tree('.')
+read_file_tool('README.md') # Now we've made 
+</example bad output.
+
+This is a good output because it calls the tool appropriately and with correct syntax:
+
+--- EXAMPLE GOOD OUTPUTS ---
+
 <example good output>
 request_research_and_implementation(\"\"\"
 Example query.
 \"\"\")
+</example good output>
 
+This is good output because it uses a multiple line string when needed and properly calls the tool, does not output backticks or extra information:
+<example good output>
 run_programming_task(\"\"\"
 # Example Programming Task
 
@@ -133,6 +186,11 @@ Implement a widget factory satisfying the following requirements:
 ...
 \"\"\")
 </example good output>
+
+As an agent, you will carefully plan ahead, carefully analyze tool call responses, and adapt to circumstances in order to accomplish your goal.
+
+We're entrusting you with a lot of autonomy and power, so be efficient and don't mess up.
+
 DO NOT CLAIM YOU ARE FINISHED UNTIL YOU ACTUALLY ARE!
 Output **ONLY THE CODE** and **NO MARKDOWN BACKTICKS**"""
 
@@ -148,7 +206,7 @@ Output **ONLY THE CODE** and **NO MARKDOWN BACKTICKS**"""
         try:
 
             code = code.strip()
-            code = code.replace("\n", " ")
+            # code = code.replace("\n", " ")
 
             # if the eval fails, try to extract it via a model call
             if _does_not_conform_to_pattern(code):
