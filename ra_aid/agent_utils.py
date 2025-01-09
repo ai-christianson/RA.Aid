@@ -10,6 +10,8 @@ import threading
 import time
 from typing import Optional
 
+from ra_aid.project_info import get_project_info, format_project_info, display_project_status
+
 from langgraph.prebuilt import create_react_agent
 from ra_aid.agents.ciayn_agent import CiaynAgent
 from ra_aid.project_info import get_project_info, format_project_info, display_project_status
@@ -42,6 +44,8 @@ from ra_aid.prompts import (
     WEB_RESEARCH_PROMPT_SECTION_PLANNING,
     HUMAN_PROMPT_SECTION_PLANNING,
     WEB_RESEARCH_PROMPT,
+    EXPERT_PROMPT_SECTION_CHAT,
+    CHAT_PROMPT,
 )
 from langgraph.checkpoint.memory import MemorySaver
 
@@ -185,7 +189,6 @@ def run_research_agent(
     try:
         project_info = get_project_info(".", file_limit=2000)
         formatted_project_info = format_project_info(project_info)
-        display_project_status(project_info)  # Add status display
     except Exception as e:
         logger.warning(f"Failed to get project info: {e}")
         formatted_project_info = ""
@@ -216,6 +219,9 @@ def run_research_agent(
         # Display console message if provided
         if console_message:
             console.print(Panel(Markdown(console_message), title="🔬 Looking into it..."))
+
+        if project_info:
+            display_project_status(project_info)
 
         # Run agent with retry logic if available
         if agent is not None:

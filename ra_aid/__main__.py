@@ -6,6 +6,7 @@ from rich.panel import Panel
 from rich.console import Console
 from langgraph.checkpoint.memory import MemorySaver
 from ra_aid.env import validate_environment
+from ra_aid.project_info import get_project_info, format_project_info, display_project_status
 from ra_aid.tools.memory import _global_memory
 from ra_aid.tools.human import ask_human
 from ra_aid import print_stage_header, print_error
@@ -206,6 +207,14 @@ def main():
 
             print_stage_header("Chat Mode")
 
+            # Get project info
+            try:
+                project_info = get_project_info(".", file_limit=2000)
+                formatted_project_info = format_project_info(project_info)
+            except Exception as e:
+                logger.warning(f"Failed to get project info: {e}")
+                formatted_project_info = ""
+
             # Get initial request from user
             initial_request = ask_human.invoke({"question": "What would you like help with?"})
 
@@ -243,7 +252,8 @@ def main():
                     initial_request=initial_request,
                     web_research_section=WEB_RESEARCH_PROMPT_SECTION_CHAT if web_research_enabled else "",
                     working_directory=working_directory,
-                    current_date=current_date
+                    current_date=current_date,
+                    project_info=formatted_project_info
                 ), config)
             return
 

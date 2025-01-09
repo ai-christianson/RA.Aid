@@ -105,16 +105,14 @@ def display_project_status(info: ProjectInfo) -> None:
         info: ProjectInfo object containing project state
     """    
     # Create project status text
-    status = "New/Empty Project" if info.is_new else "Existing Project"
+    status = "**New/empty project**" if info.is_new else "**Existing project**"
     
     # Format file count (with truncation notice if needed)
     file_count = f"{len(info.files)} of {info.total_files}" if len(info.files) < info.total_files else str(info.total_files)
     
     # Build status text with markdown
     status_text = f"""
-# Project Status
-- **Status:** {status}
-- **Total Files:** {file_count}
+{status} with **{file_count} file(s)**
 """
     # Add truncation notice if list was truncated 
     if len(info.files) < info.total_files:
