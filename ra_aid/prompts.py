@@ -123,6 +123,19 @@ Work done so far:
 {work_log}
 </work log>
 
+Project Info:
+{project_info}
+
+Project State Handling:
+    For new/empty projects:
+        Skip exploratory steps and focus directly on the task
+        
+    For existing projects:
+        Start with the provided file listing in Project Info
+        If file listing was truncated (over 2000 files):
+            Be aware there may be additional relevant files
+            Use tools like ripgrep_search and fuzzy_find_project_files to locate specific files
+
 Be very thorough in your research and emit lots of snippets, key facts. If you take more than a few steps, be eager to emit research subtasks.{research_only_note}
 
 Objective
@@ -190,10 +203,21 @@ If this is a trivial task that can be completed in one shot, do the change using
   For one shot tasks, still take some time to consider whether compilation, testing, or additional validation should be done to check your work.
   If you implement the task yourself, do not request implementation.
 
-Thoroughness and Completeness
-
-    If this is determined to be a new/empty project (no code or files), state that and stop.
-    If it is an existing project, explore it fully:
+Thoroughness and Completeness:
+    If this is determined to be a new/empty project (shown in Project Info), focus directly on the task.
+    If it is an existing project:
+        Start with the provided file listing in Project Info
+        If file listing was truncated (over 2000 files):
+            Be aware there may be additional relevant files
+            Use tools like ripgrep_search and fuzzy_find_project_files to locate specific files
+        
+        Then explore the project fully:
+            Start at the root directory, ls to see what's there.
+            For each directory found, navigate in and run ls again.
+            If this is a monorepo or multi-module project, thoroughly discover all directories and files related to the task—sometimes user requests will span multiple modules or parts of the monorepo.
+            When you find related files, search for files related to those that could be affected, and so on, until you're sure you've gone deep enough. Err on the side of going too deep.
+            Continue this process until you have discovered all directories and files at all levels.
+            Carefully report what you found, including all directories and files.
         Start at the root directory, ls to see what’s there.
         For each directory found, navigate in and run ls again.
         If this is a monorepo or multi-module project, thoroughly discover all directories and files related to the task—sometimes user requests will span multiple modules or parts of the monorepo.
@@ -336,6 +360,21 @@ Work done so far:
 {work_log}
 </work log>
 
+Project Info:
+{project_info}
+
+Project State Handling:
+    For new/empty projects:
+        Skip exploratory steps and focus directly on the task
+        
+    For existing projects:
+        Start with the provided file listing in Project Info
+        If file listing was truncated (over 2000 files):
+            Be aware there may be additional relevant files
+            Use tools like ripgrep_search and fuzzy_find_project_files to locate specific files
+        
+        Then explore the project fully:
+
 Be very thorough in your research and emit lots of snippets, key facts. If you take more than a few steps, be eager to emit research subtasks.
 
 Objective
@@ -396,10 +435,15 @@ No Planning or Problem-Solving
 
 You must remain strictly within the bounds of describing what currently exists.
 
-Thoroughness and Completeness
-
-    If this is determined to be a new/empty project (no code or files), state that and stop.
-    If it is an existing project, explore it fully:
+Thoroughness and Completeness:
+    If this is determined to be a new/empty project (shown in Project Info), focus directly on the task.
+    If it is an existing project:
+        Start with the provided file listing in Project Info
+        If file listing was truncated (over 2000 files):
+            Be aware there may be additional relevant files
+            Use tools like ripgrep_search and fuzzy_find_project_files to locate specific files
+        
+        Then explore the project fully:
         Start at the root directory, ls to see what's there.
         For each directory found, navigate in and run ls again.
         If this is a monorepo or multi-module project, thoroughly discover all directories and files related to the task—sometimes user requests will span multiple modules or parts of the monorepo.

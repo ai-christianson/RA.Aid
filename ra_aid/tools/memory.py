@@ -197,7 +197,7 @@ def emit_key_snippets(snippets: List[SnippetInfo]) -> str:
     This is for **existing**, or **just-written** files, not for things to be created in the future.
     
     Args:
-        snippets: List of snippet information dictionaries containing:
+        snippets: REQUIRED List of snippet information dictionaries containing:
                  - filepath: Path to the source file
                  - line_number: Line number where the snippet starts  
                  - snippet: The source code snippet text

@@ -12,7 +12,7 @@ from typing import Optional
 
 from langgraph.prebuilt import create_react_agent
 from ra_aid.agents.ciayn_agent import CiaynAgent
-from ra_aid.agents.ciayn_agent import CiaynAgent
+from ra_aid.project_info import get_project_info, format_project_info, display_project_status
 from ra_aid.console.formatting import print_stage_header, print_error
 from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import tool
@@ -181,6 +181,15 @@ def run_research_agent(
     code_snippets = _global_memory.get("code_snippets", "")
     related_files = _global_memory.get("related_files", "")
 
+    # Get project info
+    try:
+        project_info = get_project_info(".", file_limit=2000)
+        formatted_project_info = format_project_info(project_info)
+        display_project_status(project_info)  # Add status display
+    except Exception as e:
+        logger.warning(f"Failed to get project info: {e}")
+        formatted_project_info = ""
+
     # Build prompt
     prompt = (RESEARCH_ONLY_PROMPT if research_only else RESEARCH_PROMPT).format(
         base_task=base_task_or_query,
@@ -191,7 +200,8 @@ def run_research_agent(
         key_facts=key_facts,
         work_log=get_memory_value('work_log'),
         code_snippets=code_snippets,
-        related_files=related_files
+        related_files=related_files,
+        project_info=formatted_project_info
     )
 
     # Set up configuration
