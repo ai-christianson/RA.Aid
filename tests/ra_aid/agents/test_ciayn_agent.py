@@ -2,6 +2,7 @@ import pytest
 from unittest.mock import Mock, patch
 from langchain_core.messages import HumanMessage, AIMessage
 from ra_aid.agents.ciayn_agent import CiaynAgent
+from ra_aid.agents.ciayn_agent import validate_function_call_pattern
 
 @pytest.fixture
 def mock_model():
@@ -156,7 +157,7 @@ def test_trim_chat_history_both_limits():
     assert result[1] == chat_history[-1]
 
 
-class TestCiaynAgentRegexValidation:
+class TestFunctionCallValidation:
     @pytest.mark.parametrize("test_input", [
         "basic_func()", 
         "func_with_arg(\"test\")",
@@ -167,7 +168,7 @@ class TestCiaynAgentRegexValidation:
     ])
     def test_valid_function_calls(self, test_input):
         """Test function call patterns that should pass validation."""
-        assert not CiaynAgent._does_not_conform_to_pattern(test_input)
+        assert not validate_function_call_pattern(test_input)
 
     @pytest.mark.parametrize("test_input", [
         "",
@@ -179,7 +180,7 @@ class TestCiaynAgentRegexValidation:
     ])
     def test_invalid_function_calls(self, test_input):
         """Test function call patterns that should fail validation."""
-        assert CiaynAgent._does_not_conform_to_pattern(test_input)
+        assert validate_function_call_pattern(test_input)
 
     @pytest.mark.parametrize("test_input", [
         "  leading_space()",
@@ -189,7 +190,7 @@ class TestCiaynAgentRegexValidation:
     ])
     def test_whitespace_handling(self, test_input):
         """Test whitespace variations in function calls."""
-        assert not CiaynAgent._does_not_conform_to_pattern(test_input)
+        assert not validate_function_call_pattern(test_input)
 
     @pytest.mark.parametrize("test_input", [
         """multiline(
@@ -199,4 +200,4 @@ class TestCiaynAgentRegexValidation:
     ])
     def test_multiline_responses(self, test_input):
         """Test function calls spanning multiple lines."""
-        assert not CiaynAgent._does_not_conform_to_pattern(test_input)
+        assert not validate_function_call_pattern(test_input)

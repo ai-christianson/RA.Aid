@@ -1,7 +1,9 @@
-import inspect
+import re
 from dataclasses import dataclass
 from typing import Dict, Any, Generator, List, Optional, Union
-import re
+from typing import Dict, Any, Generator, List, Optional, Union
+
+from ra_aid.tools.reflection import get_function_info
 
 from langchain_core.messages import AIMessage, HumanMessage, BaseMessage, SystemMessage
 from ra_aid.exceptions import ToolExecutionError
@@ -13,6 +15,24 @@ logger = get_logger(__name__)
 class ChunkMessage:
     content: str
     status: str
+
+def validate_function_call_pattern(s: str) -> bool:
+    """Check if a string matches the expected function call pattern.
+
+    Validates that the string represents a valid function call with:
+    - Function name consisting of word characters, underscores or hyphens
+    - Opening/closing parentheses with balanced nesting
+    - Arbitrary arguments inside parentheses
+    - Optional whitespace
+
+    Args:
+        s: String to validate
+
+    Returns:
+        bool: False if pattern matches (valid), True if invalid
+    """
+    pattern = r"^\s*[\w_\-]+\s*\([^)(]*(?:\([^)(]*\)[^)(]*)*\)\s*$"
+    return not re.match(pattern, s, re.DOTALL)
 
 class CiaynAgent:
     """Code Is All You Need (CIAYN) agent that uses generated Python code for tool interaction.
@@ -45,26 +65,6 @@ class CiaynAgent:
     - Memory management with configurable limits
     """
 
-    @staticmethod
-    def _does_not_conform_to_pattern(s):
-        pattern = r"^\s*[\w_\-]+\s*\([^)(]*(?:\([^)(]*\)[^)(]*)*\)\s*$"
-        return not re.match(pattern, s, re.DOTALL)
-
-    def _get_function_info(self, func):
-        """
-        Returns a well-formatted string containing the function signature and docstring,
-        designed to be easily readable by both humans and LLMs.
-        """
-        signature = inspect.signature(func)
-        docstring = inspect.getdoc(func)
-        if docstring is None:
-            docstring = "No docstring provided"
-        full_signature = f"{func.__name__}{signature}"
-        info = f"""{full_signature}
-\"\"\"
-{docstring}
-\"\"\""""
-        return info
 
     def __init__(self, model, tools: list, max_history_messages: int = 50, max_tokens: Optional[int] = 100000):
         """Initialize the agent with a model and list of tools.
@@ -81,7 +81,7 @@ class CiaynAgent:
         self.max_tokens = max_tokens
         self.available_functions = []
         for t in tools:
-            self.available_functions.append(self._get_function_info(t.func))
+            self.available_functions.append(get_function_info(t.func))
 
     def _build_prompt(self, last_result: Optional[str] = None) -> str:
         """Build the prompt for the agent including available tools and context."""
@@ -217,7 +217,7 @@ Output **ONLY THE CODE** and **NO MARKDOWN BACKTICKS**"""
             # code = code.replace("\n", " ")
 
             # if the eval fails, try to extract it via a model call
-            if self._does_not_conform_to_pattern(code):
+            if validate_function_call_pattern(code):
                 functions_list = "\n\n".join(self.available_functions)
                 code = _extract_tool_call(code, functions_list)
 
