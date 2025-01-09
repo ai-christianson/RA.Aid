@@ -1,6 +1,7 @@
 import inspect
 from dataclasses import dataclass
 from typing import Dict, Any, Generator, List, Optional, Union
+import re
 
 from langchain_core.messages import AIMessage, HumanMessage, BaseMessage, SystemMessage
 from ra_aid.exceptions import ToolExecutionError
@@ -143,8 +144,17 @@ Output **ONLY THE CODE** and **NO MARKDOWN BACKTICKS**"""
             tool.func.__name__: tool.func
             for tool in self.tools
         }
-        
+
         try:
+
+            code = code.strip()
+            code = code.replace("\n", " ")
+
+            # if the eval fails, try to extract it via a model call
+            if _does_not_conform_to_pattern(code):
+                functions_list = "\n\n".join(self.available_functions)
+                code = _extract_tool_call(code, functions_list)
+
             result = eval(code.strip(), globals_dict)
             return result
         except Exception as e:
@@ -250,3 +260,40 @@ Output **ONLY THE CODE** and **NO MARKDOWN BACKTICKS**"""
             except ToolExecutionError as e:
                 chat_history.append(HumanMessage(content=f"Your tool call caused an error: {e}\n\nPlease correct your tool call and try again."))
                 yield self._create_error_chunk(str(e))
+
+def _extract_tool_call(code: str, functions_list: str) -> str:
+    from ra_aid.tools.expert import get_model
+
+    model = get_model()
+    prompt = f"""
+I'm conversing with a AI model and requiring responses in a particular format: A function call with any parameters escaped. Here is an example:
+
+```
+run_programming_task("blah \" blah\" blah")
+```
+
+The following tasks are allowed:
+
+{functions_list}
+
+I got this invalid response from the model, can you format it so it becomes a correct function call?
+
+```
+{code}
+```
+    """
+    response = model.invoke(prompt)
+    response = response.content
+
+    pattern = r"([\w_\-]+)\((.*?)\)"
+    matches = re.findall(pattern, response, re.DOTALL)
+    if len(matches) == 0:
+        raise ToolExecutionError("Failed to extract tool call")
+    ma = matches[0][0].strip()
+    mb = matches[0][1].strip().replace("\n", " ")
+    return f"{ma}({mb})"
+
+
+def _does_not_conform_to_pattern(s):
+    pattern = r"^\s*[\w_\-]+\((.*?)\)\s*$" 
+    return not re.match(pattern, s, re.DOTALL)

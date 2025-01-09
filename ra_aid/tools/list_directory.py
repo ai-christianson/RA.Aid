@@ -65,13 +65,35 @@ def load_gitignore_patterns(path: Path) -> pathspec.PathSpec:
     """
     gitignore_path = path / '.gitignore'
     patterns = []
-    
+
+    def modify_path(p: str) -> str:
+        # Python pathspec doesn't treat `blah/` as a ignore folder, but `blah`. So we strip them
+        p = p.strip()
+        if p.endswith("/"):
+            return p[:-1]
+        return p
+
     # Load patterns from .gitignore if it exists
     if gitignore_path.exists():
         with open(gitignore_path) as f:
-            patterns.extend(line.strip() for line in f 
-                          if line.strip() and not line.startswith('#'))
-            
+            patterns.extend(
+                modify_path(line)
+                for line in f
+                if line.strip() and not line.startswith("#")
+            )
+
+    # add patterns from .aiderignore if it exists
+    aiderignore_path = path / ".aiderignore"
+
+    # Load patterns from .gitignore if it exists
+    if aiderignore_path.exists():
+        with open(aiderignore_path) as f:
+            patterns.extend(
+                modify_path(line)
+                for line in f
+                if line.strip() and not line.startswith("#")
+            )
+    
     # Add default patterns
     patterns.extend(DEFAULT_EXCLUDE_PATTERNS)
     
