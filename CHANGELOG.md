@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.1] - 2025-01-08
+- Fix bug where directories are added as related files.
+
+## [0.12.0] - 2025-01-04
+
+### Added
+- Google Gemini AI provider support
+- Dependency check functionality in ra_aid/dependencies.py
+- Test coverage reporting to pytest commands
+
+### Changed
+- Updated minimum Python requirement to 3.9
+- Updated OpenAI model defaults
+- Modified test files to support new Gemini provider
+- Updated SWE-bench dataset generation script with UV package management
+
+### Fixed
+- Date-based assertions in directory listing tests
+
+## [0.11.3] - 2024-12-30
+
+- MacOS fixes.
+
+## [0.11.2] - 2024-12-30
+
+- Fix SyntaxError: f-string expression part cannot include a backslash.
+
 ## [0.11.1] - 2024-12-29
 
 - Improve prompts.

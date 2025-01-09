@@ -3,6 +3,7 @@ import pytest
 from unittest.mock import patch, Mock
 from langchain_openai.chat_models import ChatOpenAI
 from langchain_anthropic.chat_models import ChatAnthropic
+from langchain_google_genai.chat_models import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage
 from dataclasses import dataclass
 from ra_aid.agents.ciayn_agent import CiaynAgent
@@ -16,7 +17,7 @@ def clean_env(monkeypatch):
     env_vars = [
         'ANTHROPIC_API_KEY', 'OPENAI_API_KEY', 'OPENROUTER_API_KEY',
         'OPENAI_API_BASE', 'EXPERT_ANTHROPIC_API_KEY', 'EXPERT_OPENAI_API_KEY',
-        'EXPERT_OPENROUTER_API_KEY', 'EXPERT_OPENAI_API_BASE'
+        'EXPERT_OPENROUTER_API_KEY', 'EXPERT_OPENAI_API_BASE', 'GEMINI_API_KEY', 'EXPERT_GEMINI_API_KEY'
     ]
     for var in env_vars:
         monkeypatch.delenv(var, raising=False)
@@ -38,7 +39,7 @@ def test_initialize_expert_defaults(clean_env, mock_openai, monkeypatch):
     
     mock_openai.assert_called_once_with(
         api_key="test-key",
-        model="o1-preview"
+        model="o1"
     )
 
 def test_initialize_expert_openai_custom(clean_env, mock_openai, monkeypatch):
@@ -49,6 +50,16 @@ def test_initialize_expert_openai_custom(clean_env, mock_openai, monkeypatch):
     mock_openai.assert_called_once_with(
         api_key="test-key",
         model="gpt-4-preview"
+    )
+
+def test_initialize_expert_gemini(clean_env, mock_gemini, monkeypatch):
+    """Test expert Gemini initialization."""
+    monkeypatch.setenv("EXPERT_GEMINI_API_KEY", "test-key")
+    llm = initialize_expert_llm("gemini", "gemini-2.0-flash-thinking-exp-1219")
+    
+    mock_gemini.assert_called_once_with(
+        api_key="test-key",
+        model="gemini-2.0-flash-thinking-exp-1219"
     )
 
 def test_initialize_expert_anthropic(clean_env, mock_anthropic, monkeypatch):
@@ -114,6 +125,16 @@ def test_initialize_openai(clean_env, mock_openai):
         model="gpt-4"
     )
 
+def test_initialize_gemini(clean_env, mock_gemini):
+    """Test Gemini provider initialization"""
+    os.environ["GEMINI_API_KEY"] = "test-key"
+    model = initialize_llm("gemini", "gemini-2.0-flash-thinking-exp-1219")
+    
+    mock_gemini.assert_called_once_with(
+        api_key="test-key",
+        model="gemini-2.0-flash-thinking-exp-1219"
+    )
+
 def test_initialize_anthropic(clean_env, mock_anthropic):
     """Test Anthropic provider initialization"""
     os.environ["ANTHROPIC_API_KEY"] = "test-key"
@@ -154,12 +175,12 @@ def test_initialize_unsupported_provider(clean_env):
         initialize_llm("unsupported", "model")
     assert str(exc_info.value) == "Unsupported provider: unsupported"
 
-def test_temperature_defaults(clean_env, mock_openai, mock_anthropic):
+def test_temperature_defaults(clean_env, mock_openai, mock_anthropic, mock_gemini):
     """Test default temperature behavior for different providers."""
     os.environ["OPENAI_API_KEY"] = "test-key"
     os.environ["ANTHROPIC_API_KEY"] = "test-key"
     os.environ["OPENAI_API_BASE"] = "http://test-url"
-    
+    os.environ["GEMINI_API_KEY"] = "test-key"
     # Test openai-compatible default temperature
     initialize_llm("openai-compatible", "test-model")
     mock_openai.assert_called_with(
@@ -181,18 +202,33 @@ def test_temperature_defaults(clean_env, mock_openai, mock_anthropic):
         api_key="test-key",
         model_name="test-model"
     )
+    
+    initialize_llm("gemini", "test-model")
+    mock_gemini.assert_called_with(
+        api_key="test-key",
+        model="test-model"
+    )
 
-def test_explicit_temperature(clean_env, mock_openai, mock_anthropic):
+def test_explicit_temperature(clean_env, mock_openai, mock_anthropic, mock_gemini):
     """Test explicit temperature setting for each provider."""
     os.environ["OPENAI_API_KEY"] = "test-key"
     os.environ["ANTHROPIC_API_KEY"] = "test-key"
     os.environ["OPENROUTER_API_KEY"] = "test-key"
+    os.environ["GEMINI_API_KEY"] = "test-key"
     
     test_temp = 0.7
     
     # Test OpenAI
     initialize_llm("openai", "test-model", temperature=test_temp)
     mock_openai.assert_called_with(
+        api_key="test-key",
+        model="test-model",
+        temperature=test_temp
+    )
+    
+    # Test Gemini
+    initialize_llm("gemini", "test-model", temperature=test_temp)
+    mock_gemini.assert_called_with(
         api_key="test-key",
         model="test-model",
         temperature=test_temp
@@ -234,7 +270,7 @@ def test_temperature_validation(clean_env, mock_openai):
 def test_provider_name_validation():
     """Test provider name validation and normalization."""
     # Test all supported providers
-    providers = ["openai", "anthropic", "openrouter", "openai-compatible"]
+    providers = ["openai", "anthropic", "openrouter", "openai-compatible", "gemini"]
     for provider in providers:
         try:
             with patch(f'ra_aid.llm.ChatOpenAI'), patch('ra_aid.llm.ChatAnthropic'):
@@ -247,7 +283,7 @@ def test_provider_name_validation():
         with pytest.raises(ValueError):
             initialize_llm("OpenAI", "test-model")
 
-def test_initialize_llm_cross_provider(clean_env, mock_openai, mock_anthropic, monkeypatch):
+def test_initialize_llm_cross_provider(clean_env, mock_openai, mock_anthropic, mock_gemini, monkeypatch):
     """Test initializing different providers in sequence."""
     # Initialize OpenAI
     monkeypatch.setenv("OPENAI_API_KEY", "openai-key")
@@ -257,6 +293,10 @@ def test_initialize_llm_cross_provider(clean_env, mock_openai, mock_anthropic, m
     monkeypatch.setenv("ANTHROPIC_API_KEY", "anthropic-key") 
     llm2 = initialize_llm("anthropic", "claude-3")
     
+    # Initialize Gemini
+    monkeypatch.setenv("GEMINI_API_KEY", "gemini-key")
+    llm3 = initialize_llm("gemini", "gemini-2.0-flash-thinking-exp-1219")
+    
     # Verify both were initialized correctly
     mock_openai.assert_called_once_with(
         api_key="openai-key",
@@ -265,6 +305,10 @@ def test_initialize_llm_cross_provider(clean_env, mock_openai, mock_anthropic, m
     mock_anthropic.assert_called_once_with(
         api_key="anthropic-key",
         model_name="claude-3"
+    )
+    mock_gemini.assert_called_once_with(
+        api_key="gemini-key",
+        model="gemini-2.0-flash-thinking-exp-1219"
     )
 
 def test_environment_variable_precedence(clean_env, mock_openai, monkeypatch):
@@ -284,6 +328,7 @@ def test_environment_variable_precedence(clean_env, mock_openai, monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "base-key") 
     monkeypatch.setenv("EXPERT_OPENAI_API_KEY", "expert-key")
     monkeypatch.setenv("TAVILY_API_KEY", "tavily-key")
+    monkeypatch.setenv("GEMINI_API_KEY", "gemini-key")
     args = Args(provider="openai", expert_provider="openai")
     expert_enabled, expert_missing, web_enabled, web_missing = validate_environment(args)
     assert expert_enabled
@@ -294,7 +339,7 @@ def test_environment_variable_precedence(clean_env, mock_openai, monkeypatch):
     llm = initialize_expert_llm()
     mock_openai.assert_called_with(
         api_key="expert-key",
-        model="o1-preview"
+        model="o1"
     )
     
     # Test empty key validation
@@ -302,6 +347,7 @@ def test_environment_variable_precedence(clean_env, mock_openai, monkeypatch):
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)  # Remove fallback
     monkeypatch.delenv("TAVILY_API_KEY", raising=False)  # Remove web research
     monkeypatch.setenv("ANTHROPIC_API_KEY", "anthropic-key")  # Add for provider validation
+    monkeypatch.setenv("GEMINI_API_KEY", "gemini-key")  # Add for provider validation
     monkeypatch.setenv("ANTHROPIC_MODEL", "claude-3-haiku-20240307")  # Add model for provider validation
     args = Args(provider="anthropic", expert_provider="openai")  # Change base provider to avoid validation error
     expert_enabled, expert_missing, web_enabled, web_missing = validate_environment(args)
@@ -318,4 +364,11 @@ def mock_anthropic():
     """
     with patch('ra_aid.llm.ChatAnthropic') as mock:
         mock.return_value = Mock(spec=ChatAnthropic)
+        yield mock
+
+@pytest.fixture
+def mock_gemini():
+    """Mock ChatGoogleGenerativeAI class for testing Gemini provider initialization."""
+    with patch('ra_aid.llm.ChatGoogleGenerativeAI') as mock:
+        mock.return_value = Mock(spec=ChatGoogleGenerativeAI)
         yield mock

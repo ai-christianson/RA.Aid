@@ -1,9 +1,12 @@
 import os
 import pytest
 import tempfile
+from datetime import datetime
 from pathlib import Path
 from ra_aid.tools import list_directory_tree
 from ra_aid.tools.list_directory import load_gitignore_patterns, should_ignore
+
+EXPECTED_YEAR = str(datetime.now().year)
 
 @pytest.fixture
 def temp_dir():
@@ -68,7 +71,7 @@ def test_list_directory_with_details(temp_dir):
     
     # File details should be present
     assert "bytes" in result.lower() or "kb" in result.lower() or "b" in result.lower()
-    assert "2024-" in result
+    assert f"{EXPECTED_YEAR}-" in result
 
 def test_list_directory_depth_limit(temp_dir):
     """Test max_depth parameter"""

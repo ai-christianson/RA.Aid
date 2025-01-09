@@ -46,6 +46,10 @@ def copy_base_to_expert_vars(base_provider: str, expert_provider: str) -> None:
         },
         'openrouter': {
             'OPENROUTER_API_KEY': 'EXPERT_OPENROUTER_API_KEY'
+        },
+        'gemini': {
+            'GEMINI_API_KEY': 'EXPERT_GEMINI_API_KEY',
+            'GEMINI_MODEL': 'EXPERT_GEMINI_MODEL'
         }
     }
 

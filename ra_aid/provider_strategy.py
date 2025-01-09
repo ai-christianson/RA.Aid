@@ -213,6 +213,45 @@ class OpenRouterStrategy(ProviderStrategy):
 
         return ValidationResult(valid=len(missing) == 0, missing_vars=missing)
 
+class GeminiStrategy(ProviderStrategy):
+    """Gemini provider validation strategy."""
+
+    def validate(self, args: Optional[Any] = None) -> ValidationResult:
+        """Validate Gemini environment variables."""
+        missing = []
+
+        # Check if we're validating expert config
+        if args and hasattr(args, 'expert_provider') and args.expert_provider == 'gemini':
+            key = os.environ.get('EXPERT_GEMINI_API_KEY')
+            if not key or key == '':
+                # Try to copy from base if not set
+                base_key = os.environ.get('GEMINI_API_KEY')
+                if base_key:
+                    os.environ['EXPERT_GEMINI_API_KEY'] = base_key
+                    key = base_key
+            if not key:
+                missing.append('EXPERT_GEMINI_API_KEY environment variable is not set')
+        else:
+            key = os.environ.get('GEMINI_API_KEY')
+            if not key:
+                missing.append('GEMINI_API_KEY environment variable is not set')
+
+        return ValidationResult(valid=len(missing) == 0, missing_vars=missing)
+
+
+class OllamaStrategy(ProviderStrategy):
+    """Ollama provider validation strategy."""
+
+    def validate(self, args: Optional[Any] = None) -> ValidationResult:
+        """Validate Ollama environment variables."""
+        missing = []
+        
+        base_url = os.environ.get('OLLAMA_BASE_URL')
+        if not base_url:
+            missing.append('OLLAMA_BASE_URL environment variable is not set')
+
+        return ValidationResult(valid=len(missing) == 0, missing_vars=missing)
+
 class ProviderFactory:
     """Factory for creating provider validation strategies."""
 
@@ -231,7 +270,9 @@ class ProviderFactory:
             'openai': OpenAIStrategy(),
             'openai-compatible': OpenAICompatibleStrategy(),
             'anthropic': AnthropicStrategy(),
-            'openrouter': OpenRouterStrategy()
+            'openrouter': OpenRouterStrategy(),
+            'gemini': GeminiStrategy(),
+            'ollama': OllamaStrategy()
         }
         strategy = strategies.get(provider)
         return strategy
