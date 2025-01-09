@@ -189,6 +189,7 @@ def run_research_agent(
         human_section=human_section,
         web_research_section=web_research_section,
         key_facts=key_facts,
+        work_log=get_memory_value('work_log'),
         code_snippets=code_snippets,
         related_files=related_files
     )
@@ -382,6 +383,7 @@ def run_planning_agent(
         related_files="\n".join(get_related_files()),
         key_facts=get_memory_value('key_facts'),
         key_snippets=get_memory_value('key_snippets'),
+        work_log=get_memory_value('work_log'),
         research_only_note='' if config.get('research_only') else ' Only request implementation if the user explicitly asked for changes to be made.'
     )
 

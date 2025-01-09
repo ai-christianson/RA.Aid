@@ -118,6 +118,11 @@ Relevant Code Snippets:
 Related Files:
 {related_files}
 
+Work done so far:
+<work log>
+{work_log}
+</work log>
+
 Be very thorough in your research and emit lots of snippets, key facts. If you take more than a few steps, be eager to emit research subtasks.{research_only_note}
 
 Objective
@@ -326,6 +331,11 @@ Relevant Code Snippets:
 Related Files:
 {related_files}
 
+Work done so far:
+<work log>
+{work_log}
+</work log>
+
 Be very thorough in your research and emit lots of snippets, key facts. If you take more than a few steps, be eager to emit research subtasks.
 
 Objective
@@ -438,6 +448,11 @@ Key Facts:
 
 Key Snippets:
 {key_snippets}
+
+Work done so far:
+<work log>
+{work_log}
+</work log>
 
 Fact Management:
     Each fact is identified with [Fact ID: X].
