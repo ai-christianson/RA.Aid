@@ -16,7 +16,7 @@ from ..console import print_task_header
 
 CANCELLED_BY_USER_REASON = "The operation was explicitly cancelled by the user. This typically is an indication that the action requested was not aligned with the user request."
 
-RESEARCH_AGENT_RECURSION_LIMIT = 2
+RESEARCH_AGENT_RECURSION_LIMIT = 3
 
 console = Console()
 

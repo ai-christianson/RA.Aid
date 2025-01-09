@@ -571,8 +571,10 @@ def run_agent_with_retry(agent, prompt: str, config: dict) -> Optional[str]:
                 except (KeyboardInterrupt, AgentInterrupt):
                     raise
                 except (InternalServerError, APITimeoutError, RateLimitError, APIError, ValueError) as e:
-                    if isinstance(e, ValueError) and 'code 429' not in str(e):
-                        raise  # Re-raise ValueError if it's not a Lambda 429
+                    if isinstance(e, ValueError):
+                        error_str = str(e).lower()
+                        if 'code' not in error_str or '429' not in error_str:
+                            raise  # Re-raise ValueError if it's not a Lambda 429
                     if attempt == max_retries - 1:
                         logger.error("Max retries reached, failing: %s", str(e))
                         raise RuntimeError(f"Max retries ({max_retries}) exceeded. Last error: {e}")
