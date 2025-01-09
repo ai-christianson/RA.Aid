@@ -44,7 +44,7 @@ def is_new_project(directory: str) -> bool:
         if not path.exists():
             raise DirectoryNotFoundError(f"Directory does not exist: {directory}")
         if not path.is_dir():
-            raise ProjectStateError(f"Path is not a directory: {directory}")
+            raise DirectoryNotFoundError(f"Path is not a directory: {directory}")
 
         # Get all files/dirs in the directory, excluding contents of .git
         allowed_items: Set[str] = {'.git', '.gitignore'}
