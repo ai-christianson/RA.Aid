@@ -45,7 +45,7 @@ def emit_research_notes(notes: str) -> str:
     """Store research notes in global memory.
     
     Args:
-        notes: The research notes to store
+        notes: REQUIRED The research notes to store
         
     Returns:
         The stored notes

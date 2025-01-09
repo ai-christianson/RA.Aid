@@ -29,7 +29,7 @@ If new files are created, emit them after finishing.
 They can add/modify files, but not remove. Use run_shell_command to remove files. If referencing files you’ll delete, remove them after they finish.
 
 Args:
- instructions: Programming task instructions (markdown format, use newlines and as many tokens as needed)
+ instructions: REQUIRED Programming task instructions (markdown format, use newlines and as many tokens as needed)
  files: Optional; if not provided, uses related_files
 
 Returns: { "output": stdout+stderr, "return_code": 0 if success, "success": True/False }
