@@ -161,6 +161,9 @@ def request_web_research(query: str) -> ResearchResult:
 def request_research_and_implementation(query: str) -> Dict[str, Any]:
     """Spawn a research agent to investigate and implement the given query.
     
+    If you are calling this on behalf of a user request, you must *faithfully*
+    represent all info the user gave you, sometimes even to the point of repeating the user query verbatim.
+    
     Args:
         query: The research question or project description
     """

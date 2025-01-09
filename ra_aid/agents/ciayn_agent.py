@@ -45,6 +45,11 @@ class CiaynAgent:
     - Memory management with configurable limits
     """
 
+    @staticmethod
+    def _does_not_conform_to_pattern(s):
+        pattern = r"^\s*[\w_\-]+\s*\([^)(]*(?:\([^)(]*\)[^)(]*)*\)\s*$"
+        return not re.match(pattern, s, re.DOTALL)
+
     def _get_function_info(self, func):
         """
         Returns a well-formatted string containing the function signature and docstring,
@@ -191,6 +196,10 @@ As an agent, you will carefully plan ahead, carefully analyze tool call response
 
 We're entrusting you with a lot of autonomy and power, so be efficient and don't mess up.
 
+You have often been criticized for:
+
+- Making the same function calls over and over, getting stuck in a loop.
+
 DO NOT CLAIM YOU ARE FINISHED UNTIL YOU ACTUALLY ARE!
 Output **ONLY THE CODE** and **NO MARKDOWN BACKTICKS**"""
 
@@ -204,12 +213,11 @@ Output **ONLY THE CODE** and **NO MARKDOWN BACKTICKS**"""
         }
 
         try:
-
             code = code.strip()
             # code = code.replace("\n", " ")
 
             # if the eval fails, try to extract it via a model call
-            if _does_not_conform_to_pattern(code):
+            if self._does_not_conform_to_pattern(code):
                 functions_list = "\n\n".join(self.available_functions)
                 code = _extract_tool_call(code, functions_list)
 
@@ -350,8 +358,3 @@ I got this invalid response from the model, can you format it so it becomes a co
     ma = matches[0][0].strip()
     mb = matches[0][1].strip().replace("\n", " ")
     return f"{ma}({mb})"
-
-
-def _does_not_conform_to_pattern(s):
-    pattern = r"^\s*[\w_\-]+\((.*?)\)\s*$" 
-    return not re.match(pattern, s, re.DOTALL)

@@ -154,3 +154,49 @@ def test_trim_chat_history_both_limits():
     assert len(result) == 2  # Initial message + 1 message under token limit
     assert result[0] == initial_messages[0]
     assert result[1] == chat_history[-1]
+
+
+class TestCiaynAgentRegexValidation:
+    @pytest.mark.parametrize("test_input", [
+        "basic_func()", 
+        "func_with_arg(\"test\")",
+        "complex_func(1, \"two\", three)",
+        "nested_parens(func(\"test\"))",
+        "under_score()",
+        "with-dash()"
+    ])
+    def test_valid_function_calls(self, test_input):
+        """Test function call patterns that should pass validation."""
+        assert not CiaynAgent._does_not_conform_to_pattern(test_input)
+
+    @pytest.mark.parametrize("test_input", [
+        "",
+        "Invalid!function()",
+        "missing_parens",
+        "unmatched(parens))",
+        "multiple()calls()",
+        "no spaces()()"
+    ])
+    def test_invalid_function_calls(self, test_input):
+        """Test function call patterns that should fail validation."""
+        assert CiaynAgent._does_not_conform_to_pattern(test_input)
+
+    @pytest.mark.parametrize("test_input", [
+        "  leading_space()",
+        "trailing_space()  ",
+        "func   (arg)",
+        "func(  spaced args  )"
+    ])
+    def test_whitespace_handling(self, test_input):
+        """Test whitespace variations in function calls."""
+        assert not CiaynAgent._does_not_conform_to_pattern(test_input)
+
+    @pytest.mark.parametrize("test_input", [
+        """multiline(
+            arg
+        )""",
+        "func(\n  arg1,\n  arg2\n)"
+    ])
+    def test_multiline_responses(self, test_input):
+        """Test function calls spanning multiple lines."""
+        assert not CiaynAgent._does_not_conform_to_pattern(test_input)
