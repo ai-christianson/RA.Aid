@@ -24,6 +24,46 @@ DEFAULT_EXCLUDE_DIRS = [
     '.vscode'
 ]
 
+
+FILE_TYPE_MAP = {
+    # General programming languages
+    "py": "python",
+    "rs": "rust",
+    "js": "javascript",
+    "ts": "typescript",
+    "java": "java",
+    "c": "c",
+    "cpp": "cpp",
+    "h": "c-header",
+    "hpp": "cpp-header",
+    "cs": "csharp",
+    "go": "go",
+    "rb": "ruby",
+    "php": "php",
+    "swift": "swift",
+    "kt": "kotlin",
+    "sh": "sh",
+    "bash": "sh",
+    "r": "r",
+    "pl": "perl",
+    "scala": "scala",
+    "dart": "dart",
+    # Markup, data, and web
+    "html": "html",
+    "htm": "html",
+    "xml": "xml",
+    "css": "css",
+    "scss": "scss",
+    "json": "json",
+    "yaml": "yaml",
+    "yml": "yaml",
+    "toml": "toml",
+    "md": "markdown",
+    "markdown": "markdown",
+    "sql": "sql",
+    "psql": "postgres",
+}
+
 @tool
 def ripgrep_search(
     pattern: str,
@@ -63,7 +103,9 @@ def ripgrep_search(
         cmd.append('--follow')
         
     if file_type:
-        cmd.extend(['-t', file_type])
+        if FILE_TYPE_MAP.get(file_type):
+            file_type = FILE_TYPE_MAP.get(file_type)
+        cmd.extend(["-t", file_type])
 
     # Add exclusions
     exclusions = DEFAULT_EXCLUDE_DIRS + (exclude_dirs or [])
