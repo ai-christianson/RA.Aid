@@ -87,8 +87,7 @@ def request_research(query: str) -> ResearchResult:
         _global_memory['completion_message'] = ''
         _global_memory['task_completed'] = False
         
-    return {
-        "work_log": work_log,
+    response_data = {
         "completion_message": completion_message,
         "key_facts": get_memory_value("key_facts"),
         "related_files": get_related_files(),
@@ -97,6 +96,9 @@ def request_research(query: str) -> ResearchResult:
         "success": success,
         "reason": reason
     }
+    if work_log is not None:
+        response_data["work_log"] = work_log
+    return response_data
 
 @tool("request_web_research")
 def request_web_research(query: str) -> ResearchResult:
@@ -148,14 +150,16 @@ def request_web_research(query: str) -> ResearchResult:
         _global_memory['completion_message'] = ''
         _global_memory['task_completed'] = False
         
-    return {
-        "work_log": work_log,
+    response_data = {
         "completion_message": completion_message,
         "key_snippets": get_memory_value("key_snippets"),
         "research_notes": get_memory_value("research_notes"),
         "success": success,
         "reason": reason
     }
+    if work_log is not None:
+        response_data["work_log"] = work_log
+    return response_data
 
 @tool("request_research_and_implementation")
 def request_research_and_implementation(query: str) -> Dict[str, Any]:
@@ -212,8 +216,7 @@ def request_research_and_implementation(query: str) -> Dict[str, Any]:
     _global_memory['task_completed'] = False
     _global_memory['plan_completed'] = False
 
-    return {
-        "work_log": work_log,
+    response_data = {
         "completion_message": completion_message,
         "key_facts": get_memory_value("key_facts"),
         "related_files": get_related_files(),
@@ -222,6 +225,9 @@ def request_research_and_implementation(query: str) -> Dict[str, Any]:
         "success": success,
         "reason": reason
     }
+    if work_log is not None:
+        response_data["work_log"] = work_log
+    return response_data
 
 @tool("request_task_implementation")
 def request_task_implementation(task_spec: str) -> Dict[str, Any]:
@@ -281,8 +287,7 @@ def request_task_implementation(task_spec: str) -> Dict[str, Any]:
     _global_memory['completion_message'] = ''
     _global_memory['task_completed'] = False
         
-    return {
-        "work_log": work_log,
+    response_data = {
         "key_facts": get_memory_value("key_facts"),
         "related_files": get_related_files(),
         "key_snippets": get_memory_value("key_snippets"),
@@ -290,6 +295,9 @@ def request_task_implementation(task_spec: str) -> Dict[str, Any]:
         "success": success,
         "reason": reason
     }
+    if work_log is not None:
+        response_data["work_log"] = work_log
+    return response_data
 
 @tool("request_implementation")
 def request_implementation(task_spec: str) -> Dict[str, Any]:
@@ -341,8 +349,7 @@ def request_implementation(task_spec: str) -> Dict[str, Any]:
     _global_memory['task_completed'] = False
     _global_memory['plan_completed'] = False
         
-    return {
-        "work_log": work_log,
+    response_data = {
         "completion_message": completion_message,
         "key_facts": get_memory_value("key_facts"),
         "related_files": get_related_files(),
@@ -350,3 +357,6 @@ def request_implementation(task_spec: str) -> Dict[str, Any]:
         "success": success,
         "reason": reason
     }
+    if work_log is not None:
+        response_data["work_log"] = work_log
+    return response_data
