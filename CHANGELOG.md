@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 - Improve prompts for better open model support.
+- Better handle 429 errors on openrouter.
 
 ## [0.12.1] - 2025-01-08
 - Fix bug where directories are added as related files.
