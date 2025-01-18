@@ -44,6 +44,7 @@ dependencies = [
 dev = [
     "pytest-timeout>=2.2.0",
     "pytest>=7.0.0",
+    "pytest-cov>=4.1.0",
 ]
 
 [project.scripts]
