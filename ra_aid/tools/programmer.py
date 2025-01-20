@@ -1,5 +1,5 @@
 import os
-from typing import List, Optional, Dict, Union
+from typing import List, Dict, Union
 from ra_aid.tools.memory import _global_memory
 from langchain_core.tools import tool
 from rich.console import Console
@@ -7,7 +7,6 @@ from rich.panel import Panel
 from rich.markdown import Markdown
 from rich.text import Text
 from ra_aid.proc.interactive import run_interactive_command
-from pydantic import BaseModel, Field
 from ra_aid.text.processing import truncate_output
 
 console = Console()

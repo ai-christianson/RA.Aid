@@ -1,8 +1,8 @@
 import re
 from dataclasses import dataclass
 from typing import Dict, Any, Generator, List, Optional, Union
-from typing import Dict, Any, Generator, List, Optional, Union
 
+from ra_aid.models_tokens import DEFAULT_TOKEN_LIMIT
 from ra_aid.tools.reflection import get_function_info
 
 from langchain_core.messages import AIMessage, HumanMessage, BaseMessage, SystemMessage
@@ -66,7 +66,7 @@ class CiaynAgent:
     """
 
 
-    def __init__(self, model, tools: list, max_history_messages: int = 50, max_tokens: Optional[int] = 100000):
+    def __init__(self, model, tools: list, max_history_messages: int = 50, max_tokens: Optional[int] = DEFAULT_TOKEN_LIMIT):
         """Initialize the agent with a model and list of tools.
         
         Args:
@@ -263,6 +263,10 @@ Output **ONLY THE CODE** and **NO MARKDOWN BACKTICKS**"""
             text = content.content
         else:
             text = content
+
+        # create-react-agent tool calls can be lists
+        if isinstance(text, List):
+            return 0
             
         if not text:
             return 0
