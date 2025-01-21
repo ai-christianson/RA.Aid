@@ -33,7 +33,7 @@ dependencies = [
     "rich>=13.0.0",
     "GitPython>=3.1",
     "fuzzywuzzy==0.18.0",
-    "python-Levenshtein==0.23.0",
+    "rapidfuzz>=3.11.0",
     "pathspec>=0.11.0",
     "aider-chat>=0.72.1",
     "tavily-python>=0.5.0",
@@ -44,6 +44,7 @@ dependencies = [
 dev = [
     "pytest-timeout>=2.2.0",
     "pytest>=7.0.0",
+    "pytest-cov>=6.0.0",
 ]
 
 [project.scripts]
