@@ -128,6 +128,11 @@ Examples:
         default=DEFAULT_RECURSION_LIMIT,
         help="Maximum recursion depth for agent operations (default: 100)",
     )
+    parser.add_argument(
+        '--aider-config',
+        type=str,
+        help='Specify the aider config file path'
+    )
 
     if args is None:
         args = sys.argv[1:]
@@ -321,6 +326,7 @@ def main():
             "research_only": args.research_only,
             "cowboy_mode": args.cowboy_mode,
             "web_research_enabled": web_research_enabled,
+            "aider_config": args.aider_config,
             "limit_tokens": args.disable_limit_tokens,
         }
 

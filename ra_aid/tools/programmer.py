@@ -45,6 +45,10 @@ Returns: { "output": stdout+stderr, "return_code": 0 if success, "success": True
         "--no-suggest-shell-commands",
     ]
 
+    # Add config file if specified
+    if 'config' in _global_memory and _global_memory['config'].get('aider_config'):
+        command.extend(['--config', _global_memory['config']['aider_config']])
+
     # if environment variable AIDER_FLAGS exists then parse
     if 'AIDER_FLAGS' in os.environ:
         # wrap in try catch in case of any error and log the error
