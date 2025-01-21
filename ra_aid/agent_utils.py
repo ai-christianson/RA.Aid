@@ -10,6 +10,7 @@ import signal
 
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt.chat_agent_executor import AgentState
+from ra_aid.config import DEFAULT_RECURSION_LIMIT
 from ra_aid.models_tokens import DEFAULT_TOKEN_LIMIT, models_tokens
 from ra_aid.agents.ciayn_agent import CiaynAgent
 import threading
@@ -293,15 +294,12 @@ def run_research_agent(
         web_research_enabled,
     )
 
-    # Initialize memory if not provided
     if memory is None:
         memory = MemorySaver()
 
-    # Set up thread ID
     if thread_id is None:
         thread_id = str(uuid.uuid4())
 
-    # Configure tools
     tools = get_research_tools(
         research_only=research_only,
         expert_enabled=expert_enabled,
@@ -309,10 +307,8 @@ def run_research_agent(
         web_research_enabled=config.get("web_research_enabled", False),
     )
 
-    # Create agent
     agent = create_agent(model, tools, checkpointer=memory)
 
-    # Format prompt sections
     expert_section = EXPERT_PROMPT_SECTION_RESEARCH if expert_enabled else ""
     human_section = HUMAN_PROMPT_SECTION_RESEARCH if hil else ""
     web_research_section = (
@@ -321,12 +317,10 @@ def run_research_agent(
         else ""
     )
 
-    # Get research context from memory
     key_facts = _global_memory.get("key_facts", "")
     code_snippets = _global_memory.get("code_snippets", "")
     related_files = _global_memory.get("related_files", "")
 
-    # Get project info
     try:
         project_info = get_project_info(".", file_limit=2000)
         formatted_project_info = format_project_info(project_info)
@@ -334,7 +328,6 @@ def run_research_agent(
         logger.warning(f"Failed to get project info: {e}")
         formatted_project_info = ""
 
-    # Build prompt
     prompt = (RESEARCH_ONLY_PROMPT if research_only else RESEARCH_PROMPT).format(
         base_task=base_task_or_query,
         research_only_note=""
@@ -350,13 +343,13 @@ def run_research_agent(
         project_info=formatted_project_info,
     )
 
-    # Set up configuration
-    run_config = {"configurable": {"thread_id": thread_id}, "recursion_limit": 100}
+    config = _global_memory.get("config", {}) if not config else config
+    recursion_limit = config.get("recursion_limit", DEFAULT_RECURSION_LIMIT)
+    run_config = {"configurable": {"thread_id": thread_id}, "recursion_limit": recursion_limit}
     if config:
         run_config.update(config)
 
     try:
-        # Display console message if provided
         if console_message:
             console.print(
                 Panel(Markdown(console_message), title="🔬 Looking into it...")
@@ -365,12 +358,10 @@ def run_research_agent(
         if project_info:
             display_project_status(project_info)
 
-        # Run agent with retry logic if available
         if agent is not None:
             logger.debug("Research agent completed successfully")
             return run_agent_with_retry(agent, prompt, run_config)
         else:
-            # Just run web research tools directly if no agent
             logger.debug("No model provided, running web research tools directly")
             return run_web_research_agent(
                 base_task_or_query,
@@ -434,30 +425,23 @@ def run_web_research_agent(
         web_research_enabled,
     )
 
-    # Initialize memory if not provided
     if memory is None:
         memory = MemorySaver()
 
-    # Set up thread ID
     if thread_id is None:
         thread_id = str(uuid.uuid4())
 
-    # Configure tools using restricted web research toolset
     tools = get_web_research_tools(expert_enabled=expert_enabled)
 
-    # Create agent
     agent = create_agent(model, tools, checkpointer=memory)
 
-    # Format prompt sections
     expert_section = EXPERT_PROMPT_SECTION_RESEARCH if expert_enabled else ""
     human_section = HUMAN_PROMPT_SECTION_RESEARCH if hil else ""
 
-    # Get research context from memory
     key_facts = _global_memory.get("key_facts", "")
     code_snippets = _global_memory.get("code_snippets", "")
     related_files = _global_memory.get("related_files", "")
 
-    # Build prompt
     prompt = WEB_RESEARCH_PROMPT.format(
         web_research_query=query,
         expert_section=expert_section,
@@ -467,13 +451,13 @@ def run_web_research_agent(
         related_files=related_files,
     )
 
-    # Set up configuration
-    run_config = {"configurable": {"thread_id": thread_id}, "recursion_limit": 100}
+    config = _global_memory.get("config", {}) if not config else config
+    recursion_limit = config.get("recursion_limit", DEFAULT_RECURSION_LIMIT)
+    run_config = {"configurable": {"thread_id": thread_id}, "recursion_limit": recursion_limit}
     if config:
         run_config.update(config)
 
     try:
-        # Display console message if provided
         if console_message:
             console.print(Panel(Markdown(console_message), title="🔬 Researching..."))
 
@@ -515,24 +499,19 @@ def run_planning_agent(
     logger.debug("Starting planning agent with thread_id=%s", thread_id)
     logger.debug("Planning configuration: expert=%s, hil=%s", expert_enabled, hil)
 
-    # Initialize memory if not provided
     if memory is None:
         memory = MemorySaver()
 
-    # Set up thread ID
     if thread_id is None:
         thread_id = str(uuid.uuid4())
 
-    # Configure tools
     tools = get_planning_tools(
         expert_enabled=expert_enabled,
         web_research_enabled=config.get("web_research_enabled", False),
     )
 
-    # Create agent
     agent = create_agent(model, tools, checkpointer=memory)
 
-    # Format prompt sections
     expert_section = EXPERT_PROMPT_SECTION_PLANNING if expert_enabled else ""
     human_section = HUMAN_PROMPT_SECTION_PLANNING if hil else ""
     web_research_section = (
@@ -541,7 +520,6 @@ def run_planning_agent(
         else ""
     )
 
-    # Build prompt
     planning_prompt = PLANNING_PROMPT.format(
         expert_section=expert_section,
         human_section=human_section,
@@ -557,8 +535,9 @@ def run_planning_agent(
         else " Only request implementation if the user explicitly asked for changes to be made.",
     )
 
-    # Set up configuration
-    run_config = {"configurable": {"thread_id": thread_id}, "recursion_limit": 100}
+    config = _global_memory.get("config", {}) if not config else config
+    recursion_limit = config.get("recursion_limit", DEFAULT_RECURSION_LIMIT)
+    run_config = {"configurable": {"thread_id": thread_id}, "recursion_limit": recursion_limit}
     if config:
         run_config.update(config)
 
@@ -614,24 +593,19 @@ def run_task_implementation_agent(
     logger.debug("Task details: base_task=%s, current_task=%s", base_task, task)
     logger.debug("Related files: %s", related_files)
 
-    # Initialize memory if not provided
     if memory is None:
         memory = MemorySaver()
 
-    # Set up thread ID
     if thread_id is None:
         thread_id = str(uuid.uuid4())
 
-    # Configure tools
     tools = get_implementation_tools(
         expert_enabled=expert_enabled,
         web_research_enabled=config.get("web_research_enabled", False),
     )
 
-    # Create agent
     agent = create_agent(model, tools, checkpointer=memory)
 
-    # Build prompt
     prompt = IMPLEMENTATION_PROMPT.format(
         base_task=base_task,
         task=task,
@@ -651,8 +625,9 @@ def run_task_implementation_agent(
         else "",
     )
 
-    # Set up configuration
-    run_config = {"configurable": {"thread_id": thread_id}, "recursion_limit": 100}
+    config = _global_memory.get("config", {}) if not config else config
+    recursion_limit = config.get("recursion_limit", DEFAULT_RECURSION_LIMIT)
+    run_config = {"configurable": {"thread_id": thread_id}, "recursion_limit": recursion_limit}
     if config:
         run_config.update(config)
 

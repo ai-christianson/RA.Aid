@@ -5,6 +5,7 @@ from datetime import datetime
 from rich.panel import Panel
 from rich.console import Console
 from langgraph.checkpoint.memory import MemorySaver
+from ra_aid.config import DEFAULT_RECURSION_LIMIT
 from ra_aid.env import validate_environment
 from ra_aid.project_info import (
     get_project_info,
@@ -121,6 +122,12 @@ Examples:
         action="store_false",
         help="Whether to disable token limiting for Anthropic Claude react agents. Token limiter removes older messages to prevent maximum token limit API errors.",
     )
+    parser.add_argument(
+        "--recursion-limit",
+        type=int,
+        default=DEFAULT_RECURSION_LIMIT,
+        help="Maximum recursion depth for agent operations (default: 100)",
+    )
 
     if args is None:
         args = sys.argv[1:]
@@ -161,6 +168,10 @@ Examples:
         0.0 <= parsed_args.temperature <= 2.0
     ):
         parser.error("Temperature must be between 0.0 and 2.0")
+
+    # Validate recursion limit is positive
+    if parsed_args.recursion_limit <= 0:
+        parser.error("Recursion limit must be positive")
 
     return parsed_args
 
@@ -255,8 +266,8 @@ def main():
 
             # Run chat agent with CHAT_PROMPT
             config = {
-                "configurable": {"thread_id": uuid.uuid4()},
-                "recursion_limit": 100,
+                "configurable": {"thread_id": str(uuid.uuid4())},
+                "recursion_limit": args.recursion_limit,
                 "chat_mode": True,
                 "cowboy_mode": args.cowboy_mode,
                 "hil": True,  # Always true in chat mode
@@ -305,8 +316,8 @@ def main():
 
         base_task = args.message
         config = {
-            "configurable": {"thread_id": uuid.uuid4()},
-            "recursion_limit": 100,
+            "configurable": {"thread_id": str(uuid.uuid4())},
+            "recursion_limit": args.recursion_limit,
             "research_only": args.research_only,
             "cowboy_mode": args.cowboy_mode,
             "web_research_enabled": web_research_enabled,

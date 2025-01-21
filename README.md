@@ -162,16 +162,20 @@ ra-aid -m "Add new feature" --verbose
 
 ### Command Line Options
 
-- `-m, --message`: The task or query to be executed (required)
+- `-m, --message`: The task or query to be executed (required except in chat mode)
 - `--research-only`: Only perform research without implementation
+- `--provider`: The LLM provider to use (choices: anthropic, openai, openrouter, openai-compatible, gemini)
+- `--model`: The model name to use (required for non-Anthropic providers)
 - `--cowboy-mode`: Skip interactive approval for shell commands
-- `--hil, -H`: Enable human-in-the-loop mode, allowing the agent to interactively ask you questions during task execution
-- `--provider`: Specify the model provider (See Model Configuration section)
-- `--model`: Specify the model name (See Model Configuration section)
-- `--expert-provider`: Specify the provider for the expert tool (defaults to OpenAI)
-- `--expert-model`: Specify the model name for the expert tool (defaults to o1 for OpenAI)
-- `--chat`: Enable chat mode for interactive assistance
-- `--verbose`: Enable detailed logging output for debugging and monitoring
+- `--expert-provider`: The LLM provider to use for expert knowledge queries (choices: anthropic, openai, openrouter, openai-compatible, gemini)
+- `--expert-model`: The model name to use for expert knowledge queries (required for non-OpenAI providers)
+- `--hil, -H`: Enable human-in-the-loop mode for interactive assistance during task execution
+- `--chat`: Enable chat mode with direct human interaction (implies --hil)
+- `--verbose`: Enable verbose logging output
+- `--temperature`: LLM temperature (0.0-2.0) to control randomness in responses
+- `--disable-limit-tokens`: Disable token limiting for Anthropic Claude react agents
+- `--recursion-limit`: Maximum recursion depth for agent operations (default: 100)
+- `--version`: Show program version number and exit
 
 ### Example Tasks
 
