@@ -35,7 +35,7 @@ dependencies = [
     "fuzzywuzzy==0.18.0",
     "python-Levenshtein==0.23.0",
     "pathspec>=0.11.0",
-    "aider-chat>=0.69.1",
+    "aider-chat>=0.72.1",
     "tavily-python>=0.5.0",
     "litellm"
 ]
