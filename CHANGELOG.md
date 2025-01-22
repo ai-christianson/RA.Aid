@@ -5,10 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-- Improve prompts for better open model support.
-- Better handle 429 errors on openrouter.
-- Get project info programmatically to save tokens.
+## [0.13.0] - 2025-01-22
+
+### Added
+- Added Deepseek Provider Support and Custom Deepseek Reasoner Chat Model (#50)
+- Added Aider config File Argument Support (#43) 
+- Added configurable --recursion-limit argument (#46)
+- Set Default Max Token Limit with Provider/Model Dictionary (#45)
+
+### Changed
+- Updated aider-chat version from 0.69.1 to 0.72.1 (#47)
+
+### Fixed
+- Fixed Issue 42 related to Levenshtein (#44)
+
+### Improved
+- Various prompt improvements
+- Better handling of 429 errors on openrouter
+- Improved project info handling and token usage optimization
+- Extracted tool reflection functionality
+- Improved work log handling
+- Added tests for CiaynAgent._does_not_conform_to_pattern
 
 ## [0.12.1] - 2025-01-08
 - Fix bug where directories are added as related files.
