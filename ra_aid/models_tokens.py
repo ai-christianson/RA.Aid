@@ -241,6 +241,10 @@ models_tokens = {
     "deepseek": {
         "deepseek-chat": 28672,
         "deepseek-coder": 16384,
+        "deepseek-reasoner": 65536,
+    },
+    "openrouter": {
+        "deepseek/deepseek-r1": 65536,
     },
     "ernie": {
         "ernie-bot-turbo": 4096,

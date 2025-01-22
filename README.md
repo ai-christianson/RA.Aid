@@ -293,6 +293,7 @@ RA.Aid supports multiple providers through environment variables:
 - `ANTHROPIC_API_KEY`: Required for the default Anthropic provider
 - `OPENAI_API_KEY`: Required for OpenAI provider
 - `OPENROUTER_API_KEY`: Required for OpenRouter provider
+- `DEEPSEEK_API_KEY`: Required for DeepSeek provider
 - `OPENAI_API_BASE`: Required for OpenAI-compatible providers along with `OPENAI_API_KEY`
 - `GEMINI_API_KEY`: Required for Gemini provider
 
@@ -302,6 +303,7 @@ Expert Tool Environment Variables:
 - `EXPERT_OPENROUTER_API_KEY`: API key for expert tool using OpenRouter provider
 - `EXPERT_OPENAI_API_BASE`: Base URL for expert tool using OpenAI-compatible provider
 - `EXPERT_GEMINI_API_KEY`: API key for expert tool using Gemini provider
+- `EXPERT_DEEPSEEK_API_KEY`: API key for expert tool using DeepSeek provider
 
 You can set these permanently in your shell's configuration file (e.g., `~/.bashrc` or `~/.zshrc`):
 
@@ -343,6 +345,15 @@ export GEMINI_API_KEY=your_api_key_here
    ra-aid -m "Your task" --provider openrouter --model mistralai/mistral-large-2411
    ```
 
+4. **Using DeepSeek**
+   ```bash
+   # Direct DeepSeek provider (requires DEEPSEEK_API_KEY)
+   ra-aid -m "Your task" --provider deepseek --model deepseek-reasoner
+   
+   # DeepSeek via OpenRouter
+   ra-aid -m "Your task" --provider openrouter --model deepseek/deepseek-r1
+   ```
+
 4. **Configuring Expert Provider**
 
    The expert tool is used by the agent for complex logic and debugging tasks. It can be configured to use different providers (OpenAI, Anthropic, OpenRouter, Gemini, openai-compatible) using the --expert-provider flag along with the corresponding EXPERT_*API_KEY environment variables.
@@ -355,6 +366,10 @@ export GEMINI_API_KEY=your_api_key_here
    # Use OpenRouter for expert tool
    export OPENROUTER_API_KEY=your_openrouter_api_key
    ra-aid -m "Your task" --expert-provider openrouter --expert-model mistralai/mistral-large-2411
+
+   # Use DeepSeek for expert tool
+   export DEEPSEEK_API_KEY=your_deepseek_api_key
+   ra-aid -m "Your task" --expert-provider deepseek --expert-model deepseek-reasoner
 
    # Use default OpenAI for expert tool
    export EXPERT_OPENAI_API_KEY=your_openai_api_key

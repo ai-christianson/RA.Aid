@@ -1,107 +1,184 @@
 import os
+from typing import Optional, Dict, Any
 from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
 from langchain_core.language_models import BaseChatModel
 from langchain_google_genai import ChatGoogleGenerativeAI
+from ra_aid.chat_models.deepseek_chat import ChatDeepseekReasoner
 
 
+def get_env_var(name: str, expert: bool = False) -> Optional[str]:
+    """Get environment variable with optional expert prefix and fallback."""
+    prefix = "EXPERT_" if expert else ""
+    value = os.getenv(f"{prefix}{name}")
 
-def initialize_llm(provider: str, model_name: str, temperature: float | None = None) -> BaseChatModel:
-    """Initialize a language model client based on the specified provider and model.
+    # If expert mode and no expert value, fall back to base value
+    if expert and not value:
+        value = os.getenv(name)
 
-    Note: Environment variables must be validated before calling this function.
-    Use validate_environment() to ensure all required variables are set.
+    return value
+
+
+def create_deepseek_client(
+    model_name: str,
+    api_key: str,
+    base_url: str,
+    temperature: Optional[float] = None,
+    is_expert: bool = False,
+) -> BaseChatModel:
+    """Create DeepSeek client with appropriate configuration."""
+    if model_name.lower() == "deepseek-reasoner":
+        return ChatDeepseekReasoner(
+            api_key=api_key,
+            base_url=base_url,
+            temperature=0
+            if is_expert
+            else (temperature if temperature is not None else 1),
+            model=model_name,
+        )
+
+    return ChatOpenAI(
+        api_key=api_key,
+        base_url=base_url,
+        temperature=0 if is_expert else (temperature if temperature is not None else 1),
+        model=model_name,
+    )
+
+
+def create_openrouter_client(
+    model_name: str,
+    api_key: str,
+    temperature: Optional[float] = None,
+    is_expert: bool = False,
+) -> BaseChatModel:
+    """Create OpenRouter client with appropriate configuration."""
+    if model_name.startswith("deepseek/") and "deepseek-r1" in model_name.lower():
+        return ChatDeepseekReasoner(
+            api_key=api_key,
+            base_url="https://openrouter.ai/api/v1",
+            temperature=0
+            if is_expert
+            else (temperature if temperature is not None else 1),
+            model=model_name,
+        )
+
+    return ChatOpenAI(
+        api_key=api_key,
+        base_url="https://openrouter.ai/api/v1",
+        model=model_name,
+        **({"temperature": temperature} if temperature is not None else {}),
+    )
+
+
+def get_provider_config(provider: str, is_expert: bool = False) -> Dict[str, Any]:
+    """Get provider-specific configuration."""
+    configs = {
+        "openai": {
+            "api_key": get_env_var("OPENAI_API_KEY", is_expert),
+            "base_url": None,
+        },
+        "anthropic": {
+            "api_key": get_env_var("ANTHROPIC_API_KEY", is_expert),
+            "base_url": None,
+        },
+        "openrouter": {
+            "api_key": get_env_var("OPENROUTER_API_KEY", is_expert),
+            "base_url": "https://openrouter.ai/api/v1",
+        },
+        "openai-compatible": {
+            "api_key": get_env_var("OPENAI_API_KEY", is_expert),
+            "base_url": get_env_var("OPENAI_API_BASE", is_expert),
+        },
+        "gemini": {
+            "api_key": get_env_var("GEMINI_API_KEY", is_expert),
+            "base_url": None,
+        },
+        "deepseek": {
+            "api_key": get_env_var("DEEPSEEK_API_KEY", is_expert),
+            "base_url": "https://api.deepseek.com",
+        },
+    }
+    return configs.get(provider, {})
+
+
+def create_llm_client(
+    provider: str,
+    model_name: str,
+    temperature: Optional[float] = None,
+    is_expert: bool = False,
+) -> BaseChatModel:
+    """Create a language model client with appropriate configuration.
 
     Args:
-        provider: The LLM provider to use ('openai', 'anthropic', 'openrouter', 'openai-compatible', 'gemini')
+        provider: The LLM provider to use
         model_name: Name of the model to use
-        temperature: Optional temperature setting for controlling randomness (0.0-2.0).
-                    If not specified, provider-specific defaults are used.
+        temperature: Optional temperature setting (0.0-2.0)
+        is_expert: Whether this is an expert model (uses deterministic output)
 
     Returns:
-        BaseChatModel: Configured language model client
-
-    Raises:
-        ValueError: If the provider is not supported
+        Configured language model client
     """
-    if provider == "openai":
+    config = get_provider_config(provider, is_expert)
+    if not config:
+        raise ValueError(f"Unsupported provider: {provider}")
+
+    # Handle temperature for expert mode
+    if is_expert:
+        temperature = 0
+
+    if provider == "deepseek":
+        return create_deepseek_client(
+            model_name=model_name,
+            api_key=config["api_key"],
+            base_url=config["base_url"],
+            temperature=temperature,
+            is_expert=is_expert,
+        )
+    elif provider == "openrouter":
+        return create_openrouter_client(
+            model_name=model_name,
+            api_key=config["api_key"],
+            temperature=temperature,
+            is_expert=is_expert,
+        )
+    elif provider == "openai":
         return ChatOpenAI(
-            api_key=os.getenv("OPENAI_API_KEY"),
+            api_key=config["api_key"],
             model=model_name,
-            **({"temperature": temperature} if temperature is not None else {})
+            **({"temperature": temperature} if temperature is not None else {}),
         )
     elif provider == "anthropic":
         return ChatAnthropic(
-            api_key=os.getenv("ANTHROPIC_API_KEY"),
+            api_key=config["api_key"],
             model_name=model_name,
-            **({"temperature": temperature} if temperature is not None else {})
-        )
-    elif provider == "openrouter":
-        return ChatOpenAI(
-            api_key=os.getenv("OPENROUTER_API_KEY"),
-            base_url="https://openrouter.ai/api/v1",
-            model=model_name,
-            **({"temperature": temperature} if temperature is not None else {})
+            **({"temperature": temperature} if temperature is not None else {}),
         )
     elif provider == "openai-compatible":
         return ChatOpenAI(
-            api_key=os.getenv("OPENAI_API_KEY"),
-            base_url=os.getenv("OPENAI_API_BASE"),
+            api_key=config["api_key"],
+            base_url=config["base_url"],
             temperature=temperature if temperature is not None else 0.3,
             model=model_name,
         )
     elif provider == "gemini":
         return ChatGoogleGenerativeAI(
-            api_key=os.getenv("GEMINI_API_KEY"),
+            api_key=config["api_key"],
             model=model_name,
-            **({"temperature": temperature} if temperature is not None else {})
+            **({"temperature": temperature} if temperature is not None else {}),
         )
     else:
         raise ValueError(f"Unsupported provider: {provider}")
 
-def initialize_expert_llm(provider: str = "openai", model_name: str = "o1") -> BaseChatModel:
-    """Initialize an expert language model client based on the specified provider and model.
 
-    Note: Environment variables must be validated before calling this function.
-    Use validate_environment() to ensure all required variables are set.
+def initialize_llm(
+    provider: str, model_name: str, temperature: float | None = None
+) -> BaseChatModel:
+    """Initialize a language model client based on the specified provider and model."""
+    return create_llm_client(provider, model_name, temperature, is_expert=False)
 
-    Args:
-        provider: The LLM provider to use ('openai', 'anthropic', 'openrouter', 'openai-compatible', 'gemini').
-                 Defaults to 'openai'.
-        model_name: Name of the model to use. Defaults to 'o1'.
 
-    Returns:
-        BaseChatModel: Configured expert language model client
-
-    Raises:
-        ValueError: If the provider is not supported
-    """
-    if provider == "openai":
-        return ChatOpenAI(
-            api_key=os.getenv("EXPERT_OPENAI_API_KEY"),
-            model=model_name,
-        )
-    elif provider == "anthropic":
-        return ChatAnthropic(
-            api_key=os.getenv("EXPERT_ANTHROPIC_API_KEY"),
-            model_name=model_name,
-        )
-    elif provider == "openrouter":
-        return ChatOpenAI(
-            api_key=os.getenv("EXPERT_OPENROUTER_API_KEY"),
-            base_url="https://openrouter.ai/api/v1",
-            model=model_name,
-        )
-    elif provider == "openai-compatible":
-        return ChatOpenAI(
-            api_key=os.getenv("EXPERT_OPENAI_API_KEY"),
-            base_url=os.getenv("EXPERT_OPENAI_API_BASE"),
-            model=model_name,
-        )
-    elif provider == "gemini":
-        return ChatGoogleGenerativeAI(
-            api_key=os.getenv("EXPERT_GEMINI_API_KEY"),
-            model=model_name,
-        )
-    else:
-        raise ValueError(f"Unsupported provider: {provider}")
+def initialize_expert_llm(
+    provider: str = "openai", model_name: str = "o1"
+) -> BaseChatModel:
+    """Initialize an expert language model client based on the specified provider and model."""
+    return create_llm_client(provider, model_name, temperature=None, is_expert=True)

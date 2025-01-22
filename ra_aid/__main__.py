@@ -39,6 +39,7 @@ def parse_arguments(args=None):
         "openai",
         "openrouter",
         "openai-compatible",
+        "deepseek",
         "gemini",
     ]
     ANTHROPIC_DEFAULT_MODEL = "claude-3-5-sonnet-20241022"
