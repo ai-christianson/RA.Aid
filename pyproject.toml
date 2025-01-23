@@ -45,6 +45,7 @@ dev = [
     "pytest-timeout>=2.2.0",
     "pytest>=7.0.0",
     "pytest-cov>=6.0.0",
+    "pytest-mock>=3.14.0",
 ]
 
 [project.scripts]
@@ -64,3 +65,4 @@ path = "ra_aid/__version__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["ra_aid"]
+

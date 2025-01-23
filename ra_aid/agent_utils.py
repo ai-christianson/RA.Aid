@@ -5,6 +5,8 @@ import time
 import uuid
 from typing import Optional, Any, List, Dict, Sequence
 from langchain_core.messages import BaseMessage, trim_messages
+from litellm import get_model_info
+import litellm
 
 import signal
 
@@ -93,7 +95,7 @@ def estimate_messages_tokens(messages: Sequence[BaseMessage]) -> int:
 
 
 def state_modifier(
-    state: AgentState, max_tokens: int = DEFAULT_TOKEN_LIMIT
+    state: AgentState, max_input_tokens: int = DEFAULT_TOKEN_LIMIT
 ) -> list[BaseMessage]:
     """Given the agent state and max_tokens, return a trimmed list of messages.
 
@@ -112,7 +114,7 @@ def state_modifier(
     first_message = messages[0]
     remaining_messages = messages[1:]
     first_tokens = estimate_messages_tokens([first_message])
-    new_max_tokens = max_tokens - first_tokens
+    new_max_tokens = max_input_tokens - first_tokens
 
     trimmed_remaining = trim_messages(
         remaining_messages,
@@ -135,16 +137,29 @@ def get_model_token_limit(config: Dict[str, Any]) -> Optional[int]:
         provider = config.get("provider", "")
         model_name = config.get("model", "")
 
+        try:
+            provider_model = model_name if not provider else f"{provider}/{model_name}"
+            model_info = get_model_info(provider_model)
+            max_input_tokens = model_info.get("max_input_tokens")
+            if max_input_tokens:
+                logger.debug(f"Using litellm token limit for {model_name}: {max_input_tokens}")
+                return max_input_tokens
+        except litellm.exceptions.NotFoundError:
+            logger.debug(f"Model {model_name} not found in litellm, falling back to models_tokens")
+        except Exception as e:
+            logger.debug(f"Error getting model info from litellm: {e}, falling back to models_tokens")
+
+        # Fallback to models_tokens dict
+        # Normalize model name for fallback lookup (e.g. claude-2 -> claude2)
+        normalized_name = model_name.replace("-", "")
         provider_tokens = models_tokens.get(provider, {})
-        token_limit = provider_tokens.get(model_name, None)
-        if token_limit:
-            logger.debug(
-                f"Found token limit for {provider}/{model_name}: {token_limit}"
-            )
+        max_input_tokens = provider_tokens.get(normalized_name, None)
+        if max_input_tokens:
+            logger.debug(f"Found token limit for {provider}/{model_name}: {max_input_tokens}")
         else:
             logger.debug(f"Could not find token limit for {provider}/{model_name}")
 
-        return token_limit
+        return max_input_tokens
 
     except Exception as e:
         logger.warning(f"Failed to get model token limit: {e}")
@@ -154,7 +169,7 @@ def get_model_token_limit(config: Dict[str, Any]) -> Optional[int]:
 def build_agent_kwargs(
     checkpointer: Optional[Any] = None,
     config: Dict[str, Any] = None,
-    token_limit: Optional[int] = None,
+    max_input_tokens: Optional[int] = None,
 ) -> Dict[str, Any]:
     """Build kwargs dictionary for agent creation.
 
@@ -174,7 +189,7 @@ def build_agent_kwargs(
     if config.get("limit_tokens", True) and is_anthropic_claude(config):
 
         def wrapped_state_modifier(state: AgentState) -> list[BaseMessage]:
-            return state_modifier(state, max_tokens=token_limit)
+            return state_modifier(state, max_input_tokens=max_input_tokens)
 
         agent_kwargs["state_modifier"] = wrapped_state_modifier
 
@@ -226,23 +241,23 @@ def create_agent(
     """
     try:
         config = _global_memory.get("config", {})
-        token_limit = get_model_token_limit(config) or DEFAULT_TOKEN_LIMIT
+        max_input_tokens = get_model_token_limit(config) or DEFAULT_TOKEN_LIMIT
 
         # Use REACT agent for Anthropic Claude models, otherwise use CIAYN
         if is_anthropic_claude(config):
             logger.debug("Using create_react_agent to instantiate agent.")
-            agent_kwargs = build_agent_kwargs(checkpointer, config, token_limit)
+            agent_kwargs = build_agent_kwargs(checkpointer, config, max_input_tokens)
             return create_react_agent(model, tools, **agent_kwargs)
         else:
             logger.debug("Using CiaynAgent agent instance")
-            return CiaynAgent(model, tools, max_tokens=token_limit)
+            return CiaynAgent(model, tools, max_tokens=max_input_tokens)
 
     except Exception as e:
         # Default to REACT agent if provider/model detection fails
         logger.warning(f"Failed to detect model type: {e}. Defaulting to REACT agent.")
         config = _global_memory.get("config", {})
-        token_limit = get_model_token_limit(config)
-        agent_kwargs = build_agent_kwargs(checkpointer, config, token_limit)
+        max_input_tokens = get_model_token_limit(config)
+        agent_kwargs = build_agent_kwargs(checkpointer, config, max_input_tokens)
         return create_react_agent(model, tools, **agent_kwargs)
 
 

@@ -4,6 +4,8 @@ List of model tokens
 
 DEFAULT_TOKEN_LIMIT = 100000
 
+
+
 models_tokens = {
     "openai": {
         "gpt-3.5-turbo-0125": 16385,
@@ -241,7 +243,7 @@ models_tokens = {
     "deepseek": {
         "deepseek-chat": 28672,
         "deepseek-coder": 16384,
-        "deepseek-reasoner": 65536,
+        "deepseek-reasoner": 64000,
     },
     "openrouter": {
         "deepseek/deepseek-r1": 65536,
