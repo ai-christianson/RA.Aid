@@ -122,9 +122,10 @@ def create_llm_client(
     if not config:
         raise ValueError(f"Unsupported provider: {provider}")
 
-    # Handle temperature for expert mode
-    if is_expert:
-        temperature = 0
+    # Only pass temperature if it's explicitly set and not in expert mode
+    temp_kwargs = {}
+    if not is_expert and temperature is not None:
+        temp_kwargs = {"temperature": temperature}
 
     if provider == "deepseek":
         return create_deepseek_client(
@@ -145,26 +146,26 @@ def create_llm_client(
         return ChatOpenAI(
             api_key=config["api_key"],
             model=model_name,
-            **({"temperature": temperature} if temperature is not None else {}),
+            **temp_kwargs,
         )
     elif provider == "anthropic":
         return ChatAnthropic(
             api_key=config["api_key"],
             model_name=model_name,
-            **({"temperature": temperature} if temperature is not None else {}),
+            **temp_kwargs,
         )
     elif provider == "openai-compatible":
         return ChatOpenAI(
             api_key=config["api_key"],
             base_url=config["base_url"],
-            temperature=temperature if temperature is not None else 0.3,
+            **temp_kwargs if temp_kwargs else {"temperature": 0.3},
             model=model_name,
         )
     elif provider == "gemini":
         return ChatGoogleGenerativeAI(
             api_key=config["api_key"],
             model=model_name,
-            **({"temperature": temperature} if temperature is not None else {}),
+            **temp_kwargs,
         )
     else:
         raise ValueError(f"Unsupported provider: {provider}")
