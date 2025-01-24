@@ -121,3 +121,45 @@ def test_missing_message():
     # Verify message is captured when provided
     args = parse_arguments(["-m", "test"])
     assert args.message == "test"
+
+
+def test_research_model_provider_args(mock_dependencies):
+    """Test that research-specific model/provider args are correctly stored in config."""
+    from ra_aid.__main__ import main
+    import sys
+    from unittest.mock import patch
+
+    _global_memory.clear()
+    
+    with patch.object(sys, 'argv', [
+        'ra-aid', '-m', 'test message',
+        '--research-provider', 'anthropic',
+        '--research-model', 'claude-3-haiku-20240307',
+        '--planner-provider', 'openai',
+        '--planner-model', 'gpt-4'
+    ]):
+        main()
+        config = _global_memory["config"]
+        assert config["research_provider"] == "anthropic"
+        assert config["research_model"] == "claude-3-haiku-20240307"
+        assert config["planner_provider"] == "openai"
+        assert config["planner_model"] == "gpt-4"
+
+
+def test_planner_model_provider_args(mock_dependencies):
+    """Test that planner provider/model args fall back to main config when not specified."""
+    from ra_aid.__main__ import main
+    import sys
+    from unittest.mock import patch
+
+    _global_memory.clear()
+    
+    with patch.object(sys, 'argv', [
+        'ra-aid', '-m', 'test message',
+        '--provider', 'openai',
+        '--model', 'gpt-4'
+    ]):
+        main()
+        config = _global_memory["config"]
+        assert config["planner_provider"] == "openai"
+        assert config["planner_model"] == "gpt-4"

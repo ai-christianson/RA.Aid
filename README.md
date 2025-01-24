@@ -166,6 +166,10 @@ ra-aid -m "Add new feature" --verbose
 - `--research-only`: Only perform research without implementation
 - `--provider`: The LLM provider to use (choices: anthropic, openai, openrouter, openai-compatible, gemini)
 - `--model`: The model name to use (required for non-Anthropic providers)
+- `--research-provider`: Provider to use specifically for research tasks (falls back to --provider if not specified)
+- `--research-model`: Model to use specifically for research tasks (falls back to --model if not specified)
+- `--planner-provider`: Provider to use specifically for planning tasks (falls back to --provider if not specified)
+- `--planner-model`: Model to use specifically for planning tasks (falls back to --model if not specified)
 - `--cowboy-mode`: Skip interactive approval for shell commands
 - `--expert-provider`: The LLM provider to use for expert knowledge queries (choices: anthropic, openai, openrouter, openai-compatible, gemini)
 - `--expert-model`: The model name to use for expert knowledge queries (required for non-OpenAI providers)

@@ -142,12 +142,18 @@ def get_model_token_limit(config: Dict[str, Any]) -> Optional[int]:
             model_info = get_model_info(provider_model)
             max_input_tokens = model_info.get("max_input_tokens")
             if max_input_tokens:
-                logger.debug(f"Using litellm token limit for {model_name}: {max_input_tokens}")
+                logger.debug(
+                    f"Using litellm token limit for {model_name}: {max_input_tokens}"
+                )
                 return max_input_tokens
         except litellm.exceptions.NotFoundError:
-            logger.debug(f"Model {model_name} not found in litellm, falling back to models_tokens")
+            logger.debug(
+                f"Model {model_name} not found in litellm, falling back to models_tokens"
+            )
         except Exception as e:
-            logger.debug(f"Error getting model info from litellm: {e}, falling back to models_tokens")
+            logger.debug(
+                f"Error getting model info from litellm: {e}, falling back to models_tokens"
+            )
 
         # Fallback to models_tokens dict
         # Normalize model name for fallback lookup (e.g. claude-2 -> claude2)
@@ -155,7 +161,9 @@ def get_model_token_limit(config: Dict[str, Any]) -> Optional[int]:
         provider_tokens = models_tokens.get(provider, {})
         max_input_tokens = provider_tokens.get(normalized_name, None)
         if max_input_tokens:
-            logger.debug(f"Found token limit for {provider}/{model_name}: {max_input_tokens}")
+            logger.debug(
+                f"Found token limit for {provider}/{model_name}: {max_input_tokens}"
+            )
         else:
             logger.debug(f"Could not find token limit for {provider}/{model_name}")
 
@@ -360,7 +368,10 @@ def run_research_agent(
 
     config = _global_memory.get("config", {}) if not config else config
     recursion_limit = config.get("recursion_limit", DEFAULT_RECURSION_LIMIT)
-    run_config = {"configurable": {"thread_id": thread_id}, "recursion_limit": recursion_limit}
+    run_config = {
+        "configurable": {"thread_id": thread_id},
+        "recursion_limit": recursion_limit,
+    }
     if config:
         run_config.update(config)
 
@@ -467,8 +478,12 @@ def run_web_research_agent(
     )
 
     config = _global_memory.get("config", {}) if not config else config
+
     recursion_limit = config.get("recursion_limit", DEFAULT_RECURSION_LIMIT)
-    run_config = {"configurable": {"thread_id": thread_id}, "recursion_limit": recursion_limit}
+    run_config = {
+        "configurable": {"thread_id": thread_id},
+        "recursion_limit": recursion_limit,
+    }
     if config:
         run_config.update(config)
 
@@ -551,8 +566,12 @@ def run_planning_agent(
     )
 
     config = _global_memory.get("config", {}) if not config else config
+
     recursion_limit = config.get("recursion_limit", DEFAULT_RECURSION_LIMIT)
-    run_config = {"configurable": {"thread_id": thread_id}, "recursion_limit": recursion_limit}
+    run_config = {
+        "configurable": {"thread_id": thread_id},
+        "recursion_limit": recursion_limit,
+    }
     if config:
         run_config.update(config)
 
@@ -642,7 +661,10 @@ def run_task_implementation_agent(
 
     config = _global_memory.get("config", {}) if not config else config
     recursion_limit = config.get("recursion_limit", DEFAULT_RECURSION_LIMIT)
-    run_config = {"configurable": {"thread_id": thread_id}, "recursion_limit": recursion_limit}
+    run_config = {
+        "configurable": {"thread_id": thread_id},
+        "recursion_limit": recursion_limit,
+    }
     if config:
         run_config.update(config)
 

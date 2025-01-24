@@ -60,41 +60,43 @@ def test_get_model_token_limit_missing_config(mock_memory):
     assert token_limit is None
 
 
+
 def test_get_model_token_limit_litellm_success():
     """Test get_model_token_limit successfully getting limit from litellm."""
     config = {"provider": "anthropic", "model": "claude-2"}
-    
-    with patch('ra_aid.agent_utils.get_model_info') as mock_get_info:
+
+    with patch("ra_aid.agent_utils.get_model_info") as mock_get_info:
         mock_get_info.return_value = {"max_input_tokens": 100000}
         token_limit = get_model_token_limit(config)
         assert token_limit == 100000
 
+
 def test_get_model_token_limit_litellm_not_found():
     """Test fallback to models_tokens when litellm raises NotFoundError."""
     config = {"provider": "anthropic", "model": "claude-2"}
-    
-    with patch('ra_aid.agent_utils.get_model_info') as mock_get_info:
+
+    with patch("ra_aid.agent_utils.get_model_info") as mock_get_info:
         mock_get_info.side_effect = litellm.exceptions.NotFoundError(
-            message="Model not found",
-            model="claude-2",
-            llm_provider="anthropic"
+            message="Model not found", model="claude-2", llm_provider="anthropic"
         )
         token_limit = get_model_token_limit(config)
         assert token_limit == models_tokens["anthropic"]["claude2"]
 
+
 def test_get_model_token_limit_litellm_error():
     """Test fallback to models_tokens when litellm raises other exceptions."""
     config = {"provider": "anthropic", "model": "claude-2"}
-    
-    with patch('ra_aid.agent_utils.get_model_info') as mock_get_info:
+
+    with patch("ra_aid.agent_utils.get_model_info") as mock_get_info:
         mock_get_info.side_effect = Exception("Unknown error")
         token_limit = get_model_token_limit(config)
         assert token_limit == models_tokens["anthropic"]["claude2"]
 
+
 def test_get_model_token_limit_unexpected_error():
     """Test returning None when unexpected errors occur."""
     config = None  # This will cause an attribute error when accessed
-    
+
     token_limit = get_model_token_limit(config)
     assert token_limit is None
 

@@ -1,5 +1,6 @@
 import os
 from typing import List, Dict, Union
+from ra_aid.logging_config import get_logger
 from ra_aid.tools.memory import _global_memory
 from langchain_core.tools import tool
 from rich.console import Console
@@ -10,6 +11,7 @@ from ra_aid.proc.interactive import run_interactive_command
 from ra_aid.text.processing import truncate_output
 
 console = Console()
+logger = get_logger(__name__)
 
 @tool
 def run_programming_task(instructions: str, files: List[str] = []) -> Dict[str, Union[str, int, bool]]:
@@ -81,6 +83,7 @@ Returns: { "output": stdout+stderr, "return_code": 0 if success, "success": True
 
     markdown_content = "".join(task_display)
     console.print(Panel(Markdown(markdown_content), title="🤖 Aider Task", border_style="bright_blue"))
+    logger.debug(f"command: {command}")
 
     try:
         # Run the command interactively

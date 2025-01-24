@@ -11,6 +11,10 @@ class MockArgs:
     expert_provider: str
     model: Optional[str] = None
     expert_model: Optional[str] = None
+    research_provider: Optional[str] = None
+    research_model: Optional[str] = None
+    planner_provider: Optional[str] = None
+    planner_model: Optional[str] = None
 
 @pytest.fixture
 def clean_env(monkeypatch):
@@ -165,6 +169,7 @@ def test_different_providers_no_expert_key(clean_env, monkeypatch):
     assert not expert_missing
     assert not web_research_enabled
     assert 'TAVILY_API_KEY environment variable is not set' in web_research_missing
+
 
 def test_mixed_provider_openai_compatible(clean_env, monkeypatch):
     """Test behavior with openai-compatible expert and different main provider"""

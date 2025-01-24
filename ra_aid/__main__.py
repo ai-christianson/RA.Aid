@@ -7,11 +7,7 @@ from rich.console import Console
 from langgraph.checkpoint.memory import MemorySaver
 from ra_aid.config import DEFAULT_RECURSION_LIMIT
 from ra_aid.env import validate_environment
-from ra_aid.project_info import (
-    get_project_info,
-    format_project_info,
-    display_project_status,
-)
+from ra_aid.project_info import get_project_info, format_project_info
 from ra_aid.tools.memory import _global_memory
 from ra_aid.tools.human import ask_human
 from ra_aid import print_stage_header, print_error
@@ -82,6 +78,26 @@ Examples:
     )
     parser.add_argument("--model", type=str, help="The model name to use")
     parser.add_argument(
+        "--research-provider",
+        type=str,
+        choices=VALID_PROVIDERS,
+        help="Provider to use specifically for research tasks",
+    )
+    parser.add_argument(
+        "--research-model",
+        type=str,
+        help="Model to use specifically for research tasks",
+    )
+    parser.add_argument(
+        "--planner-provider",
+        type=str,
+        choices=VALID_PROVIDERS,
+        help="Provider to use specifically for planning tasks",
+    )
+    parser.add_argument(
+        "--planner-model", type=str, help="Model to use specifically for planning tasks"
+    )
+    parser.add_argument(
         "--cowboy-mode",
         action="store_true",
         help="Skip interactive approval for shell commands",
@@ -130,9 +146,7 @@ Examples:
         help="Maximum recursion depth for agent operations (default: 100)",
     )
     parser.add_argument(
-        '--aider-config',
-        type=str,
-        help='Specify the aider config file path'
+        "--aider-config", type=str, help="Specify the aider config file path"
     )
 
     if args is None:
@@ -223,7 +237,7 @@ def main():
         if expert_missing:
             console.print(
                 Panel(
-                    f"[yellow]Expert tools disabled due to missing configuration:[/yellow]\n"
+                    "[yellow]Expert tools disabled due to missing configuration:[/yellow]\n"
                     + "\n".join(f"- {m}" for m in expert_missing)
                     + "\nSet the required environment variables or args to enable expert mode.",
                     title="Expert Tools Disabled",
@@ -234,7 +248,7 @@ def main():
         if web_research_missing:
             console.print(
                 Panel(
-                    f"[yellow]Web research disabled due to missing configuration:[/yellow]\n"
+                    "[yellow]Web research disabled due to missing configuration:[/yellow]\n"
                     + "\n".join(f"- {m}" for m in web_research_missing)
                     + "\nSet the required environment variables to enable web research.",
                     title="Web Research Disabled",
@@ -242,11 +256,12 @@ def main():
                 )
             )
 
-        # Create the base model after validation
-        model = initialize_llm(args.provider, args.model, temperature=args.temperature)
-
         # Handle chat mode
         if args.chat:
+            # Initialize chat model with default provider/model
+            chat_model = initialize_llm(
+                args.provider, args.model, temperature=args.temperature
+            )
             if args.research_only:
                 print_error("Chat mode cannot be used with --research-only")
                 sys.exit(1)
@@ -291,7 +306,7 @@ def main():
 
             # Create chat agent with appropriate tools
             chat_agent = create_agent(
-                model,
+                chat_model,
                 get_chat_tools(
                     expert_enabled=expert_enabled,
                     web_research_enabled=web_research_enabled,
@@ -334,20 +349,39 @@ def main():
         # Store config in global memory for access by is_informational_query
         _global_memory["config"] = config
 
-        # Store model configuration
+        # Store base provider/model configuration
         _global_memory["config"]["provider"] = args.provider
         _global_memory["config"]["model"] = args.model
 
-        # Store expert provider and model in config
+        # Store expert provider/model (no fallback)
         _global_memory["config"]["expert_provider"] = args.expert_provider
         _global_memory["config"]["expert_model"] = args.expert_model
+
+        # Store planner config with fallback to base values
+        _global_memory["config"]["planner_provider"] = (
+            args.planner_provider or args.provider
+        )
+        _global_memory["config"]["planner_model"] = args.planner_model or args.model
+
+        # Store research config with fallback to base values
+        _global_memory["config"]["research_provider"] = (
+            args.research_provider or args.provider
+        )
+        _global_memory["config"]["research_model"] = args.research_model or args.model
 
         # Run research stage
         print_stage_header("Research Stage")
 
+        # Initialize research model with potential overrides
+        research_provider = args.research_provider or args.provider
+        research_model_name = args.research_model or args.model
+        research_model = initialize_llm(
+            research_provider, research_model_name, temperature=args.temperature
+        )
+
         run_research_agent(
             base_task,
-            model,
+            research_model,
             expert_enabled=expert_enabled,
             research_only=args.research_only,
             hil=args.hil,
@@ -357,10 +391,17 @@ def main():
 
         # Proceed with planning and implementation if not an informational query
         if not is_informational_query():
+            # Initialize planning model with potential overrides
+            planner_provider = args.planner_provider or args.provider
+            planner_model_name = args.planner_model or args.model
+            planning_model = initialize_llm(
+                planner_provider, planner_model_name, temperature=args.temperature
+            )
+
             # Run planning agent
             run_planning_agent(
                 base_task,
-                model,
+                planning_model,
                 expert_enabled=expert_enabled,
                 hil=args.hil,
                 memory=planning_memory,
