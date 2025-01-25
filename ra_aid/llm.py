@@ -132,27 +132,29 @@ def create_llm_client(
         is_expert
     )
 
-    # Handle temperature for expert mode
+    # Handle temperature settings
     if is_expert:
-        temperature = 0
-
-    temp_kwargs = {}
-    if not is_expert and temperature is not None:
+        temp_kwargs = {"temperature": 0}
+    elif temperature is not None:
         temp_kwargs = {"temperature": temperature}
+    elif provider == "openai-compatible":
+        temp_kwargs = {"temperature": 0.3}
+    else:
+        temp_kwargs = {}
 
     if provider == "deepseek":
         return create_deepseek_client(
             model_name=model_name,
             api_key=config["api_key"],
             base_url=config["base_url"],
-            temperature=temperature,
+            temperature=temperature if not is_expert else 0,
             is_expert=is_expert,
         )
     elif provider == "openrouter":
         return create_openrouter_client(
             model_name=model_name,
             api_key=config["api_key"],
-            temperature=temperature,
+            temperature=temperature if not is_expert else 0,
             is_expert=is_expert,
         )
     elif provider == "openai":
@@ -171,8 +173,8 @@ def create_llm_client(
         return ChatOpenAI(
             api_key=config["api_key"],
             base_url=config["base_url"],
-            **temp_kwargs if temp_kwargs else {"temperature": 0.3},
             model=model_name,
+            **temp_kwargs,
         )
     elif provider == "gemini":
         return ChatGoogleGenerativeAI(
