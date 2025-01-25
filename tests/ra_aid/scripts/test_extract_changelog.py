@@ -1,5 +1,5 @@
 import pytest
-from scripts.extract_changelog import extract_version_content
+from ra_aid.scripts.extract_changelog import extract_version_content
 
 @pytest.fixture
 def basic_changelog():

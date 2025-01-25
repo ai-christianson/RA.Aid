@@ -1,16 +1,20 @@
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
 
-[project]
+[tool.poetry]
 name = "ra-aid"
-dynamic = ["version"]
+version = "0.1.0"
 description = "RA.Aid - ReAct Aid"
 readme = "README.md"
-license = {file = "LICENSE"}
-requires-python = ">=3.9"
+license = "Apache-2.0"
+authors = ["AI Christianson <ai.christianson@christianson.ai>"]
+packages = [
+    { include = "ra_aid" },
+    { include = "scripts" },
+    { include = "tests", format = "sdist" }
+]
 keywords = ["langchain", "ai", "agent", "tools", "development"]
-authors = [{name = "AI Christianson", email = "ai.christianson@christianson.ai"}]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -21,48 +25,44 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Topic :: Software Development :: Libraries :: Python Modules"
 ]
-dependencies = [
-    "langchain-anthropic>=0.3.1",
-    "langchain-openai",
-    "langchain-google-genai",
-    "langgraph>=0.2.60",
-    "langgraph-checkpoint>=2.0.9",
-    "langgraph-sdk>=0.1.48",
-    "langchain-core>=0.3.28",
-    "langchain>=0.3.13",
-    "rich>=13.0.0",
-    "GitPython>=3.1",
-    "fuzzywuzzy==0.18.0",
-    "rapidfuzz>=3.11.0",
-    "pathspec>=0.11.0",
-    "aider-chat>=0.72.1",
-    "tavily-python>=0.5.0",
-    "litellm"
-]
 
-[project.optional-dependencies]
-dev = [
-    "pytest-timeout>=2.2.0",
-    "pytest>=7.0.0",
-    "pytest-cov>=6.0.0",
-    "pytest-mock>=3.14.0",
-]
+[tool.poetry.dependencies]
+python = ">=3.9"
+langchain-anthropic = ">=0.3.1"
+langchain-openai = "*"
+langchain-google-genai = "*"
+langgraph = ">=0.2.60"
+langgraph-checkpoint = ">=2.0.9"
+langgraph-sdk = ">=0.1.48"
+langchain-core = ">=0.3.28"
+langchain = ">=0.3.13"
+rich = ">=13.0.0"
+GitPython = ">=3.1"
+fuzzywuzzy = "0.18.0"
+rapidfuzz = ">=3.11.0"
+pathspec = ">=0.11.0"
+aider-chat = ">=0.72.1"
+tavily-python = ">=0.5.0"
+litellm = "*"
 
-[project.scripts]
+[tool.poetry.group.dev.dependencies]
+pytest-timeout = ">=2.2.0"
+pytest = ">=7.0.0"
+pytest-cov = ">=6.0.0"
+pytest-mock = ">=3.14.0"
+
+[tool.poetry.scripts]
 ra-aid = "ra_aid.__main__:main"
 
-[project.urls]
+[tool.poetry.urls]
 Homepage = "https://github.com/ai-christianson/ra-aid"
 Documentation = "https://github.com/ai-christianson/ra-aid#readme"
 Repository = "https://github.com/ai-christianson/ra-aid.git"
 Issues = "https://github.com/ai-christianson/ra-aid/issues"
 
-[tool.setuptools.dynamic]
-version = {attr = "ra_aid.version.__version__"}
-
-[tool.hatch.version]
-path = "ra_aid/__version__.py"
-
-[tool.hatch.build.targets.wheel]
-packages = ["ra_aid"]
-
+[tool.pytest.ini_options]
+pythonpath = [
+    ".",
+    "tests"
+]
+testpaths = ["tests"]

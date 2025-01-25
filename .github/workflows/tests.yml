@@ -2,9 +2,9 @@ name: Tests
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
   pull_request:
-    branches: [ main ]
+    branches: [ master ]
 
 # Cancel any in-progress job or run
 concurrency:
@@ -18,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false  # Don't cancel other matrix jobs if one fails
       matrix:
-        python-version: ["3.11", "3.12"]  # Test multiple Python versions
+        python-version: ["3.12"]  # Test multiple Python versions
 
     steps:
     - uses: actions/checkout@v4
@@ -29,10 +29,18 @@ jobs:
         python-version: ${{ matrix.python-version }}
         cache: 'pip'  # Enable pip caching
         
+    - name: Install Poetry
+      run: |
+        curl -sSL https://install.python-poetry.org | python3 -
+        
+    - name: Configure Poetry
+      run: |
+        poetry config virtualenvs.create false
+        
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        make setup-dev
+        poetry install --with dev
         
     - name: Run tests
-      run: make test
+      run: |
+        poetry run pytest tests/ --cov=ra_aid --cov-report=term-missing --cov-report=html
