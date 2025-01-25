@@ -5,7 +5,7 @@ from datetime import datetime
 from rich.panel import Panel
 from rich.console import Console
 from langgraph.checkpoint.memory import MemorySaver
-from ra_aid.config import DEFAULT_RECURSION_LIMIT
+from ra_aid.config import DEFAULT_MAX_TEST_CMD_RETRIES, DEFAULT_RECURSION_LIMIT
 from ra_aid.env import validate_environment
 from ra_aid.project_info import get_project_info, format_project_info
 from ra_aid.tools.memory import _global_memory
@@ -148,7 +148,22 @@ Examples:
     parser.add_argument(
         "--aider-config", type=str, help="Specify the aider config file path"
     )
-
+    parser.add_argument(
+        "--test-cmd",
+        type=str,
+        help="Test command to run before completing tasks (e.g. 'pytest tests/')"
+    )
+    parser.add_argument(
+        "--auto-test",
+        action="store_true",
+        help="Automatically run tests before completing tasks"
+    )
+    parser.add_argument(
+        "--max-test-cmd-retries",
+        type=int,
+        default=DEFAULT_MAX_TEST_CMD_RETRIES,
+        help="Maximum number of retries for the test command (default: 10)",
+    )
     if args is None:
         args = sys.argv[1:]
     parsed_args = parser.parse_args(args)
@@ -192,6 +207,10 @@ Examples:
     # Validate recursion limit is positive
     if parsed_args.recursion_limit <= 0:
         parser.error("Recursion limit must be positive")
+        
+    # if auto-test command is provided, validate test-cmd is also provided
+    if parsed_args.auto_test and not parsed_args.test_cmd:
+        parser.error("Test command is required when using --auto-test")
 
     return parsed_args
 
@@ -344,6 +363,9 @@ def main():
             "web_research_enabled": web_research_enabled,
             "aider_config": args.aider_config,
             "limit_tokens": args.disable_limit_tokens,
+            "auto_test": args.auto_test,
+            "test_cmd": args.test_cmd,
+            "max_test_cmd_retries": args.max_test_cmd_retries,
         }
 
         # Store config in global memory for access by is_informational_query
