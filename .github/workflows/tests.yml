@@ -1,0 +1,38 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+# Cancel any in-progress job or run
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10  # Set maximum job runtime
+    strategy:
+      fail-fast: false  # Don't cancel other matrix jobs if one fails
+      matrix:
+        python-version: ["3.11", "3.12"]  # Test multiple Python versions
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'  # Enable pip caching
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        make setup-dev
+        
+    - name: Run tests
+      run: make test
