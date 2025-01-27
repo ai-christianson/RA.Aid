@@ -45,6 +45,8 @@ Returns: { "output": stdout+stderr, "return_code": 0 if success, "success": True
         "--no-auto-commits",
         "--dark-mode",
         "--no-suggest-shell-commands",
+        "--no-show-release-notes",
+        "--no-check-update",
     ]
 
     # Add config file if specified

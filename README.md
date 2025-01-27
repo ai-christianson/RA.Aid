@@ -179,6 +179,9 @@ ra-aid -m "Add new feature" --verbose
 - `--temperature`: LLM temperature (0.0-2.0) to control randomness in responses
 - `--disable-limit-tokens`: Disable token limiting for Anthropic Claude react agents
 - `--recursion-limit`: Maximum recursion depth for agent operations (default: 100)
+- `--test-cmd`: Custom command to run tests. If set user will be asked if they want to run the test command
+- `--auto-test`: Automatically run tests after each code change
+- `--max-test-cmd-retries`: Maximum number of test command retry attempts (default: 3)
 - `--version`: Show program version number and exit
 
 ### Example Tasks

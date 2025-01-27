@@ -12,7 +12,7 @@ import signal
 
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt.chat_agent_executor import AgentState
-from ra_aid.config import DEFAULT_RECURSION_LIMIT
+from ra_aid.config import DEFAULT_MAX_TEST_CMD_RETRIES, DEFAULT_RECURSION_LIMIT
 from ra_aid.models_tokens import DEFAULT_TOKEN_LIMIT, models_tokens
 from ra_aid.agents.ciayn_agent import CiaynAgent
 import threading
@@ -55,6 +55,8 @@ from ra_aid.prompts import (
 
 from langchain_core.messages import HumanMessage
 from anthropic import APIError, APITimeoutError, RateLimitError, InternalServerError
+from ra_aid.tools.human import ask_human
+from ra_aid.tools.shell import run_shell_command
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
@@ -64,6 +66,7 @@ from ra_aid.tools.memory import (
     get_memory_value,
     get_related_files,
 )
+from ra_aid.tools.handle_user_defined_test_cmd_execution import execute_test_command
 
 
 console = Console()
@@ -719,6 +722,10 @@ def run_agent_with_retry(agent, prompt: str, config: dict) -> Optional[str]:
 
     max_retries = 20
     base_delay = 1
+    test_attempts = 0
+    max_test_retries = config.get("max_test_cmd_retries", DEFAULT_MAX_TEST_CMD_RETRIES)
+    auto_test = config.get("auto_test", False)
+    original_prompt = prompt
 
     with InterruptibleSection():
         try:
@@ -745,6 +752,19 @@ def run_agent_with_retry(agent, prompt: str, config: dict) -> Optional[str]:
                             _global_memory["task_completed"] = False
                             _global_memory["completion_message"] = ""
                             break
+                    
+                    # Execute test command if configured
+                    should_break, prompt, auto_test, test_attempts = execute_test_command(
+                        config,
+                        original_prompt,
+                        test_attempts,
+                        auto_test
+                    )
+                    if should_break:
+                        break
+                    if prompt != original_prompt:
+                        continue
+
                     logger.debug("Agent run completed successfully")
                     return "Agent run completed successfully"
                 except (KeyboardInterrupt, AgentInterrupt):

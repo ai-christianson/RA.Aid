@@ -1,3 +1,4 @@
 """Configuration utilities."""
 
 DEFAULT_RECURSION_LIMIT = 100
+DEFAULT_MAX_TEST_CMD_RETRIES = 3
