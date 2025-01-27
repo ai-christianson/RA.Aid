@@ -66,13 +66,11 @@ from ra_aid.tools.memory import (
     get_memory_value,
     get_related_files,
 )
-from ra_aid.tools.handle_user_defined_test_cmd_execution import execute_test_command
-
+from ra_aid.tools.handle_user_defined_test_cmd_execution import TestCommandExecutor
 
 console = Console()
-
 logger = get_logger(__name__)
-
+test_executor = TestCommandExecutor()
 
 @tool
 def output_markdown_message(message: str) -> str:
@@ -754,7 +752,7 @@ def run_agent_with_retry(agent, prompt: str, config: dict) -> Optional[str]:
                             break
                     
                     # Execute test command if configured
-                    should_break, prompt, auto_test, test_attempts = execute_test_command(
+                    should_break, prompt, auto_test, test_attempts = test_executor.execute_test_command(
                         config,
                         original_prompt,
                         test_attempts,

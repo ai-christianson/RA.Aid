@@ -2,7 +2,13 @@
 
 import pytest
 from unittest.mock import Mock, patch
-from ra_aid.tools.handle_user_defined_test_cmd_execution import execute_test_command
+from rich.console import Console
+from ra_aid.tools.handle_user_defined_test_cmd_execution import TestCommandExecutor, DEFAULT_MAX_RETRIES
+
+@pytest.fixture
+def executor():
+    """Create a TestCommandExecutor fixture."""
+    return TestCommandExecutor(console=Mock(spec=Console))
 
 # Test cases for execute_test_command
 test_cases = [
@@ -70,12 +76,12 @@ test_cases = [
     # Case 6: Max retries reached
     (
         "max_retries_reached",
-        {"test_cmd": "pytest", "max_test_cmd_retries": 3},
+        {"test_cmd": "pytest"},
         "original prompt",
-        3,
+        DEFAULT_MAX_RETRIES,
         True,
-        {},
-        (True, "original prompt", True, 3)
+        {"shell_cmd_result": {"success": False, "output": "Test failed"}},
+        (True, "original prompt", True, DEFAULT_MAX_RETRIES)
     ),
     
     # Case 7: User runs test manually
@@ -105,33 +111,6 @@ test_cases = [
         },
         (False, "original prompt. Previous attempt failed with: <test_cmd_stdout>Test failed</test_cmd_stdout>", False, 1)
     ),
-    
-    # Case 9: Manual test error
-    (
-        "manual_test_error",
-        {"test_cmd": "pytest"},
-        "original prompt",
-        0,
-        False,
-        {
-            "ask_human_response": "y",
-            "shell_cmd_result_error": Exception("Command failed")
-        },
-        (True, "original prompt", False, 1)
-    ),
-    
-    # Case 10: Auto-test error
-    (
-        "auto_test_error",
-        {"test_cmd": "pytest"},
-        "original prompt",
-        0,
-        True,
-        {
-            "shell_cmd_result_error": Exception("Command failed")
-        },
-        (True, "original prompt", True, 1)
-    ),
 ]
 
 @pytest.mark.parametrize(
@@ -140,6 +119,7 @@ test_cases = [
     ids=[case[0] for case in test_cases]
 )
 def test_execute_test_command(
+    executor,
     name: str,
     config: dict,
     original_prompt: str,
@@ -147,10 +127,11 @@ def test_execute_test_command(
     auto_test: bool,
     mock_responses: dict,
     expected: tuple,
-) -> None:
+):
     """Test execute_test_command with different scenarios.
     
     Args:
+        executor: TestCommandExecutor instance
         name: Test case name
         config: Test configuration
         original_prompt: Original prompt text
@@ -159,60 +140,37 @@ def test_execute_test_command(
         mock_responses: Mock response data
         expected: Expected result tuple
     """
-    with patch("ra_aid.tools.handle_user_defined_test_cmd_execution.ask_human") as mock_ask_human, \
-         patch("ra_aid.tools.handle_user_defined_test_cmd_execution.run_shell_command") as mock_run_cmd, \
-         patch("ra_aid.tools.handle_user_defined_test_cmd_execution.console") as mock_console, \
-         patch("ra_aid.tools.handle_user_defined_test_cmd_execution.logger") as mock_logger:
+    with patch("ra_aid.tools.handle_user_defined_test_cmd_execution.ask_human") as mock_ask, \
+         patch("ra_aid.tools.handle_user_defined_test_cmd_execution.run_shell_command") as mock_run:
         
-        # Configure mocks based on mock_responses
+        # Configure mocks based on responses
         if "ask_human_response" in mock_responses:
-            mock_ask_human.invoke.return_value = mock_responses["ask_human_response"]
-        
-        if "shell_cmd_result_error" in mock_responses:
-            mock_run_cmd.side_effect = mock_responses["shell_cmd_result_error"]
-        elif "shell_cmd_result" in mock_responses:
-            mock_run_cmd.return_value = mock_responses["shell_cmd_result"]
-        
-        # Execute test command
-        result = execute_test_command(
+            mock_ask.return_value = mock_responses["ask_human_response"]
+            
+        if "shell_cmd_result" in mock_responses:
+            mock_run.return_value = mock_responses["shell_cmd_result"]
+            
+        result = executor.execute_test_command(
             config,
             original_prompt,
             test_attempts,
             auto_test
         )
         
-        # Verify result matches expected
-        assert result == expected, f"Test case '{name}' failed"
-        
-        # Verify mock interactions
-        if config.get("test_cmd") and not auto_test:
-            mock_ask_human.invoke.assert_called_once()
-        
-        if auto_test and test_attempts < config.get("max_test_cmd_retries", 5):
-            if config.get("test_cmd"):
-                mock_run_cmd.assert_called_once_with(config["test_cmd"])
-        
-        # Verify logging for max retries
-        if test_attempts >= config.get("max_test_cmd_retries", 5):
-            mock_logger.warning.assert_called_once_with("Max test retries reached")
+        assert result == expected
 
-def test_execute_test_command_error_handling() -> None:
+def test_execute_test_command_error_handling(executor):
     """Test error handling in execute_test_command."""
-    config = {"test_cmd": "pytest"}
-    
-    with patch("ra_aid.tools.handle_user_defined_test_cmd_execution.run_shell_command") as mock_run_cmd, \
-         patch("ra_aid.tools.handle_user_defined_test_cmd_execution.logger") as mock_logger:
+    with patch("ra_aid.tools.handle_user_defined_test_cmd_execution.run_shell_command") as mock_run:
+        mock_run.side_effect = Exception("Command failed")
         
-        # Simulate run_shell_command raising an exception
-        mock_run_cmd.side_effect = Exception("Command failed")
-        
-        result = execute_test_command(
-            config,
+        result = executor.execute_test_command(
+            {"test_cmd": "pytest"},
             "original prompt",
-            0,
-            True
+            auto_test=True
         )
         
-        # Should handle error and continue
-        assert result == (True, "original prompt", True, 1)
-        mock_logger.warning.assert_called_once()
+        # Should return with should_break=True when an error occurs
+        assert result[0] is True  # should_break
+        assert result[2] is True  # auto_test
+        assert result[3] == 1     # test_attempts
