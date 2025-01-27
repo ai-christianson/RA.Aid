@@ -190,7 +190,8 @@ def test_execute_test_command(
         
         if auto_test and test_attempts < config.get("max_test_cmd_retries", 5):
             if config.get("test_cmd"):
-                mock_run_cmd.assert_called_once_with(config["test_cmd"])
+                # Verify run_shell_command called with command and default timeout
+                mock_run_cmd.assert_called_once_with(config["test_cmd"], timeout=config.get('timeout', 30))
         
         # Verify logging for max retries
         if test_attempts >= config.get("max_test_cmd_retries", 5):
