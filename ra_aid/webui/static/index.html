@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-900">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="server-port" content="{{ server_port }}">
+    <title>RA.Aid Web Interface</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        'dark-primary': '#1a1b26',
+                        'dark-secondary': '#24283b',
+                        'dark-accent': '#7aa2f7',
+                        'dark-text': '#c0caf5'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="h-full bg-dark-primary text-dark-text">
+    <div class="flex h-full">
+        <!-- Sidebar -->
+        <div class="w-64 bg-dark-secondary border-r border-gray-700 flex flex-col">
+            <div class="p-4 border-b border-gray-700">
+                <h2 class="text-xl font-semibold text-dark-accent">History</h2>
+            </div>
+            <div id="history-list" class="flex-1 overflow-y-auto p-4 space-y-2"></div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col min-w-0">
+            <!-- Chat Container -->
+            <div class="flex-1 overflow-y-auto p-4 space-y-4" id="chat-container">
+                <div id="chat-messages"></div>
+                <div id="stream-output" class="hidden font-mono bg-dark-secondary rounded-lg p-4 text-sm"></div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="border-t border-gray-700 p-4 bg-dark-secondary">
+                <div class="flex space-x-4">
+                    <textarea 
+                        id="user-input" 
+                        class="flex-1 bg-dark-primary border border-gray-700 rounded-lg p-3 text-dark-text placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-dark-accent resize-none"
+                        placeholder="Type your request here..."
+                        rows="3"
+                    ></textarea>
+                    <button 
+                        id="send-button"
+                        class="px-6 py-2 bg-dark-accent text-white rounded-lg hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-dark-accent disabled:opacity-50 disabled:cursor-not-allowed h-fit"
+                    >
+                        Send
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Add dynamic styles for messages
+        const style = document.createElement('style');
+        style.textContent = `
+            .message {
+                @apply mb-4 p-4 rounded-lg max-w-3xl;
+            }
+            .user-message {
+                @apply bg-dark-accent text-white ml-auto;
+            }
+            .system-message {
+                @apply bg-dark-secondary mr-auto;
+            }
+            .error-message {
+                @apply bg-red-900 text-red-100 mr-auto;
+            }
+            .history-item {
+                @apply p-3 rounded-lg hover:bg-dark-primary cursor-pointer transition-colors duration-200 text-sm;
+            }
+            #stream-output:not(:empty) {
+                @apply block;
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+    <script src="/static/script.js"></script>
+</body>
+</html>
