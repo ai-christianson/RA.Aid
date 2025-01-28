@@ -1,4 +1,4 @@
-include README.md
 include LICENSE
-include requirements*.txt
-recursive-include agent_langchain *.py
+include README.md
+include CHANGELOG.md
+recursive-include ra_aid/webui/static *
