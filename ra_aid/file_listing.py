@@ -109,7 +109,8 @@ def get_file_listing(directory: str, limit: Optional[int] = None) -> Tuple[List[
             if line.strip()
         ]
         
-        # Sort for consistency
+        # Deduplicate and sort for consistency
+        files = list(dict.fromkeys(files))  # Remove duplicates while preserving order
         files.sort()
         
         # Get total count before truncation
