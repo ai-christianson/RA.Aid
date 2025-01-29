@@ -267,7 +267,7 @@ Output **ONLY THE CODE** and **NO MARKDOWN BACKTICKS**"""
 
         # create-react-agent tool calls can be lists
         if isinstance(text, List):
-            return 0
+            text = str(text)
 
         if not text:
             return 0
