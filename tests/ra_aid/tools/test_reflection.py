@@ -1,29 +1,33 @@
-import pytest
 from ra_aid.tools.reflection import get_function_info
+
 
 # Sample functions for testing get_function_info
 def simple_func():
     """A simple function with no parameters."""
     pass
 
+
 def typed_func(a: int, b: str = "default") -> bool:
     """A function with type hints and default value.
-    
+
     Args:
         a: An integer parameter
         b: A string parameter with default
-        
+
     Returns:
         bool: Always returns True
     """
     return True
 
+
 def complex_func(pos1, pos2, *args, kw1="default", **kwargs):
     """A function with complex signature."""
     pass
 
+
 def no_docstring_func(x):
     pass
+
 
 class TestGetFunctionInfo:
     def test_simple_function_info(self):
@@ -58,5 +62,3 @@ class TestGetFunctionInfo:
         info = get_function_info(no_docstring_func)
         assert "no_docstring_func" in info
         assert "No docstring provided" in info
-
-

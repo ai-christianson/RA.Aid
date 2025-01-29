@@ -9,3 +9,14 @@ setup-dev:
 
 setup-hooks: setup-dev
 	pre-commit install
+
+check:
+	ruff check
+
+fix:
+	ruff check . --select I --fix # First sort imports
+	ruff format .
+	ruff check --fix
+
+fix-basic:
+	ruff check --fix

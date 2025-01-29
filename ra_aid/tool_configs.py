@@ -1,17 +1,41 @@
 from ra_aid.tools import (
-    ask_expert, ask_human, run_shell_command, run_programming_task,
-    emit_research_notes, emit_plan, emit_related_files,
-    emit_expert_context, emit_key_facts, delete_key_facts,
-    emit_key_snippets, delete_key_snippets, deregister_related_files, read_file_tool,
-    fuzzy_find_project_files, ripgrep_search, list_directory_tree,
-    monorepo_detected, ui_detected,
-    task_completed, plan_implementation_completed, web_search_tavily
+    ask_expert,
+    ask_human,
+    delete_key_facts,
+    delete_key_snippets,
+    deregister_related_files,
+    emit_expert_context,
+    emit_key_facts,
+    emit_key_snippets,
+    emit_plan,
+    emit_related_files,
+    emit_research_notes,
+    fuzzy_find_project_files,
+    list_directory_tree,
+    monorepo_detected,
+    plan_implementation_completed,
+    read_file_tool,
+    ripgrep_search,
+    run_programming_task,
+    run_shell_command,
+    task_completed,
+    ui_detected,
+    web_search_tavily,
+)
+from ra_aid.tools.agent import (
+    request_implementation,
+    request_research,
+    request_research_and_implementation,
+    request_task_implementation,
+    request_web_research,
 )
 from ra_aid.tools.memory import one_shot_completed
-from ra_aid.tools.agent import request_research, request_implementation, request_research_and_implementation, request_task_implementation, request_web_research
+
 
 # Read-only tools that don't modify system state
-def get_read_only_tools(human_interaction: bool = False, web_research_enabled: bool = False) -> list:
+def get_read_only_tools(
+    human_interaction: bool = False, web_research_enabled: bool = False
+) -> list:
     """Get the list of read-only tools, optionally including human interaction tools.
 
     Args:
@@ -32,7 +56,7 @@ def get_read_only_tools(human_interaction: bool = False, web_research_enabled: b
         read_file_tool,
         fuzzy_find_project_files,
         ripgrep_search,
-        run_shell_command # can modify files, but we still need it for read-only tasks.
+        run_shell_command,  # can modify files, but we still need it for read-only tasks.
     ]
 
     if web_research_enabled:
@@ -43,6 +67,7 @@ def get_read_only_tools(human_interaction: bool = False, web_research_enabled: b
 
     return tools
 
+
 # Define constant tool groups
 READ_ONLY_TOOLS = get_read_only_tools()
 MODIFICATION_TOOLS = [run_programming_task]
@@ -52,10 +77,16 @@ RESEARCH_TOOLS = [
     emit_research_notes,
     one_shot_completed,
     monorepo_detected,
-    ui_detected
+    ui_detected,
 ]
 
-def get_research_tools(research_only: bool = False, expert_enabled: bool = True, human_interaction: bool = False, web_research_enabled: bool = False) -> list:
+
+def get_research_tools(
+    research_only: bool = False,
+    expert_enabled: bool = True,
+    human_interaction: bool = False,
+    web_research_enabled: bool = False,
+) -> list:
     """Get the list of research tools based on mode and whether expert is enabled.
 
     Args:
@@ -83,7 +114,10 @@ def get_research_tools(research_only: bool = False, expert_enabled: bool = True,
 
     return tools
 
-def get_planning_tools(expert_enabled: bool = True, web_research_enabled: bool = False) -> list:
+
+def get_planning_tools(
+    expert_enabled: bool = True, web_research_enabled: bool = False
+) -> list:
     """Get the list of planning tools based on whether expert is enabled.
 
     Args:
@@ -97,7 +131,7 @@ def get_planning_tools(expert_enabled: bool = True, web_research_enabled: bool =
     planning_tools = [
         emit_plan,
         request_task_implementation,
-        plan_implementation_completed
+        plan_implementation_completed,
     ]
     tools.extend(planning_tools)
 
@@ -107,7 +141,10 @@ def get_planning_tools(expert_enabled: bool = True, web_research_enabled: bool =
 
     return tools
 
-def get_implementation_tools(expert_enabled: bool = True, web_research_enabled: bool = False) -> list:
+
+def get_implementation_tools(
+    expert_enabled: bool = True, web_research_enabled: bool = False
+) -> list:
     """Get the list of implementation tools based on whether expert is enabled.
 
     Args:
@@ -119,15 +156,14 @@ def get_implementation_tools(expert_enabled: bool = True, web_research_enabled: 
 
     # Add modification tools since it's not research-only
     tools.extend(MODIFICATION_TOOLS)
-    tools.extend([
-        task_completed
-    ])
+    tools.extend([task_completed])
 
     # Add expert tools if enabled
     if expert_enabled:
         tools.extend(EXPERT_TOOLS)
 
     return tools
+
 
 def get_web_research_tools(expert_enabled: bool = True) -> list:
     """Get the list of tools available for web research.
@@ -140,11 +176,7 @@ def get_web_research_tools(expert_enabled: bool = True) -> list:
     Returns:
         list: List of tools configured for web research
     """
-    tools = [
-        web_search_tavily,
-        emit_research_notes,
-        task_completed
-    ]
+    tools = [web_search_tavily, emit_research_notes, task_completed]
 
     if expert_enabled:
         tools.append(emit_expert_context)
@@ -152,7 +184,10 @@ def get_web_research_tools(expert_enabled: bool = True) -> list:
 
     return tools
 
-def get_chat_tools(expert_enabled: bool = True, web_research_enabled: bool = False) -> list:
+
+def get_chat_tools(
+    expert_enabled: bool = True, web_research_enabled: bool = False
+) -> list:
     """Get the list of tools available in chat mode.
 
     Chat mode includes research and implementation capabilities but excludes
@@ -169,7 +204,7 @@ def get_chat_tools(expert_enabled: bool = True, web_research_enabled: bool = Fal
         emit_key_facts,
         delete_key_facts,
         delete_key_snippets,
-        deregister_related_files
+        deregister_related_files,
     ]
 
     if web_research_enabled:

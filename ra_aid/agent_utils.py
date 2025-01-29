@@ -1,73 +1,65 @@
 """Utility functions for working with agents."""
 
+import signal
 import sys
+import threading
 import time
 import uuid
-from typing import Optional, Any, List, Dict, Sequence
-from langchain_core.messages import BaseMessage, trim_messages
-from litellm import get_model_info
+from typing import Any, Dict, List, Optional, Sequence
+
 import litellm
-
-import signal
-
-from langgraph.checkpoint.memory import MemorySaver
-from langgraph.prebuilt.chat_agent_executor import AgentState
-from ra_aid.config import DEFAULT_MAX_TEST_CMD_RETRIES, DEFAULT_RECURSION_LIMIT
-from ra_aid.models_tokens import DEFAULT_TOKEN_LIMIT, models_tokens
-from ra_aid.agents.ciayn_agent import CiaynAgent
-import threading
-
-from ra_aid.project_info import (
-    get_project_info,
-    format_project_info,
-    display_project_status,
-)
-
-from langgraph.prebuilt import create_react_agent
-from ra_aid.console.formatting import print_stage_header, print_error
+from anthropic import APIError, APITimeoutError, InternalServerError, RateLimitError
 from langchain_core.language_models import BaseChatModel
+from langchain_core.messages import BaseMessage, HumanMessage, trim_messages
 from langchain_core.tools import tool
-from ra_aid.console.output import print_agent_output
-from ra_aid.logging_config import get_logger
-from ra_aid.exceptions import AgentInterrupt
-from ra_aid.tool_configs import (
-    get_implementation_tools,
-    get_research_tools,
-    get_planning_tools,
-    get_web_research_tools,
-)
-from ra_aid.prompts import (
-    IMPLEMENTATION_PROMPT,
-    EXPERT_PROMPT_SECTION_IMPLEMENTATION,
-    HUMAN_PROMPT_SECTION_IMPLEMENTATION,
-    EXPERT_PROMPT_SECTION_RESEARCH,
-    WEB_RESEARCH_PROMPT_SECTION_RESEARCH,
-    WEB_RESEARCH_PROMPT_SECTION_CHAT,
-    WEB_RESEARCH_PROMPT_SECTION_PLANNING,
-    RESEARCH_PROMPT,
-    RESEARCH_ONLY_PROMPT,
-    HUMAN_PROMPT_SECTION_RESEARCH,
-    PLANNING_PROMPT,
-    EXPERT_PROMPT_SECTION_PLANNING,
-    HUMAN_PROMPT_SECTION_PLANNING,
-    WEB_RESEARCH_PROMPT,
-)
-
-from langchain_core.messages import HumanMessage
-from anthropic import APIError, APITimeoutError, RateLimitError, InternalServerError
-from ra_aid.tools.human import ask_human
-from ra_aid.tools.shell import run_shell_command
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.prebuilt import create_react_agent
+from langgraph.prebuilt.chat_agent_executor import AgentState
+from litellm import get_model_info
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 
+from ra_aid.agents.ciayn_agent import CiaynAgent
+from ra_aid.config import DEFAULT_MAX_TEST_CMD_RETRIES, DEFAULT_RECURSION_LIMIT
+from ra_aid.console.formatting import print_error, print_stage_header
+from ra_aid.console.output import print_agent_output
+from ra_aid.exceptions import AgentInterrupt
+from ra_aid.logging_config import get_logger
+from ra_aid.models_tokens import DEFAULT_TOKEN_LIMIT, models_tokens
+from ra_aid.project_info import (
+    display_project_status,
+    format_project_info,
+    get_project_info,
+)
+from ra_aid.prompts import (
+    EXPERT_PROMPT_SECTION_IMPLEMENTATION,
+    EXPERT_PROMPT_SECTION_PLANNING,
+    EXPERT_PROMPT_SECTION_RESEARCH,
+    HUMAN_PROMPT_SECTION_IMPLEMENTATION,
+    HUMAN_PROMPT_SECTION_PLANNING,
+    HUMAN_PROMPT_SECTION_RESEARCH,
+    IMPLEMENTATION_PROMPT,
+    PLANNING_PROMPT,
+    RESEARCH_ONLY_PROMPT,
+    RESEARCH_PROMPT,
+    WEB_RESEARCH_PROMPT,
+    WEB_RESEARCH_PROMPT_SECTION_CHAT,
+    WEB_RESEARCH_PROMPT_SECTION_PLANNING,
+    WEB_RESEARCH_PROMPT_SECTION_RESEARCH,
+)
+from ra_aid.tool_configs import (
+    get_implementation_tools,
+    get_planning_tools,
+    get_research_tools,
+    get_web_research_tools,
+)
+from ra_aid.tools.handle_user_defined_test_cmd_execution import execute_test_command
 from ra_aid.tools.memory import (
     _global_memory,
     get_memory_value,
     get_related_files,
 )
-from ra_aid.tools.handle_user_defined_test_cmd_execution import execute_test_command
-
 
 console = Console()
 
@@ -723,7 +715,7 @@ def run_agent_with_retry(agent, prompt: str, config: dict) -> Optional[str]:
     max_retries = 20
     base_delay = 1
     test_attempts = 0
-    max_test_retries = config.get("max_test_cmd_retries", DEFAULT_MAX_TEST_CMD_RETRIES)
+    _max_test_retries = config.get("max_test_cmd_retries", DEFAULT_MAX_TEST_CMD_RETRIES)
     auto_test = config.get("auto_test", False)
     original_prompt = prompt
 
@@ -752,13 +744,12 @@ def run_agent_with_retry(agent, prompt: str, config: dict) -> Optional[str]:
                             _global_memory["task_completed"] = False
                             _global_memory["completion_message"] = ""
                             break
-                    
+
                     # Execute test command if configured
-                    should_break, prompt, auto_test, test_attempts = execute_test_command(
-                        config,
-                        original_prompt,
-                        test_attempts,
-                        auto_test
+                    should_break, prompt, auto_test, test_attempts = (
+                        execute_test_command(
+                            config, original_prompt, test_attempts, auto_test
+                        )
                     )
                     if should_break:
                         break

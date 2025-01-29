@@ -1,30 +1,32 @@
 import argparse
+import os
 import sys
 import uuid
 from datetime import datetime
-from rich.panel import Panel
-from rich.console import Console
+
 from langgraph.checkpoint.memory import MemorySaver
-from ra_aid.config import DEFAULT_MAX_TEST_CMD_RETRIES, DEFAULT_RECURSION_LIMIT
-from ra_aid.env import validate_environment
-from ra_aid.project_info import get_project_info, format_project_info
-from ra_aid.tools.memory import _global_memory
-from ra_aid.tools.human import ask_human
-from ra_aid import print_stage_header, print_error
+from rich.console import Console
+from rich.panel import Panel
+
+from ra_aid import print_error, print_stage_header
 from ra_aid.__version__ import __version__
 from ra_aid.agent_utils import (
     AgentInterrupt,
-    run_agent_with_retry,
-    run_research_agent,
-    run_planning_agent,
     create_agent,
+    run_agent_with_retry,
+    run_planning_agent,
+    run_research_agent,
 )
-from ra_aid.prompts import CHAT_PROMPT, WEB_RESEARCH_PROMPT_SECTION_CHAT
-from ra_aid.llm import initialize_llm
-from ra_aid.logging_config import setup_logging, get_logger
-from ra_aid.tool_configs import get_chat_tools
+from ra_aid.config import DEFAULT_MAX_TEST_CMD_RETRIES, DEFAULT_RECURSION_LIMIT
 from ra_aid.dependencies import check_dependencies
-import os
+from ra_aid.env import validate_environment
+from ra_aid.llm import initialize_llm
+from ra_aid.logging_config import get_logger, setup_logging
+from ra_aid.project_info import format_project_info, get_project_info
+from ra_aid.prompts import CHAT_PROMPT, WEB_RESEARCH_PROMPT_SECTION_CHAT
+from ra_aid.tool_configs import get_chat_tools
+from ra_aid.tools.human import ask_human
+from ra_aid.tools.memory import _global_memory
 
 logger = get_logger(__name__)
 
@@ -151,12 +153,12 @@ Examples:
     parser.add_argument(
         "--test-cmd",
         type=str,
-        help="Test command to run before completing tasks (e.g. 'pytest tests/')"
+        help="Test command to run before completing tasks (e.g. 'pytest tests/')",
     )
     parser.add_argument(
         "--auto-test",
         action="store_true",
-        help="Automatically run tests before completing tasks"
+        help="Automatically run tests before completing tasks",
     )
     parser.add_argument(
         "--max-test-cmd-retries",
@@ -207,7 +209,7 @@ Examples:
     # Validate recursion limit is positive
     if parsed_args.recursion_limit <= 0:
         parser.error("Recursion limit must be positive")
-        
+
     # if auto-test command is provided, validate test-cmd is also provided
     if parsed_args.auto_test and not parsed_args.test_cmd:
         parser.error("Test command is required when using --auto-test")

@@ -1,19 +1,18 @@
-import os
 import logging
+import os
 import time
 from typing import Dict
+
 from langchain_core.tools import tool
 from rich.console import Console
 from rich.panel import Panel
 
 console = Console()
 
+
 @tool
 def write_file_tool(
-    filepath: str,
-    content: str,
-    encoding: str = 'utf-8',
-    verbose: bool = True
+    filepath: str, content: str, encoding: str = "utf-8", verbose: bool = True
 ) -> Dict[str, any]:
     """Write content to a text file.
 
@@ -40,7 +39,7 @@ def write_file_tool(
         "elapsed_time": 0,
         "error": None,
         "filepath": None,
-        "message": None
+        "message": None,
     }
 
     try:
@@ -50,42 +49,48 @@ def write_file_tool(
             os.makedirs(dirpath, exist_ok=True)
 
         logging.debug(f"Starting to write file: {filepath}")
-        
-        with open(filepath, 'w', encoding=encoding) as f:
+
+        with open(filepath, "w", encoding=encoding) as f:
             f.write(content)
             result["bytes_written"] = len(content.encode(encoding))
-        
+
         elapsed = time.time() - start_time
         result["elapsed_time"] = elapsed
         result["success"] = True
         result["filepath"] = filepath
         result["message"] = "Operation completed successfully"
 
-        logging.debug(f"File write complete: {result['bytes_written']} bytes in {elapsed:.2f}s")
+        logging.debug(
+            f"File write complete: {result['bytes_written']} bytes in {elapsed:.2f}s"
+        )
 
         if verbose:
-            console.print(Panel(
-                f"Wrote {result['bytes_written']} bytes to {filepath} in {elapsed:.2f}s",
-                title="💾 File Write",
-                border_style="bright_green"
-            ))
+            console.print(
+                Panel(
+                    f"Wrote {result['bytes_written']} bytes to {filepath} in {elapsed:.2f}s",
+                    title="💾 File Write",
+                    border_style="bright_green",
+                )
+            )
 
     except Exception as e:
         elapsed = time.time() - start_time
         error_msg = str(e)
-        
+
         result["elapsed_time"] = elapsed
         result["error"] = error_msg
         if "embedded null byte" in error_msg.lower():
             result["message"] = "Invalid file path: contains null byte character"
         else:
             result["message"] = error_msg
-        
+
         if verbose:
-            console.print(Panel(
-                f"Failed to write {filepath}\nError: {error_msg}",
-                title="❌ File Write Error",
-                border_style="red"
-            ))
+            console.print(
+                Panel(
+                    f"Failed to write {filepath}\nError: {error_msg}",
+                    title="❌ File Write Error",
+                    border_style="red",
+                )
+            )
 
     return result

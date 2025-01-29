@@ -1,18 +1,20 @@
 """Tests for file listing functionality."""
 
 import os
-import pytest
-from pathlib import Path
 import subprocess
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
+import pytest
+
 from ra_aid.file_listing import (
+    DirectoryAccessError,
+    DirectoryNotFoundError,
+    FileListerError,
+    GitCommandError,
     get_file_listing,
     is_git_repo,
-    GitCommandError,
-    DirectoryNotFoundError,
-    DirectoryAccessError,
-    FileListerError,
 )
+
 
 @pytest.fixture
 def empty_git_repo(tmp_path):
@@ -30,7 +32,7 @@ def sample_git_repo(empty_git_repo):
         "src/main.py",
         "src/utils.py",
         "tests/test_main.py",
-        "docs/index.html"
+        "docs/index.html",
     ]
 
     for file_path in files:
@@ -43,10 +45,12 @@ def sample_git_repo(empty_git_repo):
     subprocess.run(
         ["git", "commit", "-m", "Initial commit"],
         cwd=empty_git_repo,
-        env={"GIT_AUTHOR_NAME": "Test",
-             "GIT_AUTHOR_EMAIL": "test@example.com",
-             "GIT_COMMITTER_NAME": "Test",
-             "GIT_COMMITTER_EMAIL": "test@example.com"}
+        env={
+            "GIT_AUTHOR_NAME": "Test",
+            "GIT_AUTHOR_EMAIL": "test@example.com",
+            "GIT_COMMITTER_NAME": "Test",
+            "GIT_COMMITTER_EMAIL": "test@example.com",
+        },
     )
 
     return empty_git_repo
@@ -154,7 +158,10 @@ FILE_LISTING_TEST_CASES = [
     },
     {
         "name": "duplicate_files",
-        "git_output": "\n".join([SINGLE_FILE_NAME, SINGLE_FILE_NAME] + MULTI_FILE_NAMES[1:]) + "\n",
+        "git_output": "\n".join(
+            [SINGLE_FILE_NAME, SINGLE_FILE_NAME] + MULTI_FILE_NAMES[1:]
+        )
+        + "\n",
         "expected_files": [SINGLE_FILE_NAME] + MULTI_FILE_NAMES[1:],
         "expected_total": 3,  # After deduplication
         "limit": None,
@@ -217,6 +224,7 @@ FILE_LISTING_TEST_CASES = [
     },
 ]
 
+
 def create_mock_process(git_output: str) -> MagicMock:
     """Create a mock process with the given git output."""
     mock_process = MagicMock()
@@ -224,11 +232,13 @@ def create_mock_process(git_output: str) -> MagicMock:
     mock_process.returncode = 0
     return mock_process
 
+
 @pytest.fixture
 def mock_subprocess():
     """Fixture to mock subprocess.run."""
     with patch("subprocess.run") as mock_run:
         yield mock_run
+
 
 @pytest.fixture
 def mock_is_git_repo():
@@ -236,6 +246,7 @@ def mock_is_git_repo():
     with patch("ra_aid.file_listing.is_git_repo") as mock:
         mock.return_value = True
         yield mock
+
 
 @pytest.mark.parametrize("test_case", FILE_LISTING_TEST_CASES, ids=lambda x: x["name"])
 def test_get_file_listing(test_case, mock_subprocess, mock_is_git_repo):
@@ -245,6 +256,7 @@ def test_get_file_listing(test_case, mock_subprocess, mock_is_git_repo):
     assert files == test_case["expected_files"]
     assert total == test_case["expected_total"]
 
+
 def test_get_file_listing_non_git_repo(mock_is_git_repo):
     """Test get_file_listing with non-git repository."""
     mock_is_git_repo.return_value = False
@@ -252,11 +264,13 @@ def test_get_file_listing_non_git_repo(mock_is_git_repo):
     assert files == EMPTY_FILE_LIST
     assert total == EMPTY_FILE_TOTAL
 
+
 def test_get_file_listing_git_error(mock_subprocess, mock_is_git_repo):
     """Test get_file_listing when git command fails."""
     mock_subprocess.side_effect = GitCommandError("Git command failed")
     with pytest.raises(GitCommandError):
         get_file_listing(DUMMY_PATH)
+
 
 def test_get_file_listing_permission_error(mock_subprocess, mock_is_git_repo):
     """Test get_file_listing with permission error."""
@@ -264,9 +278,9 @@ def test_get_file_listing_permission_error(mock_subprocess, mock_is_git_repo):
     with pytest.raises(DirectoryAccessError):
         get_file_listing(DUMMY_PATH)
 
+
 def test_get_file_listing_unexpected_error(mock_subprocess, mock_is_git_repo):
     """Test get_file_listing with unexpected error."""
     mock_subprocess.side_effect = Exception("Unexpected error")
     with pytest.raises(FileListerError):
         get_file_listing(DUMMY_PATH)
-

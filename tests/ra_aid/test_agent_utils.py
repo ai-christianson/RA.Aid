@@ -1,16 +1,19 @@
 """Unit tests for agent_utils.py."""
 
-import pytest
-from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from unittest.mock import Mock, patch
-from langchain_core.language_models import BaseChatModel
+
 import litellm
+import pytest
+from langchain_core.language_models import BaseChatModel
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
-from ra_aid.models_tokens import DEFAULT_TOKEN_LIMIT
-from ra_aid.agent_utils import state_modifier, AgentState
-
-from ra_aid.agent_utils import create_agent, get_model_token_limit
-from ra_aid.models_tokens import models_tokens
+from ra_aid.agent_utils import (
+    AgentState,
+    create_agent,
+    get_model_token_limit,
+    state_modifier,
+)
+from ra_aid.models_tokens import DEFAULT_TOKEN_LIMIT, models_tokens
 
 
 @pytest.fixture
@@ -58,7 +61,6 @@ def test_get_model_token_limit_missing_config(mock_memory):
 
     token_limit = get_model_token_limit(config)
     assert token_limit is None
-
 
 
 def test_get_model_token_limit_litellm_success():

@@ -1,7 +1,7 @@
 import pytest
-from pytest import mark
-from langchain.schema.runnable import Runnable
+
 from ra_aid.tools import read_file_tool
+
 
 def test_basic_file_reading(tmp_path):
     """Test basic file reading functionality"""
@@ -15,8 +15,9 @@ def test_basic_file_reading(tmp_path):
 
     # Verify return format and content
     assert isinstance(result, dict)
-    assert 'content' in result
-    assert result['content'] == test_content
+    assert "content" in result
+    assert result["content"] == test_content
+
 
 def test_no_truncation(tmp_path):
     """Test that files under max_lines are not truncated"""
@@ -31,8 +32,9 @@ def test_no_truncation(tmp_path):
 
     # Verify no truncation occurred
     assert isinstance(result, dict)
-    assert '[lines of output truncated]' not in result['content']
-    assert len(result['content'].splitlines()) == line_count
+    assert "[lines of output truncated]" not in result["content"]
+    assert len(result["content"].splitlines()) == line_count
+
 
 def test_with_truncation(tmp_path):
     """Test that files over max_lines are properly truncated"""
@@ -47,13 +49,17 @@ def test_with_truncation(tmp_path):
 
     # Verify truncation occurred correctly
     assert isinstance(result, dict)
-    assert '[1000 lines of output truncated]' in result['content']
-    assert len(result['content'].splitlines()) == 5001  # 5000 content lines + 1 truncation message
+    assert "[1000 lines of output truncated]" in result["content"]
+    assert (
+        len(result["content"].splitlines()) == 5001
+    )  # 5000 content lines + 1 truncation message
+
 
 def test_nonexistent_file():
     """Test error handling for non-existent files"""
     with pytest.raises(FileNotFoundError):
         read_file_tool.invoke({"filepath": "/nonexistent/file.txt"})
+
 
 def test_empty_file(tmp_path):
     """Test reading an empty file"""
@@ -66,5 +72,5 @@ def test_empty_file(tmp_path):
 
     # Verify return format and empty content
     assert isinstance(result, dict)
-    assert 'content' in result
-    assert result['content'] == ""
+    assert "content" in result
+    assert result["content"] == ""

@@ -7,21 +7,25 @@ from typing import List, Optional, Tuple
 
 class FileListerError(Exception):
     """Base exception for file listing related errors."""
+
     pass
 
 
 class GitCommandError(FileListerError):
     """Raised when a git command fails."""
+
     pass
 
 
 class DirectoryNotFoundError(FileListerError):
     """Raised when the specified directory does not exist."""
+
     pass
 
 
 class DirectoryAccessError(FileListerError):
     """Raised when the directory cannot be accessed due to permissions."""
+
     pass
 
 
@@ -51,7 +55,7 @@ def is_git_repo(directory: str) -> bool:
             ["git", "rev-parse", "--git-dir"],
             cwd=str(path),
             capture_output=True,
-            text=True
+            text=True,
         )
         return result.returncode == 0
 
@@ -65,7 +69,9 @@ def is_git_repo(directory: str) -> bool:
         raise FileListerError(f"Error checking git repository: {e}")
 
 
-def get_file_listing(directory: str, limit: Optional[int] = None) -> Tuple[List[str], int]:
+def get_file_listing(
+    directory: str, limit: Optional[int] = None
+) -> Tuple[List[str], int]:
     """
     Get a list of tracked files in a git repository.
 
@@ -99,29 +105,25 @@ def get_file_listing(directory: str, limit: Optional[int] = None) -> Tuple[List[
             cwd=directory,
             capture_output=True,
             text=True,
-            check=True
+            check=True,
         )
 
         # Process the output
-        files = [
-            line.strip()
-            for line in result.stdout.splitlines()
-            if line.strip()
-        ]
+        files = [line.strip() for line in result.stdout.splitlines() if line.strip()]
 
         # Deduplicate and sort for consistency
         files = list(dict.fromkeys(files))  # Remove duplicates while preserving order
 
         # Sort for consistency
         files.sort()
-        
+
         # Get total count before truncation
         total_count = len(files)
-        
+
         # Truncate if limit specified
         if limit is not None:
             files = files[:limit]
-            
+
         return files, total_count
 
     except subprocess.CalledProcessError as e:

@@ -1,10 +1,11 @@
 import os
-from typing import Dict, List, Any, Union, Optional, Set
-from typing_extensions import TypedDict
+from typing import Any, Dict, List, Optional, Set, Union
+
+from langchain_core.tools import tool
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
-from langchain_core.tools import tool
+from typing_extensions import TypedDict
 
 
 class WorkLogEntry(TypedDict):
@@ -249,7 +250,7 @@ def emit_key_snippets(snippets: List[SnippetInfo]) -> str:
 
         # Format display text as markdown
         display_text = [
-            f"**Source Location**:",
+            "**Source Location**:",
             f"- File: `{snippet_info['filepath']}`",
             f"- Line: `{snippet_info['line_number']}`",
             "",  # Empty line before code block

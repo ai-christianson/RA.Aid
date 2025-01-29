@@ -5,7 +5,6 @@ List of model tokens
 DEFAULT_TOKEN_LIMIT = 100000
 
 
-
 models_tokens = {
     "openai": {
         "gpt-3.5-turbo-0125": 16385,

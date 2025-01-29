@@ -7,7 +7,7 @@ This module provides utilities for:
 
 import inspect
 
-__all__ = ['get_function_info']
+__all__ = ["get_function_info"]
 
 
 def get_function_info(func):
@@ -32,5 +32,3 @@ def get_function_info(func):
 {docstring}
 \"\"\""""
     return info
-
-

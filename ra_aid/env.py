@@ -2,17 +2,10 @@
 
 import os
 import sys
-from dataclasses import dataclass
-from typing import Tuple, List, Any
+from typing import Any, List
 
-from ra_aid import print_error
 from ra_aid.provider_strategy import ProviderFactory, ValidationResult
 
-@dataclass
-class ValidationResult:
-    """Result of validation."""
-    valid: bool
-    missing_vars: List[str]
 
 def validate_provider(provider: str) -> ValidationResult:
     """Validate provider configuration."""
@@ -20,8 +13,11 @@ def validate_provider(provider: str) -> ValidationResult:
         return ValidationResult(valid=False, missing_vars=["No provider specified"])
     strategy = ProviderFactory.create(provider)
     if not strategy:
-        return ValidationResult(valid=False, missing_vars=[f"Unknown provider: {provider}"])
+        return ValidationResult(
+            valid=False, missing_vars=[f"Unknown provider: {provider}"]
+        )
     return strategy.validate()
+
 
 def copy_base_to_expert_vars(base_provider: str, expert_provider: str) -> None:
     """Copy base provider environment variables to expert provider if not set.
@@ -32,28 +28,24 @@ def copy_base_to_expert_vars(base_provider: str, expert_provider: str) -> None:
     """
     # Map of base to expert environment variables for each provider
     provider_vars = {
-        'openai': {
-            'OPENAI_API_KEY': 'EXPERT_OPENAI_API_KEY',
-            'OPENAI_API_BASE': 'EXPERT_OPENAI_API_BASE'
+        "openai": {
+            "OPENAI_API_KEY": "EXPERT_OPENAI_API_KEY",
+            "OPENAI_API_BASE": "EXPERT_OPENAI_API_BASE",
         },
-        'openai-compatible': {
-            'OPENAI_API_KEY': 'EXPERT_OPENAI_API_KEY',
-            'OPENAI_API_BASE': 'EXPERT_OPENAI_API_BASE'
+        "openai-compatible": {
+            "OPENAI_API_KEY": "EXPERT_OPENAI_API_KEY",
+            "OPENAI_API_BASE": "EXPERT_OPENAI_API_BASE",
         },
-        'anthropic': {
-            'ANTHROPIC_API_KEY': 'EXPERT_ANTHROPIC_API_KEY',
-            'ANTHROPIC_MODEL': 'EXPERT_ANTHROPIC_MODEL'
+        "anthropic": {
+            "ANTHROPIC_API_KEY": "EXPERT_ANTHROPIC_API_KEY",
+            "ANTHROPIC_MODEL": "EXPERT_ANTHROPIC_MODEL",
         },
-        'openrouter': {
-            'OPENROUTER_API_KEY': 'EXPERT_OPENROUTER_API_KEY'
+        "openrouter": {"OPENROUTER_API_KEY": "EXPERT_OPENROUTER_API_KEY"},
+        "gemini": {
+            "GEMINI_API_KEY": "EXPERT_GEMINI_API_KEY",
+            "GEMINI_MODEL": "EXPERT_GEMINI_MODEL",
         },
-        'gemini': {
-            'GEMINI_API_KEY': 'EXPERT_GEMINI_API_KEY',
-            'GEMINI_MODEL': 'EXPERT_GEMINI_MODEL'
-        },
-        'deepseek': {
-            'DEEPSEEK_API_KEY': 'EXPERT_DEEPSEEK_API_KEY'
-        }
+        "deepseek": {"DEEPSEEK_API_KEY": "EXPERT_DEEPSEEK_API_KEY"},
     }
 
     # Get the variables to copy based on the expert provider
@@ -63,14 +55,17 @@ def copy_base_to_expert_vars(base_provider: str, expert_provider: str) -> None:
         if not os.environ.get(expert_var) and os.environ.get(base_var):
             os.environ[expert_var] = os.environ[base_var]
 
+
 def validate_expert_provider(provider: str) -> ValidationResult:
     """Validate expert provider configuration with fallback."""
     if not provider:
         return ValidationResult(valid=True, missing_vars=[])
-        
+
     strategy = ProviderFactory.create(provider)
     if not strategy:
-        return ValidationResult(valid=False, missing_vars=[f"Unknown expert provider: {provider}"])
+        return ValidationResult(
+            valid=False, missing_vars=[f"Unknown expert provider: {provider}"]
+        )
 
     # Copy base vars to expert vars for fallback
     copy_base_to_expert_vars(provider, provider)
@@ -78,7 +73,7 @@ def validate_expert_provider(provider: str) -> ValidationResult:
     # Validate expert configuration
     result = strategy.validate()
     missing = []
-    
+
     for var in result.missing_vars:
         key = var.split()[0]  # Get the key name without the error message
         expert_key = f"EXPERT_{key}"
@@ -87,19 +82,24 @@ def validate_expert_provider(provider: str) -> ValidationResult:
 
     return ValidationResult(valid=len(missing) == 0, missing_vars=missing)
 
+
 def validate_web_research() -> ValidationResult:
     """Validate web research configuration."""
     key = "TAVILY_API_KEY"
     return ValidationResult(
         valid=bool(os.environ.get(key)),
-        missing_vars=[] if os.environ.get(key) else [f"{key} environment variable is not set"]
+        missing_vars=[]
+        if os.environ.get(key)
+        else [f"{key} environment variable is not set"],
     )
+
 
 def print_missing_dependencies(missing_vars: List[str]) -> None:
     """Print missing dependencies and exit."""
     for var in missing_vars:
         print(f"Error: {var}", file=sys.stderr)
     sys.exit(1)
+
 
 def validate_research_only_provider(args: Any) -> None:
     """Validate provider and model for research-only mode.
@@ -111,15 +111,16 @@ def validate_research_only_provider(args: Any) -> None:
         SystemExit: If provider or model validation fails
     """
     # Get provider from args
-    provider = args.provider if args and hasattr(args, 'provider') else None
+    provider = args.provider if args and hasattr(args, "provider") else None
     if not provider:
         sys.exit("No provider specified")
 
     # For non-Anthropic providers in research-only mode, model must be specified
-    if provider != 'anthropic':
-        model = args.model if hasattr(args, 'model') and args.model else None
+    if provider != "anthropic":
+        model = args.model if hasattr(args, "model") and args.model else None
         if not model:
             sys.exit("Model is required for non-Anthropic providers")
+
 
 def validate_research_only(args: Any) -> tuple[bool, list[str], bool, list[str]]:
     """Validate environment variables for research-only mode.
@@ -141,13 +142,14 @@ def validate_research_only(args: Any) -> tuple[bool, list[str], bool, list[str]]
     web_research_missing = []
 
     # Validate web research dependencies
-    tavily_key = os.environ.get('TAVILY_API_KEY')
+    tavily_key = os.environ.get("TAVILY_API_KEY")
     if not tavily_key:
-        web_research_missing.append('TAVILY_API_KEY environment variable is not set')
+        web_research_missing.append("TAVILY_API_KEY environment variable is not set")
     else:
         web_research_enabled = True
 
     return expert_enabled, expert_missing, web_research_enabled, web_research_missing
+
 
 def validate_environment(args: Any) -> tuple[bool, list[str], bool, list[str]]:
     """Validate environment variables for providers and web research tools.
@@ -163,9 +165,9 @@ def validate_environment(args: Any) -> tuple[bool, list[str], bool, list[str]]:
         - web_research_missing: List of missing web research dependencies
     """
     # For research-only mode, use separate validation
-    if hasattr(args, 'research_only') and args.research_only:
+    if hasattr(args, "research_only") and args.research_only:
         # Only validate provider and model when testing provider validation
-        if hasattr(args, 'model') and args.model is None:
+        if hasattr(args, "model") and args.model is None:
             validate_research_only_provider(args)
         return validate_research_only(args)
 
@@ -176,7 +178,7 @@ def validate_environment(args: Any) -> tuple[bool, list[str], bool, list[str]]:
     web_research_missing = []
 
     # Get provider from args
-    provider = args.provider if args and hasattr(args, 'provider') else None
+    provider = args.provider if args and hasattr(args, "provider") else None
     if not provider:
         sys.exit("No provider specified")
 

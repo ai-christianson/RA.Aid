@@ -1,13 +1,16 @@
 import os
-from typing import Optional, Dict, Any
-from langchain_openai import ChatOpenAI
+from typing import Any, Dict, Optional
+
 from langchain_anthropic import ChatAnthropic
 from langchain_core.language_models import BaseChatModel
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
+
 from ra_aid.chat_models.deepseek_chat import ChatDeepseekReasoner
 from ra_aid.logging_config import get_logger
 
 logger = get_logger(__name__)
+
 
 def get_env_var(name: str, expert: bool = False) -> Optional[str]:
     """Get environment variable with optional expert prefix and fallback."""
@@ -129,7 +132,7 @@ def create_llm_client(
         provider,
         model_name,
         temperature,
-        is_expert
+        is_expert,
     )
 
     # Handle temperature settings

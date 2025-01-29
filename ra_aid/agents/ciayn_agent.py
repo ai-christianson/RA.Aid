@@ -1,20 +1,22 @@
 import re
 from dataclasses import dataclass
-from typing import Dict, Any, Generator, List, Optional, Union
+from typing import Any, Dict, Generator, List, Optional, Union
 
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
+
+from ra_aid.exceptions import ToolExecutionError
+from ra_aid.logging_config import get_logger
 from ra_aid.models_tokens import DEFAULT_TOKEN_LIMIT
 from ra_aid.tools.reflection import get_function_info
 
-from langchain_core.messages import AIMessage, HumanMessage, BaseMessage, SystemMessage
-from ra_aid.exceptions import ToolExecutionError
-from ra_aid.logging_config import get_logger
-
 logger = get_logger(__name__)
+
 
 @dataclass
 class ChunkMessage:
     content: str
     status: str
+
 
 def validate_function_call_pattern(s: str) -> bool:
     """Check if a string matches the expected function call pattern.
@@ -33,6 +35,7 @@ def validate_function_call_pattern(s: str) -> bool:
     """
     pattern = r"^\s*[\w_\-]+\s*\([^)(]*(?:\([^)(]*\)[^)(]*)*\)\s*$"
     return not re.match(pattern, s, re.DOTALL)
+
 
 class CiaynAgent:
     """Code Is All You Need (CIAYN) agent that uses generated Python code for tool interaction.
@@ -65,10 +68,15 @@ class CiaynAgent:
     - Memory management with configurable limits
     """
 
-
-    def __init__(self, model, tools: list, max_history_messages: int = 50, max_tokens: Optional[int] = DEFAULT_TOKEN_LIMIT):
+    def __init__(
+        self,
+        model,
+        tools: list,
+        max_history_messages: int = 50,
+        max_tokens: Optional[int] = DEFAULT_TOKEN_LIMIT,
+    ):
         """Initialize the agent with a model and list of tools.
-        
+
         Args:
             model: The language model to use
             tools: List of tools available to the agent
@@ -88,12 +96,13 @@ class CiaynAgent:
         base_prompt = ""
         if last_result is not None:
             base_prompt += f"\n<last result>{last_result}</last result>"
-            
+
         # Add available functions section
         functions_list = "\n\n".join(self.available_functions)
-        
+
         # Build the complete prompt without f-strings for the static parts
-        base_prompt += """
+        base_prompt += (
+            """
 
 <agent instructions>
 You are a ReAct agent. You run in a loop and use ONE of the available functions per iteration.
@@ -111,7 +120,9 @@ You typically don't want to keep calling the same function over and over with th
 
 You must ONLY use ONE of the following functions (these are the ONLY functions that exist):
 
-<available functions>""" + functions_list + """
+<available functions>"""
+            + functions_list
+            + """
 </available functions>
 
 You may use any of the above functions to complete your job. Use the best one for the current step you are on. Be efficient, avoid getting stuck in repetitive loops, and do not hesitate to call functions which delegate your work to make your life easier.
@@ -202,15 +213,13 @@ You have often been criticized for:
 
 DO NOT CLAIM YOU ARE FINISHED UNTIL YOU ACTUALLY ARE!
 Output **ONLY THE CODE** and **NO MARKDOWN BACKTICKS**"""
+        )
 
         return base_prompt
 
     def _execute_tool(self, code: str) -> str:
         """Execute a tool call and return its result."""
-        globals_dict = {
-            tool.func.__name__: tool.func
-            for tool in self.tools
-        }
+        globals_dict = {tool.func.__name__: tool.func for tool in self.tools}
 
         try:
             code = code.strip()
@@ -229,36 +238,28 @@ Output **ONLY THE CODE** and **NO MARKDOWN BACKTICKS**"""
 
     def _create_agent_chunk(self, content: str) -> Dict[str, Any]:
         """Create an agent chunk in the format expected by print_agent_output."""
-        return {
-            "agent": {
-                "messages": [AIMessage(content=content)]
-            }
-        }
+        return {"agent": {"messages": [AIMessage(content=content)]}}
 
     def _create_error_chunk(self, content: str) -> Dict[str, Any]:
         """Create an error chunk in the format expected by print_agent_output."""
         message = ChunkMessage(content=content, status="error")
-        return {
-            "tools": {
-                "messages": [message]
-            }
-        }
+        return {"tools": {"messages": [message]}}
 
     @staticmethod
     def _estimate_tokens(content: Optional[Union[str, BaseMessage]]) -> int:
         """Estimate number of tokens in content using simple byte length heuristic.
-        
+
         Estimates 1 token per 4 bytes of content. For messages, uses the content field.
-        
+
         Args:
             content: String content or Message object to estimate tokens for
-            
+
         Returns:
             int: Estimated number of tokens, 0 if content is None/empty
         """
         if content is None:
             return 0
-            
+
         if isinstance(content, BaseMessage):
             text = content.content
         else:
@@ -267,59 +268,72 @@ Output **ONLY THE CODE** and **NO MARKDOWN BACKTICKS**"""
         # create-react-agent tool calls can be lists
         if isinstance(text, List):
             return 0
-            
+
         if not text:
             return 0
-            
-        return len(text.encode('utf-8')) // 4
 
-    def _trim_chat_history(self, initial_messages: List[Any], chat_history: List[Any]) -> List[Any]:
+        return len(text.encode("utf-8")) // 4
+
+    def _trim_chat_history(
+        self, initial_messages: List[Any], chat_history: List[Any]
+    ) -> List[Any]:
         """Trim chat history based on message count and token limits while preserving initial messages.
-        
+
         Applies both message count and token limits (if configured) to chat_history,
         while preserving all initial_messages. Returns concatenated result.
-        
+
         Args:
             initial_messages: List of initial messages to preserve
             chat_history: List of chat messages that may be trimmed
-            
+
         Returns:
             List[Any]: Concatenated initial_messages + trimmed chat_history
         """
         # First apply message count limit
         if len(chat_history) > self.max_history_messages:
-            chat_history = chat_history[-self.max_history_messages:]
-            
+            chat_history = chat_history[-self.max_history_messages :]
+
         # Skip token limiting if max_tokens is None
         if self.max_tokens is None:
             return initial_messages + chat_history
-            
+
         # Calculate initial messages token count
         initial_tokens = sum(self._estimate_tokens(msg) for msg in initial_messages)
-        
+
         # Remove messages from start of chat_history until under token limit
         while chat_history:
-            total_tokens = initial_tokens + sum(self._estimate_tokens(msg) for msg in chat_history)
+            total_tokens = initial_tokens + sum(
+                self._estimate_tokens(msg) for msg in chat_history
+            )
             if total_tokens <= self.max_tokens:
                 break
             chat_history.pop(0)
-            
+
         return initial_messages + chat_history
 
-    def stream(self, messages_dict: Dict[str, List[Any]], config: Dict[str, Any] = None) -> Generator[Dict[str, Any], None, None]:
+    def stream(
+        self, messages_dict: Dict[str, List[Any]], config: Dict[str, Any] = None
+    ) -> Generator[Dict[str, Any], None, None]:
         """Stream agent responses in a format compatible with print_agent_output."""
         initial_messages = messages_dict.get("messages", [])
         chat_history = []
         last_result = None
         first_iteration = True
-        
+
         while True:
             base_prompt = self._build_prompt(None if first_iteration else last_result)
             chat_history.append(HumanMessage(content=base_prompt))
-            
+
             full_history = self._trim_chat_history(initial_messages, chat_history)
-            response = self.model.invoke([SystemMessage("Execute efficiently yet completely as a fully autonomous agent.")] + full_history)
-                
+            response = self.model.invoke(
+                [
+                    SystemMessage(
+                        "Execute efficiently yet completely as a fully autonomous agent."
+                    )
+                ]
+                + full_history
+            )
+
             try:
                 logger.debug(f"Code generated by agent: {response.content}")
                 last_result = self._execute_tool(response.content)
@@ -328,8 +342,13 @@ Output **ONLY THE CODE** and **NO MARKDOWN BACKTICKS**"""
                 yield {}
 
             except ToolExecutionError as e:
-                chat_history.append(HumanMessage(content=f"Your tool call caused an error: {e}\n\nPlease correct your tool call and try again."))
+                chat_history.append(
+                    HumanMessage(
+                        content=f"Your tool call caused an error: {e}\n\nPlease correct your tool call and try again."
+                    )
+                )
                 yield self._create_error_chunk(str(e))
+
 
 def _extract_tool_call(code: str, functions_list: str) -> str:
     from ra_aid.tools.expert import get_model

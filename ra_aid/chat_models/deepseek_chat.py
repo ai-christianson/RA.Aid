@@ -1,8 +1,9 @@
+from typing import Any, Dict, List, Optional
+
 from langchain_core.callbacks import CallbackManagerForLLMRun
 from langchain_core.messages import BaseMessage
 from langchain_core.outputs import ChatResult
 from langchain_openai import ChatOpenAI
-from typing import Any, List, Optional, Dict
 
 
 # Docs: https://api-docs.deepseek.com/guides/reasoning_model

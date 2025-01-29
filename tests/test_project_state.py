@@ -1,14 +1,14 @@
 """Tests for project state detection functionality."""
 
 import os
+
 import pytest
-from pathlib import Path
 
 from ra_aid.project_state import (
-    is_new_project,
-    DirectoryNotFoundError,
     DirectoryAccessError,
-    ProjectStateError
+    DirectoryNotFoundError,
+    ProjectStateError,
+    is_new_project,
 )
 
 
@@ -81,7 +81,7 @@ def test_file_as_directory(tmp_path):
     """Test that passing a file instead of directory raises error."""
     test_file = tmp_path / "test.txt"
     test_file.write_text("test")
-    
+
     with pytest.raises(ProjectStateError):
         is_new_project(str(test_file))
 
@@ -92,7 +92,7 @@ def test_permission_error(tmp_path):
     try:
         # Make directory unreadable
         os.chmod(tmp_path, 0o000)
-        
+
         with pytest.raises(DirectoryAccessError):
             is_new_project(str(tmp_path))
     finally:

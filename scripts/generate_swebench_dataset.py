@@ -22,7 +22,7 @@ import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Tuple, Dict, Any, List
+from typing import Any, Dict, List, Optional, Tuple
 
 from git import Repo
 from rich.logging import RichHandler
@@ -44,15 +44,13 @@ def setup_logging(log_dir: Path, verbose: bool = False) -> None:
     file_handler = logging.FileHandler(log_file)
     file_handler.setLevel(logging.DEBUG)
     file_formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
     file_handler.setFormatter(file_formatter)
     root_logger.addHandler(file_handler)
 
     console_handler = RichHandler(
-        rich_tracebacks=True,
-        show_time=False,
-        show_path=False
+        rich_tracebacks=True, show_time=False, show_path=False
     )
     console_handler.setLevel(logging.DEBUG if verbose else logging.INFO)
     root_logger.addHandler(console_handler)
@@ -62,6 +60,7 @@ def load_dataset_safely() -> Optional[Any]:
     """Load SWE-bench Lite dataset with error handling."""
     try:
         from datasets import load_dataset
+
         dataset = load_dataset("princeton-nlp/SWE-bench_Lite")
         return dataset
     except Exception as e:
@@ -122,18 +121,14 @@ def uv_run_raaid(repo_dir: Path, prompt: str) -> Optional[str]:
     streaming output directly to the console (capture_output=False).
     Returns the patch if successful, else None.
     """
-    cmd = [
-        "uv", "run", "ra-aid",
-        "--cowboy-mode",
-        "-m", prompt
-    ]
+    cmd = ["uv", "run", "ra-aid", "--cowboy-mode", "-m", prompt]
     # We are NOT capturing output, so it streams live:
     try:
         result = subprocess.run(
             cmd,
             cwd=repo_dir,
             text=True,
-            check=False,   # We manually handle exit code
+            check=False,  # We manually handle exit code
         )
         if result.returncode != 0:
             logging.error("ra-aid returned non-zero exit code.")
@@ -160,7 +155,7 @@ def get_git_patch(repo_dir: Path) -> Optional[str]:
         patch_text = repo.git.diff(unified=3)
         if not patch_text.strip():
             return None
-        if not any(line.startswith('+') for line in patch_text.splitlines()):
+        if not any(line.startswith("+") for line in patch_text.splitlines()):
             return None
         return patch_text
     except Exception as e:
@@ -214,7 +209,9 @@ def setup_venv_and_deps(repo_dir: Path, repo_name: str, force_venv: bool) -> Non
         uv_pip_install(repo_dir, ["-e", "."])
 
 
-def build_prompt(problem_statement: str, fail_tests: List[str], pass_tests: List[str]) -> str:
+def build_prompt(
+    problem_statement: str, fail_tests: List[str], pass_tests: List[str]
+) -> str:
     """
     Construct the prompt text from problem_statement, FAIL_TO_PASS, PASS_TO_PASS.
     """
@@ -232,10 +229,7 @@ def build_prompt(problem_statement: str, fail_tests: List[str], pass_tests: List
 
 
 def process_instance(
-    instance: Dict[str, Any],
-    projects_dir: Path,
-    reuse_repo: bool,
-    force_venv: bool
+    instance: Dict[str, Any], projects_dir: Path, reuse_repo: bool, force_venv: bool
 ) -> Dict[str, Any]:
     """
     Process a single dataset instance without a progress bar/spinner.
@@ -291,7 +285,7 @@ def process_instance(
         return {
             "instance_id": inst_id,
             "model_patch": patch if patch else "",
-            "model_name_or_path": "ra-aid"
+            "model_name_or_path": "ra-aid",
         }
 
     except Exception as e:
@@ -299,7 +293,7 @@ def process_instance(
         return {
             "instance_id": inst_id,
             "model_patch": "",
-            "model_name_or_path": "ra-aid"
+            "model_name_or_path": "ra-aid",
         }
 
 
@@ -308,40 +302,32 @@ def main() -> None:
         description="Generate predictions for SWE-bench Lite using uv + ra-aid (no progress bar)."
     )
     parser.add_argument(
-        "output_dir",
-        type=Path,
-        help="Directory to store prediction file"
+        "output_dir", type=Path, help="Directory to store prediction file"
     )
     parser.add_argument(
         "--projects-dir",
         type=Path,
         required=True,
-        help="Directory where projects will be cloned."
+        help="Directory where projects will be cloned.",
     )
     parser.add_argument(
         "--num-instances",
         type=int,
         default=None,
-        help="Number of instances to process (default: all)"
+        help="Number of instances to process (default: all)",
     )
     parser.add_argument(
         "--reuse-repo",
         action="store_true",
-        help="If set, do not delete an existing repo directory. We'll reuse it."
+        help="If set, do not delete an existing repo directory. We'll reuse it.",
     )
     parser.add_argument(
         "--force-venv",
         action="store_true",
-        help="If set, recreate the .venv even if it exists."
+        help="If set, recreate the .venv even if it exists.",
     )
-    parser.add_argument(
-        "--verbose",
-        action="store_true",
-        help="Enable verbose logging"
-    )
+    parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
     args = parser.parse_args()
-
-    from datasets import load_dataset
 
     # Create base/log dirs and set up logging
     base_dir, log_dir = create_output_dirs()
@@ -373,7 +359,9 @@ def main() -> None:
             break
 
         logging.info(f"=== Instance {i+1}/{limit}, ID={inst.get('instance_id')} ===")
-        pred = process_instance(inst, args.projects_dir, args.reuse_repo, args.force_venv)
+        pred = process_instance(
+            inst, args.projects_dir, args.reuse_repo, args.force_venv
+        )
         predictions.append(pred)
 
     # Save predictions
@@ -389,6 +377,6 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\nOperation cancelled by user.")
         sys.exit(1)
-    except Exception as e:
+    except Exception:
         logging.exception("Unhandled error occurred.")
         sys.exit(1)

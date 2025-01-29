@@ -6,16 +6,19 @@ from typing import Set
 
 class ProjectStateError(Exception):
     """Base exception for project state related errors."""
+
     pass
 
 
 class DirectoryNotFoundError(ProjectStateError):
     """Raised when the specified directory does not exist."""
+
     pass
 
 
 class DirectoryAccessError(ProjectStateError):
     """Raised when the directory cannot be accessed due to permissions."""
+
     pass
 
 
@@ -47,18 +50,18 @@ def is_new_project(directory: str) -> bool:
             raise DirectoryNotFoundError(f"Path is not a directory: {directory}")
 
         # Get all files/dirs in the directory, excluding contents of .git
-        allowed_items: Set[str] = {'.git', '.gitignore'}
+        _allowed_items: Set[str] = {".git", ".gitignore"}
         try:
             contents = set()
             for item in path.iterdir():
                 # Only consider top-level items
-                if item.name != '.git':
+                if item.name != ".git":
                     contents.add(item.name)
         except PermissionError as e:
             raise DirectoryAccessError(f"Cannot access directory {directory}: {e}")
 
         # Directory is new if empty or only contains .gitignore
-        return len(contents) == 0 or contents.issubset({'.gitignore'})
+        return len(contents) == 0 or contents.issubset({".gitignore"})
 
     except Exception as e:
         if isinstance(e, ProjectStateError):
