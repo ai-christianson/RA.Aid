@@ -2,6 +2,7 @@ import logging
 import sys
 from typing import Optional
 
+
 def setup_logging(verbose: bool = False) -> None:
     logger = logging.getLogger("ra_aid")
     logger.setLevel(logging.DEBUG if verbose else logging.INFO)
@@ -13,6 +14,7 @@ def setup_logging(verbose: bool = False) -> None:
         )
         handler.setFormatter(formatter)
         logger.addHandler(handler)
+
 
 def get_logger(name: Optional[str] = None) -> logging.Logger:
     return logging.getLogger(f"ra_aid.{name}" if name else "ra_aid")

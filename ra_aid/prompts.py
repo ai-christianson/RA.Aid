@@ -118,6 +118,24 @@ Relevant Code Snippets:
 Related Files:
 {related_files}
 
+Work done so far:
+<work log>
+{work_log}
+</work log>
+
+Project Info:
+{project_info}
+
+Project State Handling:
+    For new/empty projects:
+        Skip exploratory steps and focus directly on the task
+        
+    For existing projects:
+        Start with the provided file listing in Project Info
+        If file listing was truncated (over 2000 files):
+            Be aware there may be additional relevant files
+            Use tools like ripgrep_search and fuzzy_find_project_files to locate specific files
+
 Be very thorough in your research and emit lots of snippets, key facts. If you take more than a few steps, be eager to emit research subtasks.{research_only_note}
 
 Objective
@@ -185,10 +203,21 @@ If this is a trivial task that can be completed in one shot, do the change using
   For one shot tasks, still take some time to consider whether compilation, testing, or additional validation should be done to check your work.
   If you implement the task yourself, do not request implementation.
 
-Thoroughness and Completeness
-
-    If this is determined to be a new/empty project (no code or files), state that and stop.
-    If it is an existing project, explore it fully:
+Thoroughness and Completeness:
+    If this is determined to be a new/empty project (shown in Project Info), focus directly on the task.
+    If it is an existing project:
+        Start with the provided file listing in Project Info
+        If file listing was truncated (over 2000 files):
+            Be aware there may be additional relevant files
+            Use tools like ripgrep_search and fuzzy_find_project_files to locate specific files
+        
+        Then explore the project fully:
+            Start at the root directory, ls to see what's there.
+            For each directory found, navigate in and run ls again.
+            If this is a monorepo or multi-module project, thoroughly discover all directories and files related to the task—sometimes user requests will span multiple modules or parts of the monorepo.
+            When you find related files, search for files related to those that could be affected, and so on, until you're sure you've gone deep enough. Err on the side of going too deep.
+            Continue this process until you have discovered all directories and files at all levels.
+            Carefully report what you found, including all directories and files.
         Start at the root directory, ls to see what’s there.
         For each directory found, navigate in and run ls again.
         If this is a monorepo or multi-module project, thoroughly discover all directories and files related to the task—sometimes user requests will span multiple modules or parts of the monorepo.
@@ -326,6 +355,26 @@ Relevant Code Snippets:
 Related Files:
 {related_files}
 
+Work done so far:
+<work log>
+{work_log}
+</work log>
+
+Project Info:
+{project_info}
+
+Project State Handling:
+    For new/empty projects:
+        Skip exploratory steps and focus directly on the task
+        
+    For existing projects:
+        Start with the provided file listing in Project Info
+        If file listing was truncated (over 2000 files):
+            Be aware there may be additional relevant files
+            Use tools like ripgrep_search and fuzzy_find_project_files to locate specific files
+        
+        Then explore the project fully:
+
 Be very thorough in your research and emit lots of snippets, key facts. If you take more than a few steps, be eager to emit research subtasks.
 
 Objective
@@ -386,10 +435,15 @@ No Planning or Problem-Solving
 
 You must remain strictly within the bounds of describing what currently exists.
 
-Thoroughness and Completeness
-
-    If this is determined to be a new/empty project (no code or files), state that and stop.
-    If it is an existing project, explore it fully:
+Thoroughness and Completeness:
+    If this is determined to be a new/empty project (shown in Project Info), focus directly on the task.
+    If it is an existing project:
+        Start with the provided file listing in Project Info
+        If file listing was truncated (over 2000 files):
+            Be aware there may be additional relevant files
+            Use tools like ripgrep_search and fuzzy_find_project_files to locate specific files
+        
+        Then explore the project fully:
         Start at the root directory, ls to see what's there.
         For each directory found, navigate in and run ls again.
         If this is a monorepo or multi-module project, thoroughly discover all directories and files related to the task—sometimes user requests will span multiple modules or parts of the monorepo.
@@ -416,6 +470,7 @@ You have often been criticized for:
     - Expanding beyond the original query scope
     - Not clearly organizing output around the query
     - Not indicating confidence levels or noting uncertainties
+    - Not calling tools/functions properly, e.g. leaving off required arguments, calling a tool in a loop, calling tools inappropriately.
 
 NEVER ANNOUNCE WHAT YOU ARE DOING, JUST DO IT!
 """
@@ -438,6 +493,11 @@ Key Facts:
 
 Key Snippets:
 {key_snippets}
+
+Work done so far:
+<work log>
+{work_log}
+</work log>
 
 Fact Management:
     Each fact is identified with [Fact ID: X].
@@ -491,6 +551,7 @@ You have often been criticized for:
   - Doing the same work over and over across tasks.
     - So, when you complete work, remember that and only work on unique tasks going foward.
   - Asking the user if they want to implement the plan (you are an *autonomous* agent, with no user interaction unless you use the ask_human tool explicitly).
+  - Not calling tools/functions properly, e.g. leaving off required arguments, calling a tool in a loop, calling tools inappropriately.
 
 NEVER ANNOUNCE WHAT YOU ARE DOING, JUST DO IT!
 """
@@ -561,6 +622,7 @@ You have often been criticized for:
   - Doing changes outside of the specific scoped instructions.
   - Doing the same work over and over across tasks.
   - Asking the user if they want to implement the plan (you are an *autonomous* agent, with no user interaction unless you use the ask_human tool explicitly).
+  - Not calling tools/functions properly, e.g. leaving off required arguments, calling a tool in a loop, calling tools inappropriately.
 
 NEVER ANNOUNCE WHAT YOU ARE DOING, JUST DO IT!
 """
@@ -568,6 +630,9 @@ NEVER ANNOUNCE WHAT YOU ARE DOING, JUST DO IT!
 # New agentic chat prompt for interactive mode
 CHAT_PROMPT = """Working Directory: {working_directory}
 Current Date: {current_date}
+Project Info:
+{project_info}
+
 Agentic Chat Mode Instructions:
 
 Overview:
@@ -632,6 +697,7 @@ Remember:
     - Never announce that you are going to use a tool, just quietly use it.
     - Do communicate results/responses from tools that you call as it pertains to the users request.
     - If the user gives you key facts, record them using emit_key_facts.
+      - E.g. if the user gives you a stack trace, include the FULL stack trace into any delegated requests you make to fix it.
     - Typically, you will already be in the directory of a new or existing project.
       - If the user implies that a project exists, assume it does and make the tool calls as such.
       - E.g. if the user says "where are the unit tests?", you would call request_research("Find the location of the unit tests in the current project.")
@@ -644,6 +710,7 @@ You have often been criticized for:
     - Not emitting key facts the user gave you with emit_key_facts before calling a research or implementation tool.
     - Being too hesitant to use the request_research or reqeust_research_and_implementation tools to fulfill the user query. These are your bread and butter.
     - Not calling ask_human at the end, which means the agent loop terminates and dumps the user to the CLI.
+    - Not calling tools/functions properly, e.g. leaving off required arguments, calling a tool in a loop, calling tools inappropriately.
 
 <initial request>
 {initial_request}

@@ -162,16 +162,27 @@ ra-aid -m "Add new feature" --verbose
 
 ### Command Line Options
 
-- `-m, --message`: The task or query to be executed (required)
+- `-m, --message`: The task or query to be executed (required except in chat mode)
 - `--research-only`: Only perform research without implementation
+- `--provider`: The LLM provider to use (choices: anthropic, openai, openrouter, openai-compatible, gemini)
+- `--model`: The model name to use (required for non-Anthropic providers)
+- `--research-provider`: Provider to use specifically for research tasks (falls back to --provider if not specified)
+- `--research-model`: Model to use specifically for research tasks (falls back to --model if not specified)
+- `--planner-provider`: Provider to use specifically for planning tasks (falls back to --provider if not specified)
+- `--planner-model`: Model to use specifically for planning tasks (falls back to --model if not specified)
 - `--cowboy-mode`: Skip interactive approval for shell commands
-- `--hil, -H`: Enable human-in-the-loop mode, allowing the agent to interactively ask you questions during task execution
-- `--provider`: Specify the model provider (See Model Configuration section)
-- `--model`: Specify the model name (See Model Configuration section)
-- `--expert-provider`: Specify the provider for the expert tool (defaults to OpenAI)
-- `--expert-model`: Specify the model name for the expert tool (defaults to o1 for OpenAI)
-- `--chat`: Enable chat mode for interactive assistance
-- `--verbose`: Enable detailed logging output for debugging and monitoring
+- `--expert-provider`: The LLM provider to use for expert knowledge queries (choices: anthropic, openai, openrouter, openai-compatible, gemini)
+- `--expert-model`: The model name to use for expert knowledge queries (required for non-OpenAI providers)
+- `--hil, -H`: Enable human-in-the-loop mode for interactive assistance during task execution
+- `--chat`: Enable chat mode with direct human interaction (implies --hil)
+- `--verbose`: Enable verbose logging output
+- `--temperature`: LLM temperature (0.0-2.0) to control randomness in responses
+- `--disable-limit-tokens`: Disable token limiting for Anthropic Claude react agents
+- `--recursion-limit`: Maximum recursion depth for agent operations (default: 100)
+- `--test-cmd`: Custom command to run tests. If set user will be asked if they want to run the test command
+- `--auto-test`: Automatically run tests after each code change
+- `--max-test-cmd-retries`: Maximum number of test command retry attempts (default: 3)
+- `--version`: Show program version number and exit
 
 ### Example Tasks
 
@@ -289,6 +300,7 @@ RA.Aid supports multiple providers through environment variables:
 - `ANTHROPIC_API_KEY`: Required for the default Anthropic provider
 - `OPENAI_API_KEY`: Required for OpenAI provider
 - `OPENROUTER_API_KEY`: Required for OpenRouter provider
+- `DEEPSEEK_API_KEY`: Required for DeepSeek provider
 - `OPENAI_API_BASE`: Required for OpenAI-compatible providers along with `OPENAI_API_KEY`
 - `GEMINI_API_KEY`: Required for Gemini provider
 
@@ -298,6 +310,7 @@ Expert Tool Environment Variables:
 - `EXPERT_OPENROUTER_API_KEY`: API key for expert tool using OpenRouter provider
 - `EXPERT_OPENAI_API_BASE`: Base URL for expert tool using OpenAI-compatible provider
 - `EXPERT_GEMINI_API_KEY`: API key for expert tool using Gemini provider
+- `EXPERT_DEEPSEEK_API_KEY`: API key for expert tool using DeepSeek provider
 
 You can set these permanently in your shell's configuration file (e.g., `~/.bashrc` or `~/.zshrc`):
 
@@ -339,6 +352,15 @@ export GEMINI_API_KEY=your_api_key_here
    ra-aid -m "Your task" --provider openrouter --model mistralai/mistral-large-2411
    ```
 
+4. **Using DeepSeek**
+   ```bash
+   # Direct DeepSeek provider (requires DEEPSEEK_API_KEY)
+   ra-aid -m "Your task" --provider deepseek --model deepseek-reasoner
+   
+   # DeepSeek via OpenRouter
+   ra-aid -m "Your task" --provider openrouter --model deepseek/deepseek-r1
+   ```
+
 4. **Configuring Expert Provider**
 
    The expert tool is used by the agent for complex logic and debugging tasks. It can be configured to use different providers (OpenAI, Anthropic, OpenRouter, Gemini, openai-compatible) using the --expert-provider flag along with the corresponding EXPERT_*API_KEY environment variables.
@@ -351,6 +373,10 @@ export GEMINI_API_KEY=your_api_key_here
    # Use OpenRouter for expert tool
    export OPENROUTER_API_KEY=your_openrouter_api_key
    ra-aid -m "Your task" --expert-provider openrouter --expert-model mistralai/mistral-large-2411
+
+   # Use DeepSeek for expert tool
+   export DEEPSEEK_API_KEY=your_deepseek_api_key
+   ra-aid -m "Your task" --expert-provider deepseek --expert-model deepseek-reasoner
 
    # Use default OpenAI for expert tool
    export EXPERT_OPENAI_API_KEY=your_openai_api_key

@@ -4,14 +4,14 @@ Module for running interactive subprocesses with output capture.
 
 import os
 import re
-import tempfile
 import shlex
 import shutil
+import tempfile
 from typing import List, Tuple
-
 
 # Add macOS detection
 IS_MACOS = os.uname().sysname == "Darwin"
+
 
 def run_interactive_command(cmd: List[str]) -> Tuple[bytes, int]:
     """
@@ -31,7 +31,7 @@ def run_interactive_command(cmd: List[str]) -> Tuple[bytes, int]:
     # Fail early if cmd is empty
     if not cmd:
         raise ValueError("No command provided.")
-    
+
     # Check that the command exists
     if shutil.which(cmd[0]) is None:
         raise FileNotFoundError(f"Command '{cmd[0]}' not found in PATH.")
@@ -45,7 +45,7 @@ def run_interactive_command(cmd: List[str]) -> Tuple[bytes, int]:
     retcode_file.close()
 
     # Quote arguments for safety
-    quoted_cmd = ' '.join(shlex.quote(c) for c in cmd)
+    quoted_cmd = " ".join(shlex.quote(c) for c in cmd)
     # Use script to capture output with TTY and save return code
     shell_cmd = f"{quoted_cmd}; echo $? > {shlex.quote(retcode_path)}"
 
@@ -56,23 +56,25 @@ def run_interactive_command(cmd: List[str]) -> Tuple[bytes, int]:
 
     try:
         # Disable pagers by setting environment variables
-        os.environ['GIT_PAGER'] = ''
-        os.environ['PAGER'] = ''
-        
+        os.environ["GIT_PAGER"] = ""
+        os.environ["PAGER"] = ""
+
         # Run command with script for TTY and output capture
         if IS_MACOS:
             os.system(f"script -q {shlex.quote(output_path)} {shell_cmd}")
         else:
-            os.system(f"script -q -c {shlex.quote(shell_cmd)} {shlex.quote(output_path)}")
+            os.system(
+                f"script -q -c {shlex.quote(shell_cmd)} {shlex.quote(output_path)}"
+            )
 
         # Read and clean the output
         with open(output_path, "rb") as f:
             output = f.read()
-        
+
         # Clean ANSI escape sequences and control characters
-        output = re.sub(rb'\x1b\[[0-9;]*[a-zA-Z]', b'', output)  # ANSI escape sequences
-        output = re.sub(rb'[\x00-\x08\x0b\x0c\x0e-\x1f]', b'', output)  # Control chars
-        
+        output = re.sub(rb"\x1b\[[0-9;]*[a-zA-Z]", b"", output)  # ANSI escape sequences
+        output = re.sub(rb"[\x00-\x08\x0b\x0c\x0e-\x1f]", b"", output)  # Control chars
+
         # Get the return code
         with open(retcode_path, "r") as f:
             return_code = int(f.read().strip())

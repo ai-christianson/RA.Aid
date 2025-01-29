@@ -6,8 +6,8 @@ Usage:
     python extract_changelog.py VERSION
 """
 
-import sys
 import re
+import sys
 from pathlib import Path
 
 
@@ -16,11 +16,11 @@ def extract_version_content(content: str, version: str) -> str:
     # Escape version for regex pattern
     version_escaped = re.escape(version)
     pattern = rf"## \[{version_escaped}\].*?(?=## \[|$)"
-    
+
     match = re.search(pattern, content, re.DOTALL)
     if not match:
         raise ValueError(f"Version {version} not found in changelog")
-    
+
     return match.group(0).strip()
 
 

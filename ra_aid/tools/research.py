@@ -4,6 +4,7 @@ from rich.panel import Panel
 
 console = Console()
 
+
 @tool("existing_project_detected")
 def existing_project_detected() -> dict:
     """
@@ -11,7 +12,7 @@ def existing_project_detected() -> dict:
     """
     console.print(Panel("📁 Existing Project Detected", style="bright_blue", padding=0))
     return {
-        'hint': (
+        "hint": (
             "You are working within an existing codebase that already has established patterns and standards. "
             "Integrate any new functionality by adhering to the project's conventions:\n\n"
             "- Carefully discover existing folder structure, naming conventions, and architecture.\n"
@@ -23,6 +24,7 @@ def existing_project_detected() -> dict:
         )
     }
 
+
 @tool("monorepo_detected")
 def monorepo_detected() -> dict:
     """
@@ -30,7 +32,7 @@ def monorepo_detected() -> dict:
     """
     console.print(Panel("📦 Monorepo Detected", style="bright_blue", padding=0))
     return {
-        'hint': (
+        "hint": (
             "You are researching in a monorepo environment that manages multiple packages or services under one roof. "
             "Ensure new work fits cohesively within the broader structure:\n\n"
             "- Search all packages for shared libraries, utilities, and patterns, and reuse them to avoid redundancy.\n"
@@ -45,6 +47,7 @@ def monorepo_detected() -> dict:
         )
     }
 
+
 @tool("ui_detected")
 def ui_detected() -> dict:
     """
@@ -52,7 +55,7 @@ def ui_detected() -> dict:
     """
     console.print(Panel("🎯 UI Detected", style="bright_blue", padding=0))
     return {
-        'hint': (
+        "hint": (
             "You are working with a user interface component where established UI conventions, styles, and frameworks are likely in place. "
             "Any modifications or additions should blend seamlessly with the existing design and user experience:\n\n"
             "- Locate and note existing UI design conventions, including layout, typography, color schemes, and interaction patterns.\n"
