@@ -183,6 +183,9 @@ ra-aid -m "Add new feature" --verbose
 - `--auto-test`: Automatically run tests after each code change
 - `--max-test-cmd-retries`: Maximum number of test command retry attempts (default: 3)
 - `--version`: Show program version number and exit
+- `--webui`: Launch the web interface (alpha feature)
+- `--webui-host`: Host to listen on for web interface (default: 0.0.0.0)  (alpha feature)
+- `--webui-port`: Port to listen on for web interface (default: 8080) (alpha feature)
 
 ### Example Tasks
 
@@ -258,6 +261,38 @@ Make sure to set your TAVILY_API_KEY environment variable to enable this feature
 <img src="assets/demo-chat-mode-1.gif" alt="Chat Mode Demo" autoplay loop style="display: block; margin: 0 auto; width: 100%; max-width: 800px;">
 
 Enable with `--chat` to transform ra-aid into an interactive assistant that guides you through research and implementation tasks. Have a natural conversation about what you want to build, explore options together, and dispatch work - all while maintaining context of your discussion. Perfect for when you want to think through problems collaboratively rather than just executing commands.
+
+### Web Interface
+
+RA.Aid includes a modern web interface that provides:
+- Beautiful dark-themed chat interface
+- Real-time streaming of command output
+- Request history with quick resubmission
+- Responsive design that works on all devices
+
+To launch the web interface:
+
+```bash
+# Start with default settings (0.0.0.0:8080)
+ra-aid --webui
+
+# Specify custom host and port
+ra-aid --webui --webui-host 127.0.0.1 --webui-port 3000
+```
+
+Command line options for web interface:
+- `--webui`: Launch the web interface
+- `--webui-host`: Host to listen on (default: 0.0.0.0)
+- `--webui-port`: Port to listen on (default: 8080)
+
+After starting the server, open your web browser to the displayed URL (e.g., http://localhost:8080). The interface provides:
+- Left sidebar showing request history
+- Main chat area with real-time output
+- Input box for typing requests
+- Automatic reconnection handling
+- Error reporting and status messages
+
+All ra-aid commands sent through the web interface automatically use cowboy mode for seamless execution.
 
 ### Command Interruption and Feedback
 
