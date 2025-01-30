@@ -183,9 +183,9 @@ ra-aid -m "Add new feature" --verbose
 - `--auto-test`: Automatically run tests after each code change
 - `--max-test-cmd-retries`: Maximum number of test command retry attempts (default: 3)
 - `--version`: Show program version number and exit
-- `--webui`: Launch the web interface
-- `--webui-host`: Host to listen on for web interface (default: 0.0.0.0)
-- `--webui-port`: Port to listen on for web interface (default: 8080)
+- `--webui`: Launch the web interface (alpha feature)
+- `--webui-host`: Host to listen on for web interface (default: 0.0.0.0)  (alpha feature)
+- `--webui-port`: Port to listen on for web interface (default: 8080) (alpha feature)
 
 ### Example Tasks
 
