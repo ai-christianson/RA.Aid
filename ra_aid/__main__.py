@@ -31,6 +31,12 @@ from ra_aid.tools.memory import _global_memory
 logger = get_logger(__name__)
 
 
+def launch_webui(host: str, port: int):
+    """Launch the RA.Aid web interface."""
+    from ra_aid.webui import run_server
+    print(f"Starting RA.Aid web interface on http://{host}:{port}")
+    run_server(host=host, port=port)
+
 def parse_arguments(args=None):
     VALID_PROVIDERS = [
         "anthropic",
@@ -166,6 +172,23 @@ Examples:
         default=DEFAULT_MAX_TEST_CMD_RETRIES,
         help="Maximum number of retries for the test command (default: 10)",
     )
+    parser.add_argument(
+        "--webui",
+        action="store_true",
+        help="Launch the web interface",
+    )
+    parser.add_argument(
+        "--webui-host",
+        type=str,
+        default="0.0.0.0",
+        help="Host to listen on for web interface (default: 0.0.0.0)",
+    )
+    parser.add_argument(
+        "--webui-port",
+        type=int,
+        default=8080,
+        help="Port to listen on for web interface (default: 8080)",
+    )
     if args is None:
         args = sys.argv[1:]
     parsed_args = parser.parse_args(args)
@@ -245,6 +268,11 @@ def main():
     args = parse_arguments()
     setup_logging(args.verbose)
     logger.debug("Starting RA.Aid with arguments: %s", args)
+
+    # Launch web interface if requested
+    if args.webui:
+        launch_webui(args.webui_host, args.webui_port)
+        return
 
     try:
         # Check dependencies before proceeding
