@@ -542,6 +542,6 @@ Copyright (c) 2024 AI Christianson
 
 ## Contact
 
-- **Issues**: Please report bugs and feature requests on our [Issue Tracker](https://github.com/ai-christianson/ra-aid/issues)
-- **Repository**: [https://github.com/ai-christianson/ra-aid](https://github.com/ai-christianson/ra-aid)
-- **Documentation**: [https://github.com/ai-christianson/ra-aid#readme](https://github.com/ai-christianson/ra-aid#readme)
+- **Issues**: Please report bugs and feature requests on our [Issue Tracker](https://github.com/ai-christianson/RA.Aid/issues)
+- **Repository**: [https://github.com/ai-christianson/RA.Aid](https://github.com/ai-christianson/RA.Aid)
+- **Documentation**: [https://github.com/ai-christianson/RA.Aid#readme](https://github.com/ai-christianson/RA.Aid#readme)

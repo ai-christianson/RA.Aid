@@ -56,10 +56,10 @@ dev = [
 ra-aid = "ra_aid.__main__:main"
 
 [project.urls]
-Homepage = "https://github.com/ai-christianson/ra-aid"
-Documentation = "https://github.com/ai-christianson/ra-aid#readme"
-Repository = "https://github.com/ai-christianson/ra-aid.git"
-Issues = "https://github.com/ai-christianson/ra-aid/issues"
+Homepage = "https://github.com/ai-christianson/RA.Aid"
+Documentation = "https://github.com/ai-christianson/RA.Aid#readme"
+Repository = "https://github.com/ai-christianson/RA.Aid.git"
+Issues = "https://github.com/ai-christianson/RA.Aid/issues"
 
 [tool.setuptools.dynamic]
 version = {attr = "ra_aid.version.__version__"}
