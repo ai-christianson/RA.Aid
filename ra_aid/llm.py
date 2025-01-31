@@ -1,6 +1,8 @@
 import os
 from typing import Any, Dict, Optional
 
+known_temp_providers = {"openai", "anthropic", "openrouter", "openai-compatible", "gemini", "deepseek"}
+
 from .models_params import models_params
 from langchain_anthropic import ChatAnthropic
 from langchain_core.language_models import BaseChatModel
@@ -138,7 +140,12 @@ def create_llm_client(
 
     # Get model configuration
     model_config = models_params.get(provider, {}).get(model_name, {})
-    supports_temperature = model_config.get("supports_temperature", False)
+
+    # Default to True for known providers that support temperature if not specified
+    if "supports_temperature" not in model_config:
+        model_config["supports_temperature"] = provider in known_temp_providers
+
+    supports_temperature = model_config["supports_temperature"]
 
     # Handle temperature settings
     if is_expert:
@@ -155,14 +162,14 @@ def create_llm_client(
             model_name=model_name,
             api_key=config["api_key"],
             base_url=config["base_url"],
-            temperature=temperature if not is_expert else 0,
+            **temp_kwargs,
             is_expert=is_expert,
         )
     elif provider == "openrouter":
         return create_openrouter_client(
             model_name=model_name,
             api_key=config["api_key"],
-            temperature=temperature if not is_expert else 0,
+            **temp_kwargs,
             is_expert=is_expert,
         )
     elif provider == "openai":
