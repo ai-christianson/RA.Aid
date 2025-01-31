@@ -26,7 +26,7 @@ from ra_aid.console.formatting import print_error, print_stage_header
 from ra_aid.console.output import print_agent_output
 from ra_aid.exceptions import AgentInterrupt
 from ra_aid.logging_config import get_logger
-from ra_aid.models_tokens import DEFAULT_TOKEN_LIMIT, models_tokens
+from ra_aid.models_params import DEFAULT_TOKEN_LIMIT, models_params
 from ra_aid.project_info import (
     display_project_status,
     format_project_info,
@@ -143,23 +143,24 @@ def get_model_token_limit(config: Dict[str, Any]) -> Optional[int]:
                 return max_input_tokens
         except litellm.exceptions.NotFoundError:
             logger.debug(
-                f"Model {model_name} not found in litellm, falling back to models_tokens"
+                f"Model {model_name} not found in litellm, falling back to models_params"
             )
         except Exception as e:
             logger.debug(
-                f"Error getting model info from litellm: {e}, falling back to models_tokens"
+                f"Error getting model info from litellm: {e}, falling back to models_params"
             )
 
-        # Fallback to models_tokens dict
+        # Fallback to models_params dict
         # Normalize model name for fallback lookup (e.g. claude-2 -> claude2)
         normalized_name = model_name.replace("-", "")
-        provider_tokens = models_tokens.get(provider, {})
-        max_input_tokens = provider_tokens.get(normalized_name, None)
-        if max_input_tokens:
+        provider_tokens = models_params.get(provider, {})
+        if normalized_name in provider_tokens:
+            max_input_tokens = provider_tokens[normalized_name]["token_limit"]
             logger.debug(
                 f"Found token limit for {provider}/{model_name}: {max_input_tokens}"
             )
         else:
+            max_input_tokens = None
             logger.debug(f"Could not find token limit for {provider}/{model_name}")
 
         return max_input_tokens

@@ -6,7 +6,7 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, System
 
 from ra_aid.exceptions import ToolExecutionError
 from ra_aid.logging_config import get_logger
-from ra_aid.models_tokens import DEFAULT_TOKEN_LIMIT
+from ra_aid.models_params import DEFAULT_TOKEN_LIMIT
 from ra_aid.tools.reflection import get_function_info
 
 logger = get_logger(__name__)

@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- WebUI (#61)
+
+### Changed
+- Convert list input to string to handle create-react-agent tool calls correctly (#66)
+- Add commands for code checking and fixing using ruff (#63)
+
+### Fixed
+- Fix token estimation
+- Fix tests
+- Prevent duplicate files (#64)
+- Ensure default temperature is set correctly for different providers
+- Do not incorrectly give temp parameter to expert model
+- Correcting URLs that were referencing ai-christianson/ra-aid - should be ai-christianson/RA.Aid (#69)
+
+### Improved
+- Integrate litellm to retrieve model token limits for better flexibility (#51)
+- Handle user defined test cmd (#59)
+- Run tests during Github CICD (#58)
+- Refactor models_tokens to be models_params so we can track multiple parameters on a per-model basis.
+
 ## [0.13.0] - 2025-01-22
 
 ### Added

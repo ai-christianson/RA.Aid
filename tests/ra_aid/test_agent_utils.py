@@ -13,7 +13,7 @@ from ra_aid.agent_utils import (
     get_model_token_limit,
     state_modifier,
 )
-from ra_aid.models_tokens import DEFAULT_TOKEN_LIMIT, models_tokens
+from ra_aid.models_params import DEFAULT_TOKEN_LIMIT, models_params
 
 
 @pytest.fixture
@@ -36,7 +36,7 @@ def test_get_model_token_limit_anthropic(mock_memory):
     config = {"provider": "anthropic", "model": "claude2"}
 
     token_limit = get_model_token_limit(config)
-    assert token_limit == models_tokens["anthropic"]["claude2"]
+    assert token_limit == models_params["anthropic"]["claude2"]["token_limit"]
 
 
 def test_get_model_token_limit_openai(mock_memory):
@@ -44,7 +44,7 @@ def test_get_model_token_limit_openai(mock_memory):
     config = {"provider": "openai", "model": "gpt-4"}
 
     token_limit = get_model_token_limit(config)
-    assert token_limit == models_tokens["openai"]["gpt-4"]
+    assert token_limit == models_params["openai"]["gpt-4"]["token_limit"]
 
 
 def test_get_model_token_limit_unknown(mock_memory):
@@ -82,7 +82,7 @@ def test_get_model_token_limit_litellm_not_found():
             message="Model not found", model="claude-2", llm_provider="anthropic"
         )
         token_limit = get_model_token_limit(config)
-        assert token_limit == models_tokens["anthropic"]["claude2"]
+        assert token_limit == models_params["anthropic"]["claude2"]["token_limit"]
 
 
 def test_get_model_token_limit_litellm_error():
@@ -92,7 +92,7 @@ def test_get_model_token_limit_litellm_error():
     with patch("ra_aid.agent_utils.get_model_info") as mock_get_info:
         mock_get_info.side_effect = Exception("Unknown error")
         token_limit = get_model_token_limit(config)
-        assert token_limit == models_tokens["anthropic"]["claude2"]
+        assert token_limit == models_params["anthropic"]["claude2"]["token_limit"]
 
 
 def test_get_model_token_limit_unexpected_error():
@@ -127,7 +127,7 @@ def test_create_agent_openai(mock_model, mock_memory):
 
         assert agent == "ciayn_agent"
         mock_ciayn.assert_called_once_with(
-            mock_model, [], max_tokens=models_tokens["openai"]["gpt-4"]
+            mock_model, [], max_tokens=models_params["openai"]["gpt-4"]["token_limit"]
         )
 
 
@@ -201,7 +201,7 @@ def test_create_agent_with_checkpointer(mock_model, mock_memory):
 
         assert agent == "ciayn_agent"
         mock_ciayn.assert_called_once_with(
-            mock_model, [], max_tokens=models_tokens["openai"]["gpt-4"]
+            mock_model, [], max_tokens=models_params["openai"]["gpt-4"]["token_limit"]
         )
 
 
