@@ -1,6 +1,7 @@
 import os
 from typing import Any, Dict, Optional
 
+from .models_params import models_params
 from langchain_anthropic import ChatAnthropic
 from langchain_core.language_models import BaseChatModel
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -135,12 +136,16 @@ def create_llm_client(
         is_expert,
     )
 
+    # Get model configuration
+    model_config = models_params.get(provider, {}).get(model_name, {})
+    supports_temperature = model_config.get("supports_temperature", False)
+
     # Handle temperature settings
     if is_expert:
-        temp_kwargs = {"temperature": 0}
-    elif temperature is not None:
+        temp_kwargs = {"temperature": 0} if supports_temperature else {}
+    elif temperature is not None and supports_temperature:
         temp_kwargs = {"temperature": temperature}
-    elif provider == "openai-compatible":
+    elif provider == "openai-compatible" and supports_temperature:
         temp_kwargs = {"temperature": 0.3}
     else:
         temp_kwargs = {}
