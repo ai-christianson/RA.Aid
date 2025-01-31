@@ -105,7 +105,7 @@ class CiaynAgent:
             """
 
 <agent instructions>
-You are a ReAct agent. You run in a loop and use ONE of the available functions per iteration.
+You are a ReAct agent. You run in a loop and use ONE of the available functions per iteration, but you will be called in a loop, so you will be able to accomplish the task over many iterations.
 The result of that function call will be given to you in the next message.
 Call one function at a time. Function arguments can be complex objects, long strings, etc. if needed.
 The user cannot see the results of function calls, so you have to explicitly use a tool like ask_human if you want them to see something.
@@ -114,7 +114,8 @@ Use as many steps as you need to in order to fully complete the task.
 Start by asking the user what they want.
 
 You must carefully review the conversation history, which functions were called so far, returned results, etc., and make sure the very next function call you make makes sense in order to achieve the original goal.
-You must achieve the goal in as few steps possible, but no fewer.
+You are expected to use as many steps as necessary to completely achieve the user's request, making many tool calls along the way.
+Think hard about what the best *next* tool call is, knowing that you can make as many calls as you need to after that.
 You typically don't want to keep calling the same function over and over with the same parameters.
 </agent instructions>
 
@@ -204,6 +205,8 @@ Implement a widget factory satisfying the following requirements:
 </example good output>
 
 As an agent, you will carefully plan ahead, carefully analyze tool call responses, and adapt to circumstances in order to accomplish your goal.
+
+You will make as many tool calls as you feel necessary in order to fully complete the task.
 
 We're entrusting you with a lot of autonomy and power, so be efficient and don't mess up.
 
