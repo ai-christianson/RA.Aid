@@ -249,7 +249,7 @@ Output **ONLY THE CODE** and **NO MARKDOWN BACKTICKS**"""
     def _estimate_tokens(content: Optional[Union[str, BaseMessage]]) -> int:
         """Estimate number of tokens in content using simple byte length heuristic.
 
-        Estimates 1 token per 4 bytes of content. For messages, uses the content field.
+        Estimates 1 token per 3 bytes of content. For messages, uses the content field.
 
         Args:
             content: String content or Message object to estimate tokens for
@@ -272,7 +272,7 @@ Output **ONLY THE CODE** and **NO MARKDOWN BACKTICKS**"""
         if not text:
             return 0
 
-        return len(text.encode("utf-8")) // 4
+        return len(text.encode("utf-8")) // 3
 
     def _trim_chat_history(
         self, initial_messages: List[Any], chat_history: List[Any]
