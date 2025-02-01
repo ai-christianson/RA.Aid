@@ -248,18 +248,20 @@ def test_create_agent_anthropic_token_limiting_disabled(mock_model, mock_memory)
         assert agent == "react_agent"
         mock_react.assert_called_once_with(mock_model, [])
 
+
 def test_get_model_token_limit_research(mock_memory):
     """Test get_model_token_limit with research provider and model."""
     config = {
         "provider": "openai",
         "model": "gpt-4",
         "research_provider": "anthropic",
-        "research_model": "claude-2"
+        "research_model": "claude-2",
     }
     with patch("ra_aid.agent_utils.get_model_info") as mock_get_info:
         mock_get_info.return_value = {"max_input_tokens": 150000}
         token_limit = get_model_token_limit(config, "research")
         assert token_limit == 150000
+
 
 def test_get_model_token_limit_planner(mock_memory):
     """Test get_model_token_limit with planner provider and model."""
@@ -267,7 +269,7 @@ def test_get_model_token_limit_planner(mock_memory):
         "provider": "openai",
         "model": "gpt-4",
         "planner_provider": "deepseek",
-        "planner_model": "dsm-1"
+        "planner_model": "dsm-1",
     }
     with patch("ra_aid.agent_utils.get_model_info") as mock_get_info:
         mock_get_info.return_value = {"max_input_tokens": 120000}
