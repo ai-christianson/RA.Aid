@@ -35,7 +35,7 @@ def test_get_model_token_limit_anthropic(mock_memory):
     """Test get_model_token_limit with Anthropic model."""
     config = {"provider": "anthropic", "model": "claude2"}
 
-    token_limit = get_model_token_limit(config)
+    token_limit = get_model_token_limit(config, "default")
     assert token_limit == models_params["anthropic"]["claude2"]["token_limit"]
 
 
@@ -43,7 +43,7 @@ def test_get_model_token_limit_openai(mock_memory):
     """Test get_model_token_limit with OpenAI model."""
     config = {"provider": "openai", "model": "gpt-4"}
 
-    token_limit = get_model_token_limit(config)
+    token_limit = get_model_token_limit(config, "default")
     assert token_limit == models_params["openai"]["gpt-4"]["token_limit"]
 
 
@@ -51,7 +51,7 @@ def test_get_model_token_limit_unknown(mock_memory):
     """Test get_model_token_limit with unknown provider/model."""
     config = {"provider": "unknown", "model": "unknown-model"}
 
-    token_limit = get_model_token_limit(config)
+    token_limit = get_model_token_limit(config, "default")
     assert token_limit is None
 
 
@@ -59,7 +59,7 @@ def test_get_model_token_limit_missing_config(mock_memory):
     """Test get_model_token_limit with missing configuration."""
     config = {}
 
-    token_limit = get_model_token_limit(config)
+    token_limit = get_model_token_limit(config, "default")
     assert token_limit is None
 
 
@@ -69,7 +69,7 @@ def test_get_model_token_limit_litellm_success():
 
     with patch("ra_aid.agent_utils.get_model_info") as mock_get_info:
         mock_get_info.return_value = {"max_input_tokens": 100000}
-        token_limit = get_model_token_limit(config)
+        token_limit = get_model_token_limit(config, "default")
         assert token_limit == 100000
 
 
@@ -81,7 +81,7 @@ def test_get_model_token_limit_litellm_not_found():
         mock_get_info.side_effect = litellm.exceptions.NotFoundError(
             message="Model not found", model="claude-2", llm_provider="anthropic"
         )
-        token_limit = get_model_token_limit(config)
+        token_limit = get_model_token_limit(config, "default")
         assert token_limit == models_params["anthropic"]["claude2"]["token_limit"]
 
 
@@ -91,7 +91,7 @@ def test_get_model_token_limit_litellm_error():
 
     with patch("ra_aid.agent_utils.get_model_info") as mock_get_info:
         mock_get_info.side_effect = Exception("Unknown error")
-        token_limit = get_model_token_limit(config)
+        token_limit = get_model_token_limit(config, "default")
         assert token_limit == models_params["anthropic"]["claude2"]["token_limit"]
 
 
@@ -99,7 +99,7 @@ def test_get_model_token_limit_unexpected_error():
     """Test returning None when unexpected errors occur."""
     config = None  # This will cause an attribute error when accessed
 
-    token_limit = get_model_token_limit(config)
+    token_limit = get_model_token_limit(config, "default")
     assert token_limit is None
 
 
@@ -247,3 +247,29 @@ def test_create_agent_anthropic_token_limiting_disabled(mock_model, mock_memory)
 
         assert agent == "react_agent"
         mock_react.assert_called_once_with(mock_model, [])
+
+def test_get_model_token_limit_research(mock_memory):
+    """Test get_model_token_limit with research provider and model."""
+    config = {
+        "provider": "openai",
+        "model": "gpt-4",
+        "research_provider": "anthropic",
+        "research_model": "claude-2"
+    }
+    with patch("ra_aid.agent_utils.get_model_info") as mock_get_info:
+        mock_get_info.return_value = {"max_input_tokens": 150000}
+        token_limit = get_model_token_limit(config, "research")
+        assert token_limit == 150000
+
+def test_get_model_token_limit_planner(mock_memory):
+    """Test get_model_token_limit with planner provider and model."""
+    config = {
+        "provider": "openai",
+        "model": "gpt-4",
+        "planner_provider": "deepseek",
+        "planner_model": "dsm-1"
+    }
+    with patch("ra_aid.agent_utils.get_model_info") as mock_get_info:
+        mock_get_info.return_value = {"max_input_tokens": 120000}
+        token_limit = get_model_token_limit(config, "planner")
+        assert token_limit == 120000
