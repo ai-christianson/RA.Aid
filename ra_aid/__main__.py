@@ -34,8 +34,10 @@ logger = get_logger(__name__)
 def launch_webui(host: str, port: int):
     """Launch the RA.Aid web interface."""
     from ra_aid.webui import run_server
+
     print(f"Starting RA.Aid web interface on http://{host}:{port}")
     run_server(host=host, port=port)
+
 
 def parse_arguments(args=None):
     VALID_PROVIDERS = [
