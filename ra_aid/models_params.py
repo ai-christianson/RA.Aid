@@ -27,6 +27,9 @@ models_params = {
         "gpt-4o-mini": {"token_limit": 128000, "supports_temperature": True},
         "o1-preview": {"token_limit": 128000, "supports_temperature": False},
         "o1-mini": {"token_limit": 128000, "supports_temperature": False},
+        "o1-preview": {"token_limit": 128000, "supports_temperature": False},
+        "o1": {"token_limit": 200000, "supports_temperature": False},
+        "o3-mini": {"token_limit": 200000, "supports_temperature": False},
     },
     "azure_openai": {
         "gpt-3.5-turbo-0125": {"token_limit": 16385, "supports_temperature": True},
