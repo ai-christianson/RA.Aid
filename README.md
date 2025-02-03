@@ -18,11 +18,11 @@
 
 # RA.Aid
 
-**AI software development agent powered by `aider` and advanced reasoning models like `o1`.**
+**Develop software autonomously.**
 
-RA.Aid (ReAct Aid) was made by putting `aider` (https://aider.chat/) in a LangChain ReAct agent loop. This unique combination allows developers to leverage aider's code editing capabilities while benefiting from LangChain's agent-based task execution framework. The tool provides an intelligent assistant that can help with research, planning, and implementation of multi-step development tasks.
+RA.Aid (pronounced "raid") helps you develop software autonomously. It was made by putting `aider` (https://aider.chat/) in a LangChain ReAct agent loop. This unique combination allows developers to leverage `aider`'s code editing capabilities while benefiting from LangChain's agent-based task execution framework. The tool provides an intelligent assistant that can help with research, planning, and implementation of multi-step development tasks.
 
-RA.Aid is a practical tool for everyday software development and is used for developing real-world applications.
+The result is **near-fully-autonomous software development**.
 
 Here's a demo of RA.Aid adding a feature to itself:
 
