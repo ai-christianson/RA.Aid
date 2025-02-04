@@ -10,6 +10,8 @@ RA.Aid (pronounced "raid") helps you develop software autonomously. It was made 
 
 The result is **near-fully-autonomous software development**.
 
+**Enjoying RA.Aid?** Show your support by giving us a star ⭐ on [GitHub](https://github.com/ai-christianson/RA.Aid)!
+
 Here's a demo of RA.Aid adding a feature to itself:
 
 <img src="assets/demo-ra-aid-task-1.gif" alt="RA.Aid Demo" autoplay loop style="width: 100%; max-width: 800px;">
