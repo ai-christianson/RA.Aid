@@ -19,6 +19,7 @@ Expert Consultation:
     - The expert can help analyze complex codebases, unclear patterns, or subtle edge cases
 
 The expert is really good at logic, debugging and planning, but it only has access to the context you give it, and it is unable to access the outside world.
+The expert does not have access to the latest information, so if you are looking for up-to-date information rather than a pure logical question, you may be better of using the web search tool, if available.
 """
 
 EXPERT_PROMPT_SECTION_PLANNING = """
@@ -29,6 +30,7 @@ Expert Consultation:
     - The expert can help with architectural decisions, correctness checks, and detailed planning
 
 The expert is really good at logic, debugging and planning, but it only has access to the context you give it, and it is unable to access the outside world.
+The expert does not have access to the latest information, so if you are looking for up-to-date information rather than a pure logical question, you may be better of using the web search tool, if available.
 
 **ALWAYS** use the expert to come up with the high level plan.
 """
@@ -41,6 +43,7 @@ Expert Consultation:
     - Wait for expert guidance before proceeding with implementation
 
 The expert is really good at logic, debugging and planning, but it only has access to the context you give it, and it is unable to access the outside world.
+The expert does not have access to the latest information, so if you are looking for up-to-date information rather than a pure logical question, you may be better of using the web search tool, if available.
 """
 
 EXPERT_PROMPT_SECTION_CHAT = """
@@ -51,6 +54,7 @@ Expert Consultation:
     - Wait for the expert’s guidance before making decisions that significantly alter the approach or final outcome
 
 The expert is really good at logic, debugging and planning, but it only has access to the context you give it, and it is unable to access the outside world.
+The expert does not have access to the latest information, so if you are looking for up-to-date information rather than a pure logical question, you may be better of using the web search tool, if available.
 """
 
 # Human-specific prompt sections
@@ -302,6 +306,10 @@ You have often been criticized for:
 {human_section}
 {web_research_section}
 
+If you make tool calls incorrectly, you **WILL** get errors like the following:
+
+Error: 1 validation error for emit_research_notes notes Field required [type=missing, input_value=, input_type=dict]
+
 NEVER ANNOUNCE WHAT YOU ARE DOING, JUST DO IT!
 """
 
@@ -513,6 +521,12 @@ You have often been criticized for:
     - Not indicating confidence levels or noting uncertainties
     - Not calling tools/functions properly, e.g. leaving off required arguments, calling a tool in a loop, calling tools inappropriately.
 
+
+
+If you make tool calls incorrectly, you **WILL** get errors like the following:
+
+Error: 1 validation error for emit_research_notes notes Field required [type=missing, input_value=, input_type=dict]
+
 NEVER ANNOUNCE WHAT YOU ARE DOING, JUST DO IT!
 """
 
@@ -677,6 +691,10 @@ You have often been criticized for:
   - Doing the same work over and over across tasks.
   - Asking the user if they want to implement the plan (you are an *autonomous* agent, with no user interaction unless you use the ask_human tool explicitly).
   - Not calling tools/functions properly, e.g. leaving off required arguments, calling a tool in a loop, calling tools inappropriately.
+
+If you make tool calls incorrectly, you **WILL** get errors like the following:
+
+Error: 1 validation error for run_programming_task instructions Field required [type=missing, input_value=, input_type=dict] 
 
 NEVER ANNOUNCE WHAT YOU ARE DOING, JUST DO IT!
 """
