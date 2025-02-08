@@ -62,6 +62,7 @@ from ra_aid.tools.memory import (
     _global_memory,
     get_memory_value,
     get_related_files,
+    log_work_event,
 )
 
 console = Console()
@@ -405,7 +406,11 @@ def run_research_agent(
 
         if agent is not None:
             logger.debug("Research agent completed successfully")
-            return run_agent_with_retry(agent, prompt, run_config)
+            _result = run_agent_with_retry(agent, prompt, run_config)
+            if _result:
+                # Log research completion
+                log_work_event(f"Completed research phase for: {base_task_or_query}")
+            return _result
         else:
             logger.debug("No model provided, running web research tools directly")
             return run_web_research_agent(
@@ -517,7 +522,11 @@ def run_web_research_agent(
             console.print(Panel(Markdown(console_message), title="🔬 Researching..."))
 
         logger.debug("Web research agent completed successfully")
-        return run_agent_with_retry(agent, prompt, run_config)
+        _result = run_agent_with_retry(agent, prompt, run_config)
+        if _result:
+            # Log web research completion
+            log_work_event(f"Completed web research phase for: {query}")
+        return _result
 
     except (KeyboardInterrupt, AgentInterrupt):
         raise
@@ -618,7 +627,11 @@ def run_planning_agent(
     try:
         print_stage_header("Planning Stage")
         logger.debug("Planning agent completed successfully")
-        return run_agent_with_retry(agent, planning_prompt, run_config)
+        _result = run_agent_with_retry(agent, planning_prompt, run_config)
+        if _result:
+            # Log planning completion
+            log_work_event(f"Completed planning phase for: {base_task}")
+        return _result
     except (KeyboardInterrupt, AgentInterrupt):
         raise
     except Exception as e:
@@ -719,7 +732,11 @@ def run_task_implementation_agent(
 
     try:
         logger.debug("Implementation agent completed successfully")
-        return run_agent_with_retry(agent, prompt, run_config)
+        _result = run_agent_with_retry(agent, prompt, run_config)
+        if _result:
+            # Log task implementation completion
+            log_work_event(f"Completed implementation of task: {task}")
+        return _result
     except (KeyboardInterrupt, AgentInterrupt):
         raise
     except Exception as e:

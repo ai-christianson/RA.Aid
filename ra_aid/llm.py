@@ -181,11 +181,14 @@ def create_llm_client(
             is_expert=is_expert,
         )
     elif provider == "openai":
-        return ChatOpenAI(
-            api_key=config["api_key"],
-            model=model_name,
+        openai_kwargs = {
+            "api_key": config["api_key"],
+            "model": model_name,
             **temp_kwargs,
-        )
+        }
+        if is_expert:
+            openai_kwargs["reasoning_effort"] = "high"
+        return ChatOpenAI(**openai_kwargs)
     elif provider == "anthropic":
         return ChatAnthropic(
             api_key=config["api_key"],

@@ -10,10 +10,17 @@ from rich.text import Text
 from ra_aid.logging_config import get_logger
 from ra_aid.proc.interactive import run_interactive_command
 from ra_aid.text.processing import truncate_output
-from ra_aid.tools.memory import _global_memory
+from ra_aid.tools.memory import _global_memory, log_work_event
 
 console = Console()
 logger = get_logger(__name__)
+
+
+def _truncate_for_log(text: str, max_length: int = 300) -> str:
+    """Truncate text for logging, adding [truncated] if necessary."""
+    if len(text) <= max_length:
+        return text
+    return text[:max_length] + "... [truncated]"
 
 
 @tool
@@ -101,14 +108,17 @@ def run_programming_task(
     try:
         # Run the command interactively
         print()
-        output, return_code = run_interactive_command(command)
+        result = run_interactive_command(command)
         print()
 
+        # Log the programming task
+        log_work_event(f"Executed programming task: {_truncate_for_log(instructions)}")
+        
         # Return structured output
         return {
-            "output": truncate_output(output.decode() if output else ""),
-            "return_code": return_code,
-            "success": return_code == 0,
+            "output": truncate_output(result[0].decode()) if result[0] else "",
+            "return_code": result[1],
+            "success": result[1] == 0,
         }
 
     except Exception as e:

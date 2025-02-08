@@ -8,9 +8,16 @@ from rich.prompt import Prompt
 from ra_aid.console.cowboy_messages import get_cowboy_message
 from ra_aid.proc.interactive import run_interactive_command
 from ra_aid.text.processing import truncate_output
-from ra_aid.tools.memory import _global_memory
+from ra_aid.tools.memory import _global_memory, log_work_event
 
 console = Console()
+
+
+def _truncate_for_log(text: str, max_length: int = 300) -> str:
+    """Truncate text for logging, adding [truncated] if necessary."""
+    if len(text) <= max_length:
+        return text
+    return text[:max_length] + "... [truncated]"
 
 
 @tool
@@ -68,11 +75,13 @@ def run_shell_command(command: str) -> Dict[str, Union[str, int, bool]]:
         print()
         output, return_code = run_interactive_command(["/bin/bash", "-c", command])
         print()
-        return {
+        result = {
             "output": truncate_output(output.decode()) if output else "",
             "return_code": return_code,
             "success": return_code == 0,
         }
+        log_work_event(f"Executed shell command: {_truncate_for_log(command)}")
+        return result
     except Exception as e:
         print()
         console.print(Panel(str(e), title="❌ Error", border_style="red"))

@@ -17,6 +17,8 @@ Expert Consultation:
     - Use emit_expert_context to provide all relevant context about what you've found
     - Wait for the expert response before proceeding with research
     - The expert can help analyze complex codebases, unclear patterns, or subtle edge cases
+
+The expert is really good at logic, debugging and planning, but it only has access to the context you give it, and it is unable to access the outside world.
 """
 
 EXPERT_PROMPT_SECTION_PLANNING = """
@@ -25,6 +27,10 @@ Expert Consultation:
     - First use emit_expert_context to provide all relevant context
     - Wait for the expert's response before defining tasks in non-trivial scenarios
     - The expert can help with architectural decisions, correctness checks, and detailed planning
+
+The expert is really good at logic, debugging and planning, but it only has access to the context you give it, and it is unable to access the outside world.
+
+**ALWAYS** use the expert to come up with the high level plan.
 """
 
 EXPERT_PROMPT_SECTION_IMPLEMENTATION = """
@@ -33,6 +39,8 @@ Expert Consultation:
     - Use emit_expert_context to provide context about your specific concern
     - Ask the expert to perform deep analysis or correctness checks
     - Wait for expert guidance before proceeding with implementation
+
+The expert is really good at logic, debugging and planning, but it only has access to the context you give it, and it is unable to access the outside world.
 """
 
 EXPERT_PROMPT_SECTION_CHAT = """
@@ -41,6 +49,8 @@ Expert Consultation:
     - Use emit_expert_context to provide the current conversation state, user requirements, and discovered details
     - Ask the expert for advice on handling ambiguous user requests or complex technical challenges, and to verify correctness
     - Wait for the expert’s guidance before making decisions that significantly alter the approach or final outcome
+
+The expert is really good at logic, debugging and planning, but it only has access to the context you give it, and it is unable to access the outside world.
 """
 
 # Human-specific prompt sections
@@ -124,6 +134,8 @@ Because this is a new project
 Remember, this is the research phase. Your main focus right now is research and creating instructions for the implementation which will be handed off to the implementation team.
 Focus on finding best practices, idiomatic approaches, and using all available research tools as well as the expert, if available.
 Remember, our scope and capabilities are limited --unless the user specifically asks, we do not want to set up servers like postgres. We want to use sqlite or similar for initial implementation, but make it extensible.
+
+If the expert tool is available, **ALWAYS** ask the expert to review and refine your research before requesting implementation.
 """
 
 # Research stage prompt - guides initial codebase analysis
@@ -597,7 +609,11 @@ IMPLEMENTATION_PROMPT = """Current Date: {current_date}
 Working Directory: {working_directory}
 
 Base-level task (for reference only):
-{base_task} --keep it simple
+<base task>
+{base_task}
+</base task>
+
+keep it simple. if the expert tool is available, use it frequently for high level logic and planning.
 
 Plan Overview (for reference only, remember you are only implementing your specific task):
 {plan}
