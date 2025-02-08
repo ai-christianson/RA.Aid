@@ -5,6 +5,7 @@ import sys
 import threading
 import time
 import uuid
+from datetime import datetime
 from typing import Any, Dict, List, Literal, Optional, Sequence
 
 import litellm
@@ -40,6 +41,7 @@ from ra_aid.prompts import (
     HUMAN_PROMPT_SECTION_PLANNING,
     HUMAN_PROMPT_SECTION_RESEARCH,
     IMPLEMENTATION_PROMPT,
+    NEW_PROJECT_HINTS,
     PLANNING_PROMPT,
     RESEARCH_ONLY_PROMPT,
     RESEARCH_PROMPT,
@@ -360,6 +362,7 @@ def run_research_agent(
         formatted_project_info = ""
 
     prompt = (RESEARCH_ONLY_PROMPT if research_only else RESEARCH_PROMPT).format(
+        current_date=datetime.now().strftime("%Y-%m-%d"),
         base_task=base_task_or_query,
         research_only_note=(
             ""
@@ -374,6 +377,7 @@ def run_research_agent(
         code_snippets=code_snippets,
         related_files=related_files,
         project_info=formatted_project_info,
+        new_project_hints=NEW_PROJECT_HINTS if project_info.is_new else "",
     )
 
     config = _global_memory.get("config", {}) if not config else config
@@ -479,10 +483,12 @@ def run_web_research_agent(
     related_files = _global_memory.get("related_files", "")
 
     prompt = WEB_RESEARCH_PROMPT.format(
+        current_date=datetime.now().strftime("%Y-%m-%d"),
         web_research_query=query,
         expert_section=expert_section,
         human_section=human_section,
         key_facts=key_facts,
+        work_log=get_memory_value("work_log"),
         code_snippets=code_snippets,
         related_files=related_files,
     )
@@ -578,7 +584,6 @@ def run_planning_agent(
     )
 
     config = _global_memory.get("config", {}) if not config else config
-
     recursion_limit = config.get("recursion_limit", DEFAULT_RECURSION_LIMIT)
     run_config = {
         "configurable": {"thread_id": thread_id},
