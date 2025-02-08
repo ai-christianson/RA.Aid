@@ -460,7 +460,7 @@ No Planning or Problem-Solving
     Do not suggest fixes or improvements.
     Do not mention what should be done.
     Do not discuss how the code could be better structured.
-    Do not provide advice or commentary on the project's future.
+    Do not provide advice or commentary on the project’s future.
 
 You must remain strictly within the bounds of describing what currently exists.
 
@@ -506,8 +506,14 @@ NEVER ANNOUNCE WHAT YOU ARE DOING, JUST DO IT!
 
 # Planning stage prompt - guides task breakdown and implementation planning
 # Includes a directive to scale complexity with request size and consult the expert (if available) for logic verification and debugging.
-PLANNING_PROMPT = """Base Task:
+PLANNING_PROMPT = """Current Date: {current_date}
+Working Directory: {working_directory}
+
+Base Task:
 {base_task} --keep it simple
+
+Project Info:
+{project_info}
 
 Research Notes:
 <notes>
@@ -587,7 +593,10 @@ NEVER ANNOUNCE WHAT YOU ARE DOING, JUST DO IT!
 
 # Implementation stage prompt - guides specific task implementation
 # Added instruction to adjust complexity of implementation to match request, and consult the expert (if available) for correctness, debugging.
-IMPLEMENTATION_PROMPT = """Base-level task (for reference only):
+IMPLEMENTATION_PROMPT = """Current Date: {current_date}
+Working Directory: {working_directory}
+
+Base-level task (for reference only):
 {base_task} --keep it simple
 
 Plan Overview (for reference only, remember you are only implementing your specific task):

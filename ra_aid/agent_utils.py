@@ -1,5 +1,6 @@
 """Utility functions for working with agents."""
 
+import os
 import signal
 import sys
 import threading
@@ -361,8 +362,12 @@ def run_research_agent(
         logger.warning(f"Failed to get project info: {e}")
         formatted_project_info = ""
 
+    current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    working_directory = os.getcwd()
+
     prompt = (RESEARCH_ONLY_PROMPT if research_only else RESEARCH_PROMPT).format(
-        current_date=datetime.now().strftime("%Y-%m-%d"),
+        current_date=current_date,
+        working_directory=working_directory,
         base_task=base_task_or_query,
         research_only_note=(
             ""
@@ -482,8 +487,12 @@ def run_web_research_agent(
     code_snippets = _global_memory.get("code_snippets", "")
     related_files = _global_memory.get("related_files", "")
 
+    current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    working_directory = os.getcwd()
+
     prompt = WEB_RESEARCH_PROMPT.format(
-        current_date=datetime.now().strftime("%Y-%m-%d"),
+        current_date=current_date,
+        working_directory=working_directory,
         web_research_query=query,
         expert_section=expert_section,
         human_section=human_section,
@@ -551,6 +560,14 @@ def run_planning_agent(
     if thread_id is None:
         thread_id = str(uuid.uuid4())
 
+    # Get latest project info
+    try:
+        project_info = get_project_info(".")
+        formatted_project_info = format_project_info(project_info)
+    except Exception as e:
+        logger.warning("Failed to get project info: %s", str(e))
+        formatted_project_info = "Project info unavailable"
+
     tools = get_planning_tools(
         expert_enabled=expert_enabled,
         web_research_enabled=config.get("web_research_enabled", False),
@@ -566,11 +583,17 @@ def run_planning_agent(
         else ""
     )
 
+    current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    working_directory = os.getcwd()
+
     planning_prompt = PLANNING_PROMPT.format(
+        current_date=current_date,
+        working_directory=working_directory,
         expert_section=expert_section,
         human_section=human_section,
         web_research_section=web_research_section,
         base_task=base_task,
+        project_info=formatted_project_info,
         research_notes=get_memory_value("research_notes"),
         related_files="\n".join(get_related_files()),
         key_facts=get_memory_value("key_facts"),
@@ -657,7 +680,12 @@ def run_task_implementation_agent(
 
     agent = create_agent(model, tools, checkpointer=memory, agent_type="planner")
 
+    current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    working_directory = os.getcwd()
+
     prompt = IMPLEMENTATION_PROMPT.format(
+        current_date=current_date,
+        working_directory=working_directory,
         base_task=base_task,
         task=task,
         tasks=tasks,
