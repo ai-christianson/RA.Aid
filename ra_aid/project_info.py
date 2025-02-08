@@ -129,9 +129,6 @@ def display_project_status(info: ProjectInfo) -> None:
     status_text = f"""
 {status} with **{file_count} file(s)**
 """
-    # Add truncation notice if list was truncated
-    if len(info.files) < info.total_files:
-        status_text += f"\n[*Note: File listing truncated ({len(info.files)} of {info.total_files} shown)*]"
 
     # Create and display panel
     console = Console()
