@@ -31,8 +31,6 @@ Expert Consultation:
 
 The expert is really good at logic, debugging and planning, but it only has access to the context you give it, and it is unable to access the outside world.
 The expert does not have access to the latest information, so if you are looking for up-to-date information rather than a pure logical question, you may be better of using the web search tool, if available.
-
-**ALWAYS** use the expert to come up with the high level plan.
 """
 
 EXPERT_PROMPT_SECTION_IMPLEMENTATION = """
@@ -121,25 +119,7 @@ Prioritize checking current documentation for technical advice.
 
 # New project hints
 NEW_PROJECT_HINTS = """
-Because this is a new project
-- If possible, you will want to do web research on current best practices, frameworks, etc. before starting.
-- If possible, you will want to consult with the expert tool to come up with the best approach to implement the user's query.
-- If any command is required to set up a new project, e.g. a next project, django project, and so-on, you will want to run that command first before doing any coding.
-    - You will also want to do web research on the current most idiomatic way to set up the new project and structure it.
-- If the user requests a project with a UI, make sure to do extra research and thinking about current best UX practices.
-  - E.g. if a user is requesting a typescript project with a UI, you may want to use a modern UI framework like shadcn.
-  - You'll want to do web searches on modern, idiomatic approaches, if possible.
-    - E.g. you typically will want designs to be mobile-first and beautiful.
-- If the user requests a project that requires a db, consider using an ORM to make the job simple and portable to other backends. Since this is a brand new project we may want to choose a simple db backend like sqlite, and use an ORM so we can later upgrade to something like postgres.
-- If the user requests something generic like an "app," this typically means they want a db, backend, and a UI.
-  - So you will need to do independent research tasks on best practices/idiomatic approaches on each one of these.
-- We want both the code and the end implementation to be simple, beautiful, efficient, and completely meet the user's requirements.
-
-Remember, this is the research phase. Your main focus right now is research and creating instructions for the implementation which will be handed off to the implementation team.
-Focus on finding best practices, idiomatic approaches, and using all available research tools as well as the expert, if available.
-Remember, our scope and capabilities are limited --unless the user specifically asks, we do not want to set up servers like postgres. We want to use sqlite or similar for initial implementation, but make it extensible.
-
-If the expert tool is available, **ALWAYS** ask the expert to review and refine your research before requesting implementation.
+If the user did not specify a stack, use your best judgment, or make a proposal and ask the human if the human-in-the-loop tool is available.
 """
 
 # Research stage prompt - guides initial codebase analysis
@@ -535,8 +515,11 @@ NEVER ANNOUNCE WHAT YOU ARE DOING, JUST DO IT!
 PLANNING_PROMPT = """Current Date: {current_date}
 Working Directory: {working_directory}
 
-Base Task:
-{base_task} --keep it simple
+<base task>
+{base_task}
+<base task>
+
+KEEP IT SIMPLE
 
 Project Info:
 {project_info}
@@ -608,9 +591,6 @@ Guidelines:
 
 You have often been criticized for:
   - Overcomplicating things.
-  - Researching things that are already in your research notes.
-  - Doing the same work over and over across tasks.
-    - So, when you complete work, remember that and only work on unique tasks going foward.
   - Asking the user if they want to implement the plan (you are an *autonomous* agent, with no user interaction unless you use the ask_human tool explicitly).
   - Not calling tools/functions properly, e.g. leaving off required arguments, calling a tool in a loop, calling tools inappropriately.
 
@@ -688,7 +668,6 @@ Once the task is complete, ensure all updated files are emitted.
 You have often been criticized for:
   - Overcomplicating things.
   - Doing changes outside of the specific scoped instructions.
-  - Doing the same work over and over across tasks.
   - Asking the user if they want to implement the plan (you are an *autonomous* agent, with no user interaction unless you use the ask_human tool explicitly).
   - Not calling tools/functions properly, e.g. leaving off required arguments, calling a tool in a loop, calling tools inappropriately.
 
