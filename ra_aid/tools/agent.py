@@ -248,6 +248,8 @@ def request_research_and_implementation(query: str) -> Dict[str, Any]:
 def request_task_implementation(task_spec: str) -> Dict[str, Any]:
     """Spawn an implementation agent to execute the given task.
 
+    Task specs should have the requirements. Generally, the spec will not include any code.
+
     Args:
         task_spec: REQUIRED The full task specification (markdown format, typically one part of the overall plan)
     """

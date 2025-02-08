@@ -387,6 +387,8 @@ def plan_implementation_completed(message: str) -> str:
     Returns:
         Confirmation message
     """
+    _global_memory["task_completed"] = True
+    _global_memory["completion_message"] = message
     _global_memory["plan_completed"] = True
     _global_memory["completion_message"] = message
     _global_memory["tasks"].clear()  # Clear task list when plan is completed

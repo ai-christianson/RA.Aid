@@ -30,6 +30,7 @@ from ra_aid.tools.agent import (
     request_web_research,
 )
 from ra_aid.tools.memory import one_shot_completed
+from ra_aid.tools.write_file import write_file_tool
 
 
 # Read-only tools that don't modify system state
@@ -48,10 +49,11 @@ def get_read_only_tools(
     tools = [
         emit_related_files,
         emit_key_facts,
-        delete_key_facts,
         emit_key_snippets,
-        delete_key_snippets,
-        deregister_related_files,
+        # *TEMPORARILY* disabled to improve tool calling perf.
+        # delete_key_facts,
+        # delete_key_snippets,
+        # deregister_related_files,
         list_directory_tree,
         read_file_tool,
         fuzzy_find_project_files,
@@ -70,14 +72,15 @@ def get_read_only_tools(
 
 # Define constant tool groups
 READ_ONLY_TOOLS = get_read_only_tools()
-MODIFICATION_TOOLS = [run_programming_task]
+MODIFICATION_TOOLS = [run_programming_task, write_file_tool]
 COMMON_TOOLS = get_read_only_tools()
 EXPERT_TOOLS = [emit_expert_context, ask_expert]
 RESEARCH_TOOLS = [
     emit_research_notes,
-    one_shot_completed,
-    monorepo_detected,
-    ui_detected,
+    # *TEMPORARILY* disabled to improve tool calling perf.
+    # one_shot_completed,
+    # monorepo_detected,
+    # ui_detected,
 ]
 
 
@@ -129,9 +132,10 @@ def get_planning_tools(
 
     # Add planning-specific tools
     planning_tools = [
-        emit_plan,
         request_task_implementation,
-        plan_implementation_completed,
+        # *TEMPORARILY* disabled to improve tool calling perf.
+        # emit_plan,
+        # plan_implementation_completed,
     ]
     tools.extend(planning_tools)
 
@@ -202,9 +206,10 @@ def get_chat_tools(
         request_research,
         request_research_and_implementation,
         emit_key_facts,
-        delete_key_facts,
-        delete_key_snippets,
-        deregister_related_files,
+        # *TEMPORARILY* disabled to improve tool calling perf.
+        # delete_key_facts,
+        # delete_key_snippets,
+        # deregister_related_files,
     ]
 
     if web_research_enabled:

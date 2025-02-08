@@ -33,16 +33,20 @@ def run_programming_task(
 
     The programmer sees only what you provide, no conversation history.
 
-    Give detailed instructions but do not write their code.
+    Give detailed instructions including multi-file tasks but do not write their code.
 
-    They are intelligent and can edit multiple files.
+    The programmer cannot run commands.
 
     If new files are created, emit them after finishing.
 
     They can add/modify files, but not remove. Use run_shell_command to remove files. If referencing files you’ll delete, remove them after they finish.
+  
+    Use write_file_tool instead if you need to write the entire contents of file(s).
+
+    If the programmer wrote files, they actually wrote to disk. You do not need to rewrite the output of what the programmer showed you.
 
     Args:
-     instructions: REQUIRED Programming task instructions (markdown format, use newlines and as many tokens as needed)
+     instructions: REQUIRED Programming task instructions (markdown format, use newlines and as many tokens as needed, no commands allowed)
      files: Optional; if not provided, uses related_files
 
     Returns: { "output": stdout+stderr, "return_code": 0 if success, "success": True/False }

@@ -31,7 +31,7 @@ def print_stage_header(stage: str) -> None:
     icon = icons.get(stage_key, "🚀")
 
     # Create styled panel with icon
-    panel_content = f"{icon} {stage_title}"
+    panel_content = f" {icon} {stage_title}"
     console.print(Panel(panel_content, style="green bold", padding=0))
 
 
