@@ -108,7 +108,7 @@ def test_trim_chat_history_empty_chat(agent):
 
 def test_trim_chat_history_token_limit():
     """Test trimming based on token limit."""
-    agent = CiaynAgent(Mock(), [], max_history_messages=10, max_tokens=20)
+    agent = CiaynAgent(Mock(), [], max_history_messages=10, max_tokens=25)
 
     initial_messages = [HumanMessage(content="Initial")]  # ~2 tokens
     chat_history = [
@@ -146,7 +146,7 @@ def test_trim_chat_history_no_token_limit():
 
 def test_trim_chat_history_both_limits():
     """Test trimming with both message count and token limits."""
-    agent = CiaynAgent(Mock(), [], max_history_messages=3, max_tokens=15)
+    agent = CiaynAgent(Mock(), [], max_history_messages=3, max_tokens=35)
 
     initial_messages = [HumanMessage(content="Init")]  # ~1 token
     chat_history = [

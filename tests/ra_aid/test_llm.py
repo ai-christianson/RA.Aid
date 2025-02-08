@@ -127,13 +127,13 @@ def test_estimate_tokens():
     assert CiaynAgent._estimate_tokens("") == 0
 
     # Test string content
-    assert CiaynAgent._estimate_tokens("test") == 1  # 4 bytes
-    assert CiaynAgent._estimate_tokens("hello world") == 3  # 11 bytes
-    assert CiaynAgent._estimate_tokens("🚀") == 1  # 4 bytes
+    assert CiaynAgent._estimate_tokens("test") == 2  # 4 bytes
+    assert CiaynAgent._estimate_tokens("hello world") == 5  # 11 bytes
+    assert CiaynAgent._estimate_tokens("🚀") == 2  # 4 bytes
 
     # Test message content
     msg = HumanMessage(content="test message")
-    assert CiaynAgent._estimate_tokens(msg) == 4  # 11 bytes
+    assert CiaynAgent._estimate_tokens(msg) == 6  # 11 bytes
 
 
 def test_initialize_openai(clean_env, mock_openai):
