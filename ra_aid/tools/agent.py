@@ -50,17 +50,17 @@ def select_model(query: str, config: dict) -> str:
             config=config
         )
         console.print(Panel(Markdown(f"{categories_result}"), title="🤖 Categories Result"))
-        model = get_best_expert_model_by_capabilities(
-            provider=config.get("expert_provider"), 
+        model_name, provider_name = get_best_expert_model_by_capabilities(
+            provider=config.get("expert_provider"),
             capabilities=categories_result.strip().split("\n")
         )
-        console.print(Panel(Markdown(f"Using model: {model}"), title="🤖 Selected Expert Model Selection"))
+        console.print(Panel(Markdown(f"Using model: {model_name} from {provider_name}"), title="🤖 Selected Expert Model Selection"))
         return initialize_llm(
-            expert_provider,
-            default_model,
+            provider_name or expert_provider,
+            model_name or default_model,
         )
     else:
-        console.print(Panel(Markdown(f"Using default model: {model}"), title="🤖 Selected Default Model"))
+        console.print(Panel(Markdown(f"Using default model: {default_model} from {default_provider}"), title="🤖 Selected Default Model"))
         return initialize_llm(
             default_provider,
             default_model,

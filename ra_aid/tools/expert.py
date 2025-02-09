@@ -19,7 +19,7 @@ _model = None
 def get_best_expert_model_by_capabilities(
     provider: str | None = None,
     capabilities: List[str] | None = None,
-) -> str:
+) -> tuple[str, str]:
     """Find the first model with the specified reasoning tier, capabilities, and specialties.
 
     Args:
@@ -36,8 +36,8 @@ def get_best_expert_model_by_capabilities(
         if all(capability in config["capabilities"] for capability in capabilities):
             model_provider = config.get("provider", "")
             if provider is None or model_provider == provider:
-                return model_name
-    return ""
+                return model_name, model_provider
+    return "", ""
 
 def get_best_expert_model_by_provider(provider: str | None = None) -> str:
     """Find the model with the highest reasoning tier for the specified provider.
