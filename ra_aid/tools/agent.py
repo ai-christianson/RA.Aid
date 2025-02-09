@@ -3,7 +3,7 @@
 from typing import Any, Dict, List, Union
 
 from langchain_core.tools import tool
-from ra_aid.agent_utils import create_agent, run_agent_with_retry
+from ra_aid.agent_core import create_agent, run_agent_with_retry
 from ra_aid.models_params import Capability
 from ra_aid.prompts import TEXT_CATEGORIZER_PROMPT
 from ra_aid.tools.expert import get_best_expert_model_by_capabilities
