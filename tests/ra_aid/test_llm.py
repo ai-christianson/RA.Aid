@@ -50,9 +50,9 @@ def mock_openai():
 
 
 def test_initialize_expert_defaults(clean_env, mock_openai, monkeypatch):
-    """Test expert LLM initialization with default parameters."""
+    """Test expert LLM initialization with explicit parameters."""
     monkeypatch.setenv("EXPERT_OPENAI_API_KEY", "test-key")
-    _llm = initialize_expert_llm()
+    _llm = initialize_expert_llm("openai", "o1")
 
     mock_openai.assert_called_once_with(api_key="test-key", model="o1", reasoning_effort="high")
 

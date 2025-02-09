@@ -220,7 +220,7 @@ def initialize_llm(
 
 
 def initialize_expert_llm(
-    provider: str = "openai", model_name: str = "o1"
+    provider: str, model_name: str
 ) -> BaseChatModel:
     """Initialize an expert language model client based on the specified provider and model."""
     return create_llm_client(provider, model_name, temperature=None, is_expert=True)

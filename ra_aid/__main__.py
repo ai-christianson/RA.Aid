@@ -206,7 +206,7 @@ Examples:
 
     if parsed_args.provider == "openai":
         parsed_args.model = parsed_args.model or OPENAI_DEFAULT_MODEL
-    if parsed_args.provider == "anthropic":
+    elif parsed_args.provider == "anthropic":
         # Always use default model for Anthropic
         parsed_args.model = ANTHROPIC_DEFAULT_MODEL
     elif not parsed_args.model and not parsed_args.research_only:
@@ -215,15 +215,12 @@ Examples:
             f"--model is required when using provider '{parsed_args.provider}'"
         )
 
-    # Validate expert model requirement
-    if (
-        parsed_args.expert_provider != "openai"
-        and not parsed_args.expert_model
-        and not parsed_args.research_only
-    ):
-        parser.error(
-            f"--expert-model is required when using expert provider '{parsed_args.expert_provider}'"
-        )
+    # Handle expert provider/model defaults
+    if not parsed_args.expert_provider:
+        # If no expert provider specified, use main provider instead of defaulting to
+        # to any particular model since we do not know if we have access to any other model.
+        parsed_args.expert_provider = parsed_args.provider
+        parsed_args.expert_model = parsed_args.model
 
     # Validate temperature range if provided
     if parsed_args.temperature is not None and not (
