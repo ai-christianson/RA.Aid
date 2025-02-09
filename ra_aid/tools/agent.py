@@ -3,6 +3,10 @@
 from typing import Any, Dict, List, Union
 
 from langchain_core.tools import tool
+from ra_aid.agent_utils import create_agent, run_agent_with_retry
+from ra_aid.models_params import Capability
+from ra_aid.prompts import TEXT_CATEGORIZER_PROMPT
+from ra_aid.tools.expert import get_best_expert_model_by_capabilities
 from rich.console import Console
 
 from ra_aid.console.formatting import print_error
@@ -331,10 +335,31 @@ def request_implementation(task_spec: str) -> Dict[str, Any]:
     """
     # Initialize model from config
     config = _global_memory.get("config", {})
-    model = initialize_llm(
-        config.get("provider", "anthropic"),
-        config.get("model", "claude-3-5-sonnet-20241022"),
-    )
+    default_provider = config.get("provider", "anthropic")
+    default_model = config.get("model", "claude-3-5-sonnet-20241022")
+    expert_auto_select_model = config.get("expert_auto_select_model", False)
+    if expert_auto_select_model and config.get("expert_provider") is None:
+        # user wants us to select the best expert model based on capabilities
+        categories = Capability.list()
+        prompt = TEXT_CATEGORIZER_PROMPT.format(
+            categories=categories,
+            text=task_spec,
+        )
+        # use the detault provider and model to determine the best expert model
+        categories_result = run_agent_with_retry(
+            agent=create_agent(initialize_llm(default_provider, default_model), [prompt]),
+            prompt=prompt,
+            config=config
+        )
+        model = get_best_expert_model_by_capabilities(
+            provider=config.get("expert_provider"), 
+            capabilities=categories_result.strip().split("\n")
+        )
+    else:
+        model = initialize_llm(
+            default_provider,
+            default_model,
+        )
 
     try:
         # Run planning agent

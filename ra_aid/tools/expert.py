@@ -14,54 +14,24 @@ from .memory import _global_memory, get_memory_value
 console = Console()
 _model = None
 
-
-def get_best_expert_model_by_reasoning_tier(
-    tier: int = ReasoningTier.EXPERT, provider: str | None = None
-) -> tuple[str, str]:
-    """Find the first model with the specified reasoning tier and optionally from a specific provider.
-
-    Args:
-        tier: The reasoning tier to search for (default: ReasoningTier.EXPERT)
-        provider: Optional provider name to filter by
-
-    Returns:
-        tuple[str, str]: Tuple of (model_name, provider_name), or ("", "") if none found
-    """
-    for model_name, config in reasoning_tiers.items():
-        if config["tier"] == tier:
-            model_provider = config.get("provider", "")
-            if provider is None or model_provider == provider:
-                return model_name, model_provider
-    return "", ""
-
-
-def get_best_expert_model_by_reasoning_tier_capabilities_and_specialties(
-    tier: int = ReasoningTier.EXPERT,
-    capabilities: List[str] | None = None,
-    specialties: List[str] | None = None,
+def get_best_expert_model_by_capabilities(
     provider: str | None = None,
+    capabilities: List[str] | None = None,
 ) -> tuple[str, str]:
     """Find the first model with the specified reasoning tier, capabilities, and specialties.
 
     Args:
-        tier: The reasoning tier to search for (default: ReasoningTier.EXPERT)
-        capabilities: List of capabilities to search for (default: None)
-        specialties: List of specialties to search for (default: None)
         provider: Optional provider name to filter by (default: None)
+        capabilities: List of capabilities to search for (default: None)
 
     Returns:
         tuple[str, str]: Tuple of (model_name, provider_name), or ("", "") if none found
     """
     if capabilities is None:
         capabilities = []
-    if specialties is None:
-        specialties = []
+
     for model_name, config in reasoning_tiers.items():
-        if config["tier"] == tier and all(
-            capability in config["capabilities"] for capability in capabilities
-        ) and all(
-            specialty in config["specialties"] for specialty in specialties
-        ):
+        if all(capability in config["capabilities"] for capability in capabilities):
             model_provider = config.get("provider", "")
             if provider is None or model_provider == provider:
                 return model_name, model_provider
