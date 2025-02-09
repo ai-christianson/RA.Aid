@@ -33,7 +33,8 @@ def select_model(query: str, config: dict) -> str:
     default_provider = config.get("provider", "anthropic")
     default_model = config.get("model", "claude-3-5-sonnet-20241022")
     expert_auto_select_model = config.get("expert_auto_select_model", False)
-    if expert_auto_select_model and config.get("expert_provider") is None:
+    expert_provider = config.get("expert_provider")
+    if expert_auto_select_model and expert_provider is None:
         # user wants us to select the best expert model based on capabilities
         categories = Capability.list()
         prompt = TEXT_CATEGORIZER_PROMPT.format(
@@ -55,8 +56,12 @@ def select_model(query: str, config: dict) -> str:
         print(f"Selected model: {model}")
         console = Console()
         console.print(Panel(Markdown(f"Using model: {model}"), title="🤖 Expert Model Selection"))
+        return initialize_llm(
+            expert_provider,
+            default_model,
+        )
     else:
-        model = initialize_llm(
+        return initialize_llm(
             default_provider,
             default_model,
         )
