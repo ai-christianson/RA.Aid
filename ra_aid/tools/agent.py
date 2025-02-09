@@ -8,6 +8,8 @@ from ra_aid.models_params import Capability
 from ra_aid.prompts import TEXT_CATEGORIZER_PROMPT
 from ra_aid.tools.expert import get_best_expert_model_by_capabilities
 from rich.console import Console
+from rich.markdown import Markdown
+from rich.panel import Panel
 
 from ra_aid.console.formatting import print_error
 from ra_aid.exceptions import AgentInterrupt
@@ -26,6 +28,39 @@ RESEARCH_AGENT_RECURSION_LIMIT = 3
 
 console = Console()
 
+def select_model(query: str, config: dict) -> str:
+    """Select the best model for the given query based on reasoning capabilities."""
+    default_provider = config.get("provider", "anthropic")
+    default_model = config.get("model", "claude-3-5-sonnet-20241022")
+    expert_auto_select_model = config.get("expert_auto_select_model", False)
+    if expert_auto_select_model and config.get("expert_provider") is None:
+        # user wants us to select the best expert model based on capabilities
+        categories = Capability.list()
+        prompt = TEXT_CATEGORIZER_PROMPT.format(
+            categories=categories,
+            text=query,
+        )
+        print(f"Running text categorizer prompt: {prompt}")
+        # use the detault provider and model to determine the best expert model
+        categories_result = run_agent_with_retry(
+            agent=create_agent(initialize_llm(default_provider, default_model), [prompt]),
+            prompt=prompt,
+            config=config
+        )
+        print(f"Categories result: {categories_result}")
+        model = get_best_expert_model_by_capabilities(
+            provider=config.get("expert_provider"), 
+            capabilities=categories_result.strip().split("\n")
+        )
+        print(f"Selected model: {model}")
+        console = Console()
+        console.print(Panel(Markdown(f"Using model: {model}"), title="🤖 Expert Model Selection"))
+    else:
+        model = initialize_llm(
+            default_provider,
+            default_model,
+        )
+
 
 @tool("request_research")
 def request_research(query: str) -> ResearchResult:
@@ -39,10 +74,7 @@ def request_research(query: str) -> ResearchResult:
     """
     # Initialize model from config
     config = _global_memory.get("config", {})
-    model = initialize_llm(
-        config.get("provider", "anthropic"),
-        config.get("model", "claude-3-5-sonnet-20241022"),
-    )
+    model = select_model(query, config)
 
     # Check recursion depth
     current_depth = _global_memory.get("agent_depth", 0)
@@ -121,10 +153,7 @@ def request_web_research(query: str) -> ResearchResult:
     """
     # Initialize model from config
     config = _global_memory.get("config", {})
-    model = initialize_llm(
-        config.get("provider", "anthropic"),
-        config.get("model", "claude-3-5-sonnet-20241022"),
-    )
+    model = select_model(query, config)
 
     success = True
     reason = None
@@ -189,10 +218,7 @@ def request_research_and_implementation(query: str) -> Dict[str, Any]:
     """
     # Initialize model from config
     config = _global_memory.get("config", {})
-    model = initialize_llm(
-        config.get("provider", "anthropic"),
-        config.get("model", "claude-3-5-sonnet-20241022"),
-    )
+    model = select_model(query, config)
 
     try:
         # Run research agent
@@ -259,10 +285,7 @@ def request_task_implementation(task_spec: str) -> Dict[str, Any]:
     """
     # Initialize model from config
     config = _global_memory.get("config", {})
-    model = initialize_llm(
-        config.get("provider", "anthropic"),
-        config.get("model", "claude-3-5-sonnet-20241022"),
-    )
+    model = select_model(task_spec, config)
 
     # Get required parameters
     tasks = [
@@ -335,31 +358,7 @@ def request_implementation(task_spec: str) -> Dict[str, Any]:
     """
     # Initialize model from config
     config = _global_memory.get("config", {})
-    default_provider = config.get("provider", "anthropic")
-    default_model = config.get("model", "claude-3-5-sonnet-20241022")
-    expert_auto_select_model = config.get("expert_auto_select_model", False)
-    if expert_auto_select_model and config.get("expert_provider") is None:
-        # user wants us to select the best expert model based on capabilities
-        categories = Capability.list()
-        prompt = TEXT_CATEGORIZER_PROMPT.format(
-            categories=categories,
-            text=task_spec,
-        )
-        # use the detault provider and model to determine the best expert model
-        categories_result = run_agent_with_retry(
-            agent=create_agent(initialize_llm(default_provider, default_model), [prompt]),
-            prompt=prompt,
-            config=config
-        )
-        model = get_best_expert_model_by_capabilities(
-            provider=config.get("expert_provider"), 
-            capabilities=categories_result.strip().split("\n")
-        )
-    else:
-        model = initialize_llm(
-            default_provider,
-            default_model,
-        )
+    model = select_model(task_spec, config)
 
     try:
         # Run planning agent
