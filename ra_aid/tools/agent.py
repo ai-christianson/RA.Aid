@@ -34,6 +34,7 @@ def select_model(query: str, config: dict) -> str:
     default_model = config.get("model", "claude-3-5-sonnet-20241022")
     expert_auto_select_model = config.get("expert_auto_select_model", False)
     expert_provider = config.get("expert_provider")
+    console = Console()
     if expert_auto_select_model and expert_provider is None:
         # user wants us to select the best expert model based on capabilities
         categories = Capability.list()
@@ -41,26 +42,25 @@ def select_model(query: str, config: dict) -> str:
             categories=categories,
             text=query,
         )
-        print(f"Running text categorizer prompt: {prompt}")
+        console.print(Panel(Markdown(f"{prompt}"), title="🤖 Categorizer prompt"))
         # use the detault provider and model to determine the best expert model
         categories_result = run_agent_with_retry(
             agent=create_agent(initialize_llm(default_provider, default_model), [prompt]),
             prompt=prompt,
             config=config
         )
-        print(f"Categories result: {categories_result}")
+        console.print(Panel(Markdown(f"{categories_result}"), title="🤖 Categories Result"))
         model = get_best_expert_model_by_capabilities(
             provider=config.get("expert_provider"), 
             capabilities=categories_result.strip().split("\n")
         )
-        print(f"Selected model: {model}")
-        console = Console()
-        console.print(Panel(Markdown(f"Using model: {model}"), title="🤖 Expert Model Selection"))
+        console.print(Panel(Markdown(f"Using model: {model}"), title="🤖 Selected Expert Model Selection"))
         return initialize_llm(
             expert_provider,
             default_model,
         )
     else:
+        console.print(Panel(Markdown(f"Using default model: {model}"), title="🤖 Selected Default Model"))
         return initialize_llm(
             default_provider,
             default_model,
