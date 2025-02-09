@@ -10,6 +10,11 @@ from ra_aid.chat_models.deepseek_chat import ChatDeepseekReasoner
 from ra_aid.logging_config import get_logger
 
 from .models_params import models_params
+from rich.console import Console
+from rich.markdown import Markdown
+from rich.panel import Panel
+
+console = Console()
 
 known_temp_providers = {
     "openai",
@@ -223,4 +228,5 @@ def initialize_expert_llm(
     provider: str, model_name: str
 ) -> BaseChatModel:
     """Initialize an expert language model client based on the specified provider and model."""
+    console.print(Panel(f"Expert model: {model_name} from {provider}", title="Initializing Expert LLM", border_style="yellow"))
     return create_llm_client(provider, model_name, temperature=None, is_expert=True)

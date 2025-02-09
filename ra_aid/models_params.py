@@ -35,18 +35,27 @@ class ReasoningTier:
 reasoning_tiers = {
     "o1-preview": {
         "tier": ReasoningTier.EXPERT,
+        "provider": "openai",
         "capabilities": [Capability.LOGICAL, Capability.MATHEMATICAL, Capability.CODE_ANALYSIS, Capability.CHAIN_OF_THOUGHT, Capability.CODE_GENERATION, Capability.PROBLEM_DECOMPOSITION],
     },
     "o1": {
         "tier": ReasoningTier.EXPERT,
+        "provider": "openai",
         "capabilities": [Capability.LOGICAL, Capability.MATHEMATICAL, Capability.CODE_ANALYSIS, Capability.CHAIN_OF_THOUGHT, Capability.CODE_GENERATION, Capability.PROBLEM_DECOMPOSITION],
     },
     "o1-mini": {
         "tier": ReasoningTier.ADVANCED,
+        "provider": "openai",
         "capabilities": [Capability.LOGICAL, Capability.MATHEMATICAL, Capability.CODE_ANALYSIS, Capability.CHAIN_OF_THOUGHT, Capability.CODE_GENERATION, Capability.PROBLEM_DECOMPOSITION],
     },
     "deepseek-reasoner": {
         "tier": ReasoningTier.EXPERT,
+        "provider": "deepseek",
+        "capabilities": [Capability.LOGICAL, Capability.MATHEMATICAL, Capability.CODE_ANALYSIS, Capability.CHAIN_OF_THOUGHT, Capability.CODE_GENERATION, Capability.PROBLEM_DECOMPOSITION],
+    },
+    "claude-3-sonnet-20240229": {
+        "tier": ReasoningTier.EXPERT,
+        "provider": "anthropic",
         "capabilities": [Capability.LOGICAL, Capability.MATHEMATICAL, Capability.CODE_ANALYSIS, Capability.CHAIN_OF_THOUGHT, Capability.CODE_GENERATION, Capability.PROBLEM_DECOMPOSITION],
     },
 }

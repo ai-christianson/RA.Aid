@@ -18,8 +18,79 @@ from ra_aid.tools.expert import (
     emit_expert_context,
     expert_context,
     get_best_expert_model_by_capabilities,
+    get_best_expert_model_by_provider,
     read_files_with_limit,
 )
+
+@pytest.mark.parametrize(
+    "test_id,reasoning_tiers,provider,expected_model,expected_provider",
+    [
+        (
+            "highest_tier",
+            {
+                "model1": {
+                    "tier": ReasoningTier.BASIC,
+                    "provider": "openai",
+                },
+                "model2": {
+                    "tier": ReasoningTier.EXPERT,
+                    "provider": "openai",
+                },
+            },
+            None,
+            "model2",
+            "openai",
+        ),
+        (
+            "specific_provider",
+            {
+                "model1": {
+                    "tier": ReasoningTier.EXPERT,
+                    "provider": "openai",
+                },
+                "model2": {
+                    "tier": ReasoningTier.EXPERT,
+                    "provider": "anthropic",
+                },
+            },
+            "anthropic",
+            "model2",
+            "anthropic",
+        ),
+        (
+            "provider_not_found",
+            {
+                "model1": {
+                    "tier": ReasoningTier.EXPERT,
+                    "provider": "openai",
+                },
+            },
+            "gemini",
+            "",
+            "",
+        ),
+        (
+            "empty_reasoning_tiers",
+            {},
+            None,
+            "",
+            "",
+        ),
+    ],
+)
+def test_get_best_expert_model_by_provider(
+    test_id,
+    reasoning_tiers,
+    provider,
+    expected_model,
+    expected_provider,
+    monkeypatch,
+):
+    """Test getting model by provider with different scenarios."""
+    monkeypatch.setattr("ra_aid.tools.expert.reasoning_tiers", reasoning_tiers)
+    result_model, result_provider = get_best_expert_model_by_provider(provider=provider)
+    assert result_model == expected_model
+    assert result_provider == expected_provider
 
 @pytest.mark.parametrize(
     "test_id,reasoning_tiers,provider,capabilities,expected_model,expected_provider",
