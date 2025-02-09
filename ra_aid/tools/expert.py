@@ -19,7 +19,7 @@ _model = None
 def get_best_expert_model_by_capabilities(
     provider: str | None = None,
     capabilities: List[str] | None = None,
-) -> tuple[str, str]:
+) -> str:
     """Find the first model with the specified reasoning tier, capabilities, and specialties.
 
     Args:
@@ -36,8 +36,31 @@ def get_best_expert_model_by_capabilities(
         if all(capability in config["capabilities"] for capability in capabilities):
             model_provider = config.get("provider", "")
             if provider is None or model_provider == provider:
-                return model_name, model_provider
-    return "", ""
+                return model_name
+    return ""
+
+def get_best_expert_model_by_provider(provider: str | None = None) -> str:
+    """Find the model with the highest reasoning tier for the specified provider.
+
+    Args:
+        provider: Optional provider name to filter by (default: None)
+
+    Returns:
+        str: Model name, or empty string if none found
+    """
+    best_tier = -1
+    best_model = ""
+    
+    for model_name, config in reasoning_tiers.items():
+        model_provider = config.get("provider", "")
+        current_tier = config.get("tier", ReasoningTier.BASIC).value
+        
+        if (provider is None or model_provider == provider) and current_tier > best_tier:
+            best_tier = current_tier
+            best_model = model_name
+            
+    return best_model
+
 
 def get_random_model_from_provider(provider: str) -> str:
     """Get a random model from the given provider."""
@@ -53,13 +76,18 @@ def get_model():
         if _model is None:
             expert_provider = _global_memory["config"]["expert_provider"] or "openai"
             auto_select_expert_model = _global_memory["config"]["expert_auto_select_model"] or False
+            console.print(Panel(f"INFO: Expert provider: {expert_provider}", title="Info", border_style="white"))
+            console.print(Panel(f"INFO: Auto select expert model: {auto_select_expert_model}", title="Info", border_style="white"))
             if auto_select_expert_model:
-                expert_model = get_best_expert_model_by_capabilities(expert_provider)
+                # expert_model = get_best_expert_model_by_capabilities(expert_provider)
+                expert_model = get_best_expert_model_by_provider(expert_provider)
+                console.print(Panel(f"INFO: Selected expert model: {expert_model}", title="Info", border_style="white"))
             else:
                 expert_model = _global_memory["config"]["expert_model"] or None
                 if not expert_model:
-                    expert_model = get_random_model_from_provider(expert_provider)
-                    console.print(Panel(f"Selected expert model beacuse non provided: {expert_model}", title="Random Expert model selection", border_style="yellow"))
+                    # expert_model = get_random_model_from_provider(expert_provider)
+                    expert_model = get_best_expert_model_by_provider(expert_provider)
+                    console.print(Panel(f"Selected expert model because non provided: {expert_model}", title="Random Expert model selection", border_style="yellow"))
             _model = initialize_expert_llm(expert_provider, expert_model)
     except Exception as e:
         _model = None
