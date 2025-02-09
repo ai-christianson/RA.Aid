@@ -1,8 +1,55 @@
 """
 List of model parameters
 """
+from typing import Final
+from enum import Enum
+from typing import List, Set
 
 DEFAULT_TOKEN_LIMIT = 100000
+
+class Capability(str, Enum):
+    LOGICAL = "logical"
+    MATHEMATICAL = "mathematical"
+    CODE_ANALYSIS = "code_analysis"
+    CODE_GENERATION = "code_generation"
+    PROBLEM_DECOMPOSITION = "problem_decomposition"
+    CHAIN_OF_THOUGHT = "chain_of_thought"
+
+    @classmethod
+    def list(cls) -> List[str]:
+        """Return all capabilities as a list of strings."""
+        return [cap.value for cap in cls]
+    
+    @classmethod
+    def set(cls) -> Set[str]:
+        """Return all capabilities as a set of strings."""
+        return {cap.value for cap in cls}
+
+# Define reasoning tiers as constants to ensure consistency
+class ReasoningTier:
+    NONE: Final[int] = 0        # No specific reasoning capabilities
+    BASIC: Final[int] = 1       # Basic logical reasoning
+    ADVANCED: Final[int] = 2    # Advanced reasoning with multiple capabilities
+    EXPERT: Final[int] = 3      # Expert-level reasoning with all capabilities
+
+reasoning_tiers = {
+    "o1-preview": {
+        "tier": ReasoningTier.EXPERT,
+        "capabilities": [Capability.LOGICAL, Capability.MATHEMATICAL, Capability.CODE_ANALYSIS, Capability.CHAIN_OF_THOUGHT, Capability.CODE_GENERATION, Capability.PROBLEM_DECOMPOSITION],
+    },
+    "o1": {
+        "tier": ReasoningTier.EXPERT,
+        "capabilities": [Capability.LOGICAL, Capability.MATHEMATICAL, Capability.CODE_ANALYSIS, Capability.CHAIN_OF_THOUGHT, Capability.CODE_GENERATION, Capability.PROBLEM_DECOMPOSITION],
+    },
+    "o1-mini": {
+        "tier": ReasoningTier.ADVANCED,
+        "capabilities": [Capability.LOGICAL, Capability.MATHEMATICAL, Capability.CODE_ANALYSIS, Capability.CHAIN_OF_THOUGHT, Capability.CODE_GENERATION, Capability.PROBLEM_DECOMPOSITION],
+    },
+    "deepseek-reasoner": {
+        "tier": ReasoningTier.EXPERT,
+        "capabilities": [Capability.LOGICAL, Capability.MATHEMATICAL, Capability.CODE_ANALYSIS, Capability.CHAIN_OF_THOUGHT, Capability.CODE_GENERATION, Capability.PROBLEM_DECOMPOSITION],
+    },
+}
 
 models_params = {
     "openai": {

@@ -191,6 +191,12 @@ Examples:
         default=8080,
         help="Port to listen on for web interface (default: 8080)",
     )
+    parser.add_argument(
+        "--expert-auto-select-model",
+        action="store_true",
+        default=False,
+        help="Automatically select the best expert model based on reasoning capabilities",
+    )
     if args is None:
         args = sys.argv[1:]
     parsed_args = parser.parse_args(args)
@@ -351,6 +357,7 @@ def main():
             _global_memory["config"]["model"] = args.model
             _global_memory["config"]["expert_provider"] = args.expert_provider
             _global_memory["config"]["expert_model"] = args.expert_model
+            _global_memory["config"]["expert_auto_select_model"] = args.expert_auto_select_model
 
             # Create chat agent with appropriate tools
             chat_agent = create_agent(
@@ -419,6 +426,7 @@ def main():
             args.research_provider or args.provider
         )
         _global_memory["config"]["research_model"] = args.research_model or args.model
+        _global_memory["config"]["expert_auto_select_model"] = args.expert_auto_select_model
 
         # Run research stage
         print_stage_header("Research Stage")

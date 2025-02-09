@@ -1,13 +1,296 @@
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 import pytest
 
+from ra_aid.models_params import ReasoningTier, Capability
+from ra_aid.tools.memory import _global_memory
+
+@pytest.fixture(autouse=True)
+def mock_global_memory():
+    """Mock the global memory configuration."""
+    with patch.dict(_global_memory, {"config": {
+        "expert_provider": "openai",
+        "expert_model": "gpt-4",
+        "expert_auto_select_model": False
+    }}, clear=True):
+        yield
 from ra_aid.tools.expert import (
     emit_expert_context,
     expert_context,
+    get_best_expert_model_by_reasoning_tier,
+    get_best_expert_model_by_reasoning_tier_capabilities_and_specialties,
     read_files_with_limit,
 )
 
+@pytest.mark.parametrize(
+    "test_id,reasoning_tiers,tier,provider,expected_model,expected_provider",
+    [
+        (
+            "expert_model_exists",
+            {
+                "model1": {"tier": ReasoningTier.BASIC, "provider": "openai"},
+                "model2": {"tier": ReasoningTier.EXPERT, "provider": "anthropic"},
+                "model3": {"tier": ReasoningTier.ADVANCED, "provider": "openai"},
+            },
+            ReasoningTier.EXPERT,
+            None,
+            "model2",
+            "anthropic",
+        ),
+        (
+            "multiple_expert_models",
+            {
+                "model1": {"tier": ReasoningTier.EXPERT, "provider": "openai"},
+                "model2": {"tier": ReasoningTier.EXPERT, "provider": "anthropic"},
+                "model3": {"tier": ReasoningTier.ADVANCED, "provider": "openai"},
+            },
+            ReasoningTier.EXPERT,
+            None,
+            "model1",
+            "openai",
+        ),
+        (
+            "advanced_model_exists",
+            {
+                "model1": {"tier": ReasoningTier.BASIC, "provider": "openai"},
+                "model2": {"tier": ReasoningTier.ADVANCED, "provider": "anthropic"},
+                "model3": {"tier": ReasoningTier.NONE, "provider": "openai"},
+            },
+            ReasoningTier.ADVANCED,
+            None,
+            "model2",
+            "anthropic",
+        ),
+        (
+            "basic_model_exists",
+            {
+                "model1": {"tier": ReasoningTier.BASIC, "provider": "openai"},
+                "model2": {"tier": ReasoningTier.NONE, "provider": "anthropic"},
+            },
+            ReasoningTier.BASIC,
+            None,
+            "model1",
+            "openai",
+        ),
+        (
+            "specific_provider_match",
+            {
+                "model1": {"tier": ReasoningTier.EXPERT, "provider": "openai"},
+                "model2": {"tier": ReasoningTier.EXPERT, "provider": "anthropic"},
+            },
+            ReasoningTier.EXPERT,
+            "anthropic",
+            "model2",
+            "anthropic",
+        ),
+        (
+            "provider_not_found",
+            {
+                "model1": {"tier": ReasoningTier.EXPERT, "provider": "openai"},
+                "model2": {"tier": ReasoningTier.EXPERT, "provider": "anthropic"},
+            },
+            ReasoningTier.EXPERT,
+            "gemini",
+            "",
+            "",
+        ),
+        (
+            "no_matching_tier",
+            {
+                "model1": {"tier": ReasoningTier.BASIC, "provider": "openai"},
+                "model2": {"tier": ReasoningTier.ADVANCED, "provider": "anthropic"},
+            },
+            ReasoningTier.EXPERT,
+            None,
+            "",
+            "",
+        ),
+        (
+            "empty_reasoning_tiers",
+            {},
+            ReasoningTier.EXPERT,
+            None,
+            "",
+            "",
+        ),
+    ],
+)
+def test_get_best_expert_model_by_reasoning_tier(
+    test_id, reasoning_tiers, tier, provider, expected_model, expected_provider, monkeypatch
+):
+    """Test getting model by reasoning tier with different scenarios."""
+    monkeypatch.setattr("ra_aid.tools.expert.reasoning_tiers", reasoning_tiers)
+    result_model, result_provider = get_best_expert_model_by_reasoning_tier(tier, provider)
+    assert result_model == expected_model
+    assert result_provider == expected_provider
+
+
+@pytest.mark.parametrize(
+    "test_id,reasoning_tiers,tier,capabilities,specialties,provider,expected_model,expected_provider",
+    [
+        (
+            "exact_match",
+            {
+                "model1": {
+                    "tier": ReasoningTier.EXPERT,
+                    "capabilities": [Capability.LOGICAL],
+                    "provider": "openai",
+                },
+            },
+            ReasoningTier.EXPERT,
+            [Capability.LOGICAL],
+            [],
+            None,
+            "model1",
+            "openai",
+        ),
+        (
+            "multiple_capabilities",
+            {
+                "model1": {
+                    "tier": ReasoningTier.EXPERT,
+                    "capabilities": [Capability.LOGICAL, Capability.MATHEMATICAL, Capability.CODE_ANALYSIS],
+                    "provider": "anthropic",
+                },
+            },
+            ReasoningTier.EXPERT,
+            [Capability.LOGICAL, Capability.MATHEMATICAL],
+            [],
+            None,
+            "model1",
+            "anthropic",
+        ),
+        (
+            "all_capabilities",
+            {
+                "model1": {
+                    "tier": ReasoningTier.EXPERT,
+                    "capabilities": Capability.list(),
+                    "provider": "openai",
+                },
+            },
+            ReasoningTier.EXPERT,
+            [Capability.LOGICAL, Capability.CODE_GENERATION],
+            [],
+            None,
+            "model1",
+            "openai",
+        ),
+        (
+            "specific_provider",
+            {
+                "model1": {
+                    "tier": ReasoningTier.EXPERT,
+                    "capabilities": [Capability.LOGICAL],
+                    "provider": "openai",
+                },
+                "model2": {
+                    "tier": ReasoningTier.EXPERT,
+                    "capabilities": [Capability.LOGICAL],
+                    "provider": "anthropic",
+                },
+            },
+            ReasoningTier.EXPERT,
+            [Capability.LOGICAL],
+            [],
+            "anthropic",
+            "model2",
+            "anthropic",
+        ),
+        (
+            "provider_not_found",
+            {
+                "model1": {
+                    "tier": ReasoningTier.EXPERT,
+                    "capabilities": [Capability.LOGICAL],
+                    "provider": "openai",
+                },
+            },
+            ReasoningTier.EXPERT,
+            [Capability.LOGICAL],
+            [],
+            "gemini",
+            "",
+            "",
+        ),
+        (
+            "no_capabilities_requested",
+            {
+                "model1": {
+                    "tier": ReasoningTier.EXPERT,
+                    "capabilities": [Capability.LOGICAL],
+                    "provider": "openai",
+                },
+            },
+            ReasoningTier.EXPERT,
+            [],
+            [],
+            None,
+            "model1",
+            "openai",
+        ),
+        (
+            "missing_capability",
+            {
+                "model1": {
+                    "tier": ReasoningTier.EXPERT,
+                    "capabilities": [Capability.LOGICAL],
+                    "provider": "openai",
+                },
+            },
+            ReasoningTier.EXPERT,
+            [Capability.MATHEMATICAL],
+            [],
+            None,
+            "",
+            "",
+        ),
+        (
+            "wrong_tier",
+            {
+                "model1": {
+                    "tier": ReasoningTier.BASIC,
+                    "capabilities": [Capability.LOGICAL],
+                    "provider": "openai",
+                },
+            },
+            ReasoningTier.EXPERT,
+            [Capability.LOGICAL],
+            [],
+            None,
+            "",
+            "",
+        ),
+        (
+            "empty_reasoning_tiers",
+            {},
+            ReasoningTier.EXPERT,
+            [Capability.LOGICAL],
+            [],
+            None,
+            "",
+            "",
+        ),
+    ],
+)
+def test_get_best_expert_model_by_reasoning_tier_capabilities_and_specialties(
+    test_id,
+    reasoning_tiers,
+    tier,
+    capabilities,
+    specialties,
+    provider,
+    expected_model,
+    expected_provider,
+    monkeypatch,
+):
+    """Test getting model by reasoning tier, capabilities, and specialties with different scenarios."""
+    monkeypatch.setattr("ra_aid.tools.expert.reasoning_tiers", reasoning_tiers)
+    result_model, result_provider = get_best_expert_model_by_reasoning_tier_capabilities_and_specialties(
+        tier, capabilities, specialties, provider
+    )
+    assert result_model == expected_model
+    assert result_provider == expected_provider
 
 @pytest.fixture
 def temp_test_files(tmp_path):

@@ -1,6 +1,8 @@
 import os
 from typing import List
 
+from ..models_params import reasoning_tiers, ReasoningTier
+
 from langchain_core.tools import tool
 from rich.console import Console
 from rich.markdown import Markdown
@@ -13,13 +15,66 @@ console = Console()
 _model = None
 
 
+def get_best_expert_model_by_reasoning_tier(
+    tier: int = ReasoningTier.EXPERT, provider: str | None = None
+) -> tuple[str, str]:
+    """Find the first model with the specified reasoning tier and optionally from a specific provider.
+
+    Args:
+        tier: The reasoning tier to search for (default: ReasoningTier.EXPERT)
+        provider: Optional provider name to filter by
+
+    Returns:
+        tuple[str, str]: Tuple of (model_name, provider_name), or ("", "") if none found
+    """
+    for model_name, config in reasoning_tiers.items():
+        if config["tier"] == tier:
+            model_provider = config.get("provider", "")
+            if provider is None or model_provider == provider:
+                return model_name, model_provider
+    return "", ""
+
+
+def get_best_expert_model_by_reasoning_tier_capabilities_and_specialties(
+    tier: int = ReasoningTier.EXPERT,
+    capabilities: List[str] | None = None,
+    specialties: List[str] | None = None,
+    provider: str | None = None,
+) -> tuple[str, str]:
+    """Find the first model with the specified reasoning tier, capabilities, and specialties.
+
+    Args:
+        tier: The reasoning tier to search for (default: ReasoningTier.EXPERT)
+        capabilities: List of capabilities to search for (default: None)
+        specialties: List of specialties to search for (default: None)
+        provider: Optional provider name to filter by (default: None)
+
+    Returns:
+        tuple[str, str]: Tuple of (model_name, provider_name), or ("", "") if none found
+    """
+    if capabilities is None:
+        capabilities = []
+    if specialties is None:
+        specialties = []
+    for model_name, config in reasoning_tiers.items():
+        if config["tier"] == tier and all(
+            capability in config["capabilities"] for capability in capabilities
+        ) and all(
+            specialty in config["specialties"] for specialty in specialties
+        ):
+            model_provider = config.get("provider", "")
+            if provider is None or model_provider == provider:
+                return model_name, model_provider
+    return "", ""
+
+
 def get_model():
     global _model
     try:
         if _model is None:
-            config = _global_memory["config"]
-            provider = config.get("expert_provider") or config.get("provider")
-            model = config.get("expert_model") or config.get("model")
+            provider = _global_memory["config"]["expert_provider"] or "openai"
+            model = _global_memory["config"]["expert_model"] or "o1"
+            auto_select_expert_model = _global_memory["config"]["expert_auto_select_model"] or False
             _model = initialize_expert_llm(provider, model)
     except Exception as e:
         _model = None
