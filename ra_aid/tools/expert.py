@@ -1,4 +1,5 @@
 import os
+import random
 from typing import List
 
 from ..models_params import reasoning_tiers, ReasoningTier
@@ -10,6 +11,7 @@ from rich.panel import Panel
 
 from ..llm import initialize_expert_llm
 from .memory import _global_memory, get_memory_value
+from ra_aid import models_params
 
 console = Console()
 _model = None
@@ -37,15 +39,28 @@ def get_best_expert_model_by_capabilities(
                 return model_name, model_provider
     return "", ""
 
+def get_random_model_from_provider(provider: str) -> str:
+    """Get a random model from the given provider."""
+    # get random model by provider from models_params
+    models = models_params.get(provider, {}).get("models", [])    
+    if not models:
+        return ""
+    return random.choice(models)
 
 def get_model():
     global _model
     try:
         if _model is None:
-            provider = _global_memory["config"]["expert_provider"] or "openai"
-            model = _global_memory["config"]["expert_model"] or "o1"
+            expert_provider = _global_memory["config"]["expert_provider"] or "openai"
             auto_select_expert_model = _global_memory["config"]["expert_auto_select_model"] or False
-            _model = initialize_expert_llm(provider, model)
+            if auto_select_expert_model:
+                expert_model = get_best_expert_model_by_capabilities(expert_provider)
+            else:
+                expert_model = _global_memory["config"]["expert_model"] or None
+                if not expert_model:
+                    expert_model = get_random_model_from_provider(expert_provider)
+                    console.print(Panel(f"Selected expert model beacuse non provided: {expert_model}", title="Random Expert model selection", border_style="yellow"))
+            _model = initialize_expert_llm(expert_provider, expert_model)
     except Exception as e:
         _model = None
         console.print(
