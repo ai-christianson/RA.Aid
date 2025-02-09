@@ -99,6 +99,14 @@ def check_access_to_model(model_name: str, provider: str) -> bool:
         console.print(Panel(f"Error checking model accessibility: {str(e)}", title="Error", border_style="red"))
         return False
 
+# TODO: This is intent of the changes.
+# The goal is to dynamically select the best model based on the capabilities needed from the query or the specific task being worked on.
+# TODO: replace get_best_expert_model_by_provider with get_best_expert_model_by_capabilities but cant at the moment since we dont have yet the code to inspect the query to determine the capabilities needed.
+# Using get_best_expert_model_by_provider for now; considering it hard-coded temporarily while coding.
+# The bunch of print statements should be removed once the code is working.
+# Current state and concerns:
+# 1. The code is successfully iterating through the models for provider.
+# 2. But what do we do when we cannot find an expert model? I found at times my API token does not have access to some models, what should happen in this case?
 def get_model():
     global _model
     models_to_exclude = set()  # Using a set to ensure uniqueness

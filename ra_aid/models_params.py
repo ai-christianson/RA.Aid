@@ -32,6 +32,7 @@ class ReasoningTier:
     ADVANCED: Final[int] = 2    # Advanced reasoning with multiple capabilities
     EXPERT: Final[int] = 3      # Expert-level reasoning with all capabilities
 
+# TODO: make the provider the top-level key
 reasoning_tiers = {
     "o1-preview": {
         "tier": ReasoningTier.EXPERT,
