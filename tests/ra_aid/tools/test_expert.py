@@ -1,13 +1,222 @@
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 import pytest
 
+from ra_aid.models_params import ReasoningTier, Capability
+from ra_aid.tools.memory import _global_memory
+
+@pytest.fixture(autouse=True)
+def mock_global_memory():
+    """Mock the global memory configuration."""
+    with patch.dict(_global_memory, {"config": {
+        "expert_provider": "openai",
+        "expert_model": "gpt-4",
+        "expert_auto_select_model": False
+    }}, clear=True):
+        yield
 from ra_aid.tools.expert import (
     emit_expert_context,
     expert_context,
+    get_best_expert_model_by_capabilities,
+    get_best_expert_model_by_provider,
     read_files_with_limit,
 )
 
+@pytest.mark.parametrize(
+    "test_id,reasoning_tiers,provider,expected_model,expected_provider",
+    [
+        (
+            "highest_tier",
+            {
+                "model1": {
+                    "tier": ReasoningTier.BASIC,
+                    "provider": "openai",
+                },
+                "model2": {
+                    "tier": ReasoningTier.EXPERT,
+                    "provider": "openai",
+                },
+            },
+            None,
+            "model2",
+            "openai",
+        ),
+        (
+            "specific_provider",
+            {
+                "model1": {
+                    "tier": ReasoningTier.EXPERT,
+                    "provider": "openai",
+                },
+                "model2": {
+                    "tier": ReasoningTier.EXPERT,
+                    "provider": "anthropic",
+                },
+            },
+            "anthropic",
+            "model2",
+            "anthropic",
+        ),
+        (
+            "provider_not_found",
+            {
+                "model1": {
+                    "tier": ReasoningTier.EXPERT,
+                    "provider": "openai",
+                },
+            },
+            "gemini",
+            "",
+            "",
+        ),
+        (
+            "empty_reasoning_tiers",
+            {},
+            None,
+            "",
+            "",
+        ),
+    ],
+)
+def test_get_best_expert_model_by_provider(
+    test_id,
+    reasoning_tiers,
+    provider,
+    expected_model,
+    expected_provider,
+    monkeypatch,
+):
+    """Test getting model by provider with different scenarios."""
+    monkeypatch.setattr("ra_aid.tools.expert.reasoning_tiers", reasoning_tiers)
+    result_model, result_provider = get_best_expert_model_by_provider(provider=provider)
+    assert result_model == expected_model
+    assert result_provider == expected_provider
+
+@pytest.mark.parametrize(
+    "test_id,reasoning_tiers,provider,capabilities,expected_model,expected_provider",
+    [
+        (
+            "exact_match",
+            {
+                "model1": {
+                    "capabilities": [Capability.LOGICAL],
+                    "provider": "openai",
+                },
+            },
+            None,
+            [Capability.LOGICAL],
+            "model1",
+            "openai",
+        ),
+        (
+            "multiple_capabilities",
+            {
+                "model1": {
+                    "capabilities": [Capability.LOGICAL, Capability.MATHEMATICAL, Capability.CODE_ANALYSIS],
+                    "provider": "anthropic",
+                },
+            },
+            None,
+            [Capability.LOGICAL, Capability.MATHEMATICAL],
+            "model1",
+            "anthropic",
+        ),
+        (
+            "all_capabilities",
+            {
+                "model1": {
+                    "capabilities": Capability.list(),
+                    "provider": "openai",
+                },
+            },
+            None,
+            [Capability.LOGICAL, Capability.CODE_GENERATION],
+            "model1",
+            "openai",
+        ),
+        (
+            "specific_provider",
+            {
+                "model1": {
+                    "capabilities": [Capability.LOGICAL],
+                    "provider": "openai",
+                },
+                "model2": {
+                    "capabilities": [Capability.LOGICAL],
+                    "provider": "anthropic",
+                },
+            },
+            "anthropic",
+            [Capability.LOGICAL],
+            "model2",
+            "anthropic",
+        ),
+        (
+            "provider_not_found",
+            {
+                "model1": {
+                    "capabilities": [Capability.LOGICAL],
+                    "provider": "openai",
+                },
+            },
+            "gemini",
+            [Capability.LOGICAL],
+            "",
+            "",
+        ),
+        (
+            "no_capabilities_requested",
+            {
+                "model1": {
+                    "capabilities": [Capability.LOGICAL],
+                    "provider": "openai",
+                },
+            },
+            None,
+            None,
+            "model1",
+            "openai",
+        ),
+        (
+            "missing_capability",
+            {
+                "model1": {
+                    "capabilities": [Capability.LOGICAL],
+                    "provider": "openai",
+                },
+            },
+            None,
+            [Capability.MATHEMATICAL],
+            "",
+            "",
+        ),
+        (
+            "empty_reasoning_tiers",
+            {},
+            None,
+            [Capability.LOGICAL],
+            "",
+            "",
+        ),
+    ],
+)
+def test_get_best_expert_model_by_capabilities(
+    test_id,
+    reasoning_tiers,
+    provider,
+    capabilities,
+    expected_model,
+    expected_provider,
+    monkeypatch,
+):
+    """Test getting model by capabilities with different scenarios."""
+    monkeypatch.setattr("ra_aid.tools.expert.reasoning_tiers", reasoning_tiers)
+    result_model, result_provider = get_best_expert_model_by_capabilities(
+        provider=provider,
+        capabilities=capabilities,
+    )
+    assert result_model == expected_model
+    assert result_provider == expected_provider
 
 @pytest.fixture
 def temp_test_files(tmp_path):

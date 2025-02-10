@@ -3,7 +3,13 @@
 from typing import Any, Dict, List, Union
 
 from langchain_core.tools import tool
+from ra_aid.agent_core import create_agent, run_agent_with_retry
+from ra_aid.models_params import Capability
+from ra_aid.prompts import TEXT_CATEGORIZER_PROMPT
+from ra_aid.tools.expert import get_best_expert_model_by_capabilities
 from rich.console import Console
+from rich.markdown import Markdown
+from rich.panel import Panel
 
 from ra_aid.console.formatting import print_error
 from ra_aid.exceptions import AgentInterrupt
@@ -22,6 +28,44 @@ RESEARCH_AGENT_RECURSION_LIMIT = 3
 
 console = Console()
 
+def select_model(query: str, config: dict) -> str:
+    """Select the best model for the given query based on reasoning capabilities."""
+    default_provider = config.get("provider", "anthropic")
+    default_model = config.get("model", "claude-3-5-sonnet-20241022")
+    expert_auto_select_model = config.get("expert_auto_select_model", False)
+    expert_provider = config.get("expert_provider")
+    console = Console()
+    if expert_auto_select_model and expert_provider is None:
+        # user wants us to select the best expert model based on capabilities
+        categories = Capability.list()
+        prompt = TEXT_CATEGORIZER_PROMPT.format(
+            categories=categories,
+            text=query,
+        )
+        console.print(Panel(Markdown(f"{prompt}"), title="🤖 Categorizer prompt"))
+        # use the detault provider and model to determine the best expert model
+        categories_result = run_agent_with_retry(
+            agent=create_agent(initialize_llm(default_provider, default_model), [prompt]),
+            prompt=prompt,
+            config=config
+        )
+        console.print(Panel(Markdown(f"{categories_result}"), title="🤖 Categories Result"))
+        model_name, provider_name = get_best_expert_model_by_capabilities(
+            provider=config.get("expert_provider"),
+            capabilities=categories_result.strip().split("\n")
+        )
+        console.print(Panel(Markdown(f"Using model: {model_name} from {provider_name}"), title="🤖 Selected Expert Model Selection"))
+        return initialize_llm(
+            provider_name or expert_provider,
+            model_name or default_model,
+        )
+    else:
+        console.print(Panel(Markdown(f"Using default model: {default_model} from {default_provider}"), title="🤖 Selected Default Model"))
+        return initialize_llm(
+            default_provider,
+            default_model,
+        )
+
 
 @tool("request_research")
 def request_research(query: str) -> ResearchResult:
@@ -35,10 +79,7 @@ def request_research(query: str) -> ResearchResult:
     """
     # Initialize model from config
     config = _global_memory.get("config", {})
-    model = initialize_llm(
-        config.get("provider", "anthropic"),
-        config.get("model", "claude-3-5-sonnet-20241022"),
-    )
+    model = select_model(query, config)
 
     # Check recursion depth
     current_depth = _global_memory.get("agent_depth", 0)
@@ -117,10 +158,7 @@ def request_web_research(query: str) -> ResearchResult:
     """
     # Initialize model from config
     config = _global_memory.get("config", {})
-    model = initialize_llm(
-        config.get("provider", "anthropic"),
-        config.get("model", "claude-3-5-sonnet-20241022"),
-    )
+    model = select_model(query, config)
 
     success = True
     reason = None
@@ -185,10 +223,7 @@ def request_research_and_implementation(query: str) -> Dict[str, Any]:
     """
     # Initialize model from config
     config = _global_memory.get("config", {})
-    model = initialize_llm(
-        config.get("provider", "anthropic"),
-        config.get("model", "claude-3-5-sonnet-20241022"),
-    )
+    model = select_model(query, config)
 
     try:
         # Run research agent
@@ -255,10 +290,7 @@ def request_task_implementation(task_spec: str) -> Dict[str, Any]:
     """
     # Initialize model from config
     config = _global_memory.get("config", {})
-    model = initialize_llm(
-        config.get("provider", "anthropic"),
-        config.get("model", "claude-3-5-sonnet-20241022"),
-    )
+    model = select_model(task_spec, config)
 
     # Get required parameters
     tasks = [
@@ -331,10 +363,7 @@ def request_implementation(task_spec: str) -> Dict[str, Any]:
     """
     # Initialize model from config
     config = _global_memory.get("config", {})
-    model = initialize_llm(
-        config.get("provider", "anthropic"),
-        config.get("model", "claude-3-5-sonnet-20241022"),
-    )
+    model = select_model(task_spec, config)
 
     try:
         # Run planning agent

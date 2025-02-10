@@ -977,3 +977,37 @@ You have often been criticized for:
 
 NEVER ANNOUNCE WHAT YOU ARE DOING, JUST DO IT!
 """
+
+TEXT_CATEGORIZER_PROMPT = """
+You will be given a list of categories and a text. Your task is to select one or more categories from the list that best match the content of the text. You must only choose from the provided categories.
+
+Here is the list of categories:
+<categories>
+{categories}
+</categories>
+
+Now, here is the text to be categorized:
+<text>
+{text}
+</text>
+
+Please follow these steps:
+
+1. Carefully read and analyze the given text.
+2. Compare the content of the text to each category in the list.
+3. Select the category or categories that most closely match the main themes, topics, or content of the text. 
+You may choose multiple categories if appropriate, but only if they are truly relevant.
+4. Before providing your final answer, explain your reasoning for selecting the chosen category or categories. 
+Consider the main topics, themes, vocabulary, and overall content of the text in your justification.
+
+Provide your response in the following format:
+<justification>
+[Your explanation for why you chose the category or categories]
+</justification>
+
+<selected_categories>
+[List the selected category or categories here, one per line]
+</selected_categories>
+
+Remember, you must only select from the categories provided in the list. Do not create new categories or modify the existing ones.
+"""

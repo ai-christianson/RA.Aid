@@ -7,8 +7,8 @@ import pytest
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
-from ra_aid.agent_utils import (
-    AgentState,
+from langgraph.prebuilt.chat_agent_executor import AgentState
+from ra_aid.agent_core import (
     create_agent,
     get_model_token_limit,
     state_modifier,
@@ -26,7 +26,7 @@ def mock_model():
 @pytest.fixture
 def mock_memory():
     """Fixture providing a mock global memory store."""
-    with patch("ra_aid.agent_utils._global_memory") as mock_mem:
+    with patch("ra_aid.agent_core._global_memory") as mock_mem:
         mock_mem.get.return_value = {}
         yield mock_mem
 
@@ -67,7 +67,7 @@ def test_get_model_token_limit_litellm_success():
     """Test get_model_token_limit successfully getting limit from litellm."""
     config = {"provider": "anthropic", "model": "claude-2"}
 
-    with patch("ra_aid.agent_utils.get_model_info") as mock_get_info:
+    with patch("ra_aid.agent_core.get_model_info") as mock_get_info:
         mock_get_info.return_value = {"max_input_tokens": 100000}
         token_limit = get_model_token_limit(config, "default")
         assert token_limit == 100000
@@ -77,7 +77,7 @@ def test_get_model_token_limit_litellm_not_found():
     """Test fallback to models_tokens when litellm raises NotFoundError."""
     config = {"provider": "anthropic", "model": "claude-2"}
 
-    with patch("ra_aid.agent_utils.get_model_info") as mock_get_info:
+    with patch("ra_aid.agent_core.get_model_info") as mock_get_info:
         mock_get_info.side_effect = litellm.exceptions.NotFoundError(
             message="Model not found", model="claude-2", llm_provider="anthropic"
         )
@@ -89,7 +89,7 @@ def test_get_model_token_limit_litellm_error():
     """Test fallback to models_tokens when litellm raises other exceptions."""
     config = {"provider": "anthropic", "model": "claude-2"}
 
-    with patch("ra_aid.agent_utils.get_model_info") as mock_get_info:
+    with patch("ra_aid.agent_core.get_model_info") as mock_get_info:
         mock_get_info.side_effect = Exception("Unknown error")
         token_limit = get_model_token_limit(config, "default")
         assert token_limit == models_params["anthropic"]["claude2"]["token_limit"]
@@ -107,7 +107,7 @@ def test_create_agent_anthropic(mock_model, mock_memory):
     """Test create_agent with Anthropic Claude model."""
     mock_memory.get.return_value = {"provider": "anthropic", "model": "claude-2"}
 
-    with patch("ra_aid.agent_utils.create_react_agent") as mock_react:
+    with patch("ra_aid.agent_core.create_react_agent") as mock_react:
         mock_react.return_value = "react_agent"
         agent = create_agent(mock_model, [])
 
@@ -121,13 +121,14 @@ def test_create_agent_openai(mock_model, mock_memory):
     """Test create_agent with OpenAI model."""
     mock_memory.get.return_value = {"provider": "openai", "model": "gpt-4"}
 
-    with patch("ra_aid.agent_utils.CiaynAgent") as mock_ciayn:
+    with patch("ra_aid.agent_core.get_model_token_limit", return_value=None), \
+         patch("ra_aid.agent_core.CiaynAgent") as mock_ciayn:
         mock_ciayn.return_value = "ciayn_agent"
         agent = create_agent(mock_model, [])
 
         assert agent == "ciayn_agent"
         mock_ciayn.assert_called_once_with(
-            mock_model, [], max_tokens=models_params["openai"]["gpt-4"]["token_limit"]
+            mock_model, [], max_tokens=DEFAULT_TOKEN_LIMIT
         )
 
 
@@ -135,7 +136,7 @@ def test_create_agent_no_token_limit(mock_model, mock_memory):
     """Test create_agent when no token limit is found."""
     mock_memory.get.return_value = {"provider": "unknown", "model": "unknown-model"}
 
-    with patch("ra_aid.agent_utils.CiaynAgent") as mock_ciayn:
+    with patch("ra_aid.agent_core.CiaynAgent") as mock_ciayn:
         mock_ciayn.return_value = "ciayn_agent"
         agent = create_agent(mock_model, [])
 
@@ -149,7 +150,7 @@ def test_create_agent_missing_config(mock_model, mock_memory):
     """Test create_agent with missing configuration."""
     mock_memory.get.return_value = {"provider": "openai"}
 
-    with patch("ra_aid.agent_utils.CiaynAgent") as mock_ciayn:
+    with patch("ra_aid.agent_core.CiaynAgent") as mock_ciayn:
         mock_ciayn.return_value = "ciayn_agent"
         agent = create_agent(mock_model, [])
 
@@ -195,7 +196,7 @@ def test_create_agent_with_checkpointer(mock_model, mock_memory):
     mock_memory.get.return_value = {"provider": "openai", "model": "gpt-4"}
     mock_checkpointer = Mock()
 
-    with patch("ra_aid.agent_utils.CiaynAgent") as mock_ciayn:
+    with patch("ra_aid.agent_core.CiaynAgent") as mock_ciayn:
         mock_ciayn.return_value = "ciayn_agent"
         agent = create_agent(mock_model, [], checkpointer=mock_checkpointer)
 
@@ -214,8 +215,8 @@ def test_create_agent_anthropic_token_limiting_enabled(mock_model, mock_memory):
     }
 
     with (
-        patch("ra_aid.agent_utils.create_react_agent") as mock_react,
-        patch("ra_aid.agent_utils.get_model_token_limit") as mock_limit,
+        patch("ra_aid.agent_core.create_react_agent") as mock_react,
+        patch("ra_aid.agent_core.get_model_token_limit") as mock_limit,
     ):
         mock_react.return_value = "react_agent"
         mock_limit.return_value = 100000
@@ -237,8 +238,8 @@ def test_create_agent_anthropic_token_limiting_disabled(mock_model, mock_memory)
     }
 
     with (
-        patch("ra_aid.agent_utils.create_react_agent") as mock_react,
-        patch("ra_aid.agent_utils.get_model_token_limit") as mock_limit,
+        patch("ra_aid.agent_core.create_react_agent") as mock_react,
+        patch("ra_aid.agent_core.get_model_token_limit") as mock_limit,
     ):
         mock_react.return_value = "react_agent"
         mock_limit.return_value = 100000
@@ -257,7 +258,7 @@ def test_get_model_token_limit_research(mock_memory):
         "research_provider": "anthropic",
         "research_model": "claude-2",
     }
-    with patch("ra_aid.agent_utils.get_model_info") as mock_get_info:
+    with patch("ra_aid.agent_core.get_model_info") as mock_get_info:
         mock_get_info.return_value = {"max_input_tokens": 150000}
         token_limit = get_model_token_limit(config, "research")
         assert token_limit == 150000
@@ -271,7 +272,7 @@ def test_get_model_token_limit_planner(mock_memory):
         "planner_provider": "deepseek",
         "planner_model": "dsm-1",
     }
-    with patch("ra_aid.agent_utils.get_model_info") as mock_get_info:
+    with patch("ra_aid.agent_core.get_model_info") as mock_get_info:
         mock_get_info.return_value = {"max_input_tokens": 120000}
         token_limit = get_model_token_limit(config, "planner")
         assert token_limit == 120000
