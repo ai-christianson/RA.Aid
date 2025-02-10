@@ -54,7 +54,7 @@ def test_initialize_expert_defaults(clean_env, mock_openai, monkeypatch):
     monkeypatch.setenv("EXPERT_OPENAI_API_KEY", "test-key")
     _llm = initialize_expert_llm("openai", "o1")
 
-    mock_openai.assert_called_once_with(api_key="test-key", model="o1", reasoning_effort="high")
+    mock_openai.assert_called_once_with(api_key="test-key", model="o1", reasoning_effort="high", timeout=180, max_retries=5)
 
 
 def test_initialize_expert_openai_custom(clean_env, mock_openai, monkeypatch):
@@ -63,7 +63,8 @@ def test_initialize_expert_openai_custom(clean_env, mock_openai, monkeypatch):
     _llm = initialize_expert_llm("openai", "gpt-4-preview")
 
     mock_openai.assert_called_once_with(
-        api_key="test-key", model="gpt-4-preview", temperature=0, reasoning_effort="high"
+        api_key="test-key", model="gpt-4-preview", temperature=0, reasoning_effort="high",
+        timeout=180, max_retries=5
     )
 
 
@@ -73,7 +74,8 @@ def test_initialize_expert_gemini(clean_env, mock_gemini, monkeypatch):
     _llm = initialize_expert_llm("gemini", "gemini-2.0-flash-thinking-exp-1219")
 
     mock_gemini.assert_called_once_with(
-        api_key="test-key", model="gemini-2.0-flash-thinking-exp-1219", temperature=0
+        api_key="test-key", model="gemini-2.0-flash-thinking-exp-1219", temperature=0,
+        timeout=180, max_retries=5
     )
 
 
@@ -83,7 +85,8 @@ def test_initialize_expert_anthropic(clean_env, mock_anthropic, monkeypatch):
     _llm = initialize_expert_llm("anthropic", "claude-3")
 
     mock_anthropic.assert_called_once_with(
-        api_key="test-key", model_name="claude-3", temperature=0
+        api_key="test-key", model_name="claude-3", temperature=0,
+        timeout=180, max_retries=5
     )
 
 
@@ -97,6 +100,8 @@ def test_initialize_expert_openrouter(clean_env, mock_openai, monkeypatch):
         base_url="https://openrouter.ai/api/v1",
         model="models/mistral-large",
         temperature=0,
+        timeout=180,
+        max_retries=5
     )
 
 
@@ -111,6 +116,8 @@ def test_initialize_expert_openai_compatible(clean_env, mock_openai, monkeypatch
         base_url="http://test-url",
         model="local-model",
         temperature=0,
+        timeout=180,
+        max_retries=5
     )
 
 
@@ -141,7 +148,7 @@ def test_initialize_openai(clean_env, mock_openai):
     os.environ["OPENAI_API_KEY"] = "test-key"
     _model = initialize_llm("openai", "gpt-4")
 
-    mock_openai.assert_called_once_with(api_key="test-key", model="gpt-4")
+    mock_openai.assert_called_once_with(api_key="test-key", model="gpt-4", timeout=180, max_retries=5)
 
 
 def test_initialize_gemini(clean_env, mock_gemini):
@@ -150,7 +157,7 @@ def test_initialize_gemini(clean_env, mock_gemini):
     _model = initialize_llm("gemini", "gemini-2.0-flash-thinking-exp-1219")
 
     mock_gemini.assert_called_once_with(
-        api_key="test-key", model="gemini-2.0-flash-thinking-exp-1219"
+        api_key="test-key", model="gemini-2.0-flash-thinking-exp-1219", timeout=180, max_retries=5
     )
 
 
@@ -159,7 +166,7 @@ def test_initialize_anthropic(clean_env, mock_anthropic):
     os.environ["ANTHROPIC_API_KEY"] = "test-key"
     _model = initialize_llm("anthropic", "claude-3")
 
-    mock_anthropic.assert_called_once_with(api_key="test-key", model_name="claude-3")
+    mock_anthropic.assert_called_once_with(api_key="test-key", model_name="claude-3", timeout=180, max_retries=5)
 
 
 def test_initialize_openrouter(clean_env, mock_openai):
@@ -171,6 +178,8 @@ def test_initialize_openrouter(clean_env, mock_openai):
         api_key="test-key",
         base_url="https://openrouter.ai/api/v1",
         model="mistral-large",
+        timeout=180,
+        max_retries=5,
     )
 
 
@@ -185,6 +194,8 @@ def test_initialize_openai_compatible(clean_env, mock_openai):
         base_url="https://custom-endpoint/v1",
         model="local-model",
         temperature=0.3,
+        timeout=180,
+        max_retries=5,
     )
 
 
@@ -208,17 +219,19 @@ def test_temperature_defaults(clean_env, mock_openai, mock_anthropic, mock_gemin
         base_url="http://test-url",
         model="test-model",
         temperature=0.3,
+        timeout=180,
+        max_retries=5,
     )
 
     # Test other providers don't set temperature by default
     initialize_llm("openai", "test-model")
-    mock_openai.assert_called_with(api_key="test-key", model="test-model")
+    mock_openai.assert_called_with(api_key="test-key", model="test-model", timeout=180, max_retries=5)
 
     initialize_llm("anthropic", "test-model")
-    mock_anthropic.assert_called_with(api_key="test-key", model_name="test-model")
+    mock_anthropic.assert_called_with(api_key="test-key", model_name="test-model", timeout=180, max_retries=5)
 
     initialize_llm("gemini", "test-model")
-    mock_gemini.assert_called_with(api_key="test-key", model="test-model")
+    mock_gemini.assert_called_with(api_key="test-key", model="test-model", timeout=180, max_retries=5)
 
 
 def test_explicit_temperature(clean_env, mock_openai, mock_anthropic, mock_gemini):
@@ -233,19 +246,19 @@ def test_explicit_temperature(clean_env, mock_openai, mock_anthropic, mock_gemin
     # Test OpenAI
     initialize_llm("openai", "test-model", temperature=test_temp)
     mock_openai.assert_called_with(
-        api_key="test-key", model="test-model", temperature=test_temp
+        api_key="test-key", model="test-model", temperature=test_temp, timeout=180, max_retries=5
     )
 
     # Test Gemini
     initialize_llm("gemini", "test-model", temperature=test_temp)
     mock_gemini.assert_called_with(
-        api_key="test-key", model="test-model", temperature=test_temp
+        api_key="test-key", model="test-model", temperature=test_temp, timeout=180, max_retries=5
     )
 
     # Test Anthropic
     initialize_llm("anthropic", "test-model", temperature=test_temp)
     mock_anthropic.assert_called_with(
-        api_key="test-key", model_name="test-model", temperature=test_temp
+        api_key="test-key", model_name="test-model", temperature=test_temp, timeout=180, max_retries=5
     )
 
     # Test OpenRouter
@@ -255,6 +268,8 @@ def test_explicit_temperature(clean_env, mock_openai, mock_anthropic, mock_gemin
         base_url="https://openrouter.ai/api/v1",
         model="test-model",
         temperature=test_temp,
+        timeout=180,
+        max_retries=5,
     )
 
 
@@ -309,12 +324,12 @@ def test_initialize_llm_cross_provider(
     _llm3 = initialize_llm("gemini", "gemini-2.0-flash-thinking-exp-1219")
 
     # Verify both were initialized correctly
-    mock_openai.assert_called_once_with(api_key="openai-key", model="gpt-4")
+    mock_openai.assert_called_once_with(api_key="openai-key", model="gpt-4", timeout=180, max_retries=5)
     mock_anthropic.assert_called_once_with(
-        api_key="anthropic-key", model_name="claude-3"
+        api_key="anthropic-key", model_name="claude-3", timeout=180, max_retries=5
     )
     mock_gemini.assert_called_once_with(
-        api_key="gemini-key", model="gemini-2.0-flash-thinking-exp-1219"
+        api_key="gemini-key", model="gemini-2.0-flash-thinking-exp-1219", timeout=180, max_retries=5
     )
 
 
@@ -348,7 +363,7 @@ def test_environment_variable_precedence(clean_env, mock_openai, monkeypatch):
 
     # Test LLM client creation with expert mode
     _llm = create_llm_client("openai", "o1", is_expert=True)
-    mock_openai.assert_called_with(api_key="expert-key", model="o1", reasoning_effort="high")
+    mock_openai.assert_called_with(api_key="expert-key", model="o1", reasoning_effort="high", timeout=180, max_retries=5)
 
     # Test environment validation
     monkeypatch.setenv("EXPERT_OPENAI_API_KEY", "")
@@ -408,6 +423,8 @@ def test_initialize_deepseek(
         base_url="https://api.deepseek.com",
         temperature=1,
         model="deepseek-reasoner",
+        timeout=180,
+        max_retries=5,
     )
 
     # Test with non-reasoner model
@@ -417,6 +434,8 @@ def test_initialize_deepseek(
         base_url="https://api.deepseek.com",
         temperature=1,
         model="deepseek-chat",
+        timeout=180,
+        max_retries=5,
     )
 
 
@@ -433,6 +452,8 @@ def test_initialize_expert_deepseek(
         base_url="https://api.deepseek.com",
         temperature=0,
         model="deepseek-reasoner",
+        timeout=180,
+        max_retries=5,
     )
 
     # Test with non-reasoner model
@@ -442,6 +463,8 @@ def test_initialize_expert_deepseek(
         base_url="https://api.deepseek.com",
         temperature=0,
         model="deepseek-chat",
+        timeout=180,
+        max_retries=5,
     )
 
 
@@ -458,6 +481,8 @@ def test_initialize_openrouter_deepseek(
         base_url="https://openrouter.ai/api/v1",
         temperature=1,
         model="deepseek/deepseek-r1",
+        timeout=180,
+        max_retries=5,
     )
 
     # Test with non-DeepSeek model
@@ -466,6 +491,8 @@ def test_initialize_openrouter_deepseek(
         api_key="test-key",
         base_url="https://openrouter.ai/api/v1",
         model="mistral/mistral-large",
+        timeout=180,
+        max_retries=5,
     )
 
 
@@ -482,6 +509,8 @@ def test_initialize_expert_openrouter_deepseek(
         base_url="https://openrouter.ai/api/v1",
         temperature=0,
         model="deepseek/deepseek-r1",
+        timeout=180,
+        max_retries=5,
     )
 
     # Test with non-DeepSeek model
@@ -491,6 +520,8 @@ def test_initialize_expert_openrouter_deepseek(
         base_url="https://openrouter.ai/api/v1",
         model="mistral/mistral-large",
         temperature=0,
+        timeout=180,
+        max_retries=5,
     )
 
 
@@ -517,4 +548,6 @@ def test_deepseek_environment_fallback(clean_env, mock_deepseek_reasoner, monkey
         base_url="https://api.deepseek.com",
         temperature=0,
         model="deepseek-reasoner",
+        timeout=180,
+        max_retries=5,
     )
