@@ -17,7 +17,11 @@ from ra_aid.agent_utils import (
     run_planning_agent,
     run_research_agent,
 )
-from ra_aid.config import DEFAULT_MAX_TEST_CMD_RETRIES, DEFAULT_RECURSION_LIMIT
+from ra_aid.config import (
+    DEFAULT_MAX_TEST_CMD_RETRIES,
+    DEFAULT_RECURSION_LIMIT,
+    VALID_PROVIDERS,
+)
 from ra_aid.dependencies import check_dependencies
 from ra_aid.env import validate_environment
 from ra_aid.llm import initialize_llm
@@ -40,14 +44,6 @@ def launch_webui(host: str, port: int):
 
 
 def parse_arguments(args=None):
-    VALID_PROVIDERS = [
-        "anthropic",
-        "openai",
-        "openrouter",
-        "openai-compatible",
-        "deepseek",
-        "gemini",
-    ]
     ANTHROPIC_DEFAULT_MODEL = "claude-3-5-sonnet-20241022"
     OPENAI_DEFAULT_MODEL = "gpt-4o"
 
@@ -80,9 +76,11 @@ Examples:
     parser.add_argument(
         "--provider",
         type=str,
-        default="openai"
-        if (os.getenv("OPENAI_API_KEY") and not os.getenv("ANTHROPIC_API_KEY"))
-        else "anthropic",
+        default=(
+            "openai"
+            if (os.getenv("OPENAI_API_KEY") and not os.getenv("ANTHROPIC_API_KEY"))
+            else "anthropic"
+        ),
         choices=VALID_PROVIDERS,
         help="The LLM provider to use",
     )
@@ -137,6 +135,9 @@ Examples:
     )
     parser.add_argument(
         "--verbose", action="store_true", help="Enable verbose logging output"
+    )
+    parser.add_argument(
+        "--pretty-logger", action="store_true", help="Enable pretty logging output"
     )
     parser.add_argument(
         "--temperature",
@@ -276,7 +277,7 @@ def is_stage_requested(stage: str) -> bool:
 def main():
     """Main entry point for the ra-aid command line tool."""
     args = parse_arguments()
-    setup_logging(args.verbose)
+    setup_logging(args.verbose, args.pretty_logger)
     logger.debug("Starting RA.Aid with arguments: %s", args)
 
     # Launch web interface if requested
@@ -378,9 +379,9 @@ def main():
                 chat_agent,
                 CHAT_PROMPT.format(
                     initial_request=initial_request,
-                    web_research_section=WEB_RESEARCH_PROMPT_SECTION_CHAT
-                    if web_research_enabled
-                    else "",
+                    web_research_section=(
+                        WEB_RESEARCH_PROMPT_SECTION_CHAT if web_research_enabled else ""
+                    ),
                     working_directory=working_directory,
                     current_date=current_date,
                     project_info=formatted_project_info,

@@ -4,15 +4,7 @@
 Add functionality to automatically fallback to alternative LLM models when a tool call experiences multiple consecutive failures.
 
 ## Background
-Currently, when a tool call fails due to LLM-related errors (e.g., API timeouts, rate limits, context length issues), there is no automatic fallback mechanism. This can lead to interrupted workflows and poor user experience.
-
-## Relevant Files
-- ra_aid/agents/ciayn_agent.py
-- ra_aid/llm.py
-- ra_aid/agent_utils.py
-- ra_aid/__main__.py
-- ra_aid/models_params.py
-
+Currently, when a tool call fails due to LLM-related errors (e.g., invalid format), there is no automatic fallback mechanism. This often causes infinite loop of erroring tool calls.
 
 ## Implementation Details
 
@@ -59,31 +51,24 @@ The prompt passed to `try_fallback_model`, should be the failed last few failing
 Define fallback sequences for each provider based on model capabilities:
 
 1. Try same provider's smaller models
-2. Try alternative providers' equivalent models
+2. Try alternative providers' similar models
 3. Raise final error if all fallbacks fail
 
-### Provider Strategy Updates
-Update provider strategies to support fallback configuration:
-- Add provider-specific fallback sequences
-- Handle model capability validation during fallback
-- Track successful/failed attempts
-
 ## Risks and Mitigations
-1. **Performance Impact**
-   - Risk: Multiple fallback attempts could increase latency
-   - Mitigation: Set reasonable max_failures limit and timeouts
-
-2. **Consistency**
-   - Risk: Different models may give slightly different outputs
-   - Mitigation: Validate output schema consistency across models
-
-3. **Cost**
+1. **Cost**
    - Risk: Fallback to more expensive models
    - Mitigation: Configure cost limits and preferred fallback sequences
 
-4. **State Management** 
+2. **State Management** 
    - Risk: Loss of context during fallbacks
    - Mitigation: Preserve conversation state and tool context
+
+## Relevant Files
+- ra_aid/agents/ciayn_agent.py
+- ra_aid/llm.py
+- ra_aid/agent_utils.py
+- ra_aid/__main__.py
+- ra_aid/models_params.py
 
 ## Acceptance Criteria
 1. Tool calls automatically attempt fallback models after N consecutive failures
@@ -92,16 +77,6 @@ Update provider strategies to support fallback configuration:
 4. Original error is preserved if all fallbacks fail
 5. Unit tests cover fallback scenarios and edge cases
 6. README.md updated to reflect new behavior
-
-## Testing
-1. Unit tests for fallback wrapper
-2. Integration tests with mock LLM failures 
-3. Provider strategy fallback tests
-4. Command line argument handling
-5. Error preservation and reporting
-6. Performance impact measurement
-7. Edge cases (e.g., partial failures, timeout handling)
-8. State preservation during fallbacks
 
 ## Documentation Updates
 1. Add fallback feature to main README

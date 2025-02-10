@@ -31,6 +31,7 @@ class DummyModel:
             content = "dummy_tool()"
 
         return Response()
+
     def bind_tools(self, tools, tool_choice):
         pass
 
@@ -267,6 +268,7 @@ class TestCiaynAgentNewMethods(unittest.TestCase):
         # Create a dummy tool that always fails for testing fallback
         def always_fail():
             raise Exception("Failure for fallback test")
+
         self.always_fail_tool = DummyTool(always_fail)
         # Create a dummy model that does minimal work for fallback tests
         self.dummy_model = DummyModel()
@@ -274,24 +276,33 @@ class TestCiaynAgentNewMethods(unittest.TestCase):
         self.agent = CiaynAgent(
             self.dummy_model,
             [self.always_fail_tool],
-            config={"max_tool_failures": 2, "fallback_tool_models": "dummy-fallback-model"}
+            config={
+                "max_tool_failures": 2,
+                "fallback_tool_models": "dummy-fallback-model",
+            },
         )
 
     def test_handle_tool_failure_increments_counter(self):
-        initial_failures = self.agent._tool_failure.consecutive_failures
+        initial_failures = self.agent.tool_failure_consecutive_failures
         self.agent._handle_tool_failure("dummy_call()", Exception("Test error"))
-        self.assertEqual(self.agent._tool_failure.consecutive_failures, initial_failures + 1)
+        self.assertEqual(
+            self.agent.tool_failure_consecutive_failures, initial_failures + 1
+        )
 
     def test_attempt_fallback_invokes_fallback_logic(self):
-        # Monkey-patch initialize_llm, merge_chat_history, and validate_provider_env 
+        # Monkey-patch initialize_llm, merge_chat_history, and validate_provider_env
         # to simulate fallback switching without external dependencies.
         def dummy_initialize_llm(provider, model_name, temperature=None):
             return self.dummy_model
+
         def dummy_merge_chat_history():
             return ["merged"]
+
         def dummy_validate_provider_env(provider):
             return True
+
         import ra_aid.llm as llm
+
         original_initialize = llm.initialize_llm
         original_merge = llm.merge_chat_history
         original_validate = llm.validate_provider_env
@@ -300,14 +311,15 @@ class TestCiaynAgentNewMethods(unittest.TestCase):
         llm.validate_provider_env = dummy_validate_provider_env
 
         # Set failure counter high enough to trigger fallback in _handle_tool_failure
-        self.agent._tool_failure.consecutive_failures = 2
+        self.agent.tool_failure_consecutive_failures = 2
         # Call _attempt_fallback; it should reset the failure counter to 0 on success.
         self.agent._attempt_fallback("always_fail_tool()")
-        self.assertEqual(self.agent._tool_failure.consecutive_failures, 0)
+        self.assertEqual(self.agent.tool_failure_consecutive_failures, 0)
         # Restore original functions
         llm.initialize_llm = original_initialize
         llm.merge_chat_history = original_merge
         llm.validate_provider_env = original_validate
+
 
 if __name__ == "__main__":
     unittest.main()
