@@ -54,7 +54,9 @@ def test_initialize_expert_defaults(clean_env, mock_openai, monkeypatch):
     monkeypatch.setenv("EXPERT_OPENAI_API_KEY", "test-key")
     _llm = initialize_expert_llm("openai", "o1")
 
-    mock_openai.assert_called_once_with(api_key="test-key", model="o1", reasoning_effort="high")
+    mock_openai.assert_called_once_with(
+        api_key="test-key", model="o1", reasoning_effort="high"
+    )
 
 
 def test_initialize_expert_openai_custom(clean_env, mock_openai, monkeypatch):
@@ -63,7 +65,10 @@ def test_initialize_expert_openai_custom(clean_env, mock_openai, monkeypatch):
     _llm = initialize_expert_llm("openai", "gpt-4-preview")
 
     mock_openai.assert_called_once_with(
-        api_key="test-key", model="gpt-4-preview", temperature=0, reasoning_effort="high"
+        api_key="test-key",
+        model="gpt-4-preview",
+        temperature=0,
+        reasoning_effort="high",
     )
 
 
@@ -348,7 +353,9 @@ def test_environment_variable_precedence(clean_env, mock_openai, monkeypatch):
 
     # Test LLM client creation with expert mode
     _llm = create_llm_client("openai", "o1", is_expert=True)
-    mock_openai.assert_called_with(api_key="expert-key", model="o1", reasoning_effort="high")
+    mock_openai.assert_called_with(
+        api_key="expert-key", model="o1", reasoning_effort="high"
+    )
 
     # Test environment validation
     monkeypatch.setenv("EXPERT_OPENAI_API_KEY", "")

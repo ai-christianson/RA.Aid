@@ -27,7 +27,6 @@ models_params = {
         "gpt-4o-mini": {"token_limit": 128000, "supports_temperature": True},
         "o1-preview": {"token_limit": 128000, "supports_temperature": False},
         "o1-mini": {"token_limit": 128000, "supports_temperature": False},
-        "o1-preview": {"token_limit": 128000, "supports_temperature": False},
         "o1": {"token_limit": 200000, "supports_temperature": False},
         "o3-mini": {"token_limit": 200000, "supports_temperature": False},
     },

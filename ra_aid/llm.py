@@ -1,8 +1,9 @@
 import os
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from langchain_anthropic import ChatAnthropic
 from langchain_core.language_models import BaseChatModel
+from langchain_core.messages import BaseMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
 
@@ -47,9 +48,9 @@ def create_deepseek_client(
         return ChatDeepseekReasoner(
             api_key=api_key,
             base_url=base_url,
-            temperature=0
-            if is_expert
-            else (temperature if temperature is not None else 1),
+            temperature=(
+                0 if is_expert else (temperature if temperature is not None else 1)
+            ),
             model=model_name,
         )
 
@@ -72,9 +73,9 @@ def create_openrouter_client(
         return ChatDeepseekReasoner(
             api_key=api_key,
             base_url="https://openrouter.ai/api/v1",
-            temperature=0
-            if is_expert
-            else (temperature if temperature is not None else 1),
+            temperature=(
+                0 if is_expert else (temperature if temperature is not None else 1)
+            ),
             model=model_name,
         )
 
@@ -114,7 +115,12 @@ def get_provider_config(provider: str, is_expert: bool = False) -> Dict[str, Any
             "base_url": "https://api.deepseek.com",
         },
     }
-    return configs.get(provider, {})
+    config = configs.get(provider, {})
+    if not config or not config.get("api_key"):
+        raise ValueError(
+            f"Missing required environment variable for provider: {provider}"
+        )
+    return config
 
 
 def create_llm_client(
@@ -219,8 +225,41 @@ def initialize_llm(
     return create_llm_client(provider, model_name, temperature, is_expert=False)
 
 
-def initialize_expert_llm(
-    provider: str, model_name: str
-) -> BaseChatModel:
+def initialize_expert_llm(provider: str, model_name: str) -> BaseChatModel:
     """Initialize an expert language model client based on the specified provider and model."""
     return create_llm_client(provider, model_name, temperature=None, is_expert=True)
+
+
+def validate_provider_env(provider: str) -> bool:
+    """Check if the required environment variables for a provider are set."""
+    required_vars = {
+        "openai": "OPENAI_API_KEY",
+        "anthropic": "ANTHROPIC_API_KEY",
+        "openrouter": "OPENROUTER_API_KEY",
+        "openai-compatible": "OPENAI_API_KEY",
+        "gemini": "GEMINI_API_KEY",
+        "deepseek": "DEEPSEEK_API_KEY",
+    }
+    key = required_vars.get(provider.lower())
+    if key:
+        return bool(os.getenv(key))
+    return False
+
+
+def merge_chat_history(
+    original_history: List[BaseMessage], fallback_history: List[BaseMessage]
+) -> List[BaseMessage]:
+    """Merge original and fallback chat histories while preserving order.
+
+    Args:
+        original_history: The original chat message history
+        fallback_history: Additional messages from fallback attempts
+
+    Returns:
+        List[BaseMessage]: Combined message history preserving chronological order
+
+    Note:
+        The function appends fallback messages to maintain context for future
+        interactions while preserving the original conversation flow.
+    """
+    return original_history + fallback_history

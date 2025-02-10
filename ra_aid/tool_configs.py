@@ -1,25 +1,18 @@
 from ra_aid.tools import (
     ask_expert,
     ask_human,
-    delete_key_facts,
-    delete_key_snippets,
-    deregister_related_files,
     emit_expert_context,
     emit_key_facts,
     emit_key_snippets,
-    emit_plan,
     emit_related_files,
     emit_research_notes,
     fuzzy_find_project_files,
     list_directory_tree,
-    monorepo_detected,
-    plan_implementation_completed,
     read_file_tool,
     ripgrep_search,
     run_programming_task,
     run_shell_command,
     task_completed,
-    ui_detected,
     web_search_tavily,
 )
 from ra_aid.tools.agent import (
@@ -29,7 +22,6 @@ from ra_aid.tools.agent import (
     request_task_implementation,
     request_web_research,
 )
-from ra_aid.tools.memory import one_shot_completed
 from ra_aid.tools.write_file import write_file_tool
 
 

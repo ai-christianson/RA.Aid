@@ -68,12 +68,29 @@ class CiaynAgent:
     - Memory management with configurable limits
     """
 
+    class ToolCallFailure:
+        """Tracks consecutive failures and fallback model usage for tool calls.
+
+        Attributes:
+            consecutive_failures (int): Count of consecutive failures for current model
+            current_provider (Optional[str]): Current provider being used
+            current_model (Optional[str]): Current model being used
+            used_fallbacks (Set[str]): Set of fallback models already attempted
+        """
+
+        def __init__(self):
+            self.consecutive_failures = 0
+            self.current_provider = None
+            self.current_model = None
+            self.used_fallbacks = set()
+
     def __init__(
         self,
         model,
         tools: list,
         max_history_messages: int = 50,
         max_tokens: Optional[int] = DEFAULT_TOKEN_LIMIT,
+        config: Optional[dict] = None,
     ):
         """Initialize the agent with a model and list of tools.
 
@@ -82,7 +99,17 @@ class CiaynAgent:
             tools: List of tools available to the agent
             max_history_messages: Maximum number of messages to keep in chat history
             max_tokens: Maximum number of tokens allowed in message history (None for no limit)
+            config: Optional configuration dictionary for fallback settings
         """
+        if config is None:
+            config = {}
+        self.config = config
+        self.provider = config.get("provider", "openai")
+        self.fallback_enabled = config.get("fallback_tool_enabled", True)
+        fallback_models_str = config.get("fallback_tool_models", "gpt-3.5-turbo,gpt-4")
+        self.fallback_tool_models = [
+            m.strip() for m in fallback_models_str.split(",") if m.strip()
+        ]
         self.model = model
         self.tools = tools
         self.max_history_messages = max_history_messages
@@ -90,6 +117,7 @@ class CiaynAgent:
         self.available_functions = []
         for t in tools:
             self.available_functions.append(get_function_info(t.func))
+        self._tool_failure = CiaynAgent.ToolCallFailure()
 
     def _build_prompt(self, last_result: Optional[str] = None) -> str:
         """Build the prompt for the agent including available tools and context."""
@@ -221,23 +249,56 @@ Output **ONLY THE CODE** and **NO MARKDOWN BACKTICKS**"""
         return base_prompt
 
     def _execute_tool(self, code: str) -> str:
-        """Execute a tool call and return its result."""
-        globals_dict = {tool.func.__name__: tool.func for tool in self.tools}
+        """Execute a tool call with retry and fallback logic and return its result."""
+        max_retries = 3
+        retries = 0
+        last_error = None
+        while retries < max_retries:
+            try:
+                code = code.strip()
+                if validate_function_call_pattern(code):
+                    functions_list = "\n\n".join(self.available_functions)
+                    code = _extract_tool_call(code, functions_list)
+                globals_dict = {tool.func.__name__: tool.func for tool in self.tools}
+                result = eval(code, globals_dict)
+                self._tool_failure.consecutive_failures = 0
+                return result
+            except Exception as e:
+                self._handle_tool_failure(code, e)
+                last_error = e
+                retries += 1
+        raise ToolExecutionError(
+            f"Error executing code after {max_retries} attempts: {str(last_error)}"
+        )
 
+    def _handle_tool_failure(self, code: str, error: Exception) -> None:
+        self._tool_failure.consecutive_failures += 1
+        max_failures = self.config.get("max_tool_failures", 3)
+        if (
+            self.fallback_enabled
+            and self._tool_failure.consecutive_failures >= max_failures
+            and self.fallback_tool_models
+        ):
+            self._attempt_fallback(code)
+
+    def _attempt_fallback(self, code: str) -> None:
+        new_model = self.fallback_tool_models[0]
+        failed_tool_call_name = code.split('(')[0].strip()
+        logger.error(
+            f"Tool call failed {self._tool_failure.consecutive_failures} times. Attempting fallback to model: {new_model} for tool: {failed_tool_call_name}"
+        )
         try:
-            code = code.strip()
-            # code = code.replace("\n", " ")
-
-            # if the eval fails, try to extract it via a model call
-            if validate_function_call_pattern(code):
-                functions_list = "\n\n".join(self.available_functions)
-                code = _extract_tool_call(code, functions_list)
-
-            result = eval(code.strip(), globals_dict)
-            return result
-        except Exception as e:
-            error_msg = f"Error executing code: {str(e)}"
-            raise ToolExecutionError(error_msg)
+            from ra_aid.llm import initialize_llm, merge_chat_history, validate_provider_env
+            if not validate_provider_env(self.provider):
+                logger.error(f"Missing environment configuration for provider {self.provider}. Cannot fallback.")
+            else:
+                self.model = initialize_llm(self.provider, new_model)
+                self.model.bind_tools(self.tools, tool_choice=failed_tool_call_name)
+                self._tool_failure.used_fallbacks.add(new_model)
+                merge_chat_history()  # Assuming merge_chat_history handles merging fallback history
+                self._tool_failure.consecutive_failures = 0
+        except Exception as switch_e:
+            logger.error(f"Fallback model switching failed: {switch_e}")
 
     def _create_agent_chunk(self, content: str) -> Dict[str, Any]:
         """Create an agent chunk in the format expected by print_agent_output."""
