@@ -4,7 +4,7 @@ from typing import Any, Dict, Generator, List, Optional, Union
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 
-from ra_aid.config import DEFAULT_MAX_TOOL_FAILURES
+from ra_aid.fallback_handler import FallbackHandler
 from ra_aid.exceptions import ToolExecutionError
 from ra_aid.logging_config import get_logger
 from ra_aid.models_params import DEFAULT_TOKEN_LIMIT
@@ -90,8 +90,7 @@ class CiaynAgent:
             config = {}
         self.config = config
         self.provider = config.get("provider", "openai")
-        self.fallback_enabled = config.get("fallback_tool_enabled", True)
-        self.fallback_tool_models = self._load_fallback_tool_models(config)
+        self.fallback_handler = FallbackHandler(config)
 
         self.model = model
         self.tools = tools
@@ -100,18 +99,8 @@ class CiaynAgent:
         self.available_functions = []
         for t in tools:
             self.available_functions.append(get_function_info(t.func))
-        self.tool_failure_consecutive_failures = 0
         self.tool_failure_current_provider = None
         self.tool_failure_current_model = None
-        self.tool_failure_used_fallbacks = set()
-
-    def _load_fallback_tool_models(self, config: dict) -> list:
-        fallback_tool_models_config = config.get("fallback_tool_models")
-        if fallback_tool_models_config:
-            return [m.strip() for m in fallback_tool_models_config.split(",") if m.strip()]
-        else:
-            from ra_aid.tool_leaderboard import supported_top_tool_models
-            return [item["model"] for item in supported_top_tool_models[:5]]
 
     def _build_prompt(self, last_result: Optional[str] = None) -> str:
         """Build the prompt for the agent including available tools and context."""
@@ -262,7 +251,7 @@ Output **ONLY THE CODE** and **NO MARKDOWN BACKTICKS**"""
                 logger.debug(
                     f"_execute_tool: tool executed successfully with result: {result}"
                 )
-                self.tool_failure_consecutive_failures = 0
+                self.fallback_handler.reset_fallback_handler()
                 return result
             except Exception as e:
                 logger.debug(f"_execute_tool: exception caught: {e}")
@@ -275,61 +264,7 @@ Output **ONLY THE CODE** and **NO MARKDOWN BACKTICKS**"""
         )
 
     def _handle_tool_failure(self, code: str, error: Exception) -> None:
-        logger.debug(
-            f"_handle_tool_failure: tool failure encountered for code '{code}' with error: {error}"
-        )
-        self.tool_failure_consecutive_failures += 1
-        max_failures = self.config.get("max_tool_failures", DEFAULT_MAX_TOOL_FAILURES)
-        logger.debug(
-            f"_handle_tool_failure: failure count {self.tool_failure_consecutive_failures}, max_failures {max_failures}"
-        )
-        if (
-            self.fallback_enabled
-            and self.tool_failure_consecutive_failures >= max_failures
-            and self.fallback_tool_models
-        ):
-            logger.debug(
-                "_handle_tool_failure: threshold reached, invoking fallback mechanism."
-            )
-            self._attempt_fallback(code)
-
-    def _attempt_fallback(self, code: str) -> None:
-        logger.debug(f"_attempt_fallback: initiating fallback for code: {code}")
-        new_model = self.fallback_tool_models[0]
-        failed_tool_call_name = code.split("(")[0].strip()
-        logger.error(
-            f"Tool call failed {self.tool_failure_consecutive_failures} times. Attempting fallback to model: {new_model} for tool: {failed_tool_call_name}"
-        )
-        try:
-            from ra_aid.llm import (
-                initialize_llm,
-                merge_chat_history,
-                validate_provider_env,
-            )
-
-            logger.debug(f"_attempt_fallback: validating provider {self.provider}")
-            if not validate_provider_env(self.provider):
-                logger.error(
-                    f"Missing environment configuration for provider {self.provider}. Cannot fallback."
-                )
-            else:
-                logger.debug(
-                    f"_attempt_fallback: initializing fallback model {new_model}"
-                )
-                self.model = initialize_llm(self.provider, new_model)
-                logger.debug(
-                    f"_attempt_fallback: binding tools to new model using tool: {failed_tool_call_name}"
-                )
-                self.model.bind_tools(self.tools, tool_choice=failed_tool_call_name)
-                self.tool_failure_used_fallbacks.add(new_model)
-                logger.debug("_attempt_fallback: merging chat history for fallback")
-                merge_chat_history()
-                self.tool_failure_consecutive_failures = 0
-                logger.debug(
-                    "_attempt_fallback: fallback successful and tool failure counter reset"
-                )
-        except Exception as switch_e:
-            logger.error(f"Fallback model switching failed: {switch_e}")
+        self.fallback_handler.handle_failure(code, error, logger, self)
 
     def _create_agent_chunk(self, content: str) -> Dict[str, Any]:
         """Create an agent chunk in the format expected by print_agent_output."""
