@@ -4,7 +4,6 @@ from typing import Any, Dict, Generator, List, Optional, Union
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 
-from ra_aid.fallback_handler import FallbackHandler
 from ra_aid.exceptions import ToolExecutionError
 from ra_aid.logging_config import get_logger
 from ra_aid.models_params import DEFAULT_TOKEN_LIMIT
@@ -84,13 +83,12 @@ class CiaynAgent:
             tools: List of tools available to the agent
             max_history_messages: Maximum number of messages to keep in chat history
             max_tokens: Maximum number of tokens allowed in message history (None for no limit)
-            config: Optional configuration dictionary for fallback settings
+            config: Optional configuration dictionary
         """
         if config is None:
             config = {}
         self.config = config
         self.provider = config.get("provider", "openai")
-        self.fallback_handler = FallbackHandler(config)
 
         self.model = model
         self.tools = tools
@@ -232,39 +230,29 @@ Output **ONLY THE CODE** and **NO MARKDOWN BACKTICKS**"""
         return base_prompt
 
     def _execute_tool(self, code: str) -> str:
-        """Execute a tool call with retry and fallback logic and return its result."""
-        max_retries = 3
-        retries = 0
-        last_error = None
-        while retries < max_retries:
-            try:
-                logger.debug(
-                    f"_execute_tool: attempt {retries+1}, original code: {code}"
-                )
-                code = code.strip()
-                if validate_function_call_pattern(code):
-                    functions_list = "\n\n".join(self.available_functions)
-                    code = _extract_tool_call(code, functions_list)
-                globals_dict = {tool.func.__name__: tool.func for tool in self.tools}
-                logger.debug(f"_execute_tool: evaluating code: {code}")
-                result = eval(code, globals_dict)
-                logger.debug(
-                    f"_execute_tool: tool executed successfully with result: {result}"
-                )
-                self.fallback_handler.reset_fallback_handler()
-                return result
-            except Exception as e:
-                logger.debug(f"_execute_tool: exception caught: {e}")
-                self._handle_tool_failure(code, e)
-                last_error = e
-                retries += 1
-                logger.debug(f"_execute_tool: retrying, new attempt count: {retries}")
-        raise ToolExecutionError(
-            f"Error executing code after {max_retries} attempts: {str(last_error)}"
-        )
+        """Execute a tool call and return its result."""
+        globals_dict = {tool.func.__name__: tool.func for tool in self.tools}
 
-    def _handle_tool_failure(self, code: str, error: Exception) -> None:
-        self.fallback_handler.handle_failure(code, error, logger, self)
+        try:
+            code = code.strip()
+            logger.debug(f"_execute_tool: stripped code: {code}")
+
+            # if the eval fails, try to extract it via a model call
+            if validate_function_call_pattern(code):
+                functions_list = "\n\n".join(self.available_functions)
+                logger.debug(f"_execute_tool: code before extraction: {code}")
+                code = _extract_tool_call(code, functions_list)
+                logger.debug(f"_execute_tool: code after extraction: {code}")
+
+            logger.debug(
+                f"_execute_tool: evaluating code: {code} with globals: {list(globals_dict.keys())}"
+            )
+            result = eval(code.strip(), globals_dict)
+            logger.debug(f"_execute_tool: result: {result}")
+            return result
+        except Exception as e:
+            error_msg = f"Error executing code: {str(e)}"
+            raise ToolExecutionError(error_msg)
 
     def _create_agent_chunk(self, content: str) -> Dict[str, Any]:
         """Create an agent chunk in the format expected by print_agent_output."""

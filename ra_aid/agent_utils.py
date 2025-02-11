@@ -9,10 +9,16 @@ import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Literal, Optional, Sequence
 
+from langgraph.graph.graph import CompiledGraph
 import litellm
 from anthropic import APIError, APITimeoutError, InternalServerError, RateLimitError
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import BaseMessage, HumanMessage, trim_messages
+from langchain_core.messages import (
+    BaseMessage,
+    HumanMessage,
+    InvalidToolCall,
+    trim_messages,
+)
 from langchain_core.tools import tool
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import create_react_agent
@@ -26,7 +32,8 @@ from ra_aid.agents.ciayn_agent import CiaynAgent
 from ra_aid.config import DEFAULT_MAX_TEST_CMD_RETRIES, DEFAULT_RECURSION_LIMIT
 from ra_aid.console.formatting import print_error, print_stage_header
 from ra_aid.console.output import print_agent_output
-from ra_aid.exceptions import AgentInterrupt
+from ra_aid.exceptions import AgentInterrupt, ToolExecutionError
+from ra_aid.fallback_handler import FallbackHandler
 from ra_aid.logging_config import get_logger
 from ra_aid.models_params import DEFAULT_TOKEN_LIMIT, models_params
 from ra_aid.project_info import (
@@ -238,7 +245,7 @@ def create_agent(
     *,
     checkpointer: Any = None,
     agent_type: str = "default",
-) -> Any:
+):
     """Create a react agent with the given configuration.
 
     Args:
@@ -775,61 +782,98 @@ def check_interrupt():
         raise AgentInterrupt("Interrupt requested")
 
 
-def run_agent_with_retry(agent, prompt: str, config: dict) -> Optional[str]:
-    """Run an agent with retry logic for API errors."""
-    logger.debug("Running agent with prompt length: %d", len(prompt))
-    original_handler = None
+# New helper functions for run_agent_with_retry refactoring
+def _setup_interrupt_handling():
     if threading.current_thread() is threading.main_thread():
         original_handler = signal.getsignal(signal.SIGINT)
         signal.signal(signal.SIGINT, _request_interrupt)
+        return original_handler
+    return None
 
+
+def _restore_interrupt_handling(original_handler):
+    if original_handler and threading.current_thread() is threading.main_thread():
+        signal.signal(signal.SIGINT, original_handler)
+
+
+def _increment_agent_depth():
+    current_depth = _global_memory.get("agent_depth", 0)
+    _global_memory["agent_depth"] = current_depth + 1
+
+
+def _decrement_agent_depth():
+    _global_memory["agent_depth"] = _global_memory.get("agent_depth", 1) - 1
+
+
+def _run_agent_stream(agent, prompt, config):
+    for chunk in agent.stream({"messages": [HumanMessage(content=prompt)]}, config):
+        logger.debug("Agent output: %s", chunk)
+        check_interrupt()
+        print_agent_output(chunk)
+        if _global_memory["plan_completed"] or _global_memory["task_completed"]:
+            _global_memory["plan_completed"] = False
+            _global_memory["task_completed"] = False
+            _global_memory["completion_message"] = ""
+            break
+
+
+def _execute_test_command_wrapper(original_prompt, config, test_attempts, auto_test):
+    return execute_test_command(config, original_prompt, test_attempts, auto_test)
+
+
+def _handle_api_error(e, attempt, max_retries, base_delay):
+    if isinstance(e, ValueError):
+        error_str = str(e).lower()
+        if "code" not in error_str or "429" not in error_str:
+            raise e
+    if attempt == max_retries - 1:
+        logger.error("Max retries reached, failing: %s", str(e))
+        raise RuntimeError(f"Max retries ({max_retries}) exceeded. Last error: {e}")
+    logger.warning("API error (attempt %d/%d): %s", attempt + 1, max_retries, str(e))
+    delay = base_delay * (2**attempt)
+    print_error(
+        f"Encountered {e.__class__.__name__}: {e}. Retrying in {delay}s... (Attempt {attempt+1}/{max_retries})"
+    )
+    start = time.monotonic()
+    while time.monotonic() - start < delay:
+        check_interrupt()
+        time.sleep(0.1)
+
+
+def run_agent_with_retry(agent, prompt: str, config: dict) -> Optional[str]:
+    """Run an agent with retry logic for API errors."""
+    logger.debug("Running agent with prompt length: %d", len(prompt))
+    original_handler = _setup_interrupt_handling()
     max_retries = 20
     base_delay = 1
     test_attempts = 0
     _max_test_retries = config.get("max_test_cmd_retries", DEFAULT_MAX_TEST_CMD_RETRIES)
     auto_test = config.get("auto_test", False)
     original_prompt = prompt
+    fallback_handler = FallbackHandler(config)
 
     with InterruptibleSection():
         try:
-            # Track agent execution depth
-            current_depth = _global_memory.get("agent_depth", 0)
-            _global_memory["agent_depth"] = current_depth + 1
-
+            _increment_agent_depth()
             for attempt in range(max_retries):
                 logger.debug("Attempt %d/%d", attempt + 1, max_retries)
                 check_interrupt()
                 try:
-                    for chunk in agent.stream(
-                        {"messages": [HumanMessage(content=prompt)]}, config
-                    ):
-                        logger.debug("Agent output: %s", chunk)
-                        check_interrupt()
-                        print_agent_output(chunk)
-
-                        if _global_memory["plan_completed"]:
-                            _global_memory["plan_completed"] = False
-                            _global_memory["task_completed"] = False
-                            _global_memory["completion_message"] = ""
-                            break
-                        if _global_memory["task_completed"]:
-                            _global_memory["task_completed"] = False
-                            _global_memory["completion_message"] = ""
-                            break
-
-                    # Execute test command if configured
+                    _run_agent_stream(agent, prompt, config)
+                    fallback_handler.reset_fallback_handler()
                     should_break, prompt, auto_test, test_attempts = (
-                        execute_test_command(
-                            config, original_prompt, test_attempts, auto_test
+                        _execute_test_command_wrapper(
+                            original_prompt, config, test_attempts, auto_test
                         )
                     )
                     if should_break:
                         break
                     if prompt != original_prompt:
                         continue
-
                     logger.debug("Agent run completed successfully")
                     return "Agent run completed successfully"
+                except (ToolExecutionError, InvalidToolCall) as e:
+                    _handle_tool_execution_error(fallback_handler, agent, e)
                 except (KeyboardInterrupt, AgentInterrupt):
                     raise
                 except (
@@ -839,35 +883,15 @@ def run_agent_with_retry(agent, prompt: str, config: dict) -> Optional[str]:
                     APIError,
                     ValueError,
                 ) as e:
-                    if isinstance(e, ValueError):
-                        error_str = str(e).lower()
-                        if "code" not in error_str or "429" not in error_str:
-                            raise  # Re-raise ValueError if it's not a Lambda 429
-                    if attempt == max_retries - 1:
-                        logger.error("Max retries reached, failing: %s", str(e))
-                        raise RuntimeError(
-                            f"Max retries ({max_retries}) exceeded. Last error: {e}"
-                        )
-                    logger.warning(
-                        "API error (attempt %d/%d): %s",
-                        attempt + 1,
-                        max_retries,
-                        str(e),
-                    )
-                    delay = base_delay * (2**attempt)
-                    print_error(
-                        f"Encountered {e.__class__.__name__}: {e}. Retrying in {delay}s... (Attempt {attempt+1}/{max_retries})"
-                    )
-                    start = time.monotonic()
-                    while time.monotonic() - start < delay:
-                        check_interrupt()
-                        time.sleep(0.1)
+                    _handle_api_error(e, attempt, max_retries, base_delay)
         finally:
-            # Reset depth tracking
-            _global_memory["agent_depth"] = _global_memory.get("agent_depth", 1) - 1
+            _decrement_agent_depth()
+            _restore_interrupt_handling(original_handler)
 
-            if (
-                original_handler
-                and threading.current_thread() is threading.main_thread()
-            ):
-                signal.signal(signal.SIGINT, original_handler)
+
+def _handle_tool_execution_error(
+    fallback_handler: FallbackHandler,
+    agent: CiaynAgent | CompiledGraph,
+    error: ToolExecutionError | InvalidToolCall,
+):
+    fallback_handler.handle_failure("Tool execution error", error, agent)

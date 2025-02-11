@@ -9,6 +9,8 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from ra_aid.llm import initialize_llm, merge_chat_history, validate_provider_env
 
+logger = get_logger(__name__)
+
 
 class FallbackHandler:
     """
@@ -73,6 +75,7 @@ class FallbackHandler:
             for item in supported:
                 if "type" not in item:
                     item["type"] = "prompt"
+                item["model"] = item["model"].lower()
                 final_models.append(item)
             message = "Fallback models selected: " + ", ".join(
                 [m["model"] for m in final_models]
@@ -85,7 +88,7 @@ class FallbackHandler:
             console.print(Panel(Markdown(message), title="Fallback Models"))
             return final_models
 
-    def handle_failure(self, code: str, error: Exception, logger, agent):
+    def handle_failure(self, code: str, error: Exception, agent):
         """
         Handle a tool failure by incrementing the failure counter and triggering fallback if thresholds are exceeded.
 
@@ -173,8 +176,23 @@ class FallbackHandler:
                 simple_model = initialize_llm(
                     fallback_model["provider"], fallback_model["model"]
                 )
+                tool_to_bind = next(
+                    (
+                        t
+                        for t in agent.tools
+                        if t.func.__name__ == failed_tool_call_name
+                    ),
+                    None,
+                )
+                if tool_to_bind is None:
+                    logger.debug(
+                        f"Failed to find tool: {failed_tool_call_name}. Available tools: {[t.func.__name__ for t in agent.tools]}"
+                    )
+                    raise Exception(
+                        f"Tool {failed_tool_call_name} not found in agent.tools"
+                    )
                 binded_model = simple_model.bind_tools(
-                    agent.tools, tool_choice=failed_tool_call_name
+                    [tool_to_bind], tool_choice=failed_tool_call_name
                 )
                 retry_model = binded_model.with_retry(
                     stop_after_attempt=RETRY_FALLBACK_COUNT
@@ -221,8 +239,23 @@ class FallbackHandler:
                 simple_model = initialize_llm(
                     fallback_model["provider"], fallback_model["model"]
                 )
+                tool_to_bind = next(
+                    (
+                        t
+                        for t in agent.tools
+                        if t.func.__name__ == failed_tool_call_name
+                    ),
+                    None,
+                )
+                if tool_to_bind is None:
+                    logger.debug(
+                        f"Failed to find tool: {failed_tool_call_name}. Available tools: {[t.func.__name__ for t in agent.tools]}"
+                    )
+                    raise Exception(
+                        f"Tool {failed_tool_call_name} not found in agent.tools"
+                    )
                 binded_model = simple_model.bind_tools(
-                    agent.tools, tool_choice=failed_tool_call_name
+                    [tool_to_bind], tool_choice=failed_tool_call_name
                 )
                 retry_model = binded_model.with_retry(
                     stop_after_attempt=RETRY_FALLBACK_COUNT
