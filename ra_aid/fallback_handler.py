@@ -71,6 +71,7 @@ class FallbackHandler:
         logger.error(
             f"Tool call failed {self.tool_failure_consecutive_failures} times. Attempting fallback to model: {fallback_model['model']} for tool: {failed_tool_call_name}"
         )
+        Console().print(Panel(Markdown(f"**Tool fallback activated**: Switching to fallback model {fallback_model['model']} for tool {failed_tool_call_name}."), title="Fallback Notification"))
         if fallback_model.get("type", "prompt").lower() == "fc":
             self.attempt_fallback_function(code, logger, agent)
         else:
