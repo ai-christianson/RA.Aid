@@ -270,7 +270,7 @@ models_params = {
         "claude-3-5-sonnet-20241022": {
             "token_limit": 200000,
             "supports_temperature": True,
-            "default_temperature": DEFAULT_TEMPERATURE,
+            "default_temperature": 1.0,
         },
         "claude-3-5-haiku-latest": {
             "token_limit": 200000,

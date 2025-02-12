@@ -116,9 +116,9 @@ Examples:
     parser.add_argument(
         "--expert-provider",
         type=str,
-        default="openai",
+        default=None,
         choices=VALID_PROVIDERS,
-        help="The LLM provider to use for expert knowledge queries (default: openai)",
+        help="The LLM provider to use for expert knowledge queries",
     )
     parser.add_argument(
         "--expert-model",
@@ -218,10 +218,19 @@ Examples:
 
     # Handle expert provider/model defaults
     if not parsed_args.expert_provider:
-        # If no expert provider specified, use main provider instead of defaulting to
-        # to any particular model since we do not know if we have access to any other model.
-        parsed_args.expert_provider = parsed_args.provider
-        parsed_args.expert_model = parsed_args.model
+        # Check for OpenAI API key first
+        if os.environ.get("OPENAI_API_KEY"):
+            parsed_args.expert_provider = "openai"
+            parsed_args.expert_model = None  # Will be auto-selected
+        # If no OpenAI key but DeepSeek key exists, use DeepSeek
+        elif os.environ.get("DEEPSEEK_API_KEY"):
+            parsed_args.expert_provider = "deepseek"
+            parsed_args.expert_model = "deepseek-reasoner"
+        else:
+            # Fall back to main provider if neither is available 
+            parsed_args.expert_provider = parsed_args.provider
+            parsed_args.expert_model = parsed_args.model
+
 
     # Validate temperature range if provided
     if parsed_args.temperature is not None and not (
