@@ -809,11 +809,9 @@ def run_agent_with_retry(agent, prompt: str, config: dict) -> Optional[str]:
                         if _global_memory["plan_completed"]:
                             _global_memory["plan_completed"] = False
                             _global_memory["task_completed"] = False
-                            _global_memory["completion_message"] = ""
                             break
                         if _global_memory["task_completed"]:
                             _global_memory["task_completed"] = False
-                            _global_memory["completion_message"] = ""
                             break
 
                     # Execute test command if configured
