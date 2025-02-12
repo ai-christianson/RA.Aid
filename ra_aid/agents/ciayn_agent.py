@@ -127,7 +127,7 @@ You must ONLY use ONE of the following functions (these are the ONLY functions t
 </available functions>
 
 You may use any of the above functions to complete your job. Use the best one for the current step you are on. Be efficient, avoid getting stuck in repetitive loops, and do not hesitate to call functions which delegate your work to make your life easier.
-But you MUST NOT assume tools exist that are not in the above list, e.g. write_file_tool.
+But you MUST NOT assume tools exist that are not in the above list, e.g. put_complete_file_contents.
 Consider your task done only once you have taken *ALL* the steps required to complete it.
 
 --- EXAMPLE BAD OUTPUTS ---
@@ -135,13 +135,13 @@ Consider your task done only once you have taken *ALL* the steps required to com
 This tool is not in available functions, so this is a bad tool call:
 
 <example bad output>
-write_file_tool(...)
+put_complete_file_contents(...)
 </example bad output>
 
 This tool call has a syntax error (unclosed parenthesis, quotes), so it is bad:
 
 <example bad output>
-write_file_tool("asdf
+put_complete_file_contents("asdf
 </example bad output>
 
 This tool call is bad because it includes a message as well as backticks:

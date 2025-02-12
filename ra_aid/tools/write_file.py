@@ -11,14 +11,18 @@ console = Console()
 
 
 @tool
-def write_file_tool(
+def put_complete_file_contents(
     filepath: str, content: str, encoding: str = "utf-8", verbose: bool = True
 ) -> Dict[str, any]:
-    """Write content to a text file.
+    """Write the complete contents of a file, creating it if it doesn't exist.
+    This tool is specifically for writing the entire contents of a file at once,
+    not for appending or partial writes.
+
+    `filepath` and `content` must ALWAYS be provided.
 
     Args:
         filepath: Path to the file to write
-        content: String content to write to the file
+        content: Complete string content to write to the file
         encoding: File encoding to use (default: utf-8)
         verbose: Whether to display a Rich panel with write statistics (default: True)
 

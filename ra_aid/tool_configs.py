@@ -30,7 +30,7 @@ from ra_aid.tools.agent import (
     request_web_research,
 )
 from ra_aid.tools.memory import one_shot_completed
-from ra_aid.tools.write_file import write_file_tool
+from ra_aid.tools.write_file import put_complete_file_contents
 
 
 # Read-only tools that don't modify system state
@@ -72,7 +72,7 @@ def get_read_only_tools(
 
 # Define constant tool groups
 READ_ONLY_TOOLS = get_read_only_tools()
-MODIFICATION_TOOLS = [run_programming_task, write_file_tool]
+MODIFICATION_TOOLS = [run_programming_task, put_complete_file_contents]
 COMMON_TOOLS = get_read_only_tools()
 EXPERT_TOOLS = [emit_expert_context, ask_expert]
 RESEARCH_TOOLS = [
