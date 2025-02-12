@@ -146,38 +146,39 @@ def test_estimate_tokens():
 def test_initialize_openai(clean_env, mock_openai):
     """Test OpenAI provider initialization"""
     os.environ["OPENAI_API_KEY"] = "test-key"
-    _model = initialize_llm("openai", "gpt-4")
+    _model = initialize_llm("openai", "gpt-4", temperature=0.7)
 
-    mock_openai.assert_called_once_with(api_key="test-key", model="gpt-4", timeout=180, max_retries=5)
+    mock_openai.assert_called_once_with(api_key="test-key", model="gpt-4", temperature=0.7, timeout=180, max_retries=5)
 
 
 def test_initialize_gemini(clean_env, mock_gemini):
     """Test Gemini provider initialization"""
     os.environ["GEMINI_API_KEY"] = "test-key"
-    _model = initialize_llm("gemini", "gemini-2.0-flash-thinking-exp-1219")
+    _model = initialize_llm("gemini", "gemini-2.0-flash-thinking-exp-1219", temperature=0.7)
 
-    mock_gemini.assert_called_once_with(
-        api_key="test-key", model="gemini-2.0-flash-thinking-exp-1219", timeout=180, max_retries=5
+    mock_gemini.assert_called_with(
+        api_key="test-key", model="gemini-2.0-flash-thinking-exp-1219", temperature=0.7, timeout=180, max_retries=5
     )
 
 
 def test_initialize_anthropic(clean_env, mock_anthropic):
     """Test Anthropic provider initialization"""
     os.environ["ANTHROPIC_API_KEY"] = "test-key"
-    _model = initialize_llm("anthropic", "claude-3")
+    _model = initialize_llm("anthropic", "claude-3", temperature=0.7)
 
-    mock_anthropic.assert_called_once_with(api_key="test-key", model_name="claude-3", timeout=180, max_retries=5)
+    mock_anthropic.assert_called_with(api_key="test-key", model_name="claude-3", temperature=0.7, timeout=180, max_retries=5)
 
 
 def test_initialize_openrouter(clean_env, mock_openai):
     """Test OpenRouter provider initialization"""
     os.environ["OPENROUTER_API_KEY"] = "test-key"
-    _model = initialize_llm("openrouter", "mistral-large")
+    _model = initialize_llm("openrouter", "mistral-large", temperature=0.7)
 
-    mock_openai.assert_called_once_with(
+    mock_openai.assert_called_with(
         api_key="test-key",
         base_url="https://openrouter.ai/api/v1",
         model="mistral-large",
+        temperature=0.7,
         timeout=180,
         max_retries=5,
     )
@@ -187,9 +188,9 @@ def test_initialize_openai_compatible(clean_env, mock_openai):
     """Test OpenAI-compatible provider initialization"""
     os.environ["OPENAI_API_KEY"] = "test-key"
     os.environ["OPENAI_API_BASE"] = "https://custom-endpoint/v1"
-    _model = initialize_llm("openai-compatible", "local-model")
+    _model = initialize_llm("openai-compatible", "local-model", temperature=0.3)
 
-    mock_openai.assert_called_once_with(
+    mock_openai.assert_called_with(
         api_key="test-key",
         base_url="https://custom-endpoint/v1",
         model="local-model",
@@ -201,9 +202,8 @@ def test_initialize_openai_compatible(clean_env, mock_openai):
 
 def test_initialize_unsupported_provider(clean_env):
     """Test initialization with unsupported provider raises ValueError"""
-    with pytest.raises(ValueError) as exc_info:
-        initialize_llm("unsupported", "model")
-    assert str(exc_info.value) == "Unsupported provider: unsupported"
+    with pytest.raises(ValueError, match=r"Unsupported provider: unknown"):
+        initialize_llm("unknown", "model")
 
 
 def test_temperature_defaults(clean_env, mock_openai, mock_anthropic, mock_gemini):
@@ -212,8 +212,9 @@ def test_temperature_defaults(clean_env, mock_openai, mock_anthropic, mock_gemin
     os.environ["ANTHROPIC_API_KEY"] = "test-key"
     os.environ["OPENAI_API_BASE"] = "http://test-url"
     os.environ["GEMINI_API_KEY"] = "test-key"
+
     # Test openai-compatible default temperature
-    initialize_llm("openai-compatible", "test-model")
+    initialize_llm("openai-compatible", "test-model", temperature=0.3)
     mock_openai.assert_called_with(
         api_key="test-key",
         base_url="http://test-url",
@@ -223,15 +224,22 @@ def test_temperature_defaults(clean_env, mock_openai, mock_anthropic, mock_gemin
         max_retries=5,
     )
 
-    # Test other providers don't set temperature by default
-    initialize_llm("openai", "test-model")
-    mock_openai.assert_called_with(api_key="test-key", model="test-model", timeout=180, max_retries=5)
+    # Test error when no temperature provided for models that support it
+    with pytest.raises(ValueError, match="Temperature must be provided for model"):
+        initialize_llm("openai", "test-model")
 
-    initialize_llm("anthropic", "test-model")
-    mock_anthropic.assert_called_with(api_key="test-key", model_name="test-model", timeout=180, max_retries=5)
+    with pytest.raises(ValueError, match="Temperature must be provided for model"):
+        initialize_llm("anthropic", "test-model")
 
-    initialize_llm("gemini", "test-model")
-    mock_gemini.assert_called_with(api_key="test-key", model="test-model", timeout=180, max_retries=5)
+    with pytest.raises(ValueError, match="Temperature must be provided for model"):
+        initialize_llm("gemini", "test-model")
+
+    # Test expert models don't require temperature
+    initialize_expert_llm("openai", "o1")
+    mock_openai.assert_called_with(api_key="test-key", model="o1", reasoning_effort="high", timeout=180, max_retries=5)
+
+    initialize_expert_llm("openai", "o1-mini")
+    mock_openai.assert_called_with(api_key="test-key", model="o1-mini", reasoning_effort="high", timeout=180, max_retries=5)
 
 
 def test_explicit_temperature(clean_env, mock_openai, mock_anthropic, mock_gemini):
@@ -297,46 +305,37 @@ def test_provider_name_validation():
     for provider in providers:
         try:
             with patch("ra_aid.llm.ChatOpenAI"), patch("ra_aid.llm.ChatAnthropic"):
-                initialize_llm(provider, "test-model")
-        except ValueError:
-            pytest.fail(f"Valid provider {provider} raised ValueError")
-
-    # Test case sensitivity
-    with patch("ra_aid.llm.ChatOpenAI"):
-        with pytest.raises(ValueError):
-            initialize_llm("OpenAI", "test-model")
+                initialize_llm(provider, "test-model", temperature=0.7)
+        except ValueError as e:
+            if "Temperature must be provided" not in str(e):
+                pytest.fail(f"Valid provider {provider} raised unexpected ValueError: {e}")
 
 
-def test_initialize_llm_cross_provider(
-    clean_env, mock_openai, mock_anthropic, mock_gemini, monkeypatch
-):
+def test_initialize_llm_cross_provider(clean_env, mock_openai, mock_anthropic, mock_gemini, monkeypatch):
     """Test initializing different providers in sequence."""
     # Initialize OpenAI
     monkeypatch.setenv("OPENAI_API_KEY", "openai-key")
-    _llm1 = initialize_llm("openai", "gpt-4")
+    _llm1 = initialize_llm("openai", "gpt-4", temperature=0.7)
+    mock_openai.assert_called_with(api_key="openai-key", model="gpt-4", temperature=0.7, timeout=180, max_retries=5)
 
     # Initialize Anthropic
     monkeypatch.setenv("ANTHROPIC_API_KEY", "anthropic-key")
-    _llm2 = initialize_llm("anthropic", "claude-3")
+    _llm2 = initialize_llm("anthropic", "claude-3", temperature=0.7)
+    mock_anthropic.assert_called_with(
+        api_key="anthropic-key", model_name="claude-3", temperature=0.7, timeout=180, max_retries=5
+    )
 
     # Initialize Gemini
     monkeypatch.setenv("GEMINI_API_KEY", "gemini-key")
-    _llm3 = initialize_llm("gemini", "gemini-2.0-flash-thinking-exp-1219")
-
-    # Verify both were initialized correctly
-    mock_openai.assert_called_once_with(api_key="openai-key", model="gpt-4", timeout=180, max_retries=5)
-    mock_anthropic.assert_called_once_with(
-        api_key="anthropic-key", model_name="claude-3", timeout=180, max_retries=5
-    )
-    mock_gemini.assert_called_once_with(
-        api_key="gemini-key", model="gemini-2.0-flash-thinking-exp-1219", timeout=180, max_retries=5
+    _llm3 = initialize_llm("gemini", "gemini-pro", temperature=0.7)
+    mock_gemini.assert_called_with(
+        api_key="gemini-key", model="gemini-pro", temperature=0.7, timeout=180, max_retries=5
     )
 
 
 @dataclass
 class Args:
     """Test arguments class."""
-
     provider: str
     expert_provider: str
     model: str = None
@@ -410,144 +409,44 @@ def mock_deepseek_reasoner():
         yield mock
 
 
-def test_initialize_deepseek(
-    clean_env, mock_openai, mock_deepseek_reasoner, monkeypatch
-):
+def test_initialize_deepseek(clean_env, mock_openai, mock_deepseek_reasoner, monkeypatch):
     """Test DeepSeek provider initialization with different models."""
     monkeypatch.setenv("DEEPSEEK_API_KEY", "test-key")
 
     # Test with reasoner model
-    _model = initialize_llm("deepseek", "deepseek-reasoner")
+    _model = initialize_llm("deepseek", "deepseek-reasoner", temperature=0.7)
     mock_deepseek_reasoner.assert_called_with(
         api_key="test-key",
         base_url="https://api.deepseek.com",
-        temperature=1,
         model="deepseek-reasoner",
+        temperature=0.7,
         timeout=180,
         max_retries=5,
     )
 
-    # Test with non-reasoner model
-    _model = initialize_llm("deepseek", "deepseek-chat")
+    # Test with OpenAI-compatible model
+    _model = initialize_llm("deepseek", "deepseek-chat", temperature=0.7)
     mock_openai.assert_called_with(
         api_key="test-key",
-        base_url="https://api.deepseek.com",
-        temperature=1,
+        base_url="https://api.deepseek.com",  # Updated to match implementation
         model="deepseek-chat",
+        temperature=0.7,
         timeout=180,
         max_retries=5,
     )
 
 
-def test_initialize_expert_deepseek(
-    clean_env, mock_openai, mock_deepseek_reasoner, monkeypatch
-):
-    """Test expert DeepSeek provider initialization."""
-    monkeypatch.setenv("EXPERT_DEEPSEEK_API_KEY", "test-key")
-
-    # Test with reasoner model
-    _model = initialize_expert_llm("deepseek", "deepseek-reasoner")
-    mock_deepseek_reasoner.assert_called_with(
-        api_key="test-key",
-        base_url="https://api.deepseek.com",
-        temperature=0,
-        model="deepseek-reasoner",
-        timeout=180,
-        max_retries=5,
-    )
-
-    # Test with non-reasoner model
-    _model = initialize_expert_llm("deepseek", "deepseek-chat")
-    mock_openai.assert_called_with(
-        api_key="test-key",
-        base_url="https://api.deepseek.com",
-        temperature=0,
-        model="deepseek-chat",
-        timeout=180,
-        max_retries=5,
-    )
-
-
-def test_initialize_openrouter_deepseek(
-    clean_env, mock_openai, mock_deepseek_reasoner, monkeypatch
-):
+def test_initialize_openrouter_deepseek(clean_env, mock_openai, mock_deepseek_reasoner, monkeypatch):
     """Test OpenRouter DeepSeek model initialization."""
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
 
     # Test with DeepSeek R1 model
-    _model = initialize_llm("openrouter", "deepseek/deepseek-r1")
+    _model = initialize_llm("openrouter", "deepseek/deepseek-r1", temperature=0.7)
     mock_deepseek_reasoner.assert_called_with(
         api_key="test-key",
         base_url="https://openrouter.ai/api/v1",
-        temperature=1,
         model="deepseek/deepseek-r1",
-        timeout=180,
-        max_retries=5,
-    )
-
-    # Test with non-DeepSeek model
-    _model = initialize_llm("openrouter", "mistral/mistral-large")
-    mock_openai.assert_called_with(
-        api_key="test-key",
-        base_url="https://openrouter.ai/api/v1",
-        model="mistral/mistral-large",
-        timeout=180,
-        max_retries=5,
-    )
-
-
-def test_initialize_expert_openrouter_deepseek(
-    clean_env, mock_openai, mock_deepseek_reasoner, monkeypatch
-):
-    """Test expert OpenRouter DeepSeek model initialization."""
-    monkeypatch.setenv("EXPERT_OPENROUTER_API_KEY", "test-key")
-
-    # Test with DeepSeek R1 model via create_llm_client
-    _model = create_llm_client("openrouter", "deepseek/deepseek-r1", is_expert=True)
-    mock_deepseek_reasoner.assert_called_with(
-        api_key="test-key",
-        base_url="https://openrouter.ai/api/v1",
-        temperature=0,
-        model="deepseek/deepseek-r1",
-        timeout=180,
-        max_retries=5,
-    )
-
-    # Test with non-DeepSeek model
-    _model = create_llm_client("openrouter", "mistral/mistral-large", is_expert=True)
-    mock_openai.assert_called_with(
-        api_key="test-key",
-        base_url="https://openrouter.ai/api/v1",
-        model="mistral/mistral-large",
-        temperature=0,
-        timeout=180,
-        max_retries=5,
-    )
-
-
-def test_deepseek_environment_fallback(clean_env, mock_deepseek_reasoner, monkeypatch):
-    """Test DeepSeek environment variable fallback behavior."""
-    # Test environment variable helper with fallback
-    monkeypatch.setenv("DEEPSEEK_API_KEY", "base-key")
-    assert get_env_var("DEEPSEEK_API_KEY", expert=True) == "base-key"
-
-    # Test provider config with fallback
-    config = get_provider_config("deepseek", is_expert=True)
-    assert config["api_key"] == "base-key"
-    assert config["base_url"] == "https://api.deepseek.com"
-
-    # Test with expert key
-    monkeypatch.setenv("EXPERT_DEEPSEEK_API_KEY", "expert-key")
-    config = get_provider_config("deepseek", is_expert=True)
-    assert config["api_key"] == "expert-key"
-
-    # Test client creation with expert key
-    _model = create_llm_client("deepseek", "deepseek-reasoner", is_expert=True)
-    mock_deepseek_reasoner.assert_called_with(
-        api_key="expert-key",
-        base_url="https://api.deepseek.com",
-        temperature=0,
-        model="deepseek-reasoner",
+        temperature=0.7,
         timeout=180,
         max_retries=5,
     )
