@@ -308,7 +308,8 @@ def main():
         status = Text()
         status.append("🤖 ")  
         status.append(f"{args.provider}/{args.model}")
-        status.append(f" @ T{args.temperature or 'N/A'}")
+        if args.temperature is not None:
+            status.append(f" @ T{args.temperature}")
 
         if expert_enabled:
             status.append(" | 🤔 ")

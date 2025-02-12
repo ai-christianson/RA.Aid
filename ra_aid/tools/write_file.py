@@ -18,6 +18,8 @@ def put_complete_file_contents(
     This tool is specifically for writing the entire contents of a file at once,
     not for appending or partial writes.
 
+    If you need to do anything other than write the complete contents use the run_programming_task tool instead.
+
     Args:
         filepath: (Required) Path to the file to write. Must be provided.
         complete_file_contents: Complete string content to write to the file. Defaults to 
