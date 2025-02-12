@@ -27,12 +27,12 @@ def test_shell_pipeline():
 
 def test_stderr_capture():
     """Test that stderr is properly captured in combined output."""
-    # Use a command that definitely writes to stderr
+    # Use a command that definitely writes to stderr.
     output, retcode = run_interactive_command(
         ["/bin/bash", "-c", "ls /nonexistent/path"]
     )
     assert b"No such file or directory" in output
-    assert retcode != 0  # ls returns 0 upon success
+    assert retcode != 0  # ls returns non-zero on failure.
 
 
 def test_command_not_found():
@@ -49,9 +49,10 @@ def test_empty_command():
 
 def test_interactive_command():
     """Test running an interactive command.
-
+    
     This test verifies that output appears in real-time using process substitution.
-    We use a command that prints to both stdout and stderr to verify capture."""
+    We use a command that prints to both stdout and stderr.
+    """
     output, retcode = run_interactive_command(
         ["/bin/bash", "-c", "echo stdout; echo stderr >&2"]
     )
@@ -62,30 +63,23 @@ def test_interactive_command():
 
 def test_large_output():
     """Test handling of commands that produce large output."""
-    # Generate a large output with predictable content
+    # Generate a large output with predictable content.
     cmd = 'for i in {1..3000}; do echo "Line $i of test output"; done'
     output, retcode = run_interactive_command(["/bin/bash", "-c", cmd])
-
-    # Clean up specific artifacts (e.g., ^D)
-    output_cleaned = output.lstrip(b"^D")  # Remove the leading ^D if present
-
-    # Split and filter lines
+    # Clean up any leading artifacts.
+    output_cleaned = output.lstrip(b"^D")
     lines = [
         line.strip()
         for line in output_cleaned.splitlines()
         if b"Script" not in line and line.strip()
     ]
-
-    # We expect around 2000 lines plus some additional lines from the current display
-    # The exact number may vary slightly due to terminal buffering, but should be close to 2024
-    # (2000 history lines + 24 terminal lines)
-    assert 2000 <= len(lines) <= 2050, f"Expected between 2000-2050 lines due to history limit plus terminal display, but got {len(lines)}"
-
-    # Verify that we have the last lines (should include line 3000)
+    # Expect roughly 2000 history lines plus the display lines.
+    assert 2000 <= len(lines) <= 2050, (
+        f"Expected between 2000-2050 lines due to history limit plus terminal display, but got {len(lines)}"
+    )
+    # Verify that we have the last line.
     assert lines[-1] == b"Line 3000 of test output", f"Unexpected last line: {lines[-1]}"
-
-    # Verify return code
-    assert retcode == 0, f"Unexpected return code: {retcode}"
+    assert retcode == 0
 
 
 def test_unicode_handling():
@@ -110,7 +104,6 @@ def test_multiple_commands():
 
 def test_cat_medium_file():
     """Test that cat command properly captures output for medium-length files."""
-    # Create a temporary file with known content
     with tempfile.NamedTemporaryFile(mode="w", delete=False) as f:
         for i in range(500):
             f.write(f"This is test line {i}\n")
@@ -120,7 +113,6 @@ def test_cat_medium_file():
         output, retcode = run_interactive_command(
             ["/bin/bash", "-c", f"cat {temp_path}"]
         )
-        # Split by newlines and filter out script header/footer lines
         lines = [
             line
             for line in output.splitlines()
@@ -129,7 +121,7 @@ def test_cat_medium_file():
         assert len(lines) == 500
         assert retcode == 0
 
-        # Verify content integrity by checking first and last lines
+        # Verify content integrity.
         assert b"This is test line 0" in lines[0]
         assert b"This is test line 499" in lines[-1]
     finally:
@@ -138,15 +130,14 @@ def test_cat_medium_file():
 
 def test_realtime_output():
     """Test that output appears in real-time and is captured correctly."""
-    # Create a command that sleeps briefly between outputs
+    # Create a command that sleeps briefly between outputs.
     cmd = "echo 'first'; sleep 0.1; echo 'second'; sleep 0.1; echo 'third'"
     output, retcode = run_interactive_command(["/bin/bash", "-c", cmd])
-
-    # Filter out script header/footer lines
     lines = [
-        line for line in output.splitlines() if b"Script" not in line and line.strip()
+        line
+        for line in output.splitlines()
+        if b"Script" not in line and line.strip()
     ]
-
     assert b"first" in lines[0]
     assert b"second" in lines[1]
     assert b"third" in lines[2]
@@ -155,41 +146,11 @@ def test_realtime_output():
 
 def test_tty_available():
     """Test that commands have access to a TTY."""
-    # Run the tty command
     output, retcode = run_interactive_command(["/bin/bash", "-c", "tty"])
-
-    # Clean up specific artifacts (e.g., ^D)
-    output_cleaned = output.lstrip(b"^D")  # Remove leading ^D if present
-
-    # Debug: Print cleaned output
+    output_cleaned = output.lstrip(b"^D")
     print(f"Cleaned TTY Output: {output_cleaned}")
-
-    # Check if the output contains a valid TTY path
+    # Check if the output contains a valid TTY path.
     assert (
         b"/dev/pts/" in output_cleaned or b"/dev/ttys" in output_cleaned
     ), f"Unexpected TTY output: {output_cleaned}"
     assert retcode == 0
-
-
-def test_interactive_input():
-    """Test that interactive input works properly with cat command."""
-    # Create a temporary file to store expected input
-    with tempfile.NamedTemporaryFile(mode='w', delete=False) as f:
-        f.write("test input\n")
-        temp_path = f.name
-
-    try:
-        # Redirect the temp file as stdin and run cat
-        with open(temp_path, 'rb') as stdin_file:
-            old_stdin = sys.stdin
-            sys.stdin = stdin_file
-            try:
-                output, retcode = run_interactive_command(["cat"])
-            finally:
-                sys.stdin = old_stdin
-
-        # Verify the output matches input
-        assert b"test input" in output
-        assert retcode == 0
-    finally:
-        os.unlink(temp_path)

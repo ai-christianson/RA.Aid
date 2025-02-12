@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
-Module for running interactive subprocesses with output capture.
+Module for running interactive subprocesses with output capture,
+with full raw input passthrough for interactive commands.
 
-It uses a pseudo-tty and integrates pyte's HistoryScreen to
-simulate a terminal and capture the final scrollback history (non-blank lines).
+It uses a pseudo-tty and integrates pyte's HistoryScreen to simulate
+a terminal and capture the final scrollback history (non-blank lines).
 The interface remains compatible with external callers expecting a tuple (output, return_code),
 where output is a bytes object (UTF-8 encoded).
 """
@@ -15,6 +16,9 @@ import errno
 import sys
 import io
 import subprocess
+import select
+import termios
+import tty
 from typing import List, Tuple
 
 import pyte
@@ -42,68 +46,97 @@ def run_interactive_command(cmd: List[str]) -> Tuple[bytes, int]:
       FileNotFoundError: If the command is not found in PATH.
       RuntimeError: If an error occurs during execution.
     """
-    # Fail early if cmd is empty.
     if not cmd:
         raise ValueError("No command provided.")
-    
-    # Check that the command exists.
     if shutil.which(cmd[0]) is None:
         raise FileNotFoundError(f"Command '{cmd[0]}' not found in PATH.")
     
-    # Determine terminal dimensions; use os.get_terminal_size if available.
     try:
         term_size = os.get_terminal_size()
         cols, rows = term_size.columns, term_size.lines
     except OSError:
         cols, rows = 80, 24
 
-    # Instantiate HistoryScreen with a large history (scrollback) buffer.
+    # Set up pyte screen and stream to capture terminal output.
     screen = HistoryScreen(cols, rows, history=2000, ratio=0.5)
     stream = pyte.Stream(screen)
 
     # Open a new pseudo-tty.
     master_fd, slave_fd = os.openpty()
-    
+
     try:
-        # Try to use real TTY stdin if available
         stdin_fd = sys.stdin.fileno()
     except (AttributeError, io.UnsupportedOperation):
-        # Fallback to pseudo-TTY for tests
-        stdin_fd = slave_fd
+        stdin_fd = None
 
     proc = subprocess.Popen(
         cmd,
-        stdin=stdin_fd,
+        stdin=slave_fd,
         stdout=slave_fd,
         stderr=slave_fd,
         bufsize=0,
         close_fds=True
     )
-    os.close(slave_fd)  # Close slave in the parent.
-    
-    # Read output from the master file descriptor in real time.
-    try:
-        while True:
-            try:
-                data = os.read(master_fd, 1024)
-            except OSError as e:
-                if e.errno == errno.EIO:
-                    # Expected error when the slave side is closed.
+    os.close(slave_fd)  # Close slave end in the parent process.
+
+    captured_data = []
+
+    # If we're in an interactive TTY, set raw mode and forward input.
+    if stdin_fd is not None and sys.stdin.isatty():
+        old_settings = termios.tcgetattr(stdin_fd)
+        tty.setraw(stdin_fd)
+        try:
+            while True:
+                rlist, _, _ = select.select([master_fd, stdin_fd], [], [])
+                if master_fd in rlist:
+                    try:
+                        data = os.read(master_fd, 1024)
+                    except OSError as e:
+                        if e.errno == errno.EIO:
+                            break
+                        else:
+                            raise
+                    if not data:
+                        break
+                    captured_data.append(data)
+                    # Update pyte's screen state.
+                    stream.feed(data.decode("utf-8", errors="ignore"))
+                    # Write to stdout for live output.
+                    os.write(1, data)
+                if stdin_fd in rlist:
+                    try:
+                        input_data = os.read(stdin_fd, 1024)
+                    except OSError:
+                        input_data = b""
+                    if input_data:
+                        # Forward raw keystrokes directly to the subprocess.
+                        os.write(master_fd, input_data)
+        except KeyboardInterrupt:
+            proc.terminate()
+        finally:
+            termios.tcsetattr(stdin_fd, termios.TCSADRAIN, old_settings)
+    else:
+        # Non-interactive mode (e.g., during unit tests).
+        try:
+            while True:
+                try:
+                    data = os.read(master_fd, 1024)
+                except OSError as e:
+                    if e.errno == errno.EIO:
+                        break
+                    else:
+                        raise
+                if not data:
                     break
-                else:
-                    raise
-            if not data:
-                break
-            # Feed the decoded data into pyte to update the screen and history.
-            stream.feed(data.decode("utf-8", errors="ignore"))
-            # Also write the raw data to stdout for live output.
-            os.write(1, data)
-    except KeyboardInterrupt:
-        proc.terminate()
-    finally:
-        os.close(master_fd)
+                captured_data.append(data)
+                stream.feed(data.decode("utf-8", errors="ignore"))
+                os.write(1, data)
+        except KeyboardInterrupt:
+            proc.terminate()
+
+    os.close(master_fd)
     proc.wait()
-    
+
     # Assemble full scrollback: combine history.top, the current display, and history.bottom.
     top_lines = [render_line(line, cols) for line in screen.history.top]
     bottom_lines = [render_line(line, cols) for line in screen.history.bottom]
@@ -114,17 +147,12 @@ def run_interactive_command(cmd: List[str]) -> Tuple[bytes, int]:
     trimmed_lines = [line for line in all_lines if line.strip()]
     final_output = "\n".join(trimmed_lines)
     
-    # Return as bytes for compatibility.
     return final_output.encode("utf-8"), proc.returncode
 
-# if __name__ == "__main__":
-#     # Test command: output 100 lines so that history goes beyond the screen height.
-#     test_cmd = [
-#         "bash",
-#         "-c",
-#         "for i in $(seq 1 100); do echo \"Line $i\"; sleep 0.05; done"
-#     ]
-#     output, ret = run_interactive_command(test_cmd)
-#     print("\n=== Captured Scrollback (trimmed history lines) ===")
-#     print(output.decode("utf-8"))
-#     print("Return code:", ret)
+if __name__ == "__main__":
+    import sys
+    if len(sys.argv) < 2:
+        print("Usage: interactive.py <command> [args...]")
+        sys.exit(1)
+    output, return_code = run_interactive_command(sys.argv[1:])
+    sys.exit(return_code)
