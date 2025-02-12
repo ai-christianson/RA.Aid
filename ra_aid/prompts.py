@@ -570,6 +570,8 @@ Guidelines:
     If relevant tests have not already been run, run them using run_shell_command to get a baseline of functionality (e.g. were any tests failing before we started working? Do they all pass?)
       Only test UI components if there is already a UI testing system in place.
       Only test things that can be tested by an automated process.
+    
+    Are you writing a program that needs to be compiled? Make sure it compiles, if relevant.
 
     After finalizing the overall approach:
         Use emit_plan to store the high-level implementation plan.
@@ -630,6 +632,9 @@ Testing:
 
 - Only test UI components if there is already a UI testing system in place.
 - Only test things that can be tested by an automated process.
+- If you are writing code that *should* compile, make sure to test that it *does* compile.
+
+Test before and after making changes, if relevant.
 
 Once the task is complete, ensure all updated files are registered with emit_related_files.
 
@@ -974,6 +979,8 @@ You have often been criticized for:
 <initial request>
 {initial_request}
 </initial request>
+
+Remember, if you do not make any tool call (e.g. ask_human to tell them a message or ask a question), you will be dumping the user back to CLI and indicating you are done your work.
 
 NEVER ANNOUNCE WHAT YOU ARE DOING, JUST DO IT!
 """
