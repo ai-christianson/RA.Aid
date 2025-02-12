@@ -368,6 +368,7 @@ def main():
             _global_memory["config"]["model"] = args.model
             _global_memory["config"]["expert_provider"] = args.expert_provider
             _global_memory["config"]["expert_model"] = args.expert_model
+            _global_memory["config"]["temperature"] = args.temperature
 
             # Create chat agent with appropriate tools
             chat_agent = create_agent(
@@ -436,6 +437,9 @@ def main():
             args.research_provider or args.provider
         )
         _global_memory["config"]["research_model"] = args.research_model or args.model
+
+        # Store temperature in global config
+        _global_memory["config"]["temperature"] = args.temperature
 
         # Run research stage
         print_stage_header("Research Stage")

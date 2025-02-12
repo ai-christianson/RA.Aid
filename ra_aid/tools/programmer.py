@@ -117,8 +117,6 @@ def run_programming_task(
 
         # Log the programming task
         log_work_event(f"Executed programming task: {_truncate_for_log(instructions)}")
-
-        print(repr(result))
         
         # Return structured output
         return {
