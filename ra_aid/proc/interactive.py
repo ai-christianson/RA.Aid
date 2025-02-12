@@ -12,6 +12,8 @@ import os
 import shlex
 import shutil
 import errno
+import sys
+import io
 import subprocess
 from typing import List, Tuple
 
@@ -62,12 +64,19 @@ def run_interactive_command(cmd: List[str]) -> Tuple[bytes, int]:
     # Open a new pseudo-tty.
     master_fd, slave_fd = os.openpty()
     
-    # Spawn the subprocess with its stdio attached to the slave end.
+    try:
+        # Try to use real TTY stdin if available
+        stdin_fd = sys.stdin.fileno()
+    except (AttributeError, io.UnsupportedOperation):
+        # Fallback to pseudo-TTY for tests
+        stdin_fd = slave_fd
+
     proc = subprocess.Popen(
         cmd,
-        stdin=slave_fd,
+        stdin=stdin_fd,
         stdout=slave_fd,
         stderr=slave_fd,
+        bufsize=0,
         close_fds=True
     )
     os.close(slave_fd)  # Close slave in the parent.

@@ -1,6 +1,7 @@
 """Tests for the interactive subprocess module."""
 
 import os
+import sys
 import tempfile
 
 import pytest
@@ -168,3 +169,27 @@ def test_tty_available():
         b"/dev/pts/" in output_cleaned or b"/dev/ttys" in output_cleaned
     ), f"Unexpected TTY output: {output_cleaned}"
     assert retcode == 0
+
+
+def test_interactive_input():
+    """Test that interactive input works properly with cat command."""
+    # Create a temporary file to store expected input
+    with tempfile.NamedTemporaryFile(mode='w', delete=False) as f:
+        f.write("test input\n")
+        temp_path = f.name
+
+    try:
+        # Redirect the temp file as stdin and run cat
+        with open(temp_path, 'rb') as stdin_file:
+            old_stdin = sys.stdin
+            sys.stdin = stdin_file
+            try:
+                output, retcode = run_interactive_command(["cat"])
+            finally:
+                sys.stdin = old_stdin
+
+        # Verify the output matches input
+        assert b"test input" in output
+        assert retcode == 0
+    finally:
+        os.unlink(temp_path)
