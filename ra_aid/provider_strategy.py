@@ -47,31 +47,19 @@ class OpenAIStrategy(ProviderStrategy):
             if not key:
                 missing.append("EXPERT_OPENAI_API_KEY environment variable is not set")
 
-            # Check expert model only for research-only mode
-            if hasattr(args, "research_only") and args.research_only:
-                model = args.expert_model if hasattr(args, "expert_model") else None
-                if not model:
-                    model = os.environ.get("EXPERT_OPENAI_MODEL")
-                    if not model:
-                        model = os.environ.get("OPENAI_MODEL")
-                if not model:
-                    missing.append(
-                        "Model is required for OpenAI provider in research-only mode"
-                    )
+            # Handle expert model selection if none specified 
+            if hasattr(args, "expert_model") and not args.expert_model:
+                from ra_aid.llm import select_expert_model
+                model = select_expert_model("openai")
+                if model:
+                    args.expert_model = model
+                elif hasattr(args, "research_only") and args.research_only:
+                    missing.append("No suitable expert model available")
+
         else:
             key = os.environ.get("OPENAI_API_KEY")
             if not key:
                 missing.append("OPENAI_API_KEY environment variable is not set")
-
-            # Check model only for research-only mode
-            if hasattr(args, "research_only") and args.research_only:
-                model = args.model if hasattr(args, "model") else None
-                if not model:
-                    model = os.environ.get("OPENAI_MODEL")
-                if not model:
-                    missing.append(
-                        "Model is required for OpenAI provider in research-only mode"
-                    )
 
         return ValidationResult(valid=len(missing) == 0, missing_vars=missing)
 

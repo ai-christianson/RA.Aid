@@ -1,6 +1,7 @@
 import os
 from typing import Any, Dict, Optional
 
+from openai import OpenAI
 from langchain_anthropic import ChatAnthropic
 from langchain_core.language_models import BaseChatModel
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -8,8 +9,50 @@ from langchain_openai import ChatOpenAI
 
 from ra_aid.chat_models.deepseek_chat import ChatDeepseekReasoner
 from ra_aid.logging_config import get_logger
+from typing import List
 
 from .models_params import models_params
+
+def get_available_openai_models() -> List[str]:
+    """Fetch available OpenAI models using OpenAI client.
+    
+    Returns:
+        List of available model names
+    """
+    try:
+        # Use OpenAI client to fetch models
+        client = OpenAI()
+        models = client.models.list()
+        return [str(model.id) for model in models.data]
+    except Exception:
+        # Return empty list if unable to fetch models 
+        return []
+
+def select_expert_model(provider: str, model: Optional[str] = None) -> Optional[str]:
+    """Select appropriate expert model based on provider and availability.
+    
+    Args:
+        provider: The LLM provider
+        model: Optional explicitly specified model name
+    
+    Returns:
+        Selected model name or None if no suitable model found
+    """
+    if provider != "openai" or model is not None:
+        return model
+        
+    # Try to get available models
+    available_models = get_available_openai_models()
+    
+    # Priority order for expert models
+    priority_models = ["o3-mini", "o1", "o1-preview"]
+    
+    # Return first available model from priority list
+    for model_name in priority_models:
+        if model_name in available_models:
+            return model_name
+            
+    return None
 
 known_temp_providers = {
     "openai",
@@ -149,6 +192,11 @@ def create_llm_client(
     config = get_provider_config(provider, is_expert)
     if not config:
         raise ValueError(f"Unsupported provider: {provider}")
+
+    if is_expert and provider == "openai":
+        model_name = select_expert_model(provider, model_name)
+        if not model_name:
+            raise ValueError("No suitable expert model available")
 
     logger.debug(
         "Creating LLM client with provider=%s, model=%s, temperature=%s, expert=%s",

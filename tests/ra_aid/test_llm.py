@@ -1,5 +1,6 @@
 import os
 from dataclasses import dataclass
+from unittest import mock
 from unittest.mock import Mock, patch
 
 import pytest
@@ -12,10 +13,12 @@ from ra_aid.agents.ciayn_agent import CiaynAgent
 from ra_aid.env import validate_environment
 from ra_aid.llm import (
     create_llm_client,
+    get_available_openai_models,
     get_env_var,
     get_provider_config,
     initialize_expert_llm,
     initialize_llm,
+    select_expert_model,
 )
 
 
@@ -280,6 +283,53 @@ def test_explicit_temperature(clean_env, mock_openai, mock_anthropic, mock_gemin
         max_retries=5,
     )
 
+
+def test_get_available_openai_models_success():
+    """Test successful retrieval of OpenAI models."""
+    mock_model = Mock()
+    mock_model.id = "gpt-4"
+    mock_models = Mock()
+    mock_models.data = [mock_model]
+    
+    with mock.patch("ra_aid.llm.OpenAI") as mock_client:
+        mock_client.return_value.models.list.return_value = mock_models
+        models = get_available_openai_models()
+        assert models == ["gpt-4"]
+        mock_client.return_value.models.list.assert_called_once()
+
+def test_get_available_openai_models_failure():
+    """Test graceful handling of model retrieval failure."""
+    with mock.patch("ra_aid.llm.OpenAI") as mock_client:
+        mock_client.return_value.models.list.side_effect = Exception("API Error")
+        models = get_available_openai_models()
+        assert models == []
+        mock_client.return_value.models.list.assert_called_once()
+
+def test_select_expert_model_explicit():
+    """Test model selection with explicitly specified model."""
+    model = select_expert_model("openai", "gpt-4")
+    assert model == "gpt-4"
+
+def test_select_expert_model_non_openai():
+    """Test model selection for non-OpenAI provider."""
+    model = select_expert_model("anthropic", None)
+    assert model is None
+
+def test_select_expert_model_priority():
+    """Test model selection follows priority order."""
+    available_models = ["gpt-4", "o1", "o3-mini"]
+    
+    with mock.patch("ra_aid.llm.get_available_openai_models", return_value=available_models):
+        model = select_expert_model("openai")
+        assert model == "o3-mini"
+
+def test_select_expert_model_no_match():
+    """Test model selection when no priority models available."""
+    available_models = ["gpt-4", "gpt-3.5"]
+    
+    with mock.patch("ra_aid.llm.get_available_openai_models", return_value=available_models):
+        model = select_expert_model("openai")
+        assert model is None
 
 def test_temperature_validation(clean_env, mock_openai):
     """Test temperature validation in command line arguments."""
