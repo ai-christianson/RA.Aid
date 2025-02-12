@@ -326,7 +326,7 @@ def main():
             Panel(
                 status,
                 title="Config",
-                style="bold blue",
+                border_style="bright_blue",
                 padding=(0, 1)
             )
         )
