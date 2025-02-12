@@ -69,13 +69,30 @@ def run_interactive_command(cmd: List[str]) -> Tuple[bytes, int]:
     except (AttributeError, io.UnsupportedOperation):
         stdin_fd = None
 
+    # Set up environment variables for the subprocess
+    env = os.environ.copy()
+    env.update({
+        'DEBIAN_FRONTEND': 'noninteractive',
+        'GIT_PAGER': '',
+        'PYTHONUNBUFFERED': '1',
+        'CI': 'true',
+        'LANG': 'C.UTF-8',
+        'LC_ALL': 'C.UTF-8',
+        'COLUMNS': '120',
+        'FORCE_COLOR': '1',
+        'GIT_TERMINAL_PROMPT': '0',
+        'PYTHONDONTWRITEBYTECODE': '1',
+        'NODE_OPTIONS': '--unhandled-rejections=strict'
+    })
+
     proc = subprocess.Popen(
         cmd,
         stdin=slave_fd,
         stdout=slave_fd,
         stderr=slave_fd,
         bufsize=0,
-        close_fds=True
+        close_fds=True,
+        env=env
     )
     os.close(slave_fd)  # Close slave end in the parent process.
 
