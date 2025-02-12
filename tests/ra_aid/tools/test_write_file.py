@@ -29,7 +29,8 @@ def test_basic_write_functionality(temp_test_dir):
     assert result["success"] is True
     assert result["filepath"] == str(test_file)
     assert result["bytes_written"] == len(content.encode("utf-8"))
-    assert "Operation completed" in result["message"]
+    assert "Successfully wrote" in result["message"]
+    assert "bytes" in result["message"]
 
 
 def test_directory_creation(temp_test_dir):
