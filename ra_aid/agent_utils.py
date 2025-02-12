@@ -28,7 +28,7 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 
 from ra_aid.agents.ciayn_agent import CiaynAgent
-from ra_aid.config import DEFAULT_MAX_TEST_CMD_RETRIES, DEFAULT_RECURSION_LIMIT
+from ra_aid.config import DEFAULT_MAX_TEST_CMD_RETRIES, DEFAULT_RECURSION_LIMIT, RAgents
 from ra_aid.console.formatting import print_error, print_stage_header
 from ra_aid.console.output import print_agent_output
 from ra_aid.exceptions import AgentInterrupt, ToolExecutionError
@@ -807,16 +807,10 @@ def _decrement_agent_depth():
     _global_memory["agent_depth"] = _global_memory.get("agent_depth", 1) - 1
 
 
-def _run_agent_stream(agent: CompiledGraph, prompt: str, config: dict):
-    for chunk in agent.stream({"messages": [HumanMessage(content=prompt)]}, config):
-        logger.debug("Agent output: %s", chunk)
-        check_interrupt()
-        print_agent_output(chunk)
-        if _global_memory["plan_completed"] or _global_memory["task_completed"]:
-            _global_memory["plan_completed"] = False
-            _global_memory["task_completed"] = False
-            _global_memory["completion_message"] = ""
-            break
+def reset_agent_completion_flags():
+    _global_memory["plan_completed"] = False
+    _global_memory["task_completed"] = False
+    _global_memory["completion_message"] = ""
 
 
 def _execute_test_command_wrapper(original_prompt, config, test_attempts, auto_test):
@@ -842,8 +836,26 @@ def _handle_api_error(e, attempt, max_retries, base_delay):
         time.sleep(0.1)
 
 
+def _run_agent_stream(agent: RAgents, msg_list: list[BaseMessage], config: dict):
+    for chunk in agent.stream({"messages": msg_list}, config):
+        logger.debug("Agent output: %s", chunk)
+        check_interrupt()
+        print_agent_output(chunk)
+        if _global_memory["plan_completed"] or _global_memory["task_completed"]:
+            reset_agent_completion_flags()
+            break
+        check_interrupt()
+        print_agent_output(chunk)
+        if _global_memory["plan_completed"] or _global_memory["task_completed"]:
+            reset_agent_completion_flags()
+            break
+
+
 def run_agent_with_retry(
-    agent, prompt: str, config: dict, fallback_handler: FallbackHandler
+    agent: RAgents,
+    prompt: str,
+    config: dict,
+    fallback_handler: FallbackHandler,
 ) -> Optional[str]:
     """Run an agent with retry logic for API errors."""
     logger.debug("Running agent with prompt length: %d", len(prompt))
@@ -854,6 +866,7 @@ def run_agent_with_retry(
     _max_test_retries = config.get("max_test_cmd_retries", DEFAULT_MAX_TEST_CMD_RETRIES)
     auto_test = config.get("auto_test", False)
     original_prompt = prompt
+    msg_list = [HumanMessage(content=prompt)]
 
     with InterruptibleSection():
         try:
@@ -862,7 +875,7 @@ def run_agent_with_retry(
                 logger.debug("Attempt %d/%d", attempt + 1, max_retries)
                 check_interrupt()
                 try:
-                    _run_agent_stream(agent, prompt, config)
+                    _run_agent_stream(agent, msg_list, config)
                     fallback_handler.reset_fallback_handler()
                     should_break, prompt, auto_test, test_attempts = (
                         _execute_test_command_wrapper(
@@ -878,7 +891,7 @@ def run_agent_with_retry(
                 except ToolExecutionError as e:
                     fallback_response = fallback_handler.handle_failure(e, agent)
                     if fallback_response:
-                        prompt = original_prompt + "\n" + str(fallback_response)
+                        msg_list.extend(fallback_response)
                         continue
                 except (KeyboardInterrupt, AgentInterrupt):
                     raise
