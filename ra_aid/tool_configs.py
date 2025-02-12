@@ -72,7 +72,7 @@ def get_read_only_tools(
 
 # Define constant tool groups
 READ_ONLY_TOOLS = get_read_only_tools()
-MODIFICATION_TOOLS = [run_programming_task, put_complete_file_contents]
+MODIFICATION_TOOLS = [run_programming_task]
 COMMON_TOOLS = get_read_only_tools()
 EXPERT_TOOLS = [emit_expert_context, ask_expert]
 RESEARCH_TOOLS = [

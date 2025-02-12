@@ -7,6 +7,7 @@ from datetime import datetime
 from langgraph.checkpoint.memory import MemorySaver
 from rich.console import Console
 from rich.panel import Panel
+from rich.text import Text
 
 from ra_aid import print_error, print_stage_header
 from ra_aid.__version__ import __version__
@@ -282,27 +283,43 @@ def main():
         )  # Will exit if main env vars missing
         logger.debug("Environment validation successful")
 
-        if expert_missing:
-            console.print(
-                Panel(
-                    "[yellow]Expert tools disabled due to missing configuration:[/yellow]\n"
-                    + "\n".join(f"- {m}" for m in expert_missing)
-                    + "\nSet the required environment variables or args to enable expert mode.",
-                    title="Expert Tools Disabled",
-                    style="yellow",
-                )
-            )
+        # Validate model configuration early
+        from ra_aid.models_params import models_params
+        model_config = models_params.get(args.provider, {}).get(args.model or "", {})
+        supports_temperature = model_config.get("supports_temperature", args.provider in ["anthropic", "openai", "openrouter", "openai-compatible", "deepseek"])
+        
+        if supports_temperature and args.temperature is None:
+            args.temperature = model_config.get("default_temperature")
+            if args.temperature is None:
+                print_error(f"Temperature must be provided for model {args.model} which supports temperature")
+                sys.exit(1)
+            logger.debug(f"Using default temperature {args.temperature} for model {args.model}")
 
-        if web_research_missing:
-            console.print(
-                Panel(
-                    "[yellow]Web research disabled due to missing configuration:[/yellow]\n"
-                    + "\n".join(f"- {m}" for m in web_research_missing)
-                    + "\nSet the required environment variables to enable web research.",
-                    title="Web Research Disabled",
-                    style="yellow",
-                )
+        # Display status line
+        status = Text()
+        status.append("🤖 ")  
+        status.append(f"{args.provider}/{args.model}")
+        status.append(f" @ T{args.temperature or 'N/A'}")
+
+        if expert_enabled:
+            status.append(" | 🤔 ")
+            status.append(f"{args.expert_provider}/{args.expert_model}")
+        else:
+            status.append(" | 🤔 Expert: ")
+            status.append("Disabled", style="italic")
+
+        status.append(" | 🔍 Search: ")  
+        status.append("Enabled" if web_research_enabled else "Disabled", 
+                     style=None if web_research_enabled else "italic")
+        
+        console.print(
+            Panel(
+                status,
+                title="Config",
+                style="bold blue",
+                padding=(0, 1)
             )
+        )
 
         # Handle chat mode
         if args.chat:

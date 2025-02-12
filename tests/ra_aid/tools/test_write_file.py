@@ -19,7 +19,7 @@ def test_basic_write_functionality(temp_test_dir):
     test_file = temp_test_dir / "test.txt"
     content = "Hello, World!\nTest content"
 
-    result = put_complete_file_contents({"filepath": str(test_file), "content": content})
+    result = put_complete_file_contents({"filepath": str(test_file), "complete_file_contents": content})
 
     # Verify file contents
     assert test_file.read_text() == content
@@ -38,7 +38,7 @@ def test_directory_creation(temp_test_dir):
     test_file = nested_dir / "test.txt"
     content = "Test content"
 
-    result = put_complete_file_contents({"filepath": str(test_file), "content": content})
+    result = put_complete_file_contents({"filepath": str(test_file), "complete_file_contents": content})
 
     assert test_file.exists()
     assert test_file.read_text() == content
@@ -52,14 +52,14 @@ def test_different_encodings(temp_test_dir):
 
     # Test UTF-8
     result_utf8 = put_complete_file_contents(
-        {"filepath": str(test_file), "content": content, "encoding": "utf-8"}
+        {"filepath": str(test_file), "complete_file_contents": content, "encoding": "utf-8"}
     )
     assert result_utf8["success"] is True
     assert test_file.read_text(encoding="utf-8") == content
 
     # Test UTF-16
     result_utf16 = put_complete_file_contents(
-        {"filepath": str(test_file), "content": content, "encoding": "utf-16"}
+        {"filepath": str(test_file), "complete_file_contents": content, "encoding": "utf-16"}
     )
     assert result_utf16["success"] is True
     assert test_file.read_text(encoding="utf-16") == content
@@ -72,7 +72,7 @@ def test_permission_error(mock_open_func, temp_test_dir):
     test_file = temp_test_dir / "noperm.txt"
 
     result = put_complete_file_contents(
-        {"filepath": str(test_file), "content": "test content"}
+        {"filepath": str(test_file), "complete_file_contents": "test content"}
     )
 
     assert result["success"] is False
@@ -87,7 +87,7 @@ def test_io_error(mock_open_func, temp_test_dir):
     test_file = temp_test_dir / "ioerror.txt"
 
     result = put_complete_file_contents(
-        {"filepath": str(test_file), "content": "test content"}
+        {"filepath": str(test_file), "complete_file_contents": "test content"}
     )
 
     assert result["success"] is False
@@ -99,12 +99,26 @@ def test_empty_content(temp_test_dir):
     """Test writing empty content to a file."""
     test_file = temp_test_dir / "empty.txt"
 
-    result = put_complete_file_contents({"filepath": str(test_file), "content": ""})
+    result = put_complete_file_contents({"filepath": str(test_file)})
 
     assert test_file.exists()
     assert test_file.read_text() == ""
     assert result["success"] is True
     assert result["bytes_written"] == 0
+    assert "initialized empty file" in result["message"].lower()
+
+
+def test_write_empty_file_default(temp_test_dir):
+    """Test creating an empty file using default parameter."""
+    test_file = temp_test_dir / "empty_default.txt"
+
+    result = put_complete_file_contents({"filepath": str(test_file)})
+
+    assert test_file.exists()
+    assert test_file.read_text() == ""
+    assert result["success"] is True
+    assert result["bytes_written"] == 0
+    assert "initialized empty file" in result["message"].lower()
 
 
 def test_overwrite_existing_file(temp_test_dir):
@@ -117,7 +131,7 @@ def test_overwrite_existing_file(temp_test_dir):
     # Overwrite with new content
     new_content = "New content"
     result = put_complete_file_contents(
-        {"filepath": str(test_file), "content": new_content}
+        {"filepath": str(test_file), "complete_file_contents": new_content}
     )
 
     assert test_file.read_text() == new_content
@@ -130,7 +144,7 @@ def test_large_file_write(temp_test_dir):
     test_file = temp_test_dir / "large.txt"
     content = "Large content\n" * 1000  # Create substantial content
 
-    result = put_complete_file_contents({"filepath": str(test_file), "content": content})
+    result = put_complete_file_contents({"filepath": str(test_file), "complete_file_contents": content})
 
     assert test_file.exists()
     assert test_file.read_text() == content
@@ -144,7 +158,7 @@ def test_invalid_path_characters(temp_test_dir):
     invalid_path = temp_test_dir / "invalid\0file.txt"
 
     result = put_complete_file_contents(
-        {"filepath": str(invalid_path), "content": "test content"}
+        {"filepath": str(invalid_path), "complete_file_contents": "test content"}
     )
 
     assert result["success"] is False
@@ -162,7 +176,7 @@ def test_write_to_readonly_directory(temp_test_dir):
 
     try:
         result = put_complete_file_contents(
-            {"filepath": str(test_file), "content": "test content"}
+            {"filepath": str(test_file), "complete_file_contents": "test content"}
         )
         assert result["success"] is False
         assert "Permission" in result["message"]

@@ -170,10 +170,10 @@ def create_llm_client(
     # Handle temperature settings
     if is_expert:
         temp_kwargs = {"temperature": 0} if supports_temperature else {}
-    elif temperature is not None and supports_temperature:
+    elif supports_temperature:
+        if temperature is None:
+            raise ValueError(f"Temperature must be provided for model {model_name} which supports temperature")
         temp_kwargs = {"temperature": temperature}
-    elif provider == "openai-compatible" and supports_temperature:
-        temp_kwargs = {"temperature": 0.3}
     else:
         temp_kwargs = {}
 
