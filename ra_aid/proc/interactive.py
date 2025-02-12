@@ -56,7 +56,7 @@ def run_interactive_command(cmd: List[str]) -> Tuple[bytes, int]:
         cols, rows = 80, 24
 
     # Instantiate HistoryScreen with a large history (scrollback) buffer.
-    screen = HistoryScreen(cols, rows, history=1000, ratio=0.5)
+    screen = HistoryScreen(cols, rows, history=15000, ratio=0.5)
     stream = pyte.Stream(screen)
 
     # Open a new pseudo-tty.
