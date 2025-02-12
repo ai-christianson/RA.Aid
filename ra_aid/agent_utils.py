@@ -16,7 +16,6 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import (
     BaseMessage,
     HumanMessage,
-    InvalidToolCall,
     trim_messages,
 )
 from langchain_core.tools import tool
@@ -339,9 +338,6 @@ def run_research_agent(
     if memory is None:
         memory = MemorySaver()
 
-    if thread_id is None:
-        thread_id = str(uuid.uuid4())
-
     tools = get_research_tools(
         research_only=research_only,
         expert_enabled=expert_enabled,
@@ -413,7 +409,8 @@ def run_research_agent(
 
         if agent is not None:
             logger.debug("Research agent completed successfully")
-            _result = run_agent_with_retry(agent, prompt, run_config)
+            fallback_handler = FallbackHandler(config, tools)
+            _result = run_agent_with_retry(agent, prompt, run_config, fallback_handler)
             if _result:
                 # Log research completion
                 log_work_event(f"Completed research phase for: {base_task_or_query}")
@@ -529,7 +526,8 @@ def run_web_research_agent(
             console.print(Panel(Markdown(console_message), title="🔬 Researching..."))
 
         logger.debug("Web research agent completed successfully")
-        _result = run_agent_with_retry(agent, prompt, run_config)
+        fallback_handler = FallbackHandler(config, tools)
+        _result = run_agent_with_retry(agent, prompt, run_config, fallback_handler)
         if _result:
             # Log web research completion
             log_work_event(f"Completed web research phase for: {query}")
@@ -634,7 +632,10 @@ def run_planning_agent(
     try:
         print_stage_header("Planning Stage")
         logger.debug("Planning agent completed successfully")
-        _result = run_agent_with_retry(agent, planning_prompt, run_config)
+        fallback_handler = FallbackHandler(config, tools)
+        _result = run_agent_with_retry(
+            agent, planning_prompt, run_config, fallback_handler
+        )
         if _result:
             # Log planning completion
             log_work_event(f"Completed planning phase for: {base_task}")
@@ -739,7 +740,8 @@ def run_task_implementation_agent(
 
     try:
         logger.debug("Implementation agent completed successfully")
-        _result = run_agent_with_retry(agent, prompt, run_config)
+        fallback_handler = FallbackHandler(config, tools)
+        _result = run_agent_with_retry(agent, prompt, run_config, fallback_handler)
         if _result:
             # Log task implementation completion
             log_work_event(f"Completed implementation of task: {task}")
@@ -805,7 +807,7 @@ def _decrement_agent_depth():
     _global_memory["agent_depth"] = _global_memory.get("agent_depth", 1) - 1
 
 
-def _run_agent_stream(agent, prompt, config):
+def _run_agent_stream(agent: CompiledGraph, prompt: str, config: dict):
     for chunk in agent.stream({"messages": [HumanMessage(content=prompt)]}, config):
         logger.debug("Agent output: %s", chunk)
         check_interrupt()
@@ -840,7 +842,9 @@ def _handle_api_error(e, attempt, max_retries, base_delay):
         time.sleep(0.1)
 
 
-def run_agent_with_retry(agent, prompt: str, config: dict) -> Optional[str]:
+def run_agent_with_retry(
+    agent, prompt: str, config: dict, fallback_handler: FallbackHandler
+) -> Optional[str]:
     """Run an agent with retry logic for API errors."""
     logger.debug("Running agent with prompt length: %d", len(prompt))
     original_handler = _setup_interrupt_handling()
@@ -850,7 +854,6 @@ def run_agent_with_retry(agent, prompt: str, config: dict) -> Optional[str]:
     _max_test_retries = config.get("max_test_cmd_retries", DEFAULT_MAX_TEST_CMD_RETRIES)
     auto_test = config.get("auto_test", False)
     original_prompt = prompt
-    fallback_handler = FallbackHandler(config)
 
     with InterruptibleSection():
         try:
@@ -872,8 +875,13 @@ def run_agent_with_retry(agent, prompt: str, config: dict) -> Optional[str]:
                         continue
                     logger.debug("Agent run completed successfully")
                     return "Agent run completed successfully"
-                except (ToolExecutionError, InvalidToolCall) as e:
-                    _handle_tool_execution_error(fallback_handler, agent, e)
+                except ToolExecutionError as e:
+                    fallback_response = _handle_tool_execution_error(
+                        fallback_handler, agent, e
+                    )
+                    if fallback_response:
+                        prompt = original_prompt + "\n" + fallback_response
+                        continue
                 except (KeyboardInterrupt, AgentInterrupt):
                     raise
                 except (
@@ -892,6 +900,37 @@ def run_agent_with_retry(agent, prompt: str, config: dict) -> Optional[str]:
 def _handle_tool_execution_error(
     fallback_handler: FallbackHandler,
     agent: CiaynAgent | CompiledGraph,
-    error: ToolExecutionError | InvalidToolCall,
+    error: ToolExecutionError,
 ):
-    fallback_handler.handle_failure("Tool execution error", error, agent)
+    logger.debug("Entering _handle_tool_execution_error with error: %s", error)
+    if error.tool_name:
+        failed_tool_call_name = error.tool_name
+        logger.debug(
+            "Extracted failed_tool_call_name from error.tool_name: %s",
+            failed_tool_call_name,
+        )
+    else:
+        import re
+
+        msg = str(error)
+        logger.debug("Error message: %s", msg)
+        match = re.search(r"name=['\"](\w+)['\"]", msg)
+        if match:
+            failed_tool_call_name = match.group(1)
+            logger.debug(
+                "Extracted failed_tool_call_name using regex: %s", failed_tool_call_name
+            )
+        else:
+            failed_tool_call_name = "Tool execution error"
+            logger.debug(
+                "Defaulting failed_tool_call_name to: %s", failed_tool_call_name
+            )
+    logger.debug(
+        "Calling fallback_handler.handle_failure with failed_tool_call_name: %s",
+        failed_tool_call_name,
+    )
+    fallback_response = fallback_handler.handle_failure(
+        failed_tool_call_name, error, agent
+    )
+    logger.debug("Fallback response received: %s", fallback_response)
+    return fallback_response

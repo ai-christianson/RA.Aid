@@ -427,15 +427,6 @@ def main():
         _global_memory["config"]["planner_model"] = args.planner_model or args.model
 
         _global_memory["config"]["no_fallback_tool"] = args.no_fallback_tool
-        _global_memory["config"]["fallback_tool_models"] = (
-            [
-                model.strip()
-                for model in args.fallback_tool_models.split(",")
-                if model.strip()
-            ]
-            if args.fallback_tool_models
-            else []
-        )
 
         # Store research config with fallback to base values
         _global_memory["config"]["research_provider"] = (
@@ -445,15 +436,6 @@ def main():
 
         # Store fallback tool configuration
         _global_memory["config"]["no_fallback_tool"] = args.no_fallback_tool
-        _global_memory["config"]["fallback_tool_models"] = (
-            [
-                model.strip()
-                for model in args.fallback_tool_models.split(",")
-                if model.strip()
-            ]
-            if args.fallback_tool_models
-            else []
-        )
 
         # Run research stage
         print_stage_header("Research Stage")

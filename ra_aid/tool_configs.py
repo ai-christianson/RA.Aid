@@ -28,7 +28,7 @@ from ra_aid.tools.write_file import write_file_tool
 # Read-only tools that don't modify system state
 def get_read_only_tools(
     human_interaction: bool = False, web_research_enabled: bool = False
-) -> list:
+):
     """Get the list of read-only tools, optionally including human interaction tools.
 
     Args:
@@ -61,6 +61,21 @@ def get_read_only_tools(
 
     return tools
 
+def get_all_tools_simple():
+    """Return a list containing all available tools using existing group methods."""
+    return get_all_tools()
+
+def get_all_tools():
+    """Return a list containing all available tools from different groups."""
+    all_tools = []
+    all_tools.extend(get_read_only_tools())
+    all_tools.extend(MODIFICATION_TOOLS)
+    all_tools.extend(EXPERT_TOOLS)
+    all_tools.extend(RESEARCH_TOOLS)
+    all_tools.extend(get_web_research_tools())
+    all_tools.extend(get_chat_tools())
+    return all_tools
+
 
 # Define constant tool groups
 READ_ONLY_TOOLS = get_read_only_tools()
@@ -81,7 +96,7 @@ def get_research_tools(
     expert_enabled: bool = True,
     human_interaction: bool = False,
     web_research_enabled: bool = False,
-) -> list:
+):
     """Get the list of research tools based on mode and whether expert is enabled.
 
     Args:

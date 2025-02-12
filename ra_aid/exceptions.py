@@ -17,5 +17,6 @@ class ToolExecutionError(Exception):
     This exception is used to distinguish tool execution failures
     from other types of errors in the agent system.
     """
-
-    pass
+    def __init__(self, message, tool_name=None):
+        super().__init__(message)
+        self.tool_name = tool_name
