@@ -77,8 +77,8 @@ COMMON_TOOLS = get_read_only_tools()
 EXPERT_TOOLS = [emit_expert_context, ask_expert]
 RESEARCH_TOOLS = [
     emit_research_notes,
+    one_shot_completed,
     # *TEMPORARILY* disabled to improve tool calling perf.
-    # one_shot_completed,
     # monorepo_detected,
     # ui_detected,
 ]
@@ -133,9 +133,9 @@ def get_planning_tools(
     # Add planning-specific tools
     planning_tools = [
         request_task_implementation,
+        plan_implementation_completed,
         # *TEMPORARILY* disabled to improve tool calling perf.
         # emit_plan,
-        # plan_implementation_completed,
     ]
     tools.extend(planning_tools)
 
