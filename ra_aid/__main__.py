@@ -304,22 +304,27 @@ def main():
                 sys.exit(1)
             logger.debug(f"Using default temperature {args.temperature} for model {args.model}")
 
-        # Display status line
+        # Display status lines
         status = Text()
-        status.append("🤖 ")  
+        # Model info
+        status.append("🤖 ")
         status.append(f"{args.provider}/{args.model}")
         if args.temperature is not None:
             status.append(f" @ T{args.temperature}")
+        status.append("\n")
 
+        # Expert info
+        status.append("🤔 ")
         if expert_enabled:
-            status.append(" | 🤔 ")
             status.append(f"{args.expert_provider}/{args.expert_model}")
         else:
-            status.append(" | 🤔 Expert: ")
+            status.append("Expert: ")
             status.append("Disabled", style="italic")
+        status.append("\n")
 
-        status.append(" | 🔍 Search: ")  
-        status.append("Enabled" if web_research_enabled else "Disabled", 
+        # Search info
+        status.append("🔍 Search: ")
+        status.append("Enabled" if web_research_enabled else "Disabled",
                      style=None if web_research_enabled else "italic")
         
         console.print(
