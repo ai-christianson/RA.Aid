@@ -1,4 +1,6 @@
 import os
+import sys
+from pathlib import Path
 from typing import Dict, List, Union
 
 from langchain_core.tools import tool
@@ -14,6 +16,30 @@ from ra_aid.tools.memory import _global_memory, log_work_event
 
 console = Console()
 logger = get_logger(__name__)
+
+
+def get_aider_executable() -> str:
+    """Get the path to the aider executable in the same bin/Scripts directory as Python.
+    
+    Returns:
+        str: Full path to aider executable
+    """
+    # Get directory containing Python executable 
+    bin_dir = Path(sys.executable).parent
+    
+    # Check for platform-specific executable name
+    if sys.platform == "win32":
+        aider_exe = bin_dir / "aider.exe"
+    else:
+        aider_exe = bin_dir / "aider"
+        
+    if not aider_exe.exists():
+        raise RuntimeError(f"Could not find aider executable at {aider_exe}")
+    
+    if not os.access(aider_exe, os.X_OK):
+        raise RuntimeError(f"Aider executable at {aider_exe} is not executable")
+        
+    return str(aider_exe)
 
 
 def _truncate_for_log(text: str, max_length: int = 300) -> str:
@@ -59,8 +85,9 @@ def run_programming_task(
     )
 
     # Build command
+    aider_exe = get_aider_executable()
     command = [
-        "aider",
+        aider_exe,
         "--yes-always",
         "--no-auto-commits",
         "--dark-mode",
@@ -163,5 +190,7 @@ def parse_aider_flags(aider_flags: str) -> List[str]:
     return [f"--{flag.lstrip('-')}" for flag in flags if flag.strip()]
 
 
+
+
 # Export the functions
-__all__ = ["run_programming_task"]
+__all__ = ["run_programming_task", "get_aider_executable"]
