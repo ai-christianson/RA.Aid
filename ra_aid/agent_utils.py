@@ -878,7 +878,7 @@ def run_agent_with_retry(
                 except ToolExecutionError as e:
                     fallback_response = fallback_handler.handle_failure(e, agent)
                     if fallback_response:
-                        prompt = original_prompt + "\n" + fallback_response
+                        prompt = original_prompt + "\n" + str(fallback_response)
                         continue
                 except (KeyboardInterrupt, AgentInterrupt):
                     raise
