@@ -276,11 +276,19 @@ def test_get_model_token_limit_planner(mock_memory):
         token_limit = get_model_token_limit(config, "planner")
         assert token_limit == 120000
 
+
 # New tests for private helper methods in agent_utils.py
 
+
 def test_setup_and_restore_interrupt_handling():
-    import signal, threading
-    from ra_aid.agent_utils import _setup_interrupt_handling, _restore_interrupt_handling, _request_interrupt
+    import signal
+
+    from ra_aid.agent_utils import (
+        _request_interrupt,
+        _restore_interrupt_handling,
+        _setup_interrupt_handling,
+    )
+
     original_handler = signal.getsignal(signal.SIGINT)
     handler = _setup_interrupt_handling()
     # Verify the SIGINT handler is set to _request_interrupt
@@ -289,66 +297,93 @@ def test_setup_and_restore_interrupt_handling():
     # Verify the SIGINT handler is restored to the original
     assert signal.getsignal(signal.SIGINT) == original_handler
 
+
 def test_increment_and_decrement_agent_depth():
-    from ra_aid.agent_utils import _increment_agent_depth, _decrement_agent_depth, _global_memory
+    from ra_aid.agent_utils import (
+        _decrement_agent_depth,
+        _global_memory,
+        _increment_agent_depth,
+    )
+
     _global_memory["agent_depth"] = 10
     _increment_agent_depth()
     assert _global_memory["agent_depth"] == 11
     _decrement_agent_depth()
     assert _global_memory["agent_depth"] == 10
 
+
 def test_run_agent_stream(monkeypatch):
-    from ra_aid.agent_utils import _run_agent_stream, _global_memory
+    from ra_aid.agent_utils import _global_memory, _run_agent_stream
+
     # Create a dummy agent that yields one chunk
     class DummyAgent:
         def stream(self, msg, cfg):
             yield {"content": "chunk1"}
+
     dummy_agent = DummyAgent()
     # Set flags so that _run_agent_stream will reset them
     _global_memory["plan_completed"] = True
     _global_memory["task_completed"] = True
     _global_memory["completion_message"] = "existing"
     call_flag = {"called": False}
+
     def fake_print_agent_output(chunk):
         call_flag["called"] = True
-    monkeypatch.setattr("ra_aid.agent_utils.print_agent_output", fake_print_agent_output)
+
+    monkeypatch.setattr(
+        "ra_aid.agent_utils.print_agent_output", fake_print_agent_output
+    )
     _run_agent_stream(dummy_agent, "dummy prompt", {})
     assert call_flag["called"]
     assert _global_memory["plan_completed"] is False
     assert _global_memory["task_completed"] is False
     assert _global_memory["completion_message"] == ""
 
+
 def test_execute_test_command_wrapper(monkeypatch):
     from ra_aid.agent_utils import _execute_test_command_wrapper
+
     # Patch execute_test_command to return a testable tuple
     def fake_execute(config, orig, tests, auto):
         return (True, "new prompt", auto, tests + 1)
+
     monkeypatch.setattr("ra_aid.agent_utils.execute_test_command", fake_execute)
     result = _execute_test_command_wrapper("orig", {}, 0, False)
     assert result == (True, "new prompt", False, 1)
 
+
 def test_handle_api_error_valueerror():
-    from ra_aid.agent_utils import _handle_api_error
     import pytest
+
+    from ra_aid.agent_utils import _handle_api_error
+
     # ValueError not containing "code" or "429" should be re-raised
     with pytest.raises(ValueError):
         _handle_api_error(ValueError("some error"), 0, 5, 1)
 
+
 def test_handle_api_error_max_retries():
-    from ra_aid.agent_utils import _handle_api_error
     import pytest
+
+    from ra_aid.agent_utils import _handle_api_error
+
     # When attempt reaches max retries, a RuntimeError should be raised
     with pytest.raises(RuntimeError):
         _handle_api_error(Exception("error code 429"), 4, 5, 1)
 
+
 def test_handle_api_error_retry(monkeypatch):
-    from ra_aid.agent_utils import _handle_api_error
     import time
+
+    from ra_aid.agent_utils import _handle_api_error
+
     # Patch time.monotonic and time.sleep to simulate immediate delay expiration
     fake_time = [0]
+
     def fake_monotonic():
         fake_time[0] += 0.5
         return fake_time[0]
+
     monkeypatch.setattr(time, "monotonic", fake_monotonic)
     monkeypatch.setattr(time, "sleep", lambda s: None)
     # Should not raise error when attempt is lower than max retries

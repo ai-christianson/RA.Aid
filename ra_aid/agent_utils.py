@@ -9,7 +9,6 @@ import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Literal, Optional, Sequence
 
-from langgraph.graph.graph import CompiledGraph
 import litellm
 from anthropic import APIError, APITimeoutError, InternalServerError, RateLimitError
 from langchain_core.language_models import BaseChatModel
@@ -20,6 +19,7 @@ from langchain_core.messages import (
 )
 from langchain_core.tools import tool
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.graph.graph import CompiledGraph
 from langgraph.prebuilt import create_react_agent
 from langgraph.prebuilt.chat_agent_executor import AgentState
 from litellm import get_model_info
@@ -876,9 +876,7 @@ def run_agent_with_retry(
                     logger.debug("Agent run completed successfully")
                     return "Agent run completed successfully"
                 except ToolExecutionError as e:
-                    fallback_response = _handle_tool_execution_error(
-                        fallback_handler, agent, e
-                    )
+                    fallback_response = fallback_handler.handle_failure(e, agent)
                     if fallback_response:
                         prompt = original_prompt + "\n" + fallback_response
                         continue
@@ -895,42 +893,3 @@ def run_agent_with_retry(
         finally:
             _decrement_agent_depth()
             _restore_interrupt_handling(original_handler)
-
-
-def _handle_tool_execution_error(
-    fallback_handler: FallbackHandler,
-    agent: CiaynAgent | CompiledGraph,
-    error: ToolExecutionError,
-):
-    logger.debug("Entering _handle_tool_execution_error with error: %s", error)
-    if error.tool_name:
-        failed_tool_call_name = error.tool_name
-        logger.debug(
-            "Extracted failed_tool_call_name from error.tool_name: %s",
-            failed_tool_call_name,
-        )
-    else:
-        import re
-
-        msg = str(error)
-        logger.debug("Error message: %s", msg)
-        match = re.search(r"name=['\"](\w+)['\"]", msg)
-        if match:
-            failed_tool_call_name = match.group(1)
-            logger.debug(
-                "Extracted failed_tool_call_name using regex: %s", failed_tool_call_name
-            )
-        else:
-            failed_tool_call_name = "Tool execution error"
-            logger.debug(
-                "Defaulting failed_tool_call_name to: %s", failed_tool_call_name
-            )
-    logger.debug(
-        "Calling fallback_handler.handle_failure with failed_tool_call_name: %s",
-        failed_tool_call_name,
-    )
-    fallback_response = fallback_handler.handle_failure(
-        failed_tool_call_name, error, agent
-    )
-    logger.debug("Fallback response received: %s", fallback_response)
-    return fallback_response

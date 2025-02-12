@@ -1,9 +1,10 @@
 import logging
 import sys
 from typing import Optional
+
 from rich.console import Console
-from rich.panel import Panel
 from rich.markdown import Markdown
+from rich.panel import Panel
 
 
 class PrettyHandler(logging.Handler):

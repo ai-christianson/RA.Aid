@@ -1,5 +1,9 @@
 """Custom exceptions for RA.Aid."""
 
+from typing import Optional
+
+from langchain_core.messages import BaseMessage
+
 
 class AgentInterrupt(Exception):
     """Exception raised when an agent's execution is interrupted.
@@ -17,6 +21,13 @@ class ToolExecutionError(Exception):
     This exception is used to distinguish tool execution failures
     from other types of errors in the agent system.
     """
-    def __init__(self, message, tool_name=None):
+
+    def __init__(
+        self,
+        message: str,
+        base_message: Optional[BaseMessage] = None,
+        tool_name: Optional[str] = None,
+    ):
         super().__init__(message)
+        self.base_message = base_message
         self.tool_name = tool_name

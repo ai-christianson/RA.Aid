@@ -44,7 +44,9 @@ def print_agent_output(chunk: Dict[str, Any]) -> None:
                     )
                 )
                 tool_name = getattr(msg, "name", None)
-                raise ToolExecutionError(err_msg, tool_name=tool_name)
+                cpm(f"type(msg): {type(msg)}")
+                cpm(f"msg: {msg}")
+                raise ToolExecutionError(err_msg, tool_name=tool_name, base_message=msg)
 
 
 def cpm(message: str, title: Optional[str] = None, border_style: str = "blue") -> None:

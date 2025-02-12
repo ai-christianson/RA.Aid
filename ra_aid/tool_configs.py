@@ -1,3 +1,5 @@
+from langchain_core.tools import BaseTool
+
 from ra_aid.tools import (
     ask_expert,
     ask_human,
@@ -61,11 +63,13 @@ def get_read_only_tools(
 
     return tools
 
+
 def get_all_tools_simple():
     """Return a list containing all available tools using existing group methods."""
     return get_all_tools()
 
-def get_all_tools():
+
+def get_all_tools() -> list[BaseTool]:
     """Return a list containing all available tools from different groups."""
     all_tools = []
     all_tools.extend(get_read_only_tools())
@@ -176,7 +180,7 @@ def get_implementation_tools(
     return tools
 
 
-def get_web_research_tools(expert_enabled: bool = True) -> list:
+def get_web_research_tools(expert_enabled: bool = True):
     """Get the list of tools available for web research.
 
     Args:
@@ -196,9 +200,7 @@ def get_web_research_tools(expert_enabled: bool = True) -> list:
     return tools
 
 
-def get_chat_tools(
-    expert_enabled: bool = True, web_research_enabled: bool = False
-) -> list:
+def get_chat_tools(expert_enabled: bool = True, web_research_enabled: bool = False):
     """Get the list of tools available in chat mode.
 
     Chat mode includes research and implementation capabilities but excludes

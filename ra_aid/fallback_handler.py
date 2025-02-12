@@ -1,9 +1,9 @@
+import json
+import re
+
 from langchain_core.tools import BaseTool
 from langgraph.graph.graph import CompiledGraph
 from langgraph.graph.message import BaseMessage
-
-from ra_aid.console.output import cpm
-import json
 
 from ra_aid.agents.ciayn_agent import CiaynAgent
 from ra_aid.config import (
@@ -11,10 +11,12 @@ from ra_aid.config import (
     FALLBACK_TOOL_MODEL_LIMIT,
     RETRY_FALLBACK_COUNT,
 )
-from ra_aid.logging_config import get_logger
-from ra_aid.tool_leaderboard import supported_top_tool_models
-from rich.console import Console
+from ra_aid.console.output import cpm
+from ra_aid.exceptions import ToolExecutionError
 from ra_aid.llm import initialize_llm, validate_provider_env
+from ra_aid.logging_config import get_logger
+from ra_aid.tool_configs import get_all_tools
+from ra_aid.tool_leaderboard import supported_top_tool_models
 
 logger = get_logger(__name__)
 
@@ -41,9 +43,12 @@ class FallbackHandler:
         self.tools: list[BaseTool] = tools
         self.fallback_enabled = config.get("fallback_tool_enabled", True)
         self.fallback_tool_models = self._load_fallback_tool_models(config)
+        self.max_failures = config.get("max_tool_failures", DEFAULT_MAX_TOOL_FAILURES)
         self.tool_failure_consecutive_failures = 0
+        self.failed_messages = set()
         self.tool_failure_used_fallbacks = set()
-        self.console = Console()
+        self.current_failing_tool_name = ""
+        self.current_tool_to_bind = None
 
     def _load_fallback_tool_models(self, config):
         """
@@ -87,66 +92,104 @@ class FallbackHandler:
         cpm(message, title="Fallback Models")
         return final_models
 
-    def handle_failure(
-        self, code: str, error: Exception, agent: CiaynAgent | CompiledGraph
-    ):
+    def handle_failure(self, error: Exception, agent: CiaynAgent | CompiledGraph):
         """
         Handle a tool failure by incrementing the failure counter and triggering fallback if thresholds are exceeded.
 
         Args:
-            code (str): The code that failed to execute.
-            error (Exception): The exception raised during execution.
-            logger: Logger instance for logging.
+            error (Exception): The exception raised during execution. If the exception has a 'base_message' attribute, that message is recorded.
             agent: The agent instance on which fallback may be executed.
         """
-        logger.debug(
-            f"_handle_tool_failure: tool failure encountered for code '{code}' with error: {error}"
-        )
-        self.tool_failure_consecutive_failures += 1
-        max_failures = self.config.get("max_tool_failures", DEFAULT_MAX_TOOL_FAILURES)
-        logger.debug(
-            f"_handle_tool_failure: failure count {self.tool_failure_consecutive_failures}, max_failures {max_failures}"
-        )
+        if not self.fallback_enabled:
+            return None
+
+        failed_tool_call_name = self.extract_failed_tool_name(error)
         if (
-            self.fallback_enabled
-            and self.tool_failure_consecutive_failures >= max_failures
+            self.current_failing_tool_name
+            and failed_tool_call_name != self.current_failing_tool_name
+        ):
+            logger.debug(
+                "New failing tool name identified. Resetting consecutive tool failures."
+            )
+            self.reset_fallback_handler()
+
+        logger.debug(
+            f"_handle_tool_failure: tool failure encountered for code '{failed_tool_call_name}' with error: {error}"
+        )
+
+        self.current_failing_tool_name = failed_tool_call_name
+        self.current_tool_to_bind = self._find_tool_to_bind(
+            agent, failed_tool_call_name
+        )
+
+        if hasattr(error, "base_message") and error.base_message:
+            self.failed_messages.add(str(error.base_message))
+
+        self.tool_failure_consecutive_failures += 1
+        logger.debug(
+            f"_handle_tool_failure: failure count {self.tool_failure_consecutive_failures}, max_failures {self.max_failures}"
+        )
+
+        if (
+            self.tool_failure_consecutive_failures >= self.max_failures
             and self.fallback_tool_models
         ):
             logger.debug(
                 "_handle_tool_failure: threshold reached, invoking fallback mechanism."
             )
-            return self.attempt_fallback(code, logger, agent)
+            return self.attempt_fallback()
 
-    def attempt_fallback(self, code: str, logger, agent):
+    def attempt_fallback(self):
         """
-        Initiate the fallback process by selecting a fallback model and triggering the appropriate fallback method.
+        Initiate the fallback process by iterating over all fallback models and triggering the appropriate fallback method.
 
-        Args:
-            code (str): The tool code that triggered the fallback.
-            logger: Logger instance for logging messages.
-            agent: The agent for which fallback is being executed.
+        Returns:
+            The response from a fallback model if any, otherwise None.
         """
-        logger.debug(f"_attempt_fallback: initiating fallback for code: {code}")
-        fallback_model = self.fallback_tool_models[0]
-        failed_tool_call_name = code
         logger.error(
-            f"Tool call failed {self.tool_failure_consecutive_failures} times. Attempting fallback to model: {fallback_model['model']} for tool: {failed_tool_call_name}"
+            f"Tool call failed {self.tool_failure_consecutive_failures} times. Attempting fallback for tool: {self.current_failing_tool_name}"
         )
         cpm(
-            f"**Tool fallback activated**: Switching to fallback model {fallback_model['model']} for tool {failed_tool_call_name}.",
+            f"**Tool fallback activated**: Attempting fallback for tool {self.current_failing_tool_name}.",
             title="Fallback Notification",
         )
-        if fallback_model.get("type", "prompt").lower() == "fc":
-            self.attempt_fallback_function(code, logger, agent)
-        else:
-            self.attempt_fallback_prompt(code, logger, agent)
+        for fallback_model in self.fallback_tool_models:
+            if fallback_model.get("type", "prompt").lower() == "fc":
+                response = self.attempt_fallback_function(fallback_model)
+            else:
+                response = self.attempt_fallback_prompt(fallback_model)
+            if response:
+                return response
+        cpm("All fallback models have failed", title="Fallback Failed")
+        return None
 
     def reset_fallback_handler(self):
         """
         Reset the fallback handler's internal failure counters and clear the record of used fallback models.
         """
         self.tool_failure_consecutive_failures = 0
+        self.failed_messages.clear()
         self.tool_failure_used_fallbacks.clear()
+        self.fallback_tool_models = self._load_fallback_tool_models(self.config)
+
+    def extract_failed_tool_name(self, error: ToolExecutionError):
+        if error.tool_name:
+            failed_tool_call_name = error.tool_name
+        else:
+            msg = str(error)
+            logger.debug("Error message: %s", msg)
+            match = re.search(r"name=['\"](\w+)['\"]", msg)
+            if match:
+                failed_tool_call_name = str(match.group(1))
+                logger.debug(
+                    "Extracted failed_tool_call_name using regex: %s",
+                    failed_tool_call_name,
+                )
+            else:
+                failed_tool_call_name = "Tool execution error"
+                raise Exception("Fallback failed: Could not extract failed tool name.")
+
+        return failed_tool_call_name
 
     def _find_tool_to_bind(self, agent, failed_tool_call_name):
         logger.debug(f"failed_tool_call_name={failed_tool_call_name}")
@@ -157,135 +200,108 @@ class FallbackHandler:
                 None,
             )
         if tool_to_bind is None:
-            from ra_aid.tool_configs import get_all_tools
-
             all_tools = get_all_tools()
             tool_to_bind = next(
                 (t for t in all_tools if t.func.__name__ == failed_tool_call_name),
                 None,
             )
         if tool_to_bind is None:
-            available = [t.func.__name__ for t in get_all_tools()]
-            logger.debug(
-                f"Failed to find tool: {failed_tool_call_name}. Available tools: {available}"
+            # TODO: Would be nice to try fuzzy match or levenstein str match to find closest correspond tool name
+            raise Exception(
+                f"Fallback failed: {failed_tool_call_name} not found in all tools."
             )
-            raise Exception(f"Tool {failed_tool_call_name} not found in all tools.")
         return tool_to_bind
 
-    def attempt_fallback_prompt(self, code: str, logger, agent):
+    def attempt_fallback_prompt(self, fallback_model):
         """
-        Attempt a prompt-based fallback by iterating over fallback models and invoking the provided code.
-
-        This method tries each fallback model (with retry logic configured) until one successfully executes the code.
+        Attempt a prompt-based fallback by invoking the current failing tool with the given fallback model.
 
         Args:
-            code (str): The tool code to invoke via fallback.
-            logger: Logger instance for logging messages.
-            agent: The agent instance to update with the new model upon success.
+            fallback_model (dict): The fallback model to use.
 
         Returns:
-            The response from the fallback model invocation.
-
-        Raises:
-            Exception: If all prompt-based fallback models fail.
+            The response from the fallback model invocation, or None if failed.
         """
-        logger.debug("Attempting prompt-based fallback using fallback models")
-        failed_tool_call_name = code
-        for fallback_model in self.fallback_tool_models:
-            try:
-                logger.debug(f"Trying fallback model: {fallback_model['model']}")
-                simple_model = initialize_llm(
-                    fallback_model["provider"], fallback_model["model"]
-                )
-                tool_to_bind = self._find_tool_to_bind(agent, failed_tool_call_name)
-                binded_model = simple_model.bind_tools(
-                    [tool_to_bind], tool_choice=failed_tool_call_name
-                )
-                # retry_model = binded_model.with_retry(
-                #     stop_after_attempt=RETRY_FALLBACK_COUNT
-                # )
-                response = binded_model.invoke(code)
-                cpm(f"response={response}")
-
-                self.tool_failure_used_fallbacks.add(fallback_model["model"])
-
-                tool_call = self.base_message_to_tool_call_dict(response)
-                if tool_call:
-                    result = self.invoke_prompt_tool_call(tool_call)
-                    cpm(f"result={result}")
-                    logger.debug(
-                        "Prompt-based fallback executed successfully with model: "
-                        + fallback_model["model"]
-                    )
-                    self.reset_fallback_handler()
-                    return result
-                else:
-                    cpm(
-                        response.content if hasattr(response, "content") else response,
-                        title="Fallback Model Response: " + fallback_model["model"],
-                    )
-                    return response
-            except Exception as e:
-                if isinstance(e, KeyboardInterrupt):
-                    raise
-                logger.error(
-                    f"Prompt-based fallback with model {fallback_model['model']} failed: {e}"
-                )
-        raise Exception("All prompt-based fallback models failed")
-
-    def attempt_fallback_function(self, code: str, logger, agent):
-        """
-        Attempt a function-calling fallback by iterating over fallback models and invoking the provided code.
-
-        This method tries each fallback model (with retry logic configured) until one successfully executes the code.
-
-        Args:
-            code (str): The tool code to invoke via fallback.
-            logger: Logger instance for logging messages.
-            agent: The agent instance to update with the new model upon success.
-
-        Returns:
-            The response from the fallback model invocation.
-
-        Raises:
-            Exception: If all function-calling fallback models fail.
-        """
-        logger.debug("Attempting function-calling fallback using fallback models")
-        failed_tool_call_name = code
-        for fallback_model in self.fallback_tool_models:
-            try:
-                logger.debug(f"Trying fallback model: {fallback_model['model']}")
-                simple_model = initialize_llm(
-                    fallback_model["provider"], fallback_model["model"]
-                )
-                tool_to_bind = self._find_tool_to_bind(agent, failed_tool_call_name)
-                binded_model = simple_model.bind_tools(
-                    [tool_to_bind], tool_choice=failed_tool_call_name
-                )
-                retry_model = binded_model.with_retry(
-                    stop_after_attempt=RETRY_FALLBACK_COUNT
-                )
-                response = retry_model.invoke(code)
-                cpm(f"response={response}")
-                self.tool_failure_used_fallbacks.add(fallback_model["model"])
-                self.reset_fallback_handler()
+        try:
+            logger.debug(f"Trying fallback model: {fallback_model['model']}")
+            simple_model = initialize_llm(
+                fallback_model["provider"], fallback_model["model"]
+            )
+            binded_model = simple_model.bind_tools(
+                [self.current_tool_to_bind],
+                tool_choice=self.current_failing_tool_name,
+            )
+            retry_model = binded_model.with_retry(
+                stop_after_attempt=RETRY_FALLBACK_COUNT
+            )
+            response = retry_model.invoke(self.current_failing_tool_name)
+            cpm(f"response={response}")
+            self.tool_failure_used_fallbacks.add(fallback_model["model"])
+            tool_call = self.base_message_to_tool_call_dict(response)
+            if tool_call:
+                result = self.invoke_prompt_tool_call(tool_call)
+                cpm(f"result={result}")
                 logger.debug(
-                    "Function-calling fallback executed successfully with model: "
+                    "Prompt-based fallback executed successfully with model: "
                     + fallback_model["model"]
                 )
-
+                self.reset_fallback_handler()
+                return result
+            else:
                 cpm(
                     response.content if hasattr(response, "content") else response,
                     title="Fallback Model Response: " + fallback_model["model"],
                 )
                 return response
-            except Exception as e:
-                if isinstance(e, KeyboardInterrupt):
-                    raise
-                logger.error(
-                    f"Function-calling fallback with model {fallback_model['model']} failed: {e}"
-                )
-        raise Exception("All function-calling fallback models failed")
+        except Exception as e:
+            if isinstance(e, KeyboardInterrupt):
+                raise
+            logger.error(
+                f"Prompt-based fallback with model {fallback_model['model']} failed: {e}"
+            )
+            return None
+
+    def attempt_fallback_function(self, fallback_model):
+        """
+        Attempt a function-calling fallback by invoking the current failing tool with the given fallback model.
+
+        Args:
+            fallback_model (dict): The fallback model to use.
+
+        Returns:
+            The response from the fallback model invocation, or None if failed.
+        """
+        try:
+            logger.debug(f"Trying fallback model: {fallback_model['model']}")
+            simple_model = initialize_llm(
+                fallback_model["provider"], fallback_model["model"]
+            )
+            binded_model = simple_model.bind_tools(
+                [self.current_tool_to_bind],
+                tool_choice=self.current_failing_tool_name,
+            )
+            retry_model = binded_model.with_retry(
+                stop_after_attempt=RETRY_FALLBACK_COUNT
+            )
+            response = retry_model.invoke(self.current_failing_tool_name)
+            cpm(f"response={response}")
+            self.tool_failure_used_fallbacks.add(fallback_model["model"])
+            logger.debug(
+                "Function-calling fallback executed successfully with model: "
+                + fallback_model["model"]
+            )
+            cpm(
+                response.content if hasattr(response, "content") else response,
+                title="Fallback Model Response: " + fallback_model["model"],
+            )
+            return response
+        except Exception as e:
+            if isinstance(e, KeyboardInterrupt):
+                raise
+            logger.error(
+                f"Function-calling fallback with model {fallback_model['model']} failed: {e}"
+            )
+            return None
 
     def invoke_prompt_tool_call(self, tool_call_request: dict):
         """
