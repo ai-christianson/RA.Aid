@@ -63,22 +63,37 @@ def test_interactive_command():
 
 def test_large_output():
     """Test handling of commands that produce large output."""
-    # Generate a large output with predictable content.
-    cmd = 'for i in {1..3000}; do echo "Line $i of test output"; done'
+    # Generate a large output with predictable content
+    # Each line will be approximately 30 bytes
+    cmd = 'for i in {1..1000}; do echo "Line $i of test output"; done'
     output, retcode = run_interactive_command(["/bin/bash", "-c", cmd])
-    # Clean up any leading artifacts.
+    # Clean up any leading artifacts
     output_cleaned = output.lstrip(b"^D")
-    lines = [
-        line.strip()
-        for line in output_cleaned.splitlines()
-        if b"Script" not in line and line.strip()
-    ]
-    # Expect roughly 2000 history lines plus the display lines.
-    assert 2000 <= len(lines) <= 2050, (
-        f"Expected between 2000-2050 lines due to history limit plus terminal display, but got {len(lines)}"
-    )
-    # Verify that we have the last line.
-    assert lines[-1] == b"Line 3000 of test output", f"Unexpected last line: {lines[-1]}"
+    # Verify the output size is limited to 8000 bytes
+    assert len(output_cleaned) <= 8000, f"Output exceeded 8000 bytes: {len(output_cleaned)} bytes"
+    # Verify we have the last lines (should contain the highest numbers)
+    assert b"Line 1000" in output_cleaned, "Missing last line of output"
+    assert retcode == 0
+
+
+def test_byte_limit():
+    """Test that output is properly limited to 8000 bytes."""
+    # Create a string that's definitely over 8000 bytes
+    # Each line will be about 80 bytes
+    cmd = 'for i in {1..200}; do printf "%04d: %s\\n" "$i" "This is a line with padding to ensure we go over the byte limit quickly"; done'
+    output, retcode = run_interactive_command(["/bin/bash", "-c", cmd])
+    output_cleaned = output.lstrip(b"^D")
+    
+    # Verify exact 8000 byte limit
+    assert len(output_cleaned) <= 8000, f"Output exceeded 8000 bytes: {len(output_cleaned)} bytes"
+    
+    # Get the last line number from the output
+    last_line = output_cleaned.splitlines()[-1]
+    last_num = int(last_line.split(b':')[0])
+    
+    # Verify we have a high number in the last line (should be near 200)
+    assert last_num > 150, f"Expected last line number to be near 200, got {last_num}"
+    
     assert retcode == 0
 
 
@@ -113,17 +128,23 @@ def test_cat_medium_file():
         output, retcode = run_interactive_command(
             ["/bin/bash", "-c", f"cat {temp_path}"]
         )
+        output_cleaned = output.lstrip(b"^D")
         lines = [
             line
-            for line in output.splitlines()
+            for line in output_cleaned.splitlines()
             if b"Script" not in line and line.strip()
         ]
-        assert len(lines) == 500
+        
+        # With 8000 byte limit, we expect to see the last portion of lines
+        # The exact number may vary due to terminal settings, but we should
+        # at least have the last lines of the file
+        assert len(lines) >= 90, f"Expected at least 90 lines due to 8000 byte limit, got {len(lines)}"
+        
+        # Most importantly, verify we have the last lines
+        last_line = lines[-1].decode('utf-8')
+        assert "This is test line 499" in last_line, f"Expected last line to be 499, got: {last_line}"
+        
         assert retcode == 0
-
-        # Verify content integrity.
-        assert b"This is test line 0" in lines[0]
-        assert b"This is test line 499" in lines[-1]
     finally:
         os.unlink(temp_path)
 

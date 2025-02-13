@@ -165,6 +165,9 @@ def run_interactive_command(cmd: List[str]) -> Tuple[bytes, int]:
     trimmed_lines = [line for line in all_lines if line.strip()]
     final_output = "\n".join(trimmed_lines)
     
+    # Limit output to last 8000 bytes
+    final_output = final_output[-8000:]
+    
     return final_output.encode("utf-8"), proc.returncode
 
 if __name__ == "__main__":
