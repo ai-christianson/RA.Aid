@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Literal, Optional
 
 from langchain_core.messages import AIMessage
 from rich.markdown import Markdown
@@ -10,7 +10,9 @@ from ra_aid.exceptions import ToolExecutionError
 from .formatting import console
 
 
-def print_agent_output(chunk: Dict[str, Any]) -> None:
+def print_agent_output(
+    chunk: Dict[str, Any], agent_type: Literal["CiaynAgent", "React"]
+) -> None:
     """Print only the agent's message content, not tool calls.
 
     Args:
@@ -44,7 +46,10 @@ def print_agent_output(chunk: Dict[str, Any]) -> None:
                     )
                 )
                 tool_name = getattr(msg, "name", None)
-                raise ToolExecutionError(err_msg, tool_name=tool_name, base_message=msg)
+                if agent_type == "React":
+                    raise ToolExecutionError(
+                        err_msg, tool_name=tool_name, base_message=msg
+                    )
 
 
 def cpm(message: str, title: Optional[str] = None, border_style: str = "blue") -> None:

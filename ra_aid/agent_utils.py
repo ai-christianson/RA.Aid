@@ -19,7 +19,6 @@ from langchain_core.messages import (
 )
 from langchain_core.tools import tool
 from langgraph.checkpoint.memory import MemorySaver
-from langgraph.graph.graph import CompiledGraph
 from langgraph.prebuilt import create_react_agent
 from langgraph.prebuilt.chat_agent_executor import AgentState
 from litellm import get_model_info
@@ -28,7 +27,8 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 
 from ra_aid.agents.ciayn_agent import CiaynAgent
-from ra_aid.config import DEFAULT_MAX_TEST_CMD_RETRIES, DEFAULT_RECURSION_LIMIT, RAgents
+from ra_aid.agents_alias import RAgents
+from ra_aid.config import DEFAULT_MAX_TEST_CMD_RETRIES, DEFAULT_RECURSION_LIMIT
 from ra_aid.console.formatting import print_error, print_stage_header
 from ra_aid.console.output import print_agent_output
 from ra_aid.exceptions import AgentInterrupt, ToolExecutionError
@@ -836,16 +836,24 @@ def _handle_api_error(e, attempt, max_retries, base_delay):
         time.sleep(0.1)
 
 
+def get_agent_type(agent: RAgents) -> Literal["CiaynAgent", "React"]:
+    """
+    Determines the type of the agent.
+    Returns "CiaynAgent" if agent is an instance of CiaynAgent, otherwise "React".
+    """
+
+    if isinstance(agent, CiaynAgent):
+        return "CiaynAgent"
+    else:
+        return "React"
+
+
 def _run_agent_stream(agent: RAgents, msg_list: list[BaseMessage], config: dict):
     for chunk in agent.stream({"messages": msg_list}, config):
         logger.debug("Agent output: %s", chunk)
         check_interrupt()
-        print_agent_output(chunk)
-        if _global_memory["plan_completed"] or _global_memory["task_completed"]:
-            reset_agent_completion_flags()
-            break
-        check_interrupt()
-        print_agent_output(chunk)
+        agent_type = get_agent_type(agent)
+        print_agent_output(chunk, agent_type)
         if _global_memory["plan_completed"] or _global_memory["task_completed"]:
             reset_agent_completion_flags()
             break
@@ -889,10 +897,13 @@ def run_agent_with_retry(
                     logger.debug("Agent run completed successfully")
                     return "Agent run completed successfully"
                 except ToolExecutionError as e:
-                    fallback_response = fallback_handler.handle_failure(e, agent)
-                    if fallback_response:
-                        msg_list.extend(fallback_response)
-                        continue
+                    print("except ToolExecutionError in AGENT UTILS")
+                    if not isinstance(agent, CiaynAgent):
+                        logger.debug("AGENT UTILS ToolExecutionError called!")
+                        fallback_response = fallback_handler.handle_failure(e, agent)
+                        if fallback_response:
+                            msg_list.extend(fallback_response)
+                            continue
                 except (KeyboardInterrupt, AgentInterrupt):
                     raise
                 except (

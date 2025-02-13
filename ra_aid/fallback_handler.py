@@ -6,11 +6,11 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.tools import BaseTool
 from langgraph.graph.message import BaseMessage
 
+from ra_aid.agents_alias import RAgents
 from ra_aid.config import (
     DEFAULT_MAX_TOOL_FAILURES,
     FALLBACK_TOOL_MODEL_LIMIT,
     RETRY_FALLBACK_COUNT,
-    RAgents,
 )
 from ra_aid.console.output import cpm
 from ra_aid.exceptions import ToolExecutionError
@@ -51,7 +51,8 @@ class FallbackHandler:
         self.current_tool_to_bind: None | BaseTool = None
 
         cpm(
-            "Fallback models selected: " + ", ".join([self._format_model(m) for m in self.fallback_tool_models]),
+            "Fallback models selected: "
+            + ", ".join([self._format_model(m) for m in self.fallback_tool_models]),
             title="Fallback Models",
         )
 
@@ -263,14 +264,18 @@ class FallbackHandler:
 
             tool_call_result = self.invoke_prompt_tool_call(tool_call)
             cpm(str(tool_call_result), title="Fallback Tool Call Result")
-            logger.debug(f"Fallback call successful with model: {self._format_model(fallback_model)}")
+            logger.debug(
+                f"Fallback call successful with model: {self._format_model(fallback_model)}"
+            )
 
             self.reset_fallback_handler()
             return [response, tool_call_result]
         except Exception as e:
             if isinstance(e, KeyboardInterrupt):
                 raise
-            logger.error(f"Fallback with model {self._format_model(fallback_model)} failed: {e}")
+            logger.error(
+                f"Fallback with model {self._format_model(fallback_model)} failed: {e}"
+            )
             return None
 
     def construct_prompt_msg_list(self):

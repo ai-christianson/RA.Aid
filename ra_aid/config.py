@@ -15,8 +15,3 @@ VALID_PROVIDERS = [
     "deepseek",
     "gemini",
 ]
-
-from ra_aid.agents.ciayn_agent import CiaynAgent
-from langgraph.graph.graph import CompiledGraph
-
-RAgents = CompiledGraph | CiaynAgent
