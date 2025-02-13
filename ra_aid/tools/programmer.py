@@ -67,8 +67,6 @@ def run_programming_task(
     If new files are created, emit them after finishing.
 
     They can add/modify files, but not remove. Use run_shell_command to remove files. If referencing files you'll delete, remove them after they finish.
-  
-    Use write_file_tool instead if you need to write the entire contents of file(s).
 
     If the programmer wrote files, they actually wrote to disk. You do not need to rewrite the output of what the programmer showed you.
 
