@@ -65,7 +65,7 @@ def run_programming_task(
 
     If new files are created, emit them after finishing.
 
-    They can add/modify files, but not remove. Use run_shell_command to remove files. If referencing files you’ll delete, remove them after they finish.
+    They can add/modify files, but not remove. Use run_shell_command to remove files. If referencing files you'll delete, remove them after they finish.
   
     Use write_file_tool instead if you need to write the entire contents of file(s).
 
@@ -163,20 +163,23 @@ def run_programming_task(
 
 
 def parse_aider_flags(aider_flags: str) -> List[str]:
-    """Parse a string of aider flags into a list of flags.
+    """Parse a string of aider flags into a list of flags and their values.
 
     Args:
         aider_flags: A string containing comma-separated flags, with or without leading dashes.
                     Can contain spaces around flags and commas.
+                    Supports flags with values (e.g. --analytics-log filename.json)
 
     Returns:
-        A list of flags with proper '--' prefix.
+        A list of flags with proper '--' prefix and their values as separate elements.
 
     Examples:
         >>> parse_aider_flags("yes-always,dark-mode")
         ['--yes-always', '--dark-mode']
         >>> parse_aider_flags("--yes-always, --dark-mode")
         ['--yes-always', '--dark-mode']
+        >>> parse_aider_flags("--analytics-log filename.json")
+        ['--analytics-log', 'filename.json']
         >>> parse_aider_flags("")
         []
     """
@@ -184,12 +187,27 @@ def parse_aider_flags(aider_flags: str) -> List[str]:
         return []
 
     # Split by comma and strip whitespace
-    flags = [flag.strip() for flag in aider_flags.split(",")]
+    flag_groups = [group.strip() for group in aider_flags.split(",")]
+    
+    result = []
+    for group in flag_groups:
+        if not group:
+            continue
+            
+        # Split by space to separate flag from value
+        parts = group.split()
+        
+        # Add '--' prefix to the flag if not present, stripping any extra dashes
+        flag = parts[0].lstrip("-")  # Remove all leading dashes
+        flag = f"--{flag}"  # Add exactly two dashes
+        
+        result.append(flag)
+        
+        # Add any remaining parts as separate values
+        if len(parts) > 1:
+            result.extend(parts[1:])
 
-    # Add '--' prefix if not present and filter out empty flags
-    return [f"--{flag.lstrip('-')}" for flag in flags if flag.strip()]
-
-
+    return result
 
 
 # Export the functions
