@@ -28,14 +28,13 @@ console = Console()
 _global_memory: Dict[
     str,
     Union[
-        List[Any],
         Dict[int, str],
         Dict[int, SnippetInfo],
         int,
         Set[str],
         bool,
         str,
-        int,
+        List[str],
         List[WorkLogEntry],
     ],
 ] = {
@@ -442,10 +441,13 @@ def emit_related_files(files: List[str]) -> str:
             results.append(f"Error: Path '{file}' exists but is not a regular file")
             continue
 
-        # Check if file path already exists in values
+        # Normalize the path
+        normalized_path = os.path.abspath(file)
+
+        # Check if normalized path already exists in values
         existing_id = None
         for fid, fpath in _global_memory["related_files"].items():
-            if fpath == file:
+            if fpath == normalized_path:
                 existing_id = fid
                 break
 
@@ -457,9 +459,9 @@ def emit_related_files(files: List[str]) -> str:
             file_id = _global_memory["related_file_id_counter"]
             _global_memory["related_file_id_counter"] += 1
 
-            # Store file with ID
-            _global_memory["related_files"][file_id] = file
-            added_files.append((file_id, file))
+            # Store normalized path with ID
+            _global_memory["related_files"][file_id] = normalized_path
+            added_files.append((file_id, file))  # Keep original path for display
             results.append(f"File ID #{file_id}: {file}")
 
     # Rich output - single consolidated panel

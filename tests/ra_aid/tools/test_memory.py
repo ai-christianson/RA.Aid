@@ -464,6 +464,34 @@ def test_related_files_formatting(reset_memory, tmp_path):
     assert get_memory_value("related_files") == ""
 
 
+def test_emit_related_files_path_normalization(reset_memory, tmp_path):
+    """Test that emit_related_files fails to detect duplicates with non-normalized paths"""
+    # Create a test file
+    test_file = tmp_path / "file.txt"
+    test_file.write_text("test content")
+
+    # Change to the temp directory so relative paths work
+    import os
+    original_dir = os.getcwd()
+    os.chdir(tmp_path)
+
+    try:
+        # Add file with absolute path
+        result1 = emit_related_files.invoke({"files": ["file.txt"]})
+        assert "File ID #0:" in result1
+
+        # Add same file with relative path - should get same ID due to path normalization
+        result2 = emit_related_files.invoke({"files": ["./file.txt"]})
+        assert "File ID #0:" in result2  # Should reuse ID since it's the same file
+
+        # Verify only one normalized path entry exists
+        assert len(_global_memory["related_files"]) == 1
+        assert os.path.abspath("file.txt") in _global_memory["related_files"].values()
+    finally:
+        # Restore original directory
+        os.chdir(original_dir)
+
+
 def test_key_snippets_integration(reset_memory, tmp_path):
     """Integration test for key snippets functionality"""
     # Create test files
