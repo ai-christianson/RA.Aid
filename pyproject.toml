@@ -36,7 +36,7 @@ dependencies = [
     "rapidfuzz>=3.11.0",
     "pathspec>=0.11.0",
     "pyte>=0.8.2",
-    "aider-chat>=0.74.2",
+    "aider-chat>=0.72.0",
     "tavily-python>=0.5.0",
     "litellm",
     "fastapi>=0.104.0",
