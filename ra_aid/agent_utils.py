@@ -874,6 +874,7 @@ def run_agent_with_retry(
     _max_test_retries = config.get("max_test_cmd_retries", DEFAULT_MAX_TEST_CMD_RETRIES)
     auto_test = config.get("auto_test", False)
     original_prompt = prompt
+    agent_type = get_agent_type(agent)
     msg_list = [HumanMessage(content=prompt)]
 
     with InterruptibleSection():
@@ -898,12 +899,19 @@ def run_agent_with_retry(
                     return "Agent run completed successfully"
                 except ToolExecutionError as e:
                     print("except ToolExecutionError in AGENT UTILS")
-                    if not isinstance(agent, CiaynAgent):
-                        logger.debug("AGENT UTILS ToolExecutionError called!")
-                        fallback_response = fallback_handler.handle_failure(e, agent)
-                        if fallback_response:
+                    logger.debug("AGENT UTILS ToolExecutionError called!")
+                    fallback_response = fallback_handler.handle_failure(e, agent)
+                    if fallback_response:
+                        if agent_type == "React":
                             msg_list.extend(fallback_response)
-                            continue
+                        else:
+                            agent.chat_history.extend(fallback_response)
+                            agent.chat_history.append(
+                                HumanMessage(
+                                    content="Fallback tool handler successfully ran your tool call. See last message for result."
+                                )
+                            )
+                        continue
                 except (KeyboardInterrupt, AgentInterrupt):
                     raise
                 except (
