@@ -1,5 +1,6 @@
 import pytest
 from pathlib import Path
+from langchain_core.tools import Tool
 
 from ra_aid.tools.programmer import parse_aider_flags, run_programming_task, get_aider_executable
 
@@ -88,12 +89,49 @@ def test_aider_config_flag(mocker):
         "ra_aid.tools.programmer.run_interactive_command", return_value=(b"", 0)
     )
 
-    run_programming_task("test instruction")
+    run_programming_task.invoke({"instructions": "test instruction"})
 
     args = mock_run.call_args[0][0]  # Get the first positional arg (command list)
     assert "--config" in args
     config_index = args.index("--config")
     assert args[config_index + 1] == "/path/to/config.yml"
+
+
+def test_path_normalization_and_deduplication(mocker, tmp_path):
+    """Test path normalization and deduplication in run_programming_task."""
+    # Create a temporary test file
+    test_file = tmp_path / "test.py"
+    test_file.write_text("")
+    new_file = tmp_path / "new.py"
+    
+    # Mock dependencies
+    mocker.patch("ra_aid.tools.programmer._global_memory", {"related_files": {}})
+    mocker.patch("ra_aid.tools.programmer.get_aider_executable", return_value="/path/to/aider")
+    mock_run = mocker.patch("ra_aid.tools.programmer.run_interactive_command", return_value=(b"", 0))
+
+    # Test duplicate paths
+    run_programming_task.invoke({
+        "instructions": "test instruction",
+        "files": [str(test_file), str(test_file)]  # Same path twice
+    })
+    
+    # Get the command list passed to run_interactive_command
+    cmd_args = mock_run.call_args[0][0]
+    # Count occurrences of test_file path in command
+    test_file_count = sum(1 for arg in cmd_args if arg == str(test_file))
+    assert test_file_count == 1, "Expected exactly one instance of test_file path"
+
+    # Test mixed paths
+    run_programming_task.invoke({
+        "instructions": "test instruction",
+        "files": [str(test_file), str(new_file)]  # Two different paths
+    })
+    
+    # Get the command list from the second call
+    cmd_args = mock_run.call_args[0][0]
+    # Verify both paths are present exactly once
+    assert sum(1 for arg in cmd_args if arg == str(test_file)) == 1, "Expected one instance of test_file"
+    assert sum(1 for arg in cmd_args if arg == str(new_file)) == 1, "Expected one instance of new_file"
 
 
 def test_get_aider_executable(mocker):

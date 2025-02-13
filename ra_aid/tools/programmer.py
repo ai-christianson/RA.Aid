@@ -1,4 +1,5 @@
 import os
+import os
 import sys
 from pathlib import Path
 from typing import Dict, List, Union
@@ -77,13 +78,6 @@ def run_programming_task(
 
     Returns: { "output": stdout+stderr, "return_code": 0 if success, "success": True/False }
     """
-    # Get related files if no specific files provided
-    file_paths = (
-        list(_global_memory["related_files"].values())
-        if "related_files" in _global_memory
-        else []
-    )
-
     # Build command
     aider_exe = get_aider_executable()
     command = [
@@ -95,6 +89,13 @@ def run_programming_task(
         "--no-show-release-notes",
         "--no-check-update",
     ]
+
+    # Get combined list of files (explicit + related) with normalized paths
+    # and deduplicated using set operations
+    files_to_use = list({os.path.abspath(f) for f in (files or [])} | {
+        os.path.abspath(f) for f in _global_memory["related_files"].values() 
+        if "related_files" in _global_memory
+    })
 
     # Add config file if specified
     if "config" in _global_memory and _global_memory["config"].get("aider_config"):
@@ -112,9 +113,6 @@ def run_programming_task(
     command.append("-m")
 
     command.append(instructions)
-
-    # Add files to command
-    files_to_use = file_paths + (files or [])
     if files_to_use:
         command.extend(files_to_use)
 
