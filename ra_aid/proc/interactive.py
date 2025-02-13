@@ -44,6 +44,7 @@ def run_interactive_command(cmd: List[str], expected_runtime_seconds: int = 30) 
       expected_runtime_seconds: Expected runtime in seconds, defaults to 30.
         If process exceeds 2x this value, it will be terminated gracefully.
         If process exceeds 3x this value, it will be killed forcefully.
+        Must be between 1 and 1800 seconds (30 minutes).
       
     Returns:
       A tuple of (captured_output, return_code), where captured_output is a UTF-8 encoded
@@ -52,12 +53,15 @@ def run_interactive_command(cmd: List[str], expected_runtime_seconds: int = 30) 
     Raises:
       ValueError: If no command is provided.
       FileNotFoundError: If the command is not found in PATH.
+      ValueError: If expected_runtime_seconds is less than or equal to 0 or greater than 1800.
       RuntimeError: If an error occurs during execution.
     """
     if not cmd:
         raise ValueError("No command provided.")
     if shutil.which(cmd[0]) is None:
         raise FileNotFoundError(f"Command '{cmd[0]}' not found in PATH.")
+    if expected_runtime_seconds <= 0 or expected_runtime_seconds > 1800:
+        raise ValueError("expected_runtime_seconds must be between 1 and 1800 seconds (30 minutes)")
     
     try:
         term_size = os.get_terminal_size()
