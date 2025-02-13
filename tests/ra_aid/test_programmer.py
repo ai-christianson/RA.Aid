@@ -34,6 +34,37 @@ test_cases = [
     ),
     ("--yes-always", ["--yes-always"], "single flag with dashes"),
     ("yes-always", ["--yes-always"], "single flag without dashes"),
+    # New test cases for flags with values
+    (
+        "--analytics-log filename.json",
+        ["--analytics-log", "filename.json"],
+        "flag with value",
+    ),
+    (
+        "--analytics-log filename.json, --model gpt4",
+        ["--analytics-log", "filename.json", "--model", "gpt4"],
+        "multiple flags with values",
+    ),
+    (
+        "--dark-mode, --analytics-log filename.json",
+        ["--dark-mode", "--analytics-log", "filename.json"],
+        "mix of simple flags and flags with values",
+    ),
+    (
+        "  --dark-mode  ,  --model  gpt4  ",
+        ["--dark-mode", "--model", "gpt4"],
+        "flags with values and extra whitespace",
+    ),
+    (
+        "--analytics-log    filename.json",
+        ["--analytics-log", "filename.json"],
+        "multiple spaces between flag and value",
+    ),
+    (
+        "---dark-mode,----model gpt4",
+        ["--dark-mode", "--model", "gpt4"],
+        "stripping extra dashes",
+    ),
 ]
 
 
