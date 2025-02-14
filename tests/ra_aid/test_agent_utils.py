@@ -128,7 +128,9 @@ def test_create_agent_openai(mock_model, mock_memory):
 
         assert agent == "ciayn_agent"
         mock_ciayn.assert_called_once_with(
-            mock_model, [], max_tokens=models_params["openai"]["gpt-4"]["token_limit"]
+            mock_model, [],
+            max_tokens=models_params["openai"]["gpt-4"]["token_limit"],
+            config={'provider': 'openai', 'model': 'gpt-4'}
         )
 
 
@@ -142,7 +144,9 @@ def test_create_agent_no_token_limit(mock_model, mock_memory):
 
         assert agent == "ciayn_agent"
         mock_ciayn.assert_called_once_with(
-            mock_model, [], max_tokens=DEFAULT_TOKEN_LIMIT
+            mock_model, [],
+            max_tokens=DEFAULT_TOKEN_LIMIT,
+            config={'provider': 'unknown', 'model': 'unknown-model'}
         )
 
 
@@ -159,6 +163,7 @@ def test_create_agent_missing_config(mock_model, mock_memory):
             mock_model,
             [],
             max_tokens=DEFAULT_TOKEN_LIMIT,
+            config={'provider': 'openai'}
         )
 
 
@@ -202,7 +207,9 @@ def test_create_agent_with_checkpointer(mock_model, mock_memory):
 
         assert agent == "ciayn_agent"
         mock_ciayn.assert_called_once_with(
-            mock_model, [], max_tokens=models_params["openai"]["gpt-4"]["token_limit"]
+            mock_model, [],
+            max_tokens=models_params["openai"]["gpt-4"]["token_limit"],
+            config={'provider': 'openai', 'model': 'gpt-4'}
         )
 
 
