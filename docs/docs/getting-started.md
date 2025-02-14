@@ -1,1 +1,0 @@
----\nsidebar_position: 1\n---\n\n# Getting Started\n\nWelcome to the documentation. This page will help you get started.
