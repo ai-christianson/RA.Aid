@@ -384,7 +384,9 @@ class FallbackHandler:
             tool_calls = response.get("additional_kwargs").get("tool_calls")
         return tool_calls
 
-    def handle_failure_response(self, error: ToolExecutionError, agent, agent_type: str):
+    def handle_failure_response(
+        self, error: ToolExecutionError, agent, agent_type: str
+    ):
         """
         Handle a tool failure by calling handle_failure and, if a fallback response is returned and the agent type is "React",
         return a list of SystemMessage objects wrapping each message from the fallback response.
