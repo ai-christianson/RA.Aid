@@ -7,82 +7,174 @@ import TabItem from '@theme/TabItem';
 
 # Open Models Configuration
 
-RA.Aid supports various open source model providers and configurations. This guide shows you how to configure and use different open models with RA.Aid.
+RA.Aid supports a variety of open source and compatible model providers. This guide covers configuration options and best practices for using different models with RA.Aid.
 
-## Supported Providers
+## Overview
+
+<Tabs groupId="provider-overview">
+  <TabItem value="providers" label="Supported Providers" default>
+
+RA.Aid supports these model providers:
+
+| Provider | Description | Key Features |
+|----------|-------------|--------------|
+| DeepSeek | Specialized reasoning models | High performance on complex tasks |
+| OpenRouter | Gateway to multiple open models | Wide model selection |
+| OpenAI-compatible | API-compatible endpoints | Use with compatible hosting |
+| Anthropic | Claude model family | Strong reasoning capabilities |
+| Gemini | Google AI models | Competitive performance |
+
+  </TabItem>
+  <TabItem value="setup" label="Quick Setup">
+
+### Basic Configuration
+
+1. Set your provider's API key:
+```bash
+# Choose the appropriate provider
+export DEEPSEEK_API_KEY=your_key
+export OPENROUTER_API_KEY=your_key
+export OPENAI_API_KEY=your_key
+export ANTHROPIC_API_KEY=your_key
+export GEMINI_API_KEY=your_key
+```
+
+2. Run RA.Aid with your chosen provider:
+```bash
+ra-aid -m "Your task" --provider <provider> --model <model>
+```
+
+  </TabItem>
+</Tabs>
+
+## Provider Configuration
 
 <Tabs groupId="model-provider">
   <TabItem value="deepseek" label="DeepSeek" default>
 
 ### DeepSeek Models
 
-To use DeepSeek models, you'll need a DeepSeek API key. Set it in your environment:
+DeepSeek offers powerful reasoning models optimized for complex tasks.
 
 ```bash
+# Environment setup
 export DEEPSEEK_API_KEY=your_api_key_here
-```
 
-Then run RA.Aid with the deepseek provider and model:
-
-```bash
+# Basic usage
 ra-aid -m "Your task" --provider deepseek --model deepseek-reasoner
+
+# With temperature control
+ra-aid -m "Your task" --provider deepseek --model deepseek-reasoner --temperature 0.7
 ```
 
-You can also access DeepSeek models through OpenRouter:
-
-```bash
-ra-aid -m "Your task" --provider openrouter --model deepseek/deepseek-r1
-```
-
-  </TabItem>
-  <TabItem value="openrouter" label="OpenRouter">
+**Available Models:**
+- `deepseek-reasoner`: Optimized for reasoning tasks
+- Access via OpenRouter: `deepseek/deepseek-r1`
+</TabItem>
+<TabItem value="openrouter" label="OpenRouter">
 
 ### OpenRouter Integration
 
-OpenRouter provides access to various open source models. First, set your API key:
+OpenRouter provides access to multiple open source models through a single API.
 
 ```bash
+# Environment setup
 export OPENROUTER_API_KEY=your_api_key_here
-```
 
-Example using Mistral:
-
-```bash
+# Example commands
 ra-aid -m "Your task" --provider openrouter --model mistralai/mistral-large-2411
+ra-aid -m "Your task" --provider openrouter --model deepseek/deepseek-r1
 ```
 
-  </TabItem>
-  <TabItem value="expert" label="Expert Configuration">
+**Popular Models:**
+- `mistralai/mistral-large-2411`
+- `anthropic/claude-3`
+- `deepseek/deepseek-r1`
+</TabItem>
+<TabItem value="openai-compatible" label="OpenAI-compatible">
 
-### Expert Tool Configuration 
+### OpenAI-compatible Endpoints
 
-The expert tool can be configured to use open models for complex logic and debugging tasks:
+Use OpenAI-compatible API endpoints with custom hosting solutions.
 
 ```bash
-# Use DeepSeek for expert tool
-export EXPERT_DEEPSEEK_API_KEY=your_deepseek_api_key
+# Environment setup
+export OPENAI_API_KEY=your_api_key_here
+export OPENAI_API_BASE=https://your-api-endpoint
+
+# Usage
+ra-aid -m "Your task" --provider openai-compatible --model your-model-name
+```
+
+**Configuration Options:**
+- Set custom base URL with `OPENAI_API_BASE`
+- Supports temperature control
+- Compatible with most OpenAI-style APIs
+</TabItem>
+</Tabs>
+
+## Advanced Configuration
+
+<Tabs groupId="advanced-config">
+<TabItem value="expert" label="Expert Mode">
+
+### Expert Tool Configuration
+
+Configure the expert tool for specialized tasks:
+
+```bash
+# DeepSeek expert
+export EXPERT_DEEPSEEK_API_KEY=your_key
 ra-aid -m "Your task" --expert-provider deepseek --expert-model deepseek-reasoner
 
-# Use OpenRouter for expert
-export EXPERT_OPENROUTER_API_KEY=your_openrouter_api_key
+# OpenRouter expert
+export EXPERT_OPENROUTER_API_KEY=your_key
 ra-aid -m "Your task" --expert-provider openrouter --expert-model mistralai/mistral-large-2411
 ```
 
-  </TabItem>
+</TabItem>
+<TabItem value="temperature" label="Temperature Control">
+
+### Temperature Settings
+
+Control model creativity vs determinism:
+
+```bash
+# More deterministic (good for coding)
+ra-aid -m "Your task" --temperature 0.2
+
+# More creative (good for brainstorming)
+ra-aid -m "Your task" --temperature 0.8
+```
+
+**Note:** Not all models support temperature control. Check provider documentation.
+</TabItem>
 </Tabs>
+
+## Best Practices
+
+- Set environment variables in your shell configuration file
+- Use lower temperatures (0.1-0.3) for coding tasks
+- Test different models to find the best fit for your use case
+- Consider using expert mode for complex programming tasks
 
 ## Environment Variables
 
-Here are all the environment variables supported for open model configuration:
+Complete list of supported environment variables:
 
-- `OPENROUTER_API_KEY`: Required for OpenRouter provider
-- `DEEPSEEK_API_KEY`: Required for DeepSeek provider
-- `EXPERT_OPENROUTER_API_KEY`: API key for expert tool using OpenRouter provider
-- `EXPERT_DEEPSEEK_API_KEY`: API key for expert tool using DeepSeek provider
+| Variable | Provider | Purpose |
+|----------|----------|----------|
+| `OPENROUTER_API_KEY` | OpenRouter | Main API access |
+| `DEEPSEEK_API_KEY` | DeepSeek | Main API access |
+| `OPENAI_API_KEY` | OpenAI-compatible | API access |
+| `OPENAI_API_BASE` | OpenAI-compatible | Custom endpoint |
+| `ANTHROPIC_API_KEY` | Anthropic | API access |
+| `GEMINI_API_KEY` | Gemini | API access |
+| `EXPERT_OPENROUTER_API_KEY` | OpenRouter | Expert tool |
+| `EXPERT_DEEPSEEK_API_KEY` | DeepSeek | Expert tool |
 
-## Notes and Best Practices
+## Troubleshooting
 
-- Set environment variables in your shell's configuration file (e.g., `~/.bashrc` or `~/.zshrc`) for persistence
-- Consider using different models for different types of tasks (e.g., DeepSeek for reasoning, Mistral for general tasks)
-- Review model performance and adjust based on your specific needs
-- Keep your API keys secure and never commit them to version control
+- Verify API keys are set correctly
+- Check endpoint URLs for OpenAI-compatible setups
+- Monitor API rate limits and quotas
