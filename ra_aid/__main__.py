@@ -8,6 +8,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
+from ra_aid.models_params import models_params
 
 from ra_aid import print_error, print_stage_header
 from ra_aid.__version__ import __version__
@@ -23,10 +24,12 @@ from ra_aid.config import (
     DEFAULT_RECURSION_LIMIT,
     VALID_PROVIDERS,
 )
+from ra_aid.console.output import cpm
 from ra_aid.dependencies import check_dependencies
 from ra_aid.env import validate_environment
 from ra_aid.llm import initialize_llm
 from ra_aid.logging_config import get_logger, setup_logging
+from ra_aid.models_params import DEFAULT_TEMPERATURE
 from ra_aid.project_info import format_project_info, get_project_info
 from ra_aid.prompts import CHAT_PROMPT, WEB_RESEARCH_PROMPT_SECTION_CHAT
 from ra_aid.tool_configs import get_chat_tools
@@ -309,7 +312,6 @@ def main():
         logger.debug("Environment validation successful")
 
         # Validate model configuration early
-        from ra_aid.models_params import models_params
 
         model_config = models_params.get(args.provider, {}).get(args.model or "", {})
         supports_temperature = model_config.get(
@@ -321,10 +323,10 @@ def main():
         if supports_temperature and args.temperature is None:
             args.temperature = model_config.get("default_temperature")
             if args.temperature is None:
-                print_error(
-                    f"Temperature must be provided for model {args.model} which supports temperature"
+                cpm(
+                    f"This model supports temperature argument but none was given. Setting default temperature to {DEFAULT_TEMPERATURE}."
                 )
-                sys.exit(1)
+                args.temperature = DEFAULT_TEMPERATURE
             logger.debug(
                 f"Using default temperature {args.temperature} for model {args.model}"
             )

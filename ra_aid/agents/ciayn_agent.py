@@ -143,8 +143,6 @@ class CiaynAgent:
             if code.endswith("```"):
                 code = code[:-3].strip()
 
-            # logger.debug(f"_execute_tool: stripped code: {code}")
-
             # if the eval fails, try to extract it via a model call
             if validate_function_call_pattern(code):
                 functions_list = "\n\n".join(self.available_functions)
@@ -176,8 +174,8 @@ class CiaynAgent:
         msg = f"Fallback tool handler has triggered after consecutive failed tool calls reached {DEFAULT_MAX_TOOL_FAILURES} failures.\n"
         # Passing the fallback raw invocation may confuse our llm, as invocation methods may differ.
         # msg += f"<fallback llm raw invocation>{fallback_response[0]}</fallback llm raw invocation>\n"
-        msg += f"<fallback tool name>{e.tool_name}</fallback tool name>"
-        msg += f"<fallback tool call result>{fallback_response[1]}</fallback tool call result>"
+        msg += f"<fallback tool name>{e.tool_name}</fallback tool name>\n"
+        msg += f"<fallback tool call result>\n{fallback_response[1]}\n</fallback tool call result>\n"
         return msg
 
     def _create_agent_chunk(self, content: str) -> Dict[str, Any]:

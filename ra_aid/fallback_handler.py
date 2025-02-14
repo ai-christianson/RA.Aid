@@ -349,7 +349,7 @@ class FallbackHandler:
         ):
             return self.current_tool_to_bind.invoke(arguments)
         else:
-            raise Exception(f"Tool '{name}' not found in available tools.")
+            raise FallbackToolExecutionError(f"Tool '{name}' not found in available tools.")
 
     def base_message_to_tool_call_dict(self, response: BaseMessage):
         """
@@ -365,7 +365,7 @@ class FallbackHandler:
         tool_calls = self.get_tool_calls(response)
 
         if not tool_calls:
-            raise Exception(
+            raise FallbackToolExecutionError(
                 f"Could not extract tool_call_dict from response: {response}"
             )
 

@@ -9,6 +9,7 @@ from langchain_openai import ChatOpenAI
 from openai import OpenAI
 
 from ra_aid.chat_models.deepseek_chat import ChatDeepseekReasoner
+from ra_aid.console.output import cpm
 from ra_aid.logging_config import get_logger
 
 from .models_params import models_params
@@ -228,8 +229,9 @@ def create_llm_client(
         temp_kwargs = {"temperature": 0} if supports_temperature else {}
     elif supports_temperature:
         if temperature is None:
-            raise ValueError(
-                f"Temperature must be provided for model {model_name} which supports temperature"
+            temperature = 0.7
+            cpm(
+                "This model supports temperature argument but none was given. Setting default temperature to 0.7."
             )
         temp_kwargs = {"temperature": temperature}
     else:
