@@ -22,16 +22,17 @@ class TestFallbackHandler(unittest.TestCase):
         self.config = {
             "max_tool_failures": 2,
             "fallback_tool_models": "dummy-fallback-model",
+            "experimental_fallback_handler": True,
         }
-        self.fallback_handler = FallbackHandler(self.config)
+        self.fallback_handler = FallbackHandler(self.config, [])
         self.logger = DummyLogger()
         self.agent = DummyAgent()
 
     def test_handle_failure_increments_counter(self):
+        from ra_aid.exceptions import ToolExecutionError
         initial_failures = self.fallback_handler.tool_failure_consecutive_failures
-        self.fallback_handler.handle_failure(
-            "dummy_call()", Exception("Test error"), self.logger, self.agent
-        )
+        error_obj = ToolExecutionError("Test error", base_message="dummy_call()", tool_name="dummy_tool")
+        self.fallback_handler.handle_failure(error_obj, self.agent)
         self.assertEqual(
             self.fallback_handler.tool_failure_consecutive_failures,
             initial_failures + 1,
@@ -62,9 +63,7 @@ class TestFallbackHandler(unittest.TestCase):
         llm.validate_provider_env = dummy_validate_provider_env
 
         self.fallback_handler.tool_failure_consecutive_failures = 2
-        self.fallback_handler.attempt_fallback(
-            "dummy_tool_call()", self.logger, self.agent
-        )
+        self.fallback_handler.attempt_fallback()
         self.assertEqual(self.fallback_handler.tool_failure_consecutive_failures, 0)
 
         llm.initialize_llm = original_initialize

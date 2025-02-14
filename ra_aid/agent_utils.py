@@ -933,7 +933,6 @@ def run_agent_with_retry(
                             original_prompt, config, test_attempts, auto_test
                         )
                     )
-                    cpm(f"res:{should_break, prompt, auto_test, test_attempts}")
                     if should_break:
                         break
                     if prompt != original_prompt:

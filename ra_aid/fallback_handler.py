@@ -157,10 +157,16 @@ class FallbackHandler:
         for fallback_model in self.fallback_tool_models:
             result_list = self.invoke_fallback(fallback_model)
             if result_list:
-                # msg_list_response = [SystemMessage(str(msg)) for msg in result_list]
                 return result_list
-        cpm("All fallback models have failed", title="Fallback Failed")
-        return None
+
+        cpm("All fallback models have failed.", title="Fallback Failed")
+
+        current_failing_tool_name = self.current_failing_tool_name
+        self.reset_fallback_handler()
+
+        raise FallbackToolExecutionError(
+            f"All fallback models have failed for tool: {current_failing_tool_name}"
+        )
 
     def reset_fallback_handler(self):
         """
