@@ -8,7 +8,6 @@ from langgraph.checkpoint.memory import MemorySaver
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
-from ra_aid.models_params import models_params
 
 from ra_aid import print_error, print_stage_header
 from ra_aid.__version__ import __version__
@@ -29,7 +28,7 @@ from ra_aid.dependencies import check_dependencies
 from ra_aid.env import validate_environment
 from ra_aid.llm import initialize_llm
 from ra_aid.logging_config import get_logger, setup_logging
-from ra_aid.models_params import DEFAULT_TEMPERATURE
+from ra_aid.models_params import DEFAULT_TEMPERATURE, models_params
 from ra_aid.project_info import format_project_info, get_project_info
 from ra_aid.prompts import CHAT_PROMPT, WEB_RESEARCH_PROMPT_SECTION_CHAT
 from ra_aid.tool_configs import get_chat_tools

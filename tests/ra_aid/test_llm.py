@@ -237,7 +237,9 @@ def test_initialize_openai_compatible(clean_env, mock_openai):
 
 def test_initialize_unsupported_provider(clean_env):
     """Test initialization with unsupported provider raises ValueError"""
-    with pytest.raises(ValueError, match=r"Missing required environment variable for provider: unknown"):
+    with pytest.raises(
+        ValueError, match=r"Missing required environment variable for provider: unknown"
+    ):
         initialize_llm("unknown", "model")
 
 
