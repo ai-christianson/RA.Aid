@@ -153,9 +153,11 @@ class CiaynAgent:
             result = eval(code.strip(), globals_dict)
             return result
         except Exception as e:
-            error_msg = f"Error: {str(e)} \n Could not excute code: {code}"
+            error_msg = f"Error: {str(e)} \n Could not execute code: {code}"
             tool_name = self.extract_tool_name(code)
-            raise ToolExecutionError(error_msg, base_message=msg, tool_name=tool_name)
+            raise ToolExecutionError(
+                error_msg, base_message=msg, tool_name=tool_name
+            ) from e
 
     def extract_tool_name(self, code: str) -> str:
         match = re.match(r"\s*([\w_\-]+)\s*\(", code)

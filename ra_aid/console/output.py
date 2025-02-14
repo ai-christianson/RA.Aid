@@ -16,7 +16,8 @@ def print_agent_output(
     """Print only the agent's message content, not tool calls.
 
     Args:
-        chunk: A dictionary containing agent or tool messages
+        chunk: A dictionary containing agent or tool messages.
+        agent_type: Specifies the type of agent. 'CiaynAgent' handles tool errors internally, while 'React' raises a ToolExecutionError.
     """
     if "agent" in chunk and "messages" in chunk["agent"]:
         messages = chunk["agent"]["messages"]
