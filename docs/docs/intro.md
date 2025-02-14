@@ -3,46 +3,55 @@ sidebar_position: 1
 slug: /
 ---
 
-# Intro
+# Welcome to RA.Aid
 
-Let's discover **Docusaurus in less than 5 minutes**.
+RA.Aid (pronounced "raid") is your AI-powered development companion that helps you build software autonomously. Whether you're working on new features, refactoring code, or researching solutions, RA.Aid makes development faster and more efficient.
 
-## Getting Started
+## Why RA.Aid?
 
-Get started by **creating a new site**.
+- 🤖 **Autonomous Development**: Let RA.Aid handle complex programming tasks while you focus on the big picture
+- 🔍 **Smart Research**: Automatically researches solutions and best practices
+- 📋 **Intelligent Planning**: Breaks down complex tasks into manageable steps
+- 💬 **Interactive Mode**: Get help when you need it through natural conversation
 
-Or **try Docusaurus immediately** with **[docusaurus.new](https://docusaurus.new)**.
+## Quick Start
 
-### What you'll need
+Ready to get started? Jump right to:
 
-- [Node.js](https://nodejs.org/en/download/) version 18.0 or above:
-  - When installing Node.js, you are recommended to check all checkboxes related to dependencies.
+- [Installation Guide](/installation)
+- [Configuration Guide](/configuration)
+- [Basic Usage Examples](/usage)
 
-## Generate a new site
+### Basic Example
 
-Generate a new Docusaurus site using the **classic template**.
-
-The classic template will automatically be added to your project after you run the command:
-
-```bash
-npm init docusaurus@latest my-website classic
-```
-
-You can type this command into Command Prompt, Powershell, Terminal, or any other integrated terminal of your code editor.
-
-The command also installs all necessary dependencies you need to run Docusaurus.
-
-## Start your site
-
-Run the development server:
+Here's how simple it is to use RA.Aid:
 
 ```bash
-cd my-website
-npm run start
+# Install RA.Aid
+pip install ra-aid
+
+# Set up API keys
+export ANTHROPIC_API_KEY=your_key_here
+export OPENAI_API_KEY=your_key_here
+export TAVILY_API_KEY=your_key_here
+
+# Start using it
+ra-aid -m "Add input validation to the login form"
 ```
 
-The `cd` command changes the directory you're working with. In order to work with your newly created Docusaurus site, you'll need to navigate the terminal there.
+## Key Features
 
-The `npm run start` command builds your website locally and serves it through a development server, ready for you to view at http://localhost:3000/.
+- **Three-Stage Workflow**: Research → Planning → Implementation
+- **Web Research**: Automatically searches for best practices and solutions
+- **Interactive Mode**: Get help when you need it through natural conversation
+- **Multiple AI Providers**: Support for various AI models to suit your needs
+- **Git Integration**: Works seamlessly with your version control
 
-Open `docs/intro.md` (this page) and edit some lines: the site **reloads automatically** and displays your changes.
+## Next Steps
+
+- Check out the [Installation Guide](/installation) to set up RA.Aid
+- Learn about [Configuration](/configuration) options
+- See [Usage Examples](/usage) to get started quickly
+- Join our [Discord Community](https://discord.gg/f6wYbzHYxV) for help and discussions
+
+Ready to revolutionize your development workflow? Let's get started! 🚀
