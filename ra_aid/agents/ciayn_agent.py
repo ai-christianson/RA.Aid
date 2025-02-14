@@ -7,7 +7,6 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, System
 from langchain_core.tools import BaseTool
 
 from ra_aid.config import DEFAULT_MAX_TOOL_FAILURES
-from ra_aid.console.output import cpm
 from ra_aid.exceptions import ToolExecutionError
 from ra_aid.fallback_handler import FallbackHandler
 from ra_aid.logging_config import get_logger

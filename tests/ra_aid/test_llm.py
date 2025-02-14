@@ -121,7 +121,9 @@ def test_initialize_expert_openai_compatible(clean_env, mock_openai, monkeypatch
 
 def test_initialize_expert_unsupported_provider(clean_env):
     """Test error handling for unsupported provider in expert mode."""
-    with pytest.raises(ValueError, match=r"Missing required environment variable for provider: unknown"):
+    with pytest.raises(
+        ValueError, match=r"Missing required environment variable for provider: unknown"
+    ):
         initialize_expert_llm("unknown", "model")
 
 
@@ -197,7 +199,10 @@ def test_initialize_unsupported_provider(clean_env):
     """Test initialization with unsupported provider raises ValueError"""
     with pytest.raises(ValueError) as exc_info:
         initialize_llm("unsupported", "model")
-    assert str(exc_info.value) == "Missing required environment variable for provider: unsupported"
+    assert (
+        str(exc_info.value)
+        == "Missing required environment variable for provider: unsupported"
+    )
 
 
 def test_temperature_defaults(clean_env, mock_openai, mock_anthropic, mock_gemini):

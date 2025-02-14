@@ -26,7 +26,6 @@ class DummyTool:
 
 class DummyModel:
     def invoke(self, _messages: list[BaseMessage]):
-
         return AIMessage("dummy_tool()")
 
     def bind_tools(self, tools, tool_choice):
