@@ -41,9 +41,10 @@ const config: Config = {
       },
       items: [
         {
-          to: '/',
+          type: 'doc',
+          position: 'left',
+          docId: 'intro',
           label: 'Docs',
-          position: 'right'
         },
         {
           href: 'https://github.com/smallcloudai/refact-aide',
