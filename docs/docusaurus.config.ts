@@ -34,13 +34,17 @@ const config: Config = {
 
   themeConfig: {
     navbar: {
-      title: 'RA-Aid',
       logo: {
         alt: 'Site Logo',
         src: 'img/logo-black-transparent.png',
         srcDark: 'img/logo-white-transparent.gif',
       },
       items: [
+        {
+          to: '/',
+          label: 'Docs',
+          position: 'right'
+        },
         {
           href: 'https://github.com/smallcloudai/refact-aide',
           label: 'GitHub',
