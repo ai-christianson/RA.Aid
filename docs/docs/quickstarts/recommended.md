@@ -1,43 +1,43 @@
----
-sidebar_position: 1
----
+# Recommended Setup
 
-# Recommended
+## Installation
 
-Add **Markdown or React** files to `src/pages` to create a **standalone page**:
+Create a new Python 3.12 virtual environment and install RA.Aid:
 
-- `src/pages/index.js` → `localhost:3000/`
-- `src/pages/foo.md` → `localhost:3000/foo`
-- `src/pages/foo/bar.js` → `localhost:3000/foo/bar`
+```bash
+uv venv -p 3.12
+source .venv/bin/activate  # On Unix/macOS
+# or
+.venv\Scripts\activate     # On Windows
 
-## Create your first React Page
-
-Create a file at `src/pages/my-react-page.js`:
-
-```jsx title="src/pages/my-react-page.js"
-import React from 'react';
-import Layout from '@theme/Layout';
-
-export default function MyReactPage() {
-  return (
-    <Layout>
-      <h1>My React page</h1>
-      <p>This is a React page</p>
-    </Layout>
-  );
-}
+uv pip install ra-aid
 ```
 
-A new page is now available at [http://localhost:3000/my-react-page](http://localhost:3000/my-react-page).
+## Configuration
 
-## Create your first Markdown Page
+Configure your API keys:
 
-Create a file at `src/pages/my-markdown-page.md`:
+```bash
+# For OpenAI (required)
+export OPENAI_API_KEY=your_api_key_here
 
-```mdx title="src/pages/my-markdown-page.md"
-# My Markdown page
+# For Anthropic (required)
+export ANTHROPIC_API_KEY=your_api_key_here
 
-This is a Markdown page
+# For web search capability (optional)
+export TAVILY_API_KEY=your_api_key_here
 ```
 
-A new page is now available at [http://localhost:3000/my-markdown-page](http://localhost:3000/my-markdown-page).
+## Basic Usage
+
+Start RA.Aid in interactive mode:
+
+```bash
+ra-aid
+```
+
+Or run with a specific command:
+
+```bash
+ra-aid -m "Help me understand this code"
+```
