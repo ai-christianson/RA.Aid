@@ -154,20 +154,9 @@ Examples:
         help="Whether to disable token limiting for Anthropic Claude react agents. Token limiter removes older messages to prevent maximum token limit API errors.",
     )
     parser.add_argument(
-        "--no-fallback-tool",
-        action="store_true",
-        help="Disable fallback model switching.",
-    )
-    parser.add_argument(
         "--experimental-fallback-handler",
         action="store_true",
         help="Enable experimental fallback handler.",
-    )
-    parser.add_argument(
-        "--fallback-tool-models",
-        type=str,
-        default="gpt-3.5-turbo,gpt-4",
-        help="Comma-separated list of fallback models to use in order.",
     )
     parser.add_argument(
         "--recursion-limit",
@@ -471,16 +460,12 @@ def main():
         )
         _global_memory["config"]["planner_model"] = args.planner_model or args.model
 
-        _global_memory["config"]["no_fallback_tool"] = args.no_fallback_tool
-
         # Store research config with fallback to base values
         _global_memory["config"]["research_provider"] = (
             args.research_provider or args.provider
         )
         _global_memory["config"]["research_model"] = args.research_model or args.model
 
-        # Store fallback tool configuration
-        _global_memory["config"]["no_fallback_tool"] = args.no_fallback_tool
         # Store temperature in global config
         _global_memory["config"]["temperature"] = args.temperature
 
