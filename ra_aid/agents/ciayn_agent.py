@@ -105,8 +105,6 @@ class CiaynAgent:
         for t in tools:
             self.available_functions.append(get_function_info(t.func))
 
-        self.tool_failure_current_provider = None
-        self.tool_failure_current_model = None
         self.fallback_handler = FallbackHandler(config, tools)
         self.sys_message = SystemMessage(
             "Execute efficiently yet completely as a fully autonomous agent."
