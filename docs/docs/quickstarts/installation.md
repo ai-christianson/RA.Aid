@@ -3,6 +3,8 @@ import TabItem from '@theme/TabItem';
 
 # Installation
 
+Getting started is easy! You can install RA.Aid using any of these three methods - pick the one that works best for you:
+
 <Tabs groupId="install-method">
   <TabItem value="uv" label="UV" default>
 
