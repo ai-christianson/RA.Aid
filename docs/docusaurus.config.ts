@@ -38,6 +38,7 @@ const config: Config = {
         alt: 'Site Logo',
         src: 'img/logo-black-transparent.png',
         srcDark: 'img/logo-white-transparent.gif',
+        href: 'https://ra-aid.ai'
       },
       items: [
         {
