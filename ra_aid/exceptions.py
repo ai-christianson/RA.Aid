@@ -31,21 +31,3 @@ class ToolExecutionError(Exception):
         super().__init__(message)
         self.base_message = base_message
         self.tool_name = tool_name
-
-
-class CiaynToolExecutionError(Exception):
-    """Exception raised when a tool execution fails.
-
-    This exception is used to distinguish tool execution failures
-    from other types of errors in the agent system.
-    """
-
-    def __init__(
-        self,
-        message: str,
-        base_message: Optional[BaseMessage] = None,
-        tool_name: Optional[str] = None,
-    ):
-        super().__init__(message)
-        self.base_message = base_message
-        self.tool_name = tool_name

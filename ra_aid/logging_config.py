@@ -44,6 +44,7 @@ def setup_logging(verbose: bool = False, pretty: bool = False) -> None:
         if pretty:
             handler = PrettyHandler()
         else:
+            print("USING STREAM HANDLER LOGGER")
             handler = logging.StreamHandler(sys.stdout)
             formatter = logging.Formatter(
                 "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

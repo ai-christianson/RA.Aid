@@ -6,12 +6,15 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_core.tools import BaseTool
 
+from ra_aid.logging_config import get_logger
+from ra_aid.tools.expert import get_model
+from ra_aid.prompts import CIAYN_AGENT_BASE_PROMPT, EXTRACT_TOOL_CALL_PROMPT
 from ra_aid.console.output import cpm
 from ra_aid.exceptions import ToolExecutionError
 from ra_aid.fallback_handler import FallbackHandler
-from ra_aid.logging_config import get_logger
 from ra_aid.models_params import DEFAULT_TOKEN_LIMIT
 from ra_aid.tools.reflection import get_function_info
+from ra_aid.config import DEFAULT_MAX_TOOL_FAILURES
 
 logger = get_logger(__name__)
 
@@ -113,6 +116,7 @@ class CiaynAgent:
     def _build_prompt(self, last_result: Optional[str] = None) -> str:
         """Build the prompt for the agent including available tools and context."""
         base_prompt = ""
+
         if last_result is not None:
             base_prompt += f"\n<last result>{last_result}</last result>"
 
@@ -120,122 +124,9 @@ class CiaynAgent:
         functions_list = "\n\n".join(self.available_functions)
 
         # Build the complete prompt without f-strings for the static parts
-        base_prompt += (
-            """
+        base_prompt += CIAYN_AGENT_BASE_PROMPT.format(functions_list=functions_list)
 
-<agent instructions>
-You are a ReAct agent. You run in a loop and use ONE of the available functions per iteration, but you will be called in a loop, so you will be able to accomplish the task over many iterations.
-The result of that function call will be given to you in the next message.
-Call one function at a time. Function arguments can be complex objects, long strings, etc. if needed.
-The user cannot see the results of function calls, so you have to explicitly use a tool like ask_human if you want them to see something.
-You must always respond with a single line of python that calls one of the available tools.
-Use as many steps as you need to in order to fully complete the task.
-Start by asking the user what they want.
-
-You must carefully review the conversation history, which functions were called so far, returned results, etc., and make sure the very next function call you make makes sense in order to achieve the original goal.
-You are expected to use as many steps as necessary to completely achieve the user's request, making many tool calls along the way.
-Think hard about what the best *next* tool call is, knowing that you can make as many calls as you need to after that.
-You typically don't want to keep calling the same function over and over with the same parameters.
-</agent instructions>
-
-You must ONLY use ONE of the following functions (these are the ONLY functions that exist):
-
-<available functions>"""
-            + functions_list
-            + """
-</available functions>
-
-You may use any of the above functions to complete your job. Use the best one for the current step you are on. Be efficient, avoid getting stuck in repetitive loops, and do not hesitate to call functions which delegate your work to make your life easier.
-But you MUST NOT assume tools exist that are not in the above list, e.g. write_file_tool.
-Consider your task done only once you have taken *ALL* the steps required to complete it.
-
---- EXAMPLE BAD OUTPUTS ---
-
-This tool is not in available functions, so this is a bad tool call:
-
-<example bad output>
-write_file_tool(...)
-</example bad output>
-
-This tool call has a syntax error (unclosed parenthesis, quotes), so it is bad:
-
-<example bad output>
-write_file_tool("asdf
-</example bad output>
-
-This tool call is bad because it includes a message as well as backticks:
-
-<example bad output>
-Sure, I'll make the following tool call to accomplish what you asked me:
-
-```
-list_directory_tree('.')
-```
-</example bad output>
-
-This tool call is bad because the output code is surrounded with backticks:
-
-<example bad output>
-```
-list_directory_tree('.')
-```
-</example bad output>
-
-The following is bad becasue it makes the same tool call multiple times in a row with the exact same parameters, for no reason, getting stuck in a loop:
-
-<example bad output>
-<response 1>
-list_directory_tree('.')
-</response 1>
-<response 2>
-list_directory_tree('.')
-</response 2>
-</example bad output>
-
-The following is bad because it makes more than one tool call in one response:
-
-<example bad output>
-list_directory_tree('.')
-read_file_tool('README.md') # Now we've made 
-</example bad output.
-
-This is a good output because it calls the tool appropriately and with correct syntax:
-
---- EXAMPLE GOOD OUTPUTS ---
-
-<example good output>
-request_research_and_implementation(\"\"\"
-Example query.
-\"\"\")
-</example good output>
-
-This is good output because it uses a multiple line string when needed and properly calls the tool, does not output backticks or extra information:
-<example good output>
-run_programming_task(\"\"\"
-# Example Programming Task
-
-Implement a widget factory satisfying the following requirements:
-
-- Requirement A
-- Requirement B
-
-...
-\"\"\")
-</example good output>
-
-As an agent, you will carefully plan ahead, carefully analyze tool call responses, and adapt to circumstances in order to accomplish your goal.
-
-You will make as many tool calls as you feel necessary in order to fully complete the task.
-
-We're entrusting you with a lot of autonomy and power, so be efficient and don't mess up.
-
-You have often been criticized for:
-
-- Making the same function calls over and over, getting stuck in a loop.
-
-DO NOT CLAIM YOU ARE FINISHED UNTIL YOU ACTUALLY ARE!
-Output **ONLY THE CODE** and **NO MARKDOWN BACKTICKS**"""
-        )
+        # base_prompt += "\n\nYou must reply with ONLY ONE of the functions given in available functions."
 
         return base_prompt
 
@@ -253,7 +144,7 @@ Output **ONLY THE CODE** and **NO MARKDOWN BACKTICKS**"""
             # if the eval fails, try to extract it via a model call
             if validate_function_call_pattern(code):
                 functions_list = "\n\n".join(self.available_functions)
-                code = _extract_tool_call(code, functions_list)
+                code = self._extract_tool_call(code, functions_list)
 
             logger.debug(
                 f"_execute_tool: evaluating code: {code} with globals: {list(globals_dict.keys())}"
@@ -272,6 +163,22 @@ Output **ONLY THE CODE** and **NO MARKDOWN BACKTICKS**"""
             return match.group(1)
         return ""
 
+    def handle_fallback_response(
+        self, fallback_response: list[Any], e: ToolExecutionError
+    ) -> str:
+        err_msg = HumanMessage(content=self.error_message_template.format(e=e))
+        self.chat_history.append(err_msg)
+
+        if not fallback_response:
+            return ""
+
+        msg = f"Fallback tool handler has triggered after consecutive failed tool calls reached {DEFAULT_MAX_TOOL_FAILURES} failures.\n"
+        # Passing the fallback invocation may confuse our llm, as invocation methods may differ.
+        # msg += f"<fallback llm raw invocation>{fallback_response[0]}</fallback llm raw invocation>\n"
+        msg += f"<fallback tool name>{e.tool_name}</fallback tool name>"
+        msg += f"<fallback tool call result>{fallback_response[1]}</fallback tool call result>"
+        return msg
+
     def _create_agent_chunk(self, content: str) -> Dict[str, Any]:
         """Create an agent chunk in the format expected by print_agent_output."""
         return {"agent": {"messages": [AIMessage(content=content)]}}
@@ -284,7 +191,6 @@ Output **ONLY THE CODE** and **NO MARKDOWN BACKTICKS**"""
     @staticmethod
     def _estimate_tokens(content: Optional[Union[str, BaseMessage]]) -> int:
         """Estimate number of tokens in content using simple byte length heuristic.
-
         Estimates 1 token per 2.0 bytes of content. For messages, uses the content field.
 
         Args:
@@ -309,6 +215,22 @@ Output **ONLY THE CODE** and **NO MARKDOWN BACKTICKS**"""
             return 0
 
         return len(text.encode("utf-8")) // 2.0
+
+    def _extract_tool_call(self, code: str, functions_list: str) -> str:
+        model = get_model()
+        prompt = EXTRACT_TOOL_CALL_PROMPT.format(
+            functions_list=functions_list, code=code
+        )
+        response = model.invoke(prompt)
+        response = response.content
+
+        pattern = r"([\w_\-]+)\((.*?)\)"
+        matches = re.findall(pattern, response, re.DOTALL)
+        if len(matches) == 0:
+            raise ToolExecutionError("Failed to extract tool call")
+        ma = matches[0][0].strip()
+        mb = matches[0][1].strip().replace("\n", " ")
+        return f"{ma}({mb})"
 
     def _trim_chat_history(
         self, initial_messages: List[Any], chat_history: List[Any]
@@ -352,14 +274,12 @@ Output **ONLY THE CODE** and **NO MARKDOWN BACKTICKS**"""
     ) -> Generator[Dict[str, Any], None, None]:
         """Stream agent responses in a format compatible with print_agent_output."""
         initial_messages = messages_dict.get("messages", [])
-        # self.chat_history = []
+        self.chat_history = []
         last_result = None
-        first_iteration = True
 
         while True:
-            base_prompt = self._build_prompt(None if first_iteration else last_result)
+            base_prompt = self._build_prompt(last_result)
             self.chat_history.append(HumanMessage(content=base_prompt))
-
             full_history = self._trim_chat_history(initial_messages, self.chat_history)
             response = self.model.invoke([self.sys_message] + full_history)
 
@@ -367,62 +287,9 @@ Output **ONLY THE CODE** and **NO MARKDOWN BACKTICKS**"""
                 logger.debug(f"Code generated by agent: {response.content}")
                 last_result = self._execute_tool(response)
                 self.chat_history.append(response)
-                first_iteration = False
                 yield {}
 
             except ToolExecutionError as e:
-                # self.chat_history.append(
-                #     HumanMessage(
-                #         content=f"Your tool call caused an error: {e}\n\nPlease correct your tool call and try again."
-                #     )
-                # )
-                raise e
-                # yield self._create_error_chunk(str(e))
+                fallback_response = self.fallback_handler.handle_failure(e, self)
+                last_result = self.handle_fallback_response(fallback_response, e)
                 yield {}
-
-                # fallback_response = self.fallback_handler.handle_failure(e, self)
-                # print(f"fallback_response={fallback_response}")
-                # if fallback_response:
-                #     hm = HumanMessage(
-                #         content="The fallback handler has fixed your tool call results are in the last System message."
-                #     )
-                #     self.chat_history.extend(fallback_response)
-                #     self.chat_history.append(hm)
-                #     logger.debug("Appended fallback response to chat history.")
-                #     yield {}
-                # else:
-                #     yield self._create_error_chunk(str(e))
-                # yield {"messages": [fallback_response[-1]]}
-
-
-def _extract_tool_call(code: str, functions_list: str) -> str:
-    from ra_aid.tools.expert import get_model
-
-    model = get_model()
-    prompt = f"""
-I'm conversing with a AI model and requiring responses in a particular format: A function call with any parameters escaped. Here is an example:
-
-```
-run_programming_task("blah \" blah\" blah")
-```
-
-The following tasks are allowed:
-
-{functions_list}
-
-I got this invalid response from the model, can you format it so it becomes a correct function call?
-
-```
-{code}
-```
-    """
-    response = model.invoke(prompt)
-    response = response.content
-
-    pattern = r"([\w_\-]+)\((.*?)\)"
-    matches = re.findall(pattern, response, re.DOTALL)
-    if len(matches) == 0:
-        raise ToolExecutionError("Failed to extract tool call")
-    ma = matches[0][0].strip()
-    mb = matches[0][1].strip().replace("\n", " ")
-    return f"{ma}({mb})"

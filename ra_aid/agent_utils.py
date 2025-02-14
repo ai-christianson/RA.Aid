@@ -15,6 +15,7 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import (
     BaseMessage,
     HumanMessage,
+    SystemMessage,
     trim_messages,
 )
 from langchain_core.tools import tool
@@ -408,7 +409,7 @@ def run_research_agent(
             display_project_status(project_info)
 
         if agent is not None:
-            logger.debug("Research agent completed successfully")
+            logger.debug("Research agent created successfully")
             fallback_handler = FallbackHandler(config, tools)
             _result = run_agent_with_retry(agent, prompt, run_config, fallback_handler)
             if _result:
@@ -863,7 +864,7 @@ def run_agent_with_retry(
     agent: RAgents,
     prompt: str,
     config: dict,
-    fallback_handler: FallbackHandler,
+    fallback_handler: Optional[FallbackHandler],
 ) -> Optional[str]:
     """Run an agent with retry logic for API errors."""
     logger.debug("Running agent with prompt length: %d", len(prompt))
@@ -885,7 +886,8 @@ def run_agent_with_retry(
                 check_interrupt()
                 try:
                     _run_agent_stream(agent, msg_list, config)
-                    fallback_handler.reset_fallback_handler()
+                    if fallback_handler:
+                        fallback_handler.reset_fallback_handler()
                     should_break, prompt, auto_test, test_attempts = (
                         _execute_test_command_wrapper(
                             original_prompt, config, test_attempts, auto_test
@@ -900,18 +902,19 @@ def run_agent_with_retry(
                 except ToolExecutionError as e:
                     print("except ToolExecutionError in AGENT UTILS")
                     logger.debug("AGENT UTILS ToolExecutionError called!")
+                    if not fallback_handler:
+                        continue
+
                     fallback_response = fallback_handler.handle_failure(e, agent)
                     if fallback_response:
                         if agent_type == "React":
-                            msg_list.extend(fallback_response)
+                            msg_list_response = [
+                                SystemMessage(str(msg)) for msg in fallback_response
+                            ]
+                            msg_list.extend(msg_list_response)
                         else:
-                            agent.chat_history.extend(fallback_response)
-                            agent.chat_history.append(
-                                HumanMessage(
-                                    content="Fallback tool handler successfully ran your tool call. See last message for result."
-                                )
-                            )
-                        continue
+                            pass
+                    continue
                 except (KeyboardInterrupt, AgentInterrupt):
                     raise
                 except (

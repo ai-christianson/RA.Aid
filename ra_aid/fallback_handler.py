@@ -157,8 +157,8 @@ class FallbackHandler:
         for fallback_model in self.fallback_tool_models:
             result_list = self.invoke_fallback(fallback_model)
             if result_list:
-                msg_list_response = [SystemMessage(str(msg)) for msg in result_list]
-                return msg_list_response
+                # msg_list_response = [SystemMessage(str(msg)) for msg in result_list]
+                return result_list
         cpm("All fallback models have failed", title="Fallback Failed")
         return None
 
