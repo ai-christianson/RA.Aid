@@ -64,11 +64,6 @@ def get_read_only_tools(
     return tools
 
 
-def get_all_tools_simple():
-    """Return a list containing all available tools using existing group methods."""
-    return get_all_tools()
-
-
 def get_all_tools() -> list[BaseTool]:
     """Return a list containing all available tools from different groups."""
     all_tools = []
