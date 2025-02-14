@@ -18,9 +18,8 @@ RA.Aid (pronounced "raid") is your AI-powered development companion that helps y
 
 Ready to get started? Jump right to:
 
-- [Installation Guide](/installation)
-- [Configuration Guide](/configuration)
-- [Basic Usage Examples](/usage)
+- [Installation Guide](/quickstart/installation)
+- [Basic Usage Examples](/usage/modern-web-app)
 
 ### Basic Example
 
@@ -49,9 +48,9 @@ ra-aid -m "Add input validation to the login form"
 
 ## Next Steps
 
-- Check out the [Installation Guide](/installation) to set up RA.Aid
-- Learn about [Configuration](/configuration) options
-- See [Usage Examples](/usage) to get started quickly
+- Check out the [Installation Guide](/quickstart/installation) to set up RA.Aid
+- See [Usage Examples](/usage/modern-web-app) to get started quickly
+- Read our [Contributing Guide](/contributing) to get involved
 - Join our [Discord Community](https://discord.gg/f6wYbzHYxV) for help and discussions
 
 Ready to revolutionize your development workflow? Let's get started! 🚀
