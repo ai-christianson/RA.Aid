@@ -190,7 +190,7 @@ class TestFallbackHandler(unittest.TestCase):
                     (),
                     {
                         "func": type("DummyToolFunc", (), {"__name__": "dummy_tool"})(),
-                        "invoke": lambda self, args: "tool_result",
+                        "invoke": lambda self, args=None: "tool_result",
                     },
                 )
             )
