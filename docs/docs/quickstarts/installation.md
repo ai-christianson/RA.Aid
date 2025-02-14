@@ -10,3 +10,5 @@ source .venv/bin/activate  # On Unix/macOS
 
 uv pip install ra-aid
 ```
+
+Once installed, see the [Recommended Configuration](recommended) to set up RA.Aid with the recommended settings.

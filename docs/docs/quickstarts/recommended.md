@@ -1,5 +1,9 @@
 # Recommended Config
 
+:::info
+RA.Aid must be installed before using these configurations. If you haven't installed it yet, please see the [Installation Guide](installation).
+:::
+
 ## Configuration
 
 Configure your API keys:
