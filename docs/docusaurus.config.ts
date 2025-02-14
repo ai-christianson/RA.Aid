@@ -8,6 +8,7 @@ const config: Config = {
   url: 'https://your-docusaurus-site.example.com',
   baseUrl: '/',
   
+  onDuplicateRoutes: 'ignore',
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',
 
@@ -22,7 +23,7 @@ const config: Config = {
       {
         docs: {
           sidebarPath: './sidebars.ts',
-          routeBasePath: '/', // Serve docs at the site root
+          routeBasePath: '/',
         },
         theme: {
           customCss: './src/css/custom.css',
@@ -35,8 +36,9 @@ const config: Config = {
     navbar: {
       title: 'My Site',
       logo: {
-        alt: 'My Site Logo',
-        src: 'img/logo.svg',
+        alt: 'Site Logo',
+        src: 'img/logo-black-transparent.png',
+        srcDark: 'img/logo-white-transparent.gif',
       },
       items: [
         {
