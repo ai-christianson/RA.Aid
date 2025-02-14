@@ -322,22 +322,3 @@ def validate_provider_env(provider: str) -> bool:
     if key:
         return bool(os.getenv(key))
     return False
-
-
-def merge_chat_history(
-    original_history: List[BaseMessage], fallback_history: List[BaseMessage]
-) -> List[BaseMessage]:
-    """Merge original and fallback chat histories while preserving order.
-
-    Args:
-        original_history: The original chat message history
-        fallback_history: Additional messages from fallback attempts
-
-    Returns:
-        List[BaseMessage]: Combined message history preserving chronological order
-
-    Note:
-        The function appends fallback messages to maintain context for future
-        interactions while preserving the original conversation flow.
-    """
-    return original_history + fallback_history

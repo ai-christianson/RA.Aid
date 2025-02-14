@@ -60,19 +60,14 @@ class TestFallbackHandler(unittest.TestCase):
 
             return DummyModel()
 
-        def dummy_merge_chat_history():
-            return ["merged"]
-
         def dummy_validate_provider_env(provider):
             return True
 
         import ra_aid.llm as llm
 
         original_initialize = llm.initialize_llm
-        original_merge = llm.merge_chat_history
         original_validate = llm.validate_provider_env
         llm.initialize_llm = dummy_initialize_llm
-        llm.merge_chat_history = dummy_merge_chat_history
         llm.validate_provider_env = dummy_validate_provider_env
 
         self.fallback_handler.tool_failure_consecutive_failures = 2
@@ -81,7 +76,6 @@ class TestFallbackHandler(unittest.TestCase):
         self.assertEqual(self.fallback_handler.tool_failure_consecutive_failures, 0)
 
         llm.initialize_llm = original_initialize
-        llm.merge_chat_history = original_merge
         llm.validate_provider_env = original_validate
 
     def test_load_fallback_tool_models(self):
