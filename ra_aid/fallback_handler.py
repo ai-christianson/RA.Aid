@@ -13,7 +13,7 @@ from ra_aid.config import (
     RETRY_FALLBACK_COUNT,
 )
 from ra_aid.console.output import cpm
-from ra_aid.exceptions import ToolExecutionError, FallbackToolExecutionError
+from ra_aid.exceptions import FallbackToolExecutionError, ToolExecutionError
 from ra_aid.llm import initialize_llm, validate_provider_env
 from ra_aid.logging_config import get_logger
 from ra_aid.tool_configs import get_all_tools
@@ -383,3 +383,13 @@ class FallbackHandler:
         ):
             tool_calls = response.get("additional_kwargs").get("tool_calls")
         return tool_calls
+
+    def handle_failure_response(self, error: ToolExecutionError, agent, agent_type: str):
+        """
+        Handle a tool failure by calling handle_failure and, if a fallback response is returned and the agent type is "React",
+        return a list of SystemMessage objects wrapping each message from the fallback response.
+        """
+        fallback_response = self.handle_failure(error, agent)
+        if fallback_response and agent_type == "React":
+            return [SystemMessage(str(msg)) for msg in fallback_response]
+        return None

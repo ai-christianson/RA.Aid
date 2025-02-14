@@ -6,15 +6,15 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_core.tools import BaseTool
 
-from ra_aid.logging_config import get_logger
-from ra_aid.tools.expert import get_model
-from ra_aid.prompts import CIAYN_AGENT_BASE_PROMPT, EXTRACT_TOOL_CALL_PROMPT
+from ra_aid.config import DEFAULT_MAX_TOOL_FAILURES
 from ra_aid.console.output import cpm
 from ra_aid.exceptions import ToolExecutionError
 from ra_aid.fallback_handler import FallbackHandler
+from ra_aid.logging_config import get_logger
 from ra_aid.models_params import DEFAULT_TOKEN_LIMIT
+from ra_aid.prompts import CIAYN_AGENT_BASE_PROMPT, EXTRACT_TOOL_CALL_PROMPT
+from ra_aid.tools.expert import get_model
 from ra_aid.tools.reflection import get_function_info
-from ra_aid.config import DEFAULT_MAX_TOOL_FAILURES
 
 logger = get_logger(__name__)
 
@@ -271,7 +271,7 @@ class CiaynAgent:
         return initial_messages + chat_history
 
     def stream(
-        self, messages_dict: Dict[str, List[Any]], config: Dict[str, Any] = None
+        self, messages_dict: Dict[str, List[Any]], _config: Dict[str, Any] = None
     ) -> Generator[Dict[str, Any], None, None]:
         """Stream agent responses in a format compatible with print_agent_output."""
         initial_messages = messages_dict.get("messages", [])

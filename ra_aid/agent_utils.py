@@ -34,8 +34,8 @@ from ra_aid.console.formatting import print_error, print_stage_header
 from ra_aid.console.output import print_agent_output
 from ra_aid.exceptions import (
     AgentInterrupt,
-    ToolExecutionError,
     FallbackToolExecutionError,
+    ToolExecutionError,
 )
 from ra_aid.fallback_handler import FallbackHandler
 from ra_aid.logging_config import get_logger
@@ -846,11 +846,28 @@ def get_agent_type(agent: RAgents) -> Literal["CiaynAgent", "React"]:
     Determines the type of the agent.
     Returns "CiaynAgent" if agent is an instance of CiaynAgent, otherwise "React".
     """
-
+    
     if isinstance(agent, CiaynAgent):
         return "CiaynAgent"
     else:
         return "React"
+
+def _handle_fallback_response(
+    error: ToolExecutionError,
+    fallback_handler,
+    agent: RAgents,
+    agent_type: str,
+    msg_list: list
+) -> None:
+    """
+    Handle fallback response by invoking fallback_handler and updating msg_list.
+    """
+    if not fallback_handler:
+        return
+    fallback_response = fallback_handler.handle_failure(error, agent)
+    if fallback_response and agent_type == "React":
+        msg_list_response = [SystemMessage(str(msg)) for msg in fallback_response]
+        msg_list.extend(msg_list_response)
 
 
 def _run_agent_stream(agent: RAgents, msg_list: list[BaseMessage], config: dict):
@@ -904,16 +921,7 @@ def run_agent_with_retry(
                     logger.debug("Agent run completed successfully")
                     return "Agent run completed successfully"
                 except ToolExecutionError as e:
-                    if not fallback_handler:
-                        continue
-
-                    fallback_response = fallback_handler.handle_failure(e, agent)
-                    if fallback_response:
-                        if agent_type == "React":
-                            msg_list_response = [
-                                SystemMessage(str(msg)) for msg in fallback_response
-                            ]
-                            msg_list.extend(msg_list_response)
+                    _handle_fallback_response(e, fallback_handler, agent, agent_type, msg_list)
                     continue
                 except FallbackToolExecutionError as e:
                     msg_list.append(
