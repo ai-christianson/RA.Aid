@@ -270,7 +270,6 @@ def create_agent(
     """
     try:
         config = _global_memory.get("config", {})
-        print(f"config={config}")
         max_input_tokens = (
             get_model_token_limit(config, agent_type) or DEFAULT_TOKEN_LIMIT
         )

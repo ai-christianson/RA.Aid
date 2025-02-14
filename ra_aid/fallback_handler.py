@@ -274,11 +274,10 @@ class FallbackHandler:
             msg_list = self.construct_prompt_msg_list()
             response = retry_model.invoke(msg_list)
 
-            logger.debug(f"raw llm response={response}")
             tool_call = self.base_message_to_tool_call_dict(response)
 
             tool_call_result = self.invoke_prompt_tool_call(tool_call)
-            cpm(str(tool_call_result), title="Fallback Tool Call Result")
+            # cpm(str(tool_call_result), title="Fallback Tool Call Result")
             logger.debug(
                 f"Fallback call successful with model: {self._format_model(fallback_model)}"
             )
