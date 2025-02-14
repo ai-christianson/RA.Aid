@@ -38,6 +38,7 @@ def request_research(query: str) -> ResearchResult:
     model = initialize_llm(
         config.get("provider", "anthropic"),
         config.get("model", "claude-3-5-sonnet-20241022"),
+        temperature=config.get("temperature"),
     )
 
     # Check recursion depth
@@ -120,6 +121,7 @@ def request_web_research(query: str) -> ResearchResult:
     model = initialize_llm(
         config.get("provider", "anthropic"),
         config.get("model", "claude-3-5-sonnet-20241022"),
+        temperature=config.get("temperature"),
     )
 
     success = True
@@ -188,6 +190,7 @@ def request_research_and_implementation(query: str) -> Dict[str, Any]:
     model = initialize_llm(
         config.get("provider", "anthropic"),
         config.get("model", "claude-3-5-sonnet-20241022"),
+        temperature=config.get("temperature"),
     )
 
     try:
@@ -258,6 +261,7 @@ def request_task_implementation(task_spec: str) -> Dict[str, Any]:
     model = initialize_llm(
         config.get("provider", "anthropic"),
         config.get("model", "claude-3-5-sonnet-20241022"),
+        temperature=config.get("temperature"),
     )
 
     # Get required parameters
@@ -271,6 +275,8 @@ def request_task_implementation(task_spec: str) -> Dict[str, Any]:
         print_task_header(task_spec)
         # Run implementation agent
         from ..agent_utils import run_task_implementation_agent
+
+        _global_memory["completion_message"] = ""
 
         _result = run_task_implementation_agent(
             base_task=_global_memory.get("base_task", ""),
@@ -334,11 +340,14 @@ def request_implementation(task_spec: str) -> Dict[str, Any]:
     model = initialize_llm(
         config.get("provider", "anthropic"),
         config.get("model", "claude-3-5-sonnet-20241022"),
+        temperature=config.get("temperature"),
     )
 
     try:
         # Run planning agent
         from ..agent_utils import run_planning_agent
+
+        _global_memory["completion_message"] = ""
 
         _result = run_planning_agent(
             task_spec,

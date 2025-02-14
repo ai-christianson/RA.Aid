@@ -11,14 +11,22 @@ console = Console()
 
 
 @tool
-def write_file_tool(
-    filepath: str, content: str, encoding: str = "utf-8", verbose: bool = True
+def put_complete_file_contents(
+    filepath: str,
+    complete_file_contents: str = "",
+    encoding: str = "utf-8",
+    verbose: bool = True,
 ) -> Dict[str, any]:
-    """Write content to a text file.
+    """Write the complete contents of a file, creating it if it doesn't exist.
+    This tool is specifically for writing the entire contents of a file at once,
+    not for appending or partial writes.
+
+    If you need to do anything other than write the complete contents use the run_programming_task tool instead.
 
     Args:
-        filepath: Path to the file to write
-        content: String content to write to the file
+        filepath: (Required) Path to the file to write. Must be provided.
+        complete_file_contents: Complete string content to write to the file. Defaults to
+                              an empty string, which will create an empty file.
         encoding: File encoding to use (default: utf-8)
         verbose: Whether to display a Rich panel with write statistics (default: True)
 
@@ -51,14 +59,18 @@ def write_file_tool(
         logging.debug(f"Starting to write file: {filepath}")
 
         with open(filepath, "w", encoding=encoding) as f:
-            f.write(content)
-            result["bytes_written"] = len(content.encode(encoding))
+            logging.debug(f"Writing {len(complete_file_contents)} bytes to {filepath}")
+            f.write(complete_file_contents)
+            result["bytes_written"] = len(complete_file_contents.encode(encoding))
 
         elapsed = time.time() - start_time
         result["elapsed_time"] = elapsed
         result["success"] = True
         result["filepath"] = filepath
-        result["message"] = "Operation completed successfully"
+        result["message"] = (
+            f"Successfully {'initialized empty file' if not complete_file_contents else f'wrote {result['bytes_written']} bytes'} "
+            f"at {filepath} in {result['elapsed_time']:.3f}s"
+        )
 
         logging.debug(
             f"File write complete: {result['bytes_written']} bytes in {elapsed:.2f}s"
@@ -67,7 +79,7 @@ def write_file_tool(
         if verbose:
             console.print(
                 Panel(
-                    f"Wrote {result['bytes_written']} bytes to {filepath} in {elapsed:.2f}s",
+                    f"{'Initialized empty file' if not complete_file_contents else f'Wrote {result['bytes_written']} bytes'} at {filepath} in {elapsed:.2f}s",
                     title="💾 File Write",
                     border_style="bright_green",
                 )

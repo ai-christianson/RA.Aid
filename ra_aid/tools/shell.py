@@ -21,8 +21,16 @@ def _truncate_for_log(text: str, max_length: int = 300) -> str:
 
 
 @tool
-def run_shell_command(command: str) -> Dict[str, Union[str, int, bool]]:
+def run_shell_command(
+    command: str, expected_runtime_seconds: int = 30
+) -> Dict[str, Union[str, int, bool]]:
     """Execute a shell command and return its output.
+
+    Args:
+        command: The shell command to execute
+        expected_runtime_seconds: Expected runtime in seconds, defaults to 30.
+            If process exceeds 2x this value, it will be terminated gracefully.
+            If process exceeds 3x this value, it will be killed forcefully.
 
     Important notes:
     1. Try to constrain/limit the output. Output processing is expensive, and infinite/looping output will cause us to fail.
@@ -73,7 +81,10 @@ def run_shell_command(command: str) -> Dict[str, Union[str, int, bool]]:
 
     try:
         print()
-        output, return_code = run_interactive_command(["/bin/bash", "-c", command])
+        output, return_code = run_interactive_command(
+            ["/bin/bash", "-c", command],
+            expected_runtime_seconds=expected_runtime_seconds,
+        )
         print()
         result = {
             "output": truncate_output(output.decode()) if output else "",

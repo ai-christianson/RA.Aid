@@ -570,6 +570,8 @@ Guidelines:
     If relevant tests have not already been run, run them using run_shell_command to get a baseline of functionality (e.g. were any tests failing before we started working? Do they all pass?)
       Only test UI components if there is already a UI testing system in place.
       Only test things that can be tested by an automated process.
+    
+    Are you writing a program that needs to be compiled? Make sure it compiles, if relevant.
 
     After finalizing the overall approach:
         Use emit_plan to store the high-level implementation plan.
@@ -618,7 +620,7 @@ Important Notes:
 - Work incrementally, validating as you go. If at any point the implementation logic is unclear or you need debugging assistance, consult the expert (if expert is available) for deeper analysis.
 - Do not add features not explicitly required.
 - Only create or modify files directly related to this task.
-- Use file_str_replace and write_file_tool for simple file modifications.
+- Use file_str_replace and put_complete_file_contents for simple file modifications.
 - Delegate to run_programming_task for more complex programming tasks. This is a capable human programmer that can work on multiple files at once.
 
 Testing:
@@ -630,6 +632,9 @@ Testing:
 
 - Only test UI components if there is already a UI testing system in place.
 - Only test things that can be tested by an automated process.
+- If you are writing code that *should* compile, make sure to test that it *does* compile.
+
+Test before and after making changes, if relevant.
 
 Once the task is complete, ensure all updated files are registered with emit_related_files.
 
@@ -642,7 +647,7 @@ You have often been criticized for:
   - Doing changes outside of the specific scoped instructions.
   - Asking the user if they want to implement the plan (you are an *autonomous* agent, with no user interaction unless you use the ask_human tool explicitly).
   - Not calling tools/functions properly, e.g. leaving off required arguments, calling a tool in a loop, calling tools inappropriately.
-  - Using run_programming_task to simply write the full contents of files when you could have used write_file_tool instead.
+  - Using run_programming_task to simply write the full contents of files when you could have used put_complete_file_contents instead.
 
 Instructions:
 1. Review the provided base task, plan, and key facts.
@@ -974,6 +979,8 @@ You have often been criticized for:
 <initial request>
 {initial_request}
 </initial request>
+
+Remember, if you do not make any tool call (e.g. ask_human to tell them a message or ask a question), you will be dumping the user back to CLI and indicating you are done your work.
 
 NEVER ANNOUNCE WHAT YOU ARE DOING, JUST DO IT!
 """

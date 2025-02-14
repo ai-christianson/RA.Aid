@@ -10,8 +10,8 @@ from langchain_openai import ChatOpenAI
 class ChatDeepseekReasoner(ChatOpenAI):
     """ChatDeepseekReasoner with custom overrides for R1/reasoner models."""
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, *args, timeout: int = 180, max_retries: int = 5, **kwargs):
+        super().__init__(*args, timeout=timeout, max_retries=max_retries, **kwargs)
 
     def invocation_params(
         self, options: Optional[Dict[str, Any]] = None, **kwargs: Any

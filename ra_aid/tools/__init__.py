@@ -26,7 +26,7 @@ from .research import existing_project_detected, monorepo_detected, ui_detected
 from .ripgrep import ripgrep_search
 from .shell import run_shell_command
 from .web_search_tavily import web_search_tavily
-from .write_file import write_file_tool
+from .write_file import put_complete_file_contents
 
 __all__ = [
     "ask_expert",
@@ -48,7 +48,7 @@ __all__ = [
     "request_implementation",
     "run_programming_task",
     "run_shell_command",
-    "write_file_tool",
+    "put_complete_file_contents",
     "ripgrep_search",
     "file_str_replace",
     "delete_tasks",

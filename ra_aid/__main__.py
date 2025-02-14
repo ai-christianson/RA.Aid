@@ -7,6 +7,7 @@ from datetime import datetime
 from langgraph.checkpoint.memory import MemorySaver
 from rich.console import Console
 from rich.panel import Panel
+from rich.text import Text
 
 from ra_aid import print_error, print_stage_header
 from ra_aid.__version__ import __version__
@@ -113,9 +114,9 @@ Examples:
     parser.add_argument(
         "--expert-provider",
         type=str,
-        default="openai",
+        default=None,
         choices=VALID_PROVIDERS,
-        help="The LLM provider to use for expert knowledge queries (default: openai)",
+        help="The LLM provider to use for expert knowledge queries",
     )
     parser.add_argument(
         "--expert-model",
@@ -234,10 +235,18 @@ Examples:
 
     # Handle expert provider/model defaults
     if not parsed_args.expert_provider:
-        # If no expert provider specified, use main provider instead of defaulting to
-        # to any particular model since we do not know if we have access to any other model.
-        parsed_args.expert_provider = parsed_args.provider
-        parsed_args.expert_model = parsed_args.model
+        # Check for OpenAI API key first
+        if os.environ.get("OPENAI_API_KEY"):
+            parsed_args.expert_provider = "openai"
+            parsed_args.expert_model = None  # Will be auto-selected
+        # If no OpenAI key but DeepSeek key exists, use DeepSeek
+        elif os.environ.get("DEEPSEEK_API_KEY"):
+            parsed_args.expert_provider = "deepseek"
+            parsed_args.expert_model = "deepseek-reasoner"
+        else:
+            # Fall back to main provider if neither is available
+            parsed_args.expert_provider = parsed_args.provider
+            parsed_args.expert_model = parsed_args.model
 
     # Validate temperature range if provided
     if parsed_args.temperature is not None and not (
@@ -299,27 +308,55 @@ def main():
         )  # Will exit if main env vars missing
         logger.debug("Environment validation successful")
 
-        if expert_missing:
-            console.print(
-                Panel(
-                    "[yellow]Expert tools disabled due to missing configuration:[/yellow]\n"
-                    + "\n".join(f"- {m}" for m in expert_missing)
-                    + "\nSet the required environment variables or args to enable expert mode.",
-                    title="Expert Tools Disabled",
-                    style="yellow",
+        # Validate model configuration early
+        from ra_aid.models_params import models_params
+
+        model_config = models_params.get(args.provider, {}).get(args.model or "", {})
+        supports_temperature = model_config.get(
+            "supports_temperature",
+            args.provider
+            in ["anthropic", "openai", "openrouter", "openai-compatible", "deepseek"],
+        )
+
+        if supports_temperature and args.temperature is None:
+            args.temperature = model_config.get("default_temperature")
+            if args.temperature is None:
+                print_error(
+                    f"Temperature must be provided for model {args.model} which supports temperature"
                 )
+                sys.exit(1)
+            logger.debug(
+                f"Using default temperature {args.temperature} for model {args.model}"
             )
 
-        if web_research_missing:
-            console.print(
-                Panel(
-                    "[yellow]Web research disabled due to missing configuration:[/yellow]\n"
-                    + "\n".join(f"- {m}" for m in web_research_missing)
-                    + "\nSet the required environment variables to enable web research.",
-                    title="Web Research Disabled",
-                    style="yellow",
-                )
-            )
+        # Display status lines
+        status = Text()
+        # Model info
+        status.append("🤖 ")
+        status.append(f"{args.provider}/{args.model}")
+        if args.temperature is not None:
+            status.append(f" @ T{args.temperature}")
+        status.append("\n")
+
+        # Expert info
+        status.append("🤔 ")
+        if expert_enabled:
+            status.append(f"{args.expert_provider}/{args.expert_model}")
+        else:
+            status.append("Expert: ")
+            status.append("Disabled", style="italic")
+        status.append("\n")
+
+        # Search info
+        status.append("🔍 Search: ")
+        status.append(
+            "Enabled" if web_research_enabled else "Disabled",
+            style=None if web_research_enabled else "italic",
+        )
+
+        console.print(
+            Panel(status, title="Config", border_style="bright_blue", padding=(0, 1))
+        )
 
         # Handle chat mode
         if args.chat:
@@ -368,6 +405,7 @@ def main():
             _global_memory["config"]["model"] = args.model
             _global_memory["config"]["expert_provider"] = args.expert_provider
             _global_memory["config"]["expert_model"] = args.expert_model
+            _global_memory["config"]["temperature"] = args.temperature
 
             # Create chat agent with appropriate tools
             chat_agent = create_agent(
@@ -442,6 +480,8 @@ def main():
 
         # Store fallback tool configuration
         _global_memory["config"]["no_fallback_tool"] = args.no_fallback_tool
+        # Store temperature in global config
+        _global_memory["config"]["temperature"] = args.temperature
 
         # Run research stage
         print_stage_header("Research Stage")
