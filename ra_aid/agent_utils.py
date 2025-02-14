@@ -885,7 +885,7 @@ def _handle_fallback_response(
         return
     fallback_response = fallback_handler.handle_failure(error, agent)
     if fallback_response and agent_type == "React":
-        msg_list_response = [SystemMessage(str(msg)) for msg in fallback_response]
+        msg_list_response = [HumanMessage(str(msg)) for msg in fallback_response]
         msg_list.extend(msg_list_response)
 
 

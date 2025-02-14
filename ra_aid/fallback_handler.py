@@ -147,7 +147,7 @@ class FallbackHandler:
         Returns:
             List of [raw_llm_response (SystemMessage), tool_call_result (SystemMessage)] or None.
         """
-        logger.error(
+        logger.debug(
             f"Tool call failed {self.tool_failure_consecutive_failures} times. Attempting fallback for tool: {self.current_failing_tool_name}"
         )
         cpm(
@@ -323,10 +323,15 @@ class FallbackHandler:
         Returns:
             The result of invoking the tool.
         """
-        tool_name_to_tool = {tool.func.__name__: tool for tool in self.tools}
+        tool_name_to_tool = {getattr(tool.func, "__name__", None): tool for tool in self.tools}
         name = tool_call_request["name"]
         arguments = tool_call_request["arguments"]
-        return tool_name_to_tool[name].invoke(arguments)
+        if name in tool_name_to_tool:
+            return tool_name_to_tool[name].invoke(arguments)
+        elif self.current_tool_to_bind is not None and getattr(self.current_tool_to_bind.func, "__name__", None) == name:
+            return self.current_tool_to_bind.invoke(arguments)
+        else:
+            raise Exception(f"Tool '{name}' not found in available tools.")
 
     def base_message_to_tool_call_dict(self, response: BaseMessage):
         """
