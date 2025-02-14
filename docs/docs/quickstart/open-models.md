@@ -18,11 +18,11 @@ RA.Aid supports these model providers:
 
 | Provider | Description | Key Features |
 |----------|-------------|--------------|
-| DeepSeek | Specialized reasoning models | High performance on complex tasks |
-| OpenRouter | Gateway to multiple open models | Wide model selection |
-| OpenAI-compatible | API-compatible endpoints | Use with compatible hosting |
-| Anthropic | Claude model family | Strong reasoning capabilities |
-| Gemini | Google AI models | Competitive performance |
+| DeepSeek | Chinese hedge fund who creates sophisticated LLMs | Strong, open models like R1 |
+| OpenRouter | Multi-model gateway service | Access to 100+ models, unified API interface, pay-per-token |
+| OpenAI-compatible | Self-hosted model endpoints | Compatible with Llama, Mistral and other open models |
+| Anthropic | Claude model series | 200k token context, strong tool use, JSON/XML parsing |
+| Gemini | Google's multimodal models | Code generation in 20+ languages, parallel request support |
 
   </TabItem>
   <TabItem value="setup" label="Quick Setup">
@@ -116,11 +116,11 @@ ra-aid -m "Your task" --provider openai-compatible --model your-model-name
 ## Advanced Configuration
 
 <Tabs groupId="advanced-config">
-<TabItem value="expert" label="Expert Mode">
+<TabItem value="expert" label="Expert Model">
 
 ### Expert Tool Configuration
 
-Configure the expert tool for specialized tasks:
+Configure the expert model for specialized tasks; this usually benefits from a more powerful, slower, reasoning model:
 
 ```bash
 # DeepSeek expert
