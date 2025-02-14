@@ -10,6 +10,18 @@ This configuration combines the strengths of multiple AI models to provide the b
 RA.Aid must be installed before using these configurations. If you haven't installed it yet, please see the [Installation Guide](installation).
 :::
 
+## Getting API Keys
+
+To use RA.Aid with the recommended configuration, you'll need to obtain API keys from the following services:
+
+1. **OpenAI API Key**: Create an account at [OpenAI's platform](https://platform.openai.com) and generate an API key from your dashboard.
+
+2. **Anthropic API Key**: Sign up at [Anthropic's Console](https://console.anthropic.com), then generate an API key from the API Keys section.
+
+3. **Tavily API Key** (optional): Create an account at [Tavily](https://app.tavily.com/sign-in) and get your API key from the dashboard.
+
+Please keep your API keys secure and never share them publicly. Each service has its own pricing and usage terms.
+
 ## Configuration
 
 Configure your API keys:
