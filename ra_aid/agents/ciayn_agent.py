@@ -144,11 +144,7 @@ class CiaynAgent:
             if code.endswith("```"):
                 code = code[:-3].strip()
 
-            raise ToolExecutionError(
-                "err", base_message=msg, tool_name="ripgrep_search"
-            )
-
-            logger.debug(f"_execute_tool: stripped code: {code}")
+            # logger.debug(f"_execute_tool: stripped code: {code}")
 
             # if the eval fails, try to extract it via a model call
             if validate_function_call_pattern(code):
