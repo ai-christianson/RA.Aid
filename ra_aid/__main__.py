@@ -156,6 +156,11 @@ Examples:
         help="Disable fallback model switching.",
     )
     parser.add_argument(
+        "--experimental-fallback-handler",
+        action="store_true",
+        help="Enable experimental fallback handler.",
+    )
+    parser.add_argument(
         "--fallback-tool-models",
         type=str,
         default="gpt-3.5-turbo,gpt-4",
@@ -407,6 +412,7 @@ def main():
             "auto_test": args.auto_test,
             "test_cmd": args.test_cmd,
             "max_test_cmd_retries": args.max_test_cmd_retries,
+            "experimental_fallback_handler": args.experimental_fallback_handler,
         }
 
         # Store config in global memory for access by is_informational_query

@@ -861,8 +861,10 @@ def get_agent_type(agent: RAgents) -> Literal["CiaynAgent", "React"]:
 
 def init_fallback_handler(agent: RAgents, config: Dict[str, Any], tools: List[Any]):
     """
-    Initialize fallback handler if agent is of type "React"; otherwise return None.
+    Initialize fallback handler if agent is of type "React" and experimental_fallback_handler is enabled; otherwise return None.
     """
+    if not config.get("experimental_fallback_handler", False):
+        return None
     agent_type = get_agent_type(agent)
     if agent_type == "React":
         return FallbackHandler(config, tools)
