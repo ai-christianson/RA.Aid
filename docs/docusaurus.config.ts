@@ -3,9 +3,9 @@ import type {Config} from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 
 const config: Config = {
-  title: 'My Site',
+  title: 'RA-Aid Documentation',
   favicon: 'img/favicon.ico',
-  url: 'https://your-docusaurus-site.example.com',
+  url: 'https://ra-aid.0.dev',
   baseUrl: '/',
   
   onDuplicateRoutes: 'ignore',
@@ -34,7 +34,7 @@ const config: Config = {
 
   themeConfig: {
     navbar: {
-      title: 'My Site',
+      title: 'RA-Aid',
       logo: {
         alt: 'Site Logo',
         src: 'img/logo-black-transparent.png',
@@ -42,7 +42,7 @@ const config: Config = {
       },
       items: [
         {
-          href: 'https://github.com/facebook/docusaurus',
+          href: 'https://github.com/smallcloudai/refact-aide',
           label: 'GitHub',
           position: 'right',
         },
@@ -55,6 +55,10 @@ const config: Config = {
     prism: {
       theme: prismThemes.github,
       darkTheme: prismThemes.dracula,
+    },
+    colorMode: {
+      defaultMode: 'dark',
+      respectPrefersColorScheme: false,
     },
   } satisfies Preset.ThemeConfig,
 };
