@@ -3,6 +3,9 @@ import TabItem from '@theme/TabItem';
 
 # Installation
 
+<Tabs groupId="install-method">
+  <TabItem value="uv" label="UV" default>
+
 Create a new Python 3.12 virtual environment and install RA.Aid:
 
 First install [uv](https://docs.astral.sh/uv/getting-started/installation/), then:
@@ -31,5 +34,31 @@ source .venv/bin/activate
 ```bash
 uv pip install ra-aid
 ```
+
+  </TabItem>
+  <TabItem value="pip" label="pip">
+
+Install RA.Aid using pip:
+
+```bash
+pip install ra-aid
+```
+
+:::note
+If you're using Python 3.13 or newer, we recommend using the UV installation method instead due to compatibility issues with newer Python versions.
+:::
+
+  </TabItem>
+  <TabItem value="macos" label="macOS">
+
+Install RA.Aid using Homebrew:
+
+```bash
+brew tap ai-christianson/homebrew-ra-aid
+brew install ra-aid
+```
+
+  </TabItem>
+</Tabs>
 
 Once installed, see the [Recommended Configuration](recommended) to set up RA.Aid with the recommended settings.
