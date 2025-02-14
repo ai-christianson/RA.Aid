@@ -875,7 +875,6 @@ def _handle_fallback_response(
     error: ToolExecutionError,
     fallback_handler: Optional[FallbackHandler],
     agent: RAgents,
-    agent_type: str,
     msg_list: list,
 ) -> None:
     """
@@ -884,6 +883,7 @@ def _handle_fallback_response(
     if not fallback_handler:
         return
     fallback_response = fallback_handler.handle_failure(error, agent)
+    agent_type = get_agent_type(agent)
     if fallback_response and agent_type == "React":
         msg_list_response = [HumanMessage(str(msg)) for msg in fallback_response]
         msg_list.extend(msg_list_response)
@@ -915,7 +915,6 @@ def run_agent_with_retry(
     _max_test_retries = config.get("max_test_cmd_retries", DEFAULT_MAX_TEST_CMD_RETRIES)
     auto_test = config.get("auto_test", False)
     original_prompt = prompt
-    agent_type = get_agent_type(agent)
     msg_list = [HumanMessage(content=prompt)]
 
     with InterruptibleSection():
@@ -941,9 +940,7 @@ def run_agent_with_retry(
                     logger.debug("Agent run completed successfully")
                     return "Agent run completed successfully"
                 except ToolExecutionError as e:
-                    _handle_fallback_response(
-                        e, fallback_handler, agent, agent_type, msg_list
-                    )
+                    _handle_fallback_response(e, fallback_handler, agent, msg_list)
                     continue
                 except FallbackToolExecutionError as e:
                     msg_list.append(
