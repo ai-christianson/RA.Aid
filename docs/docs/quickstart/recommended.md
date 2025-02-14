@@ -1,3 +1,7 @@
+---
+sidebar_position: 2
+---
+
 # Recommended Config
 
 This configuration combines the strengths of multiple AI models to provide the best experience:
