@@ -48,7 +48,7 @@ const config: Config = {
           label: 'Docs',
         },
         {
-          href: 'https://github.com/smallcloudai/refact-aide',
+          href: 'https://github.com/ai-christianson/RA.Aid',
           label: 'GitHub',
           position: 'right',
         },
