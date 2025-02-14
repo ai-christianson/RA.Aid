@@ -5,6 +5,8 @@ import TabItem from '@theme/TabItem';
 
 Create a new Python 3.12 virtual environment and install RA.Aid:
 
+First install [uv](https://docs.astral.sh/uv/getting-started/installation/), then:
+
 ```bash
 uv venv -p 3.12
 ```
