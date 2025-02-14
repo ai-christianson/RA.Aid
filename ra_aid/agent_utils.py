@@ -31,7 +31,7 @@ from ra_aid.agents.ciayn_agent import CiaynAgent
 from ra_aid.agents_alias import RAgents
 from ra_aid.config import DEFAULT_MAX_TEST_CMD_RETRIES, DEFAULT_RECURSION_LIMIT
 from ra_aid.console.formatting import print_error, print_stage_header
-from ra_aid.console.output import print_agent_output
+from ra_aid.console.output import cpm, print_agent_output
 from ra_aid.exceptions import (
     AgentInterrupt,
     FallbackToolExecutionError,
@@ -904,7 +904,7 @@ def run_agent_with_retry(
     agent: RAgents,
     prompt: str,
     config: dict,
-    fallback_handler: Optional[FallbackHandler],
+    fallback_handler: Optional[FallbackHandler] = None,
 ) -> Optional[str]:
     """Run an agent with retry logic for API errors."""
     logger.debug("Running agent with prompt length: %d", len(prompt))
@@ -933,10 +933,12 @@ def run_agent_with_retry(
                             original_prompt, config, test_attempts, auto_test
                         )
                     )
+                    cpm(f"res:{should_break, prompt, auto_test, test_attempts}")
                     if should_break:
                         break
                     if prompt != original_prompt:
                         continue
+
                     logger.debug("Agent run completed successfully")
                     return "Agent run completed successfully"
                 except ToolExecutionError as e:

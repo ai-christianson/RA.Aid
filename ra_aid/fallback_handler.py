@@ -42,7 +42,7 @@ class FallbackHandler:
         """
         self.config = config
         self.tools: list[BaseTool] = tools
-        self.fallback_enabled = config.get("fallback_tool_enabled", True)
+        self.fallback_enabled = config.get("experimental_fallback_handler", False)
         self.fallback_tool_models = self._load_fallback_tool_models(config)
         self.max_failures = config.get("max_tool_failures", DEFAULT_MAX_TOOL_FAILURES)
         self.tool_failure_consecutive_failures = 0
