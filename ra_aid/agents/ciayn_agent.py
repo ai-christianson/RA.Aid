@@ -112,6 +112,9 @@ class CiaynAgent:
             "Execute efficiently yet completely as a fully autonomous agent."
         )
         self.error_message_template = "Your tool call caused an error: {e}\n\nPlease correct your tool call and try again."
+        self.fallback_fixed_msg = HumanMessage(
+            "Fallback tool handler has fixed the tool call see: <fallback tool call result> for the output."
+        )
 
     def _build_prompt(self, last_result: Optional[str] = None) -> str:
         """Build the prompt for the agent including available tools and context."""
@@ -166,11 +169,12 @@ class CiaynAgent:
         self, fallback_response: list[Any], e: ToolExecutionError
     ) -> str:
         err_msg = HumanMessage(content=self.error_message_template.format(e=e))
-        self.chat_history.append(err_msg)
 
         if not fallback_response:
+            self.chat_history.append(err_msg)
             return ""
 
+        self.chat_history.append(self.fallback_fixed_msg)
         msg = f"Fallback tool handler has triggered after consecutive failed tool calls reached {DEFAULT_MAX_TOOL_FAILURES} failures.\n"
         # Passing the fallback raw invocation may confuse our llm, as invocation methods may differ.
         # msg += f"<fallback llm raw invocation>{fallback_response[0]}</fallback llm raw invocation>\n"
