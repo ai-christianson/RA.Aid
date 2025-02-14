@@ -229,7 +229,6 @@ class CiaynAgent:
             raise ToolExecutionError("Failed to extract tool call")
         ma = matches[0][0].strip()
         mb = matches[0][1].strip().replace("\n", " ")
-        logger.debug(f"Extracted tool call: {ma}({mb})")
         return f"{ma}({mb})"
 
     def _trim_chat_history(
