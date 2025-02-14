@@ -32,7 +32,11 @@ from ra_aid.agents_alias import RAgents
 from ra_aid.config import DEFAULT_MAX_TEST_CMD_RETRIES, DEFAULT_RECURSION_LIMIT
 from ra_aid.console.formatting import print_error, print_stage_header
 from ra_aid.console.output import print_agent_output
-from ra_aid.exceptions import AgentInterrupt, ToolExecutionError
+from ra_aid.exceptions import (
+    AgentInterrupt,
+    ToolExecutionError,
+    FallbackToolExecutionError,
+)
 from ra_aid.fallback_handler import FallbackHandler
 from ra_aid.logging_config import get_logger
 from ra_aid.models_params import DEFAULT_TOKEN_LIMIT, models_params
@@ -900,8 +904,6 @@ def run_agent_with_retry(
                     logger.debug("Agent run completed successfully")
                     return "Agent run completed successfully"
                 except ToolExecutionError as e:
-                    print("except ToolExecutionError in AGENT UTILS")
-                    logger.debug("AGENT UTILS ToolExecutionError called!")
                     if not fallback_handler:
                         continue
 
@@ -912,9 +914,11 @@ def run_agent_with_retry(
                                 SystemMessage(str(msg)) for msg in fallback_response
                             ]
                             msg_list.extend(msg_list_response)
-                        else:
-                            pass
                     continue
+                except FallbackToolExecutionError as e:
+                    msg_list.append(
+                        SystemMessage(f"FallbackToolExecutionError:{str(e)}")
+                    )
                 except (KeyboardInterrupt, AgentInterrupt):
                     raise
                 except (

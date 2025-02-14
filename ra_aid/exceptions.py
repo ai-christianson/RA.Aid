@@ -31,3 +31,9 @@ class ToolExecutionError(Exception):
         super().__init__(message)
         self.base_message = base_message
         self.tool_name = tool_name
+
+
+class FallbackToolExecutionError(Exception):
+    """Exception raised when a fallback tool execution fails."""
+
+    pass

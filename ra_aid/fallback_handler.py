@@ -13,7 +13,7 @@ from ra_aid.config import (
     RETRY_FALLBACK_COUNT,
 )
 from ra_aid.console.output import cpm
-from ra_aid.exceptions import ToolExecutionError
+from ra_aid.exceptions import ToolExecutionError, FallbackToolExecutionError
 from ra_aid.llm import initialize_llm, validate_provider_env
 from ra_aid.logging_config import get_logger
 from ra_aid.tool_configs import get_all_tools
@@ -197,7 +197,9 @@ class FallbackHandler:
                 )
             else:
                 failed_tool_call_name = "Tool execution error"
-                raise Exception("Fallback failed: Could not extract failed tool name.")
+                raise FallbackToolExecutionError(
+                    "Fallback failed: Could not extract failed tool name."
+                )
 
         return failed_tool_call_name
 
@@ -217,8 +219,8 @@ class FallbackHandler:
             )
         if tool_to_bind is None:
             # TODO: Would be nice to try fuzzy match or levenstein str match to find closest correspond tool name
-            raise Exception(
-                f"Fallback failed: {failed_tool_call_name} not found in all tools."
+            raise FallbackToolExecutionError(
+                f"Fallback failed failed_tool_call_name: '{failed_tool_call_name}' not found in any available tools."
             )
         return tool_to_bind
 

@@ -46,6 +46,8 @@ def print_agent_output(
                     )
                 )
                 tool_name = getattr(msg, "name", None)
+
+                # CiaynAgent handles this internally
                 if agent_type == "React":
                     raise ToolExecutionError(
                         err_msg, tool_name=tool_name, base_message=msg
