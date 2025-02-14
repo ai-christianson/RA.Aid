@@ -49,6 +49,7 @@ class FallbackHandler:
         self.failed_messages: list[BaseMessage] = []
         self.current_failing_tool_name = ""
         self.current_tool_to_bind: None | BaseTool = None
+        self.msg_list: list[BaseMessage] = []
 
         cpm(
             "Fallback models selected: "
@@ -100,7 +101,9 @@ class FallbackHandler:
             )
         return final_models
 
-    def handle_failure(self, error: ToolExecutionError, agent: RAgents):
+    def handle_failure(
+        self, error: ToolExecutionError, agent: RAgents, msg_list: list[BaseMessage]
+    ):
         """
         Handle a tool failure by incrementing the failure counter and triggering fallback if thresholds are exceeded.
 
@@ -110,6 +113,9 @@ class FallbackHandler:
         """
         if not self.fallback_enabled:
             return None
+
+        if self.tool_failure_consecutive_failures == 0:
+            self.init_msg_list(msg_list)
 
         failed_tool_call_name = self.extract_failed_tool_name(error)
         self._reset_on_new_failure(failed_tool_call_name)
@@ -177,6 +183,7 @@ class FallbackHandler:
         self.fallback_tool_models = self._load_fallback_tool_models(self.config)
         self.current_failing_tool_name = ""
         self.current_tool_to_bind = None
+        self.msg_list = []
 
     def _reset_on_new_failure(self, failed_tool_call_name):
         if (
@@ -296,22 +303,29 @@ class FallbackHandler:
         Returns:
             list: A list of chat messages.
         """
-        msg_list: list[BaseMessage] = []
-        msg_list.append(
+        prompt_msg_list: list[BaseMessage] = []
+        prompt_msg_list.append(
             SystemMessage(
                 content="You are a fallback tool caller. Your only responsibility is to figure out what the previous failed tool call was trying to do and to call that tool with the correct format and arguments, using the provided failure messages."
             )
         )
+
+        # TODO: Have some way to use the correct message type in the future, dont just convert everything to system message.
+        # This may be difficult as each model type may require different chat structures and throw API errors.
+        prompt_msg_list.extend(SystemMessage(str(msg)) for msg in self.msg_list)
+
         if self.failed_messages:
             # Convert to system messages to avoid API errors asking for correct msg structure
-            msg_list.extend([SystemMessage(str(msg)) for msg in self.failed_messages])
+            prompt_msg_list.extend(
+                [SystemMessage(str(msg)) for msg in self.failed_messages]
+            )
 
-        msg_list.append(
+        prompt_msg_list.append(
             HumanMessage(
-                content=f"Retry using the tool '{self.current_failing_tool_name}' with improved arguments."
+                content=f"Retry using the tool: '{self.current_failing_tool_name}' with correct arguments and formatting."
             )
         )
-        return msg_list
+        return prompt_msg_list
 
     def invoke_prompt_tool_call(self, tool_call_request: dict):
         """
@@ -323,12 +337,17 @@ class FallbackHandler:
         Returns:
             The result of invoking the tool.
         """
-        tool_name_to_tool = {getattr(tool.func, "__name__", None): tool for tool in self.tools}
+        tool_name_to_tool = {
+            getattr(tool.func, "__name__", None): tool for tool in self.tools
+        }
         name = tool_call_request["name"]
         arguments = tool_call_request["arguments"]
         if name in tool_name_to_tool:
             return tool_name_to_tool[name].invoke(arguments)
-        elif self.current_tool_to_bind is not None and getattr(self.current_tool_to_bind.func, "__name__", None) == name:
+        elif (
+            self.current_tool_to_bind is not None
+            and getattr(self.current_tool_to_bind.func, "__name__", None) == name
+        ):
             return self.current_tool_to_bind.invoke(arguments)
         else:
             raise Exception(f"Tool '{name}' not found in available tools.")
@@ -406,3 +425,12 @@ class FallbackHandler:
         if fallback_response and agent_type == "React":
             return [SystemMessage(str(msg)) for msg in fallback_response]
         return None
+
+    def init_msg_list(self, full_msg_list: list[BaseMessage]) -> None:
+        first_two = full_msg_list[:2]
+        last_two = full_msg_list[-2:]
+        merged = first_two.copy()
+        for msg in last_two:
+            if msg not in merged:
+                merged.append(msg)
+        self.msg_list = merged

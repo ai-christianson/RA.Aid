@@ -45,7 +45,7 @@ class TestFallbackHandler(unittest.TestCase):
         error_obj = ToolExecutionError(
             "Test error", base_message="dummy_call()", tool_name="dummy_tool"
         )
-        self.fallback_handler.handle_failure(error_obj, self.agent)
+        self.fallback_handler.handle_failure(error_obj, self.agent, [])
         self.assertEqual(
             self.fallback_handler.tool_failure_consecutive_failures,
             initial_failures + 1,
@@ -294,6 +294,20 @@ class TestFallbackHandler(unittest.TestCase):
         response_non = self.fallback_handler.handle_failure_response(ToolExecutionError("test", tool_name="dummy_tool"), self.agent, "Other")
         self.assertIsNone(response_non)
 
+
+    def test_init_msg_list_non_overlapping(self):
+        # Test when the first two and last two messages do not overlap.
+        full_list = ["msg1", "msg2", "msg3", "msg4", "msg5"]
+        self.fallback_handler.init_msg_list(full_list)
+        # Expected merged list: first two ("msg1", "msg2") plus last two ("msg4", "msg5")
+        self.assertEqual(self.fallback_handler.msg_list, ["msg1", "msg2", "msg4", "msg5"])
+
+    def test_init_msg_list_with_overlap(self):
+        # Test when the last two messages overlap with the first two.
+        full_list = ["msg1", "msg2", "msg1", "msg3"]
+        self.fallback_handler.init_msg_list(full_list)
+        # Expected merged list: first two ("msg1", "msg2") plus "msg3" from the last two, since "msg1" was already present.
+        self.assertEqual(self.fallback_handler.msg_list, ["msg1", "msg2", "msg3"])
 
 if __name__ == "__main__":
     unittest.main()

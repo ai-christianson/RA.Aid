@@ -270,6 +270,7 @@ def create_agent(
     """
     try:
         config = _global_memory.get("config", {})
+        print(f"config={config}")
         max_input_tokens = (
             get_model_token_limit(config, agent_type) or DEFAULT_TOKEN_LIMIT
         )
@@ -281,7 +282,7 @@ def create_agent(
             return create_react_agent(model, tools, **agent_kwargs)
         else:
             logger.debug("Using CiaynAgent agent instance")
-            return CiaynAgent(model, tools, max_tokens=max_input_tokens)
+            return CiaynAgent(model, tools, max_tokens=max_input_tokens, config=config)
 
     except Exception as e:
         # Default to REACT agent if provider/model detection fails
@@ -882,7 +883,7 @@ def _handle_fallback_response(
     """
     if not fallback_handler:
         return
-    fallback_response = fallback_handler.handle_failure(error, agent)
+    fallback_response = fallback_handler.handle_failure(error, agent, msg_list)
     agent_type = get_agent_type(agent)
     if fallback_response and agent_type == "React":
         msg_list_response = [HumanMessage(str(msg)) for msg in fallback_response]
