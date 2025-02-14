@@ -1,84 +1,52 @@
-import Tabs from '@theme/Tabs';
-import TabItem from '@theme/TabItem';
+# Recommended Config
 
-# Open Models Configuration
+This configuration combines the strengths of multiple AI models to provide the best experience:
 
-RA.Aid supports various open source model providers and configurations. This guide shows you how to configure and use different open models with RA.Aid.
+- Anthropic Sonnet excels at driving the agent's core reasoning and planning
+- OpenAI's models provide robust debugging and logical analysis capabilities  
+- Tavily web search integration allows the agent to find relevant information online
 
-## Supported Providers
+:::info
+RA.Aid must be installed before using these configurations. If you haven't installed it yet, please see the [Installation Guide](installation).
+:::
 
-<Tabs groupId="model-provider">
-  <TabItem value="deepseek" label="DeepSeek" default>
+## Getting API Keys
 
-### DeepSeek Models
+To use RA.Aid with the recommended configuration, you'll need to obtain API keys from the following services:
 
-To use DeepSeek models, you'll need a DeepSeek API key. Set it in your environment:
+1. **OpenAI API Key**: Create an account at [OpenAI's platform](https://platform.openai.com) and generate an API key from your dashboard.
 
-```bash
-export DEEPSEEK_API_KEY=your_api_key_here
-```
+2. **Anthropic API Key**: Sign up at [Anthropic's Console](https://console.anthropic.com), then generate an API key from the API Keys section.
 
-Then run RA.Aid with the deepseek provider and model:
+3. **Tavily API Key** (optional): Create an account at [Tavily](https://app.tavily.com/sign-in) and get your API key from the dashboard.
 
-```bash
-ra-aid -m "Your task" --provider deepseek --model deepseek-reasoner
-```
+Please keep your API keys secure and never share them publicly. Each service has its own pricing and usage terms.
 
-You can also access DeepSeek models through OpenRouter:
+## Configuration
 
-```bash
-ra-aid -m "Your task" --provider openrouter --model deepseek/deepseek-r1
-```
-
-  </TabItem>
-  <TabItem value="openrouter" label="OpenRouter">
-
-### OpenRouter Integration
-
-OpenRouter provides access to various open source models. First, set your API key:
+Configure your API keys:
 
 ```bash
-export OPENROUTER_API_KEY=your_api_key_here
+# For OpenAI (required)
+export OPENAI_API_KEY=your_api_key_here
+
+# For Anthropic (required)
+export ANTHROPIC_API_KEY=your_api_key_here
+
+# For web search capability (optional)
+export TAVILY_API_KEY=your_api_key_here
 ```
 
-Example using Mistral:
+## Basic Usage
+
+Start RA.Aid in interactive chat mode:
 
 ```bash
-ra-aid -m "Your task" --provider openrouter --model mistralai/mistral-large-2411
+ra-aid --chat
 ```
 
-  </TabItem>
-  <TabItem value="expert" label="Expert Configuration">
-
-### Expert Tool Configuration 
-
-The expert tool can be configured to use open models for complex logic and debugging tasks:
+Or run with a single command:
 
 ```bash
-# Use DeepSeek for expert tool
-export EXPERT_DEEPSEEK_API_KEY=your_deepseek_api_key
-ra-aid -m "Your task" --expert-provider deepseek --expert-model deepseek-reasoner
-
-# Use OpenRouter for expert
-export EXPERT_OPENROUTER_API_KEY=your_openrouter_api_key
-ra-aid -m "Your task" --expert-provider openrouter --expert-model mistralai/mistral-large-2411
+ra-aid -m "Help me understand this code"
 ```
-
-  </TabItem>
-</Tabs>
-
-## Environment Variables
-
-Here are all the environment variables supported for open model configuration:
-
-- `OPENROUTER_API_KEY`: Required for OpenRouter provider
-- `DEEPSEEK_API_KEY`: Required for DeepSeek provider
-- `EXPERT_OPENROUTER_API_KEY`: API key for expert tool using OpenRouter provider
-- `EXPERT_DEEPSEEK_API_KEY`: API key for expert tool using DeepSeek provider
-
-## Notes and Best Practices
-
-- Set environment variables in your shell's configuration file (e.g., `~/.bashrc` or `~/.zshrc`) for persistence
-- Consider using different models for different types of tasks (e.g., DeepSeek for reasoning, Mistral for general tasks)
-- Review model performance and adjust based on your specific needs
-- Keep your API keys secure and never commit them to version control
