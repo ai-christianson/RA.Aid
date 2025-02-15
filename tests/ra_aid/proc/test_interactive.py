@@ -1,7 +1,6 @@
 """Tests for the interactive subprocess module."""
 
 import os
-import sys
 import tempfile
 
 import pytest
@@ -49,7 +48,7 @@ def test_empty_command():
 
 def test_interactive_command():
     """Test running an interactive command.
-    
+
     This test verifies that output appears in real-time using process substitution.
     We use a command that prints to both stdout and stderr.
     """
@@ -70,7 +69,9 @@ def test_large_output():
     # Clean up any leading artifacts
     output_cleaned = output.lstrip(b"^D")
     # Verify the output size is limited to 8000 bytes
-    assert len(output_cleaned) <= 8000, f"Output exceeded 8000 bytes: {len(output_cleaned)} bytes"
+    assert (
+        len(output_cleaned) <= 8000
+    ), f"Output exceeded 8000 bytes: {len(output_cleaned)} bytes"
     # Verify we have the last lines (should contain the highest numbers)
     assert b"Line 1000" in output_cleaned, "Missing last line of output"
     assert retcode == 0
@@ -83,17 +84,19 @@ def test_byte_limit():
     cmd = 'for i in {1..200}; do printf "%04d: %s\\n" "$i" "This is a line with padding to ensure we go over the byte limit quickly"; done'
     output, retcode = run_interactive_command(["/bin/bash", "-c", cmd])
     output_cleaned = output.lstrip(b"^D")
-    
+
     # Verify exact 8000 byte limit
-    assert len(output_cleaned) <= 8000, f"Output exceeded 8000 bytes: {len(output_cleaned)} bytes"
-    
+    assert (
+        len(output_cleaned) <= 8000
+    ), f"Output exceeded 8000 bytes: {len(output_cleaned)} bytes"
+
     # Get the last line number from the output
     last_line = output_cleaned.splitlines()[-1]
-    last_num = int(last_line.split(b':')[0])
-    
+    last_num = int(last_line.split(b":")[0])
+
     # Verify we have a high number in the last line (should be near 200)
     assert last_num > 150, f"Expected last line number to be near 200, got {last_num}"
-    
+
     assert retcode == 0
 
 
@@ -134,16 +137,20 @@ def test_cat_medium_file():
             for line in output_cleaned.splitlines()
             if b"Script" not in line and line.strip()
         ]
-        
+
         # With 8000 byte limit, we expect to see the last portion of lines
         # The exact number may vary due to terminal settings, but we should
         # at least have the last lines of the file
-        assert len(lines) >= 90, f"Expected at least 90 lines due to 8000 byte limit, got {len(lines)}"
-        
+        assert (
+            len(lines) >= 90
+        ), f"Expected at least 90 lines due to 8000 byte limit, got {len(lines)}"
+
         # Most importantly, verify we have the last lines
-        last_line = lines[-1].decode('utf-8')
-        assert "This is test line 499" in last_line, f"Expected last line to be 499, got: {last_line}"
-        
+        last_line = lines[-1].decode("utf-8")
+        assert (
+            "This is test line 499" in last_line
+        ), f"Expected last line to be 499, got: {last_line}"
+
         assert retcode == 0
     finally:
         os.unlink(temp_path)
@@ -155,9 +162,7 @@ def test_realtime_output():
     cmd = "echo 'first'; sleep 0.1; echo 'second'; sleep 0.1; echo 'third'"
     output, retcode = run_interactive_command(["/bin/bash", "-c", cmd])
     lines = [
-        line
-        for line in output.splitlines()
-        if b"Script" not in line and line.strip()
+        line for line in output.splitlines() if b"Script" not in line and line.strip()
     ]
     assert b"first" in lines[0]
     assert b"second" in lines[1]

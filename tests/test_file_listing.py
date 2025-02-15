@@ -60,11 +60,7 @@ def sample_git_repo(empty_git_repo):
 def git_repo_with_untracked(sample_git_repo):
     """Create a git repository with both tracked and untracked files."""
     # Create untracked files
-    untracked_files = [
-        "untracked.txt",
-        "src/untracked.py",
-        "docs/draft.md"
-    ]
+    untracked_files = ["untracked.txt", "src/untracked.py", "docs/draft.md"]
 
     for file_path in untracked_files:
         full_path = sample_git_repo / file_path
@@ -91,7 +87,7 @@ docs/draft.md
 """
     gitignore_path = git_repo_with_untracked / ".gitignore"
     gitignore_path.write_text(gitignore_content)
-    
+
     # Add and commit .gitignore first
     subprocess.run(["git", "add", ".gitignore"], cwd=git_repo_with_untracked)
     subprocess.run(
@@ -109,7 +105,7 @@ docs/draft.md
     ignored_files = [
         "ignored.txt",
         "temp/temp.txt",
-        "src/__pycache__/main.cpython-39.pyc"
+        "src/__pycache__/main.cpython-39.pyc",
     ]
 
     for file_path in ignored_files:
@@ -128,14 +124,11 @@ def git_repo_with_aider_files(sample_git_repo):
         ".aider.chat.history.md",
         ".aider.input.history",
         ".aider.tags.cache.v3/some_file",
-        "src/.aider.local.settings"
+        "src/.aider.local.settings",
     ]
 
     # Create regular files
-    regular_files = [
-        "main.cpp",
-        "src/helper.cpp"
-    ]
+    regular_files = ["main.cpp", "src/helper.cpp"]
 
     # Create all files
     for file_path in aider_files + regular_files:
@@ -354,14 +347,15 @@ def mock_is_git_repo():
 @pytest.fixture
 def mock_os_path(monkeypatch):
     """Mock os.path functions."""
+
     def mock_exists(path):
         return True
 
     def mock_isdir(path):
         return True
 
-    monkeypatch.setattr(os.path, 'exists', mock_exists)
-    monkeypatch.setattr(os.path, 'isdir', mock_isdir)
+    monkeypatch.setattr(os.path, "exists", mock_exists)
+    monkeypatch.setattr(os.path, "isdir", mock_isdir)
     return monkeypatch
 
 
@@ -390,14 +384,18 @@ def test_get_file_listing_git_error(mock_subprocess, mock_is_git_repo, mock_os_p
         get_file_listing(DUMMY_PATH)
 
 
-def test_get_file_listing_permission_error(mock_subprocess, mock_is_git_repo, mock_os_path):
+def test_get_file_listing_permission_error(
+    mock_subprocess, mock_is_git_repo, mock_os_path
+):
     """Test get_file_listing with permission error."""
     mock_subprocess.side_effect = PermissionError("Permission denied")
     with pytest.raises(DirectoryAccessError):
         get_file_listing(DUMMY_PATH)
 
 
-def test_get_file_listing_unexpected_error(mock_subprocess, mock_is_git_repo, mock_os_path):
+def test_get_file_listing_unexpected_error(
+    mock_subprocess, mock_is_git_repo, mock_os_path
+):
     """Test get_file_listing with unexpected error."""
     mock_subprocess.side_effect = Exception("Unexpected error")
     with pytest.raises(FileListerError):
@@ -407,32 +405,34 @@ def test_get_file_listing_unexpected_error(mock_subprocess, mock_is_git_repo, mo
 def test_get_file_listing_with_untracked(git_repo_with_untracked):
     """Test that file listing includes both tracked and untracked files."""
     files, count = get_file_listing(str(git_repo_with_untracked))
-    
+
     # Check tracked files are present
     assert "README.md" in files
     assert "src/main.py" in files
-    
+
     # Check untracked files are present
     assert "untracked.txt" in files
     assert "src/untracked.py" in files
-    
+
     # Verify count includes both tracked and untracked
     expected_count = 8  # 5 tracked + 3 untracked (excluding .gitignore)
     assert count == expected_count
+
 
 def test_get_file_listing_with_untracked_and_limit(git_repo_with_untracked):
     """Test that file listing with limit works correctly with untracked files."""
     limit = 3
     files, count = get_file_listing(str(git_repo_with_untracked), limit=limit)
-    
+
     # Total count should still be full count
     assert count == 8  # 5 tracked + 3 untracked (excluding .gitignore)
 
     # Only limit number of files should be returned
     assert len(files) == limit
-    
+
     # Files should be sorted, so we can check first 3
     assert files == sorted(files)
+
 
 def test_get_file_listing_respects_gitignore(git_repo_with_ignores):
     """Test that file listing respects .gitignore rules."""
@@ -468,6 +468,7 @@ def test_get_file_listing_respects_gitignore(git_repo_with_ignores):
     expected_count = 8  # 5 tracked + 2 untracked + .gitignore
     assert count == expected_count
 
+
 def test_aider_files_excluded(git_repo_with_aider_files):
     """Test that .aider files are excluded from the file listing."""
     files, count = get_file_listing(str(git_repo_with_aider_files))
@@ -487,21 +488,14 @@ def test_aider_files_excluded(git_repo_with_aider_files):
     assert count == expected_count
     assert len(files) == expected_count
 
+
 def test_hidden_files_excluded_by_default(git_repo_with_aider_files):
     """Test that hidden files are excluded by default."""
     # Create some hidden files
-    hidden_files = [
-        ".config",
-        ".env",
-        "src/.local",
-        ".gitattributes"
-    ]
+    hidden_files = [".config", ".env", "src/.local", ".gitattributes"]
 
     # Create regular files
-    regular_files = [
-        "main.cpp",
-        "src/helper.cpp"
-    ]
+    regular_files = ["main.cpp", "src/helper.cpp"]
 
     # Create all files
     for file_path in hidden_files + regular_files:

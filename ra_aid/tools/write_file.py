@@ -12,7 +12,10 @@ console = Console()
 
 @tool
 def put_complete_file_contents(
-    filepath: str, complete_file_contents: str = "", encoding: str = "utf-8", verbose: bool = True
+    filepath: str,
+    complete_file_contents: str = "",
+    encoding: str = "utf-8",
+    verbose: bool = True,
 ) -> Dict[str, any]:
     """Write the complete contents of a file, creating it if it doesn't exist.
     This tool is specifically for writing the entire contents of a file at once,
@@ -22,7 +25,7 @@ def put_complete_file_contents(
 
     Args:
         filepath: (Required) Path to the file to write. Must be provided.
-        complete_file_contents: Complete string content to write to the file. Defaults to 
+        complete_file_contents: Complete string content to write to the file. Defaults to
                               an empty string, which will create an empty file.
         encoding: File encoding to use (default: utf-8)
         verbose: Whether to display a Rich panel with write statistics (default: True)

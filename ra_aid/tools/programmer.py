@@ -1,5 +1,4 @@
 import os
-import os
 import sys
 from pathlib import Path
 from typing import Dict, List, Union
@@ -21,25 +20,25 @@ logger = get_logger(__name__)
 
 def get_aider_executable() -> str:
     """Get the path to the aider executable in the same bin/Scripts directory as Python.
-    
+
     Returns:
         str: Full path to aider executable
     """
-    # Get directory containing Python executable 
+    # Get directory containing Python executable
     bin_dir = Path(sys.executable).parent
-    
+
     # Check for platform-specific executable name
     if sys.platform == "win32":
         aider_exe = bin_dir / "aider.exe"
     else:
         aider_exe = bin_dir / "aider"
-        
+
     if not aider_exe.exists():
         raise RuntimeError(f"Could not find aider executable at {aider_exe}")
-    
+
     if not os.access(aider_exe, os.X_OK):
         raise RuntimeError(f"Aider executable at {aider_exe} is not executable")
-        
+
     return str(aider_exe)
 
 
@@ -90,10 +89,14 @@ def run_programming_task(
 
     # Get combined list of files (explicit + related) with normalized paths
     # and deduplicated using set operations
-    files_to_use = list({os.path.abspath(f) for f in (files or [])} | {
-        os.path.abspath(f) for f in _global_memory["related_files"].values() 
-        if "related_files" in _global_memory
-    })
+    files_to_use = list(
+        {os.path.abspath(f) for f in (files or [])}
+        | {
+            os.path.abspath(f)
+            for f in _global_memory["related_files"].values()
+            if "related_files" in _global_memory
+        }
+    )
 
     # Add config file if specified
     if "config" in _global_memory and _global_memory["config"].get("aider_config"):
@@ -140,7 +143,7 @@ def run_programming_task(
 
         # Log the programming task
         log_work_event(f"Executed programming task: {_truncate_for_log(instructions)}")
-        
+
         # Return structured output
         return {
             "output": truncate_output(result[0].decode()) if result[0] else "",
@@ -184,21 +187,21 @@ def parse_aider_flags(aider_flags: str) -> List[str]:
 
     # Split by comma and strip whitespace
     flag_groups = [group.strip() for group in aider_flags.split(",")]
-    
+
     result = []
     for group in flag_groups:
         if not group:
             continue
-            
+
         # Split by space to separate flag from value
         parts = group.split()
-        
+
         # Add '--' prefix to the flag if not present, stripping any extra dashes
         flag = parts[0].lstrip("-")  # Remove all leading dashes
         flag = f"--{flag}"  # Add exactly two dashes
-        
+
         result.append(flag)
-        
+
         # Add any remaining parts as separate values
         if len(parts) > 1:
             result.extend(parts[1:])

@@ -47,9 +47,10 @@ class OpenAIStrategy(ProviderStrategy):
             if not key:
                 missing.append("EXPERT_OPENAI_API_KEY environment variable is not set")
 
-            # Handle expert model selection if none specified 
+            # Handle expert model selection if none specified
             if hasattr(args, "expert_model") and not args.expert_model:
                 from ra_aid.llm import select_expert_model
+
                 model = select_expert_model("openai")
                 if model:
                     args.expert_model = model

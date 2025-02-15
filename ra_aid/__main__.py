@@ -18,11 +18,17 @@ from ra_aid.agent_utils import (
     run_planning_agent,
     run_research_agent,
 )
-from ra_aid.config import DEFAULT_MAX_TEST_CMD_RETRIES, DEFAULT_RECURSION_LIMIT
+from ra_aid.config import (
+    DEFAULT_MAX_TEST_CMD_RETRIES,
+    DEFAULT_RECURSION_LIMIT,
+    VALID_PROVIDERS,
+)
+from ra_aid.console.output import cpm
 from ra_aid.dependencies import check_dependencies
 from ra_aid.env import validate_environment
 from ra_aid.llm import initialize_llm
 from ra_aid.logging_config import get_logger, setup_logging
+from ra_aid.models_params import DEFAULT_TEMPERATURE, models_params
 from ra_aid.project_info import format_project_info, get_project_info
 from ra_aid.prompts import CHAT_PROMPT, WEB_RESEARCH_PROMPT_SECTION_CHAT
 from ra_aid.tool_configs import get_chat_tools
@@ -41,14 +47,6 @@ def launch_webui(host: str, port: int):
 
 
 def parse_arguments(args=None):
-    VALID_PROVIDERS = [
-        "anthropic",
-        "openai",
-        "openrouter",
-        "openai-compatible",
-        "deepseek",
-        "gemini",
-    ]
     ANTHROPIC_DEFAULT_MODEL = "claude-3-5-sonnet-20241022"
     OPENAI_DEFAULT_MODEL = "gpt-4o"
 
@@ -81,9 +79,11 @@ Examples:
     parser.add_argument(
         "--provider",
         type=str,
-        default="openai"
-        if (os.getenv("OPENAI_API_KEY") and not os.getenv("ANTHROPIC_API_KEY"))
-        else "anthropic",
+        default=(
+            "openai"
+            if (os.getenv("OPENAI_API_KEY") and not os.getenv("ANTHROPIC_API_KEY"))
+            else "anthropic"
+        ),
         choices=VALID_PROVIDERS,
         help="The LLM provider to use",
     )
@@ -140,6 +140,9 @@ Examples:
         "--verbose", action="store_true", help="Enable verbose logging output"
     )
     parser.add_argument(
+        "--pretty-logger", action="store_true", help="Enable pretty logging output"
+    )
+    parser.add_argument(
         "--temperature",
         type=float,
         help="LLM temperature (0.0-2.0). Controls randomness in responses",
@@ -149,6 +152,11 @@ Examples:
         "--disable-limit-tokens",
         action="store_false",
         help="Whether to disable token limiting for Anthropic Claude react agents. Token limiter removes older messages to prevent maximum token limit API errors.",
+    )
+    parser.add_argument(
+        "--experimental-fallback-handler",
+        action="store_true",
+        help="Enable experimental fallback handler.",
     )
     parser.add_argument(
         "--recursion-limit",
@@ -227,10 +235,9 @@ Examples:
             parsed_args.expert_provider = "deepseek"
             parsed_args.expert_model = "deepseek-reasoner"
         else:
-            # Fall back to main provider if neither is available 
+            # Fall back to main provider if neither is available
             parsed_args.expert_provider = parsed_args.provider
             parsed_args.expert_model = parsed_args.model
-
 
     # Validate temperature range if provided
     if parsed_args.temperature is not None and not (
@@ -275,7 +282,7 @@ def is_stage_requested(stage: str) -> bool:
 def main():
     """Main entry point for the ra-aid command line tool."""
     args = parse_arguments()
-    setup_logging(args.verbose)
+    setup_logging(args.verbose, args.pretty_logger)
     logger.debug("Starting RA.Aid with arguments: %s", args)
 
     # Launch web interface if requested
@@ -293,16 +300,24 @@ def main():
         logger.debug("Environment validation successful")
 
         # Validate model configuration early
-        from ra_aid.models_params import models_params
+
         model_config = models_params.get(args.provider, {}).get(args.model or "", {})
-        supports_temperature = model_config.get("supports_temperature", args.provider in ["anthropic", "openai", "openrouter", "openai-compatible", "deepseek"])
-        
+        supports_temperature = model_config.get(
+            "supports_temperature",
+            args.provider
+            in ["anthropic", "openai", "openrouter", "openai-compatible", "deepseek"],
+        )
+
         if supports_temperature and args.temperature is None:
             args.temperature = model_config.get("default_temperature")
             if args.temperature is None:
-                print_error(f"Temperature must be provided for model {args.model} which supports temperature")
-                sys.exit(1)
-            logger.debug(f"Using default temperature {args.temperature} for model {args.model}")
+                cpm(
+                    f"This model supports temperature argument but none was given. Setting default temperature to {DEFAULT_TEMPERATURE}."
+                )
+                args.temperature = DEFAULT_TEMPERATURE
+            logger.debug(
+                f"Using default temperature {args.temperature} for model {args.model}"
+            )
 
         # Display status lines
         status = Text()
@@ -324,16 +339,13 @@ def main():
 
         # Search info
         status.append("🔍 Search: ")
-        status.append("Enabled" if web_research_enabled else "Disabled",
-                     style=None if web_research_enabled else "italic")
-        
+        status.append(
+            "Enabled" if web_research_enabled else "Disabled",
+            style=None if web_research_enabled else "italic",
+        )
+
         console.print(
-            Panel(
-                status,
-                title="Config",
-                border_style="bright_blue",
-                padding=(0, 1)
-            )
+            Panel(status, title="Config", border_style="bright_blue", padding=(0, 1))
         )
 
         # Handle chat mode
@@ -400,9 +412,9 @@ def main():
                 chat_agent,
                 CHAT_PROMPT.format(
                     initial_request=initial_request,
-                    web_research_section=WEB_RESEARCH_PROMPT_SECTION_CHAT
-                    if web_research_enabled
-                    else "",
+                    web_research_section=(
+                        WEB_RESEARCH_PROMPT_SECTION_CHAT if web_research_enabled else ""
+                    ),
                     working_directory=working_directory,
                     current_date=current_date,
                     project_info=formatted_project_info,
@@ -428,6 +440,7 @@ def main():
             "auto_test": args.auto_test,
             "test_cmd": args.test_cmd,
             "max_test_cmd_retries": args.max_test_cmd_retries,
+            "experimental_fallback_handler": args.experimental_fallback_handler,
         }
 
         # Store config in global memory for access by is_informational_query

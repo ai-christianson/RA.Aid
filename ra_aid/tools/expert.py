@@ -185,7 +185,11 @@ def ask_expert(question: str) -> str:
 
     query_parts.extend(["# Question", question])
     query_parts.extend(
-        ["\n # Addidional Requirements", "**DO NOT OVERTHINK**", "**DO NOT OVERCOMPLICATE**"]
+        [
+            "\n # Addidional Requirements",
+            "**DO NOT OVERTHINK**",
+            "**DO NOT OVERCOMPLICATE**",
+        ]
     )
 
     # Join all parts

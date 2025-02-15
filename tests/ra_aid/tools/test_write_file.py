@@ -19,7 +19,9 @@ def test_basic_write_functionality(temp_test_dir):
     test_file = temp_test_dir / "test.txt"
     content = "Hello, World!\nTest content"
 
-    result = put_complete_file_contents({"filepath": str(test_file), "complete_file_contents": content})
+    result = put_complete_file_contents(
+        {"filepath": str(test_file), "complete_file_contents": content}
+    )
 
     # Verify file contents
     assert test_file.read_text() == content
@@ -39,7 +41,9 @@ def test_directory_creation(temp_test_dir):
     test_file = nested_dir / "test.txt"
     content = "Test content"
 
-    result = put_complete_file_contents({"filepath": str(test_file), "complete_file_contents": content})
+    result = put_complete_file_contents(
+        {"filepath": str(test_file), "complete_file_contents": content}
+    )
 
     assert test_file.exists()
     assert test_file.read_text() == content
@@ -53,14 +57,22 @@ def test_different_encodings(temp_test_dir):
 
     # Test UTF-8
     result_utf8 = put_complete_file_contents(
-        {"filepath": str(test_file), "complete_file_contents": content, "encoding": "utf-8"}
+        {
+            "filepath": str(test_file),
+            "complete_file_contents": content,
+            "encoding": "utf-8",
+        }
     )
     assert result_utf8["success"] is True
     assert test_file.read_text(encoding="utf-8") == content
 
     # Test UTF-16
     result_utf16 = put_complete_file_contents(
-        {"filepath": str(test_file), "complete_file_contents": content, "encoding": "utf-16"}
+        {
+            "filepath": str(test_file),
+            "complete_file_contents": content,
+            "encoding": "utf-16",
+        }
     )
     assert result_utf16["success"] is True
     assert test_file.read_text(encoding="utf-16") == content
@@ -145,7 +157,9 @@ def test_large_file_write(temp_test_dir):
     test_file = temp_test_dir / "large.txt"
     content = "Large content\n" * 1000  # Create substantial content
 
-    result = put_complete_file_contents({"filepath": str(test_file), "complete_file_contents": content})
+    result = put_complete_file_contents(
+        {"filepath": str(test_file), "complete_file_contents": content}
+    )
 
     assert test_file.exists()
     assert test_file.read_text() == content
