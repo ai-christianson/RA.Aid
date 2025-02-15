@@ -535,6 +535,8 @@ git push origin feature/your-feature-name
 - Keep commits focused and message clear
 - Ensure all tests pass before submitting PR
 
+More information is available in our [Contributing Guide](https://docs.ra-aid.ai/contributing).
+
 ## License
 
 This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
