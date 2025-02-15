@@ -16,6 +16,20 @@ Here's a demo of RA.Aid adding a feature to itself:
 
 <img src="assets/demo-ra-aid-task-1.gif" alt="RA.Aid Demo" autoplay loop style="width: 100%; max-width: 800px;">
 
+## Documentation
+
+Complete documentation is available at https://docs.ra-aid.ai
+
+Key sections:
+- [Installation Guide](https://docs.ra-aid.ai/quickstart/installation)
+- [Recommended Configuration](https://docs.ra-aid.ai/quickstart/recommended)
+- [Open Models Setup](https://docs.ra-aid.ai/quickstart/open-models)
+- [Usage Examples](https://docs.ra-aid.ai/category/usage)
+- [Contributing Guide](https://docs.ra-aid.ai/contributing)
+- [Getting Help](https://docs.ra-aid.ai/getting-help)
+
+## Table of Contents
+
 - [Features](#features)
 - [Installation](#installation)
 - [Usage](#usage)
@@ -91,14 +105,7 @@ pip install ra-aid
 
 ### Prerequisites
 
-Before using RA.Aid, you'll need:
-
-1. Python package `aider` installed and available in your PATH:
-```bash
-pip install aider-chat
-```
-
-2. API keys for the required AI services:
+Before using RA.Aid, you'll need API keys for the required AI services:
 
 ```bash
 # Set up API keys based on your preferred provider:
@@ -106,7 +113,7 @@ pip install aider-chat
 # For Anthropic Claude models (recommended)
 export ANTHROPIC_API_KEY=your_api_key_here
 
-# For OpenAI models
+# For OpenAI models (optional)
 export OPENAI_API_KEY=your_api_key_here
 
 # For OpenRouter provider (optional)
@@ -133,6 +140,8 @@ You can get your API keys from:
 - OpenRouter API key: https://openrouter.ai/keys
 - Gemini API key: https://aistudio.google.com/app/apikey
 
+Complete installation documentation is available in our [Installation Guide](https://docs.ra-aid.ai/quickstart/installation).
+
 ## Usage
 
 RA.Aid is designed to be simple yet powerful. Here's how to use it:
@@ -147,6 +156,8 @@ ra-aid -m "Explain the authentication flow" --research-only
 # Enable verbose logging for detailed execution information
 ra-aid -m "Add new feature" --verbose
 ```
+
+More information is available in our [Usage Examples](https://docs.ra-aid.ai/category/usage).
 
 ### Command Line Options
 
@@ -425,6 +436,8 @@ Note: For `AIDER_FLAGS`, you can specify flags with or without the leading `--`.
 - Performance varies between models. The default Claude 3 Sonnet model currently provides the best and most reliable results.
 - Model configuration is done via command line arguments: `--provider` and `--model`
 - The `--model` argument is required for all providers except Anthropic (which defaults to `claude-3-5-sonnet-20241022`)
+
+More information is available in our [Open Models Setup](https://docs.ra-aid.ai/quickstart/open-models) guide.
 
 ## Architecture
 
