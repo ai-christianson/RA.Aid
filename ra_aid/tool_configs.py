@@ -1,3 +1,5 @@
+from langchain_core.tools import BaseTool
+
 from ra_aid.tools import (
     ask_expert,
     ask_human,
@@ -8,7 +10,6 @@ from ra_aid.tools import (
     emit_research_notes,
     fuzzy_find_project_files,
     list_directory_tree,
-    plan_implementation_completed,
     read_file_tool,
     ripgrep_search,
     run_programming_task,
@@ -23,13 +24,13 @@ from ra_aid.tools.agent import (
     request_task_implementation,
     request_web_research,
 )
-from ra_aid.tools.memory import one_shot_completed
+from ra_aid.tools.memory import one_shot_completed, plan_implementation_completed
 
 
 # Read-only tools that don't modify system state
 def get_read_only_tools(
     human_interaction: bool = False, web_research_enabled: bool = False
-) -> list:
+):
     """Get the list of read-only tools, optionally including human interaction tools.
 
     Args:
@@ -63,6 +64,18 @@ def get_read_only_tools(
     return tools
 
 
+def get_all_tools() -> list[BaseTool]:
+    """Return a list containing all available tools from different groups."""
+    all_tools = []
+    all_tools.extend(get_read_only_tools())
+    all_tools.extend(MODIFICATION_TOOLS)
+    all_tools.extend(EXPERT_TOOLS)
+    all_tools.extend(RESEARCH_TOOLS)
+    all_tools.extend(get_web_research_tools())
+    all_tools.extend(get_chat_tools())
+    return all_tools
+
+
 # Define constant tool groups
 READ_ONLY_TOOLS = get_read_only_tools()
 # MODIFICATION_TOOLS = [run_programming_task, put_complete_file_contents]
@@ -85,7 +98,7 @@ def get_research_tools(
     expert_enabled: bool = True,
     human_interaction: bool = False,
     web_research_enabled: bool = False,
-) -> list:
+):
     """Get the list of research tools based on mode and whether expert is enabled.
 
     Args:
@@ -165,7 +178,7 @@ def get_implementation_tools(
     return tools
 
 
-def get_web_research_tools(expert_enabled: bool = True) -> list:
+def get_web_research_tools(expert_enabled: bool = True):
     """Get the list of tools available for web research.
 
     Args:
@@ -185,9 +198,7 @@ def get_web_research_tools(expert_enabled: bool = True) -> list:
     return tools
 
 
-def get_chat_tools(
-    expert_enabled: bool = True, web_research_enabled: bool = False
-) -> list:
+def get_chat_tools(expert_enabled: bool = True, web_research_enabled: bool = False):
     """Get the list of tools available in chat mode.
 
     Chat mode includes research and implementation capabilities but excludes

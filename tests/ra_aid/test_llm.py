@@ -142,7 +142,9 @@ def test_initialize_expert_openai_compatible(clean_env, mock_openai, monkeypatch
 
 def test_initialize_expert_unsupported_provider(clean_env):
     """Test error handling for unsupported provider in expert mode."""
-    with pytest.raises(ValueError, match=r"Unsupported provider: unknown"):
+    with pytest.raises(
+        ValueError, match=r"Missing required environment variable for provider: unknown"
+    ):
         initialize_expert_llm("unknown", "model")
 
 
@@ -235,7 +237,9 @@ def test_initialize_openai_compatible(clean_env, mock_openai):
 
 def test_initialize_unsupported_provider(clean_env):
     """Test initialization with unsupported provider raises ValueError"""
-    with pytest.raises(ValueError, match=r"Unsupported provider: unknown"):
+    with pytest.raises(
+        ValueError, match=r"Missing required environment variable for provider: unknown"
+    ):
         initialize_llm("unknown", "model")
 
 
@@ -257,15 +261,33 @@ def test_temperature_defaults(clean_env, mock_openai, mock_anthropic, mock_gemin
         max_retries=5,
     )
 
-    # Test error when no temperature provided for models that support it
-    with pytest.raises(ValueError, match="Temperature must be provided for model"):
-        initialize_llm("openai", "test-model")
+    # Test default temperature when none is provided for models that support it
+    initialize_llm("openai", "test-model")
+    mock_openai.assert_called_with(
+        api_key="test-key",
+        model="test-model",
+        temperature=0.7,
+        timeout=180,
+        max_retries=5,
+    )
 
-    with pytest.raises(ValueError, match="Temperature must be provided for model"):
-        initialize_llm("anthropic", "test-model")
+    initialize_llm("anthropic", "test-model")
+    mock_anthropic.assert_called_with(
+        api_key="test-key",
+        model_name="test-model",
+        temperature=0.7,
+        timeout=180,
+        max_retries=5,
+    )
 
-    with pytest.raises(ValueError, match="Temperature must be provided for model"):
-        initialize_llm("gemini", "test-model")
+    initialize_llm("gemini", "test-model")
+    mock_gemini.assert_called_with(
+        api_key="test-key",
+        model="test-model",
+        temperature=0.7,
+        timeout=180,
+        max_retries=5,
+    )
 
     # Test expert models don't require temperature
     initialize_expert_llm("openai", "o1")

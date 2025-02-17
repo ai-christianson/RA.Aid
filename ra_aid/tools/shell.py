@@ -82,7 +82,8 @@ def run_shell_command(
     try:
         print()
         output, return_code = run_interactive_command(
-            ["/bin/bash", "-c", command], expected_runtime_seconds=timeout
+            ["/bin/bash", "-c", command],
+            expected_runtime_seconds=timeout,
         )
         print()
         result = {

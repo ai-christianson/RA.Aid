@@ -12,7 +12,6 @@ from rich.text import Text
 from ra_aid import print_error, print_stage_header
 from ra_aid.__version__ import __version__
 from ra_aid.agent_utils import (
-    AgentInterrupt,
     create_agent,
     run_agent_with_retry,
     run_planning_agent,
@@ -22,11 +21,15 @@ from ra_aid.config import (
     DEFAULT_MAX_TEST_CMD_RETRIES,
     DEFAULT_RECURSION_LIMIT,
     DEFAULT_TEST_CMD_TIMEOUT,
+    VALID_PROVIDERS,
 )
+from ra_aid.console.output import cpm
 from ra_aid.dependencies import check_dependencies
 from ra_aid.env import validate_environment
+from ra_aid.exceptions import AgentInterrupt
 from ra_aid.llm import initialize_llm
 from ra_aid.logging_config import get_logger, setup_logging
+from ra_aid.models_params import DEFAULT_TEMPERATURE, models_params
 from ra_aid.project_info import format_project_info, get_project_info
 from ra_aid.prompts import CHAT_PROMPT, WEB_RESEARCH_PROMPT_SECTION_CHAT
 from ra_aid.tool_configs import get_chat_tools
@@ -45,14 +48,6 @@ def launch_webui(host: str, port: int):
 
 
 def parse_arguments(args=None):
-    VALID_PROVIDERS = [
-        "anthropic",
-        "openai",
-        "openrouter",
-        "openai-compatible",
-        "deepseek",
-        "gemini",
-    ]
     ANTHROPIC_DEFAULT_MODEL = "claude-3-5-sonnet-20241022"
     OPENAI_DEFAULT_MODEL = "gpt-4o"
 
@@ -146,6 +141,9 @@ Examples:
         "--verbose", action="store_true", help="Enable verbose logging output"
     )
     parser.add_argument(
+        "--pretty-logger", action="store_true", help="Enable pretty logging output"
+    )
+    parser.add_argument(
         "--temperature",
         type=float,
         help="LLM temperature (0.0-2.0). Controls randomness in responses",
@@ -155,6 +153,11 @@ Examples:
         "--disable-limit-tokens",
         action="store_false",
         help="Whether to disable token limiting for Anthropic Claude react agents. Token limiter removes older messages to prevent maximum token limit API errors.",
+    )
+    parser.add_argument(
+        "--experimental-fallback-handler",
+        action="store_true",
+        help="Enable experimental fallback handler.",
     )
     parser.add_argument(
         "--recursion-limit",
@@ -286,7 +289,7 @@ def is_stage_requested(stage: str) -> bool:
 def main():
     """Main entry point for the ra-aid command line tool."""
     args = parse_arguments()
-    setup_logging(args.verbose)
+    setup_logging(args.verbose, args.pretty_logger)
     logger.debug("Starting RA.Aid with arguments: %s", args)
 
     # Launch web interface if requested
@@ -304,7 +307,6 @@ def main():
         logger.debug("Environment validation successful")
 
         # Validate model configuration early
-        from ra_aid.models_params import models_params
 
         model_config = models_params.get(args.provider, {}).get(args.model or "", {})
         supports_temperature = model_config.get(
@@ -316,10 +318,10 @@ def main():
         if supports_temperature and args.temperature is None:
             args.temperature = model_config.get("default_temperature")
             if args.temperature is None:
-                print_error(
-                    f"Temperature must be provided for model {args.model} which supports temperature"
+                cpm(
+                    f"This model supports temperature argument but none was given. Setting default temperature to {DEFAULT_TEMPERATURE}."
                 )
-                sys.exit(1)
+                args.temperature = DEFAULT_TEMPERATURE
             logger.debug(
                 f"Using default temperature {args.temperature} for model {args.model}"
             )
@@ -445,6 +447,7 @@ def main():
             "auto_test": args.auto_test,
             "test_cmd": args.test_cmd,
             "max_test_cmd_retries": args.max_test_cmd_retries,
+            "experimental_fallback_handler": args.experimental_fallback_handler,
             "test_cmd_timeout": args.test_cmd_timeout,
         }
 
