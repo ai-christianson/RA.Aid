@@ -9,47 +9,50 @@ The interface remains compatible with external callers expecting a tuple (output
 where output is a bytes object (UTF-8 encoded).
 """
 
-import os
-import shlex
-import shutil
 import errno
-import sys
 import io
-import subprocess
+import os
 import select
-import termios
-import tty
-import time
+import shutil
 import signal
+import subprocess
+import sys
+import termios
+import time
+import tty
 from typing import List, Tuple
 
 import pyte
 from pyte.screens import HistoryScreen
 
+
 def render_line(line, columns: int) -> str:
     """Render a single screen line from the pyte buffer (a mapping of column to Char)."""
     return "".join(line[x].data for x in range(columns))
 
-def run_interactive_command(cmd: List[str], expected_runtime_seconds: int = 30) -> Tuple[bytes, int]:
+
+def run_interactive_command(
+    cmd: List[str], expected_runtime_seconds: int = 30
+) -> Tuple[bytes, int]:
     """
     Runs an interactive command with a pseudo-tty, capturing final scrollback history.
-    
+
     Assumptions and constraints:
       - Running on a Linux system.
       - `cmd` is a non-empty list where cmd[0] is the executable.
       - The executable is on PATH.
-      
+
     Args:
       cmd: A list containing the command and its arguments.
       expected_runtime_seconds: Expected runtime in seconds, defaults to 30.
         If process exceeds 2x this value, it will be terminated gracefully.
         If process exceeds 3x this value, it will be killed forcefully.
         Must be between 1 and 1800 seconds (30 minutes).
-      
+
     Returns:
       A tuple of (captured_output, return_code), where captured_output is a UTF-8 encoded
       bytes object containing the trimmed non-empty history lines from the terminal session.
-    
+
     Raises:
       ValueError: If no command is provided.
       FileNotFoundError: If the command is not found in PATH.
@@ -61,8 +64,10 @@ def run_interactive_command(cmd: List[str], expected_runtime_seconds: int = 30) 
     if shutil.which(cmd[0]) is None:
         raise FileNotFoundError(f"Command '{cmd[0]}' not found in PATH.")
     if expected_runtime_seconds <= 0 or expected_runtime_seconds > 1800:
-        raise ValueError("expected_runtime_seconds must be between 1 and 1800 seconds (30 minutes)")
-    
+        raise ValueError(
+            "expected_runtime_seconds must be between 1 and 1800 seconds (30 minutes)"
+        )
+
     try:
         term_size = os.get_terminal_size()
         cols, rows = term_size.columns, term_size.lines
@@ -85,20 +90,22 @@ def run_interactive_command(cmd: List[str], expected_runtime_seconds: int = 30) 
 
     # Set up environment variables for the subprocess using detected terminal size.
     env = os.environ.copy()
-    env.update({
-        'DEBIAN_FRONTEND': 'noninteractive',
-        'GIT_PAGER': '',
-        'PYTHONUNBUFFERED': '1',
-        'CI': 'true',
-        'LANG': 'C.UTF-8',
-        'LC_ALL': 'C.UTF-8',
-        'COLUMNS': str(cols),
-        'LINES': str(rows),
-        'FORCE_COLOR': '1',
-        'GIT_TERMINAL_PROMPT': '0',
-        'PYTHONDONTWRITEBYTECODE': '1',
-        'NODE_OPTIONS': '--unhandled-rejections=strict'
-    })
+    env.update(
+        {
+            "DEBIAN_FRONTEND": "noninteractive",
+            "GIT_PAGER": "",
+            "PYTHONUNBUFFERED": "1",
+            "CI": "true",
+            "LANG": "C.UTF-8",
+            "LC_ALL": "C.UTF-8",
+            "COLUMNS": str(cols),
+            "LINES": str(rows),
+            "FORCE_COLOR": "1",
+            "GIT_TERMINAL_PROMPT": "0",
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "NODE_OPTIONS": "--unhandled-rejections=strict",
+        }
+    )
 
     proc = subprocess.Popen(
         cmd,
@@ -108,7 +115,7 @@ def run_interactive_command(cmd: List[str], expected_runtime_seconds: int = 30) 
         bufsize=0,
         close_fds=True,
         env=env,
-        preexec_fn=os.setsid  # Create new process group for proper signal handling.
+        preexec_fn=os.setsid,  # Create new process group for proper signal handling.
     )
     os.close(slave_fd)  # Close slave end in the parent process.
 
@@ -200,19 +207,21 @@ def run_interactive_command(cmd: List[str], expected_runtime_seconds: int = 30) 
     # Trim out empty lines to get only meaningful "history" lines.
     trimmed_lines = [line for line in all_lines if line.strip()]
     final_output = "\n".join(trimmed_lines)
-    
+
     # Add timeout message if process was terminated due to timeout.
     if was_terminated:
         timeout_msg = f"\n[Process exceeded timeout ({expected_runtime_seconds} seconds expected)]"
         final_output += timeout_msg
-    
+
     # Limit output to the last 8000 bytes.
     final_output = final_output[-8000:]
-    
+
     return final_output.encode("utf-8"), proc.returncode
+
 
 if __name__ == "__main__":
     import sys
+
     if len(sys.argv) < 2:
         print("Usage: interactive.py <command> [args...]")
         sys.exit(1)

@@ -1,25 +1,19 @@
 from ra_aid.tools import (
     ask_expert,
     ask_human,
-    delete_key_facts,
-    delete_key_snippets,
-    deregister_related_files,
     emit_expert_context,
     emit_key_facts,
     emit_key_snippets,
-    emit_plan,
     emit_related_files,
     emit_research_notes,
     fuzzy_find_project_files,
     list_directory_tree,
-    monorepo_detected,
     plan_implementation_completed,
     read_file_tool,
     ripgrep_search,
     run_programming_task,
     run_shell_command,
     task_completed,
-    ui_detected,
     web_search_tavily,
 )
 from ra_aid.tools.agent import (
@@ -30,7 +24,6 @@ from ra_aid.tools.agent import (
     request_web_research,
 )
 from ra_aid.tools.memory import one_shot_completed
-from ra_aid.tools.write_file import put_complete_file_contents
 
 
 # Read-only tools that don't modify system state
@@ -73,7 +66,9 @@ def get_read_only_tools(
 # Define constant tool groups
 READ_ONLY_TOOLS = get_read_only_tools()
 # MODIFICATION_TOOLS = [run_programming_task, put_complete_file_contents]
-MODIFICATION_TOOLS = [run_programming_task] # having put_complete_file_contents causes trouble :(
+MODIFICATION_TOOLS = [
+    run_programming_task
+]  # having put_complete_file_contents causes trouble :(
 COMMON_TOOLS = get_read_only_tools()
 EXPERT_TOOLS = [emit_expert_context, ask_expert]
 RESEARCH_TOOLS = [

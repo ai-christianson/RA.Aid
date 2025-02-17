@@ -1,21 +1,21 @@
 import os
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
-from openai import OpenAI
 from langchain_anthropic import ChatAnthropic
 from langchain_core.language_models import BaseChatModel
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
+from openai import OpenAI
 
 from ra_aid.chat_models.deepseek_chat import ChatDeepseekReasoner
 from ra_aid.logging_config import get_logger
-from typing import List
 
 from .models_params import models_params
 
+
 def get_available_openai_models() -> List[str]:
     """Fetch available OpenAI models using OpenAI client.
-    
+
     Returns:
         List of available model names
     """
@@ -25,34 +25,36 @@ def get_available_openai_models() -> List[str]:
         models = client.models.list()
         return [str(model.id) for model in models.data]
     except Exception:
-        # Return empty list if unable to fetch models 
+        # Return empty list if unable to fetch models
         return []
+
 
 def select_expert_model(provider: str, model: Optional[str] = None) -> Optional[str]:
     """Select appropriate expert model based on provider and availability.
-    
+
     Args:
         provider: The LLM provider
         model: Optional explicitly specified model name
-    
+
     Returns:
         Selected model name or None if no suitable model found
     """
     if provider != "openai" or model is not None:
         return model
-        
+
     # Try to get available models
     available_models = get_available_openai_models()
-    
+
     # Priority order for expert models
     priority_models = ["o3-mini", "o1", "o1-preview"]
-    
+
     # Return first available model from priority list
     for model_name in priority_models:
         if model_name in available_models:
             return model_name
-            
+
     return None
+
 
 known_temp_providers = {
     "openai",
@@ -220,7 +222,9 @@ def create_llm_client(
         temp_kwargs = {"temperature": 0} if supports_temperature else {}
     elif supports_temperature:
         if temperature is None:
-            raise ValueError(f"Temperature must be provided for model {model_name} which supports temperature")
+            raise ValueError(
+                f"Temperature must be provided for model {model_name} which supports temperature"
+            )
         temp_kwargs = {"temperature": temperature}
     else:
         temp_kwargs = {}
@@ -248,11 +252,13 @@ def create_llm_client(
         }
         if is_expert:
             openai_kwargs["reasoning_effort"] = "high"
-        return ChatOpenAI(**{
-            **openai_kwargs,
-            "timeout": LLM_REQUEST_TIMEOUT,
-            "max_retries": LLM_MAX_RETRIES,
-        })
+        return ChatOpenAI(
+            **{
+                **openai_kwargs,
+                "timeout": LLM_REQUEST_TIMEOUT,
+                "max_retries": LLM_MAX_RETRIES,
+            }
+        )
     elif provider == "anthropic":
         return ChatAnthropic(
             api_key=config["api_key"],
@@ -289,8 +295,6 @@ def initialize_llm(
     return create_llm_client(provider, model_name, temperature, is_expert=False)
 
 
-def initialize_expert_llm(
-    provider: str, model_name: str
-) -> BaseChatModel:
+def initialize_expert_llm(provider: str, model_name: str) -> BaseChatModel:
     """Initialize an expert language model client based on the specified provider and model."""
     return create_llm_client(provider, model_name, temperature=None, is_expert=True)

@@ -472,6 +472,7 @@ def test_emit_related_files_path_normalization(reset_memory, tmp_path):
 
     # Change to the temp directory so relative paths work
     import os
+
     original_dir = os.getcwd()
     os.chdir(tmp_path)
 

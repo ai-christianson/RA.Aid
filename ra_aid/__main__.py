@@ -18,7 +18,11 @@ from ra_aid.agent_utils import (
     run_planning_agent,
     run_research_agent,
 )
-from ra_aid.config import DEFAULT_MAX_TEST_CMD_RETRIES, DEFAULT_RECURSION_LIMIT
+from ra_aid.config import (
+    DEFAULT_MAX_TEST_CMD_RETRIES,
+    DEFAULT_RECURSION_LIMIT,
+    DEFAULT_TEST_CMD_TIMEOUT,
+)
 from ra_aid.dependencies import check_dependencies
 from ra_aid.env import validate_environment
 from ra_aid.llm import initialize_llm
@@ -81,9 +85,11 @@ Examples:
     parser.add_argument(
         "--provider",
         type=str,
-        default="openai"
-        if (os.getenv("OPENAI_API_KEY") and not os.getenv("ANTHROPIC_API_KEY"))
-        else "anthropic",
+        default=(
+            "openai"
+            if (os.getenv("OPENAI_API_KEY") and not os.getenv("ANTHROPIC_API_KEY"))
+            else "anthropic"
+        ),
         choices=VALID_PROVIDERS,
         help="The LLM provider to use",
     )
@@ -173,7 +179,13 @@ Examples:
         "--max-test-cmd-retries",
         type=int,
         default=DEFAULT_MAX_TEST_CMD_RETRIES,
-        help="Maximum number of retries for the test command (default: 10)",
+        help="Maximum number of retries for the test command (default: 3)",
+    )
+    parser.add_argument(
+        "--test-cmd-timeout",
+        type=int,
+        default=DEFAULT_TEST_CMD_TIMEOUT,
+        help=f"Timeout in seconds for test command execution (default: {DEFAULT_TEST_CMD_TIMEOUT})",
     )
     parser.add_argument(
         "--webui",
@@ -227,10 +239,9 @@ Examples:
             parsed_args.expert_provider = "deepseek"
             parsed_args.expert_model = "deepseek-reasoner"
         else:
-            # Fall back to main provider if neither is available 
+            # Fall back to main provider if neither is available
             parsed_args.expert_provider = parsed_args.provider
             parsed_args.expert_model = parsed_args.model
-
 
     # Validate temperature range if provided
     if parsed_args.temperature is not None and not (
@@ -294,15 +305,24 @@ def main():
 
         # Validate model configuration early
         from ra_aid.models_params import models_params
+
         model_config = models_params.get(args.provider, {}).get(args.model or "", {})
-        supports_temperature = model_config.get("supports_temperature", args.provider in ["anthropic", "openai", "openrouter", "openai-compatible", "deepseek"])
-        
+        supports_temperature = model_config.get(
+            "supports_temperature",
+            args.provider
+            in ["anthropic", "openai", "openrouter", "openai-compatible", "deepseek"],
+        )
+
         if supports_temperature and args.temperature is None:
             args.temperature = model_config.get("default_temperature")
             if args.temperature is None:
-                print_error(f"Temperature must be provided for model {args.model} which supports temperature")
+                print_error(
+                    f"Temperature must be provided for model {args.model} which supports temperature"
+                )
                 sys.exit(1)
-            logger.debug(f"Using default temperature {args.temperature} for model {args.model}")
+            logger.debug(
+                f"Using default temperature {args.temperature} for model {args.model}"
+            )
 
         # Display status lines
         status = Text()
@@ -324,16 +344,13 @@ def main():
 
         # Search info
         status.append("🔍 Search: ")
-        status.append("Enabled" if web_research_enabled else "Disabled",
-                     style=None if web_research_enabled else "italic")
-        
+        status.append(
+            "Enabled" if web_research_enabled else "Disabled",
+            style=None if web_research_enabled else "italic",
+        )
+
         console.print(
-            Panel(
-                status,
-                title="Config",
-                border_style="bright_blue",
-                padding=(0, 1)
-            )
+            Panel(status, title="Config", border_style="bright_blue", padding=(0, 1))
         )
 
         # Handle chat mode
@@ -400,9 +417,9 @@ def main():
                 chat_agent,
                 CHAT_PROMPT.format(
                     initial_request=initial_request,
-                    web_research_section=WEB_RESEARCH_PROMPT_SECTION_CHAT
-                    if web_research_enabled
-                    else "",
+                    web_research_section=(
+                        WEB_RESEARCH_PROMPT_SECTION_CHAT if web_research_enabled else ""
+                    ),
                     working_directory=working_directory,
                     current_date=current_date,
                     project_info=formatted_project_info,
@@ -428,6 +445,7 @@ def main():
             "auto_test": args.auto_test,
             "test_cmd": args.test_cmd,
             "max_test_cmd_retries": args.max_test_cmd_retries,
+            "test_cmd_timeout": args.test_cmd_timeout,
         }
 
         # Store config in global memory for access by is_informational_query
