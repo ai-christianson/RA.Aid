@@ -17,6 +17,10 @@ const config: Config = {
     locales: ['en'],
   },
 
+  plugins: [
+    '@docusaurus/plugin-vercel-analytics'
+  ],
+
   presets: [
     [
       'classic',
