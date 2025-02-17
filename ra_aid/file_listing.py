@@ -1,11 +1,9 @@
 """Module for efficient file listing using git."""
 
-import subprocess
 import os
+import subprocess
 from pathlib import Path
 from typing import List, Optional, Tuple
-import tempfile
-import shutil
 
 
 class FileListerError(Exception):
@@ -133,12 +131,18 @@ def get_file_listing(
 
         # Combine and process the files
         all_files = []
-        for file in tracked_files_process.stdout.splitlines() + untracked_files_process.stdout.splitlines():
+        for file in (
+            tracked_files_process.stdout.splitlines()
+            + untracked_files_process.stdout.splitlines()
+        ):
             file = file.strip()
             if not file:
                 continue
             # Skip hidden files unless explicitly included
-            if not include_hidden and (file.startswith(".") or any(part.startswith(".") for part in file.split("/"))):
+            if not include_hidden and (
+                file.startswith(".")
+                or any(part.startswith(".") for part in file.split("/"))
+            ):
                 continue
             # Skip .aider files
             if ".aider" in file:
@@ -155,7 +159,7 @@ def get_file_listing(
 
         return all_files, total_count
 
-    except (DirectoryNotFoundError, DirectoryAccessError, GitCommandError) as e:
+    except (DirectoryNotFoundError, DirectoryAccessError, GitCommandError):
         # Re-raise known exceptions
         raise
     except PermissionError as e:

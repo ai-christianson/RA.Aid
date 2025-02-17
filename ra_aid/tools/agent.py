@@ -275,6 +275,7 @@ def request_task_implementation(task_spec: str) -> Dict[str, Any]:
         print_task_header(task_spec)
         # Run implementation agent
         from ..agent_utils import run_task_implementation_agent
+
         _global_memory["completion_message"] = ""
 
         _result = run_task_implementation_agent(
@@ -345,6 +346,7 @@ def request_implementation(task_spec: str) -> Dict[str, Any]:
     try:
         # Run planning agent
         from ..agent_utils import run_planning_agent
+
         _global_memory["completion_message"] = ""
 
         _result = run_planning_agent(

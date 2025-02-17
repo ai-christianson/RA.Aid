@@ -181,6 +181,7 @@ More information is available in our [Usage Examples](https://docs.ra-aid.ai/cat
 - `--test-cmd`: Custom command to run tests. If set user will be asked if they want to run the test command
 - `--auto-test`: Automatically run tests after each code change
 - `--max-test-cmd-retries`: Maximum number of test command retry attempts (default: 3)
+- `--test-cmd-timeout`: Timeout in seconds for test command execution (default: 300)
 - `--version`: Show program version number and exit
 - `--webui`: Launch the web interface (alpha feature)
 - `--webui-host`: Host to listen on for web interface (default: 0.0.0.0)  (alpha feature)

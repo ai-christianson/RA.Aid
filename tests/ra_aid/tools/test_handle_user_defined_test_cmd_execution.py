@@ -5,6 +5,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+from ra_aid.config import DEFAULT_TEST_CMD_TIMEOUT
 from ra_aid.tools.handle_user_defined_test_cmd_execution import (
     TestCommandExecutor,
     TestState,
@@ -92,8 +93,9 @@ def test_run_test_command_timeout(test_executor):
             "ra_aid.tools.handle_user_defined_test_cmd_execution.logger.warning"
         ) as mock_logger,
     ):
-        # Create a TimeoutExpired exception
-        timeout_exc = subprocess.TimeoutExpired(cmd="test", timeout=30)
+        # Create a TimeoutExpired exception with configured timeout
+        timeout = test_executor.config.get("test_cmd_timeout", DEFAULT_TEST_CMD_TIMEOUT)
+        timeout_exc = subprocess.TimeoutExpired(cmd="test", timeout=timeout)
         mock_run.side_effect = timeout_exc
 
         test_executor.run_test_command("test", "original")
@@ -101,7 +103,7 @@ def test_run_test_command_timeout(test_executor):
         # Verify state updates
         assert not test_executor.state.should_break
         assert test_executor.state.test_attempts == 1
-        assert "timed out after 30 seconds" in test_executor.state.prompt
+        assert f"timed out after {timeout} seconds" in test_executor.state.prompt
 
         # Verify logging
         mock_logger.assert_called_once()
