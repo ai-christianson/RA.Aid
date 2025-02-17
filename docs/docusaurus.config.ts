@@ -17,6 +17,10 @@ const config: Config = {
     locales: ['en'],
   },
 
+  plugins: [
+    '@docusaurus/plugin-vercel-analytics'
+  ],
+
   presets: [
     [
       'classic',
@@ -48,7 +52,7 @@ const config: Config = {
           label: 'Docs',
         },
         {
-          href: 'https://github.com/smallcloudai/refact-aide',
+          href: 'https://github.com/ai-christianson/RA.Aid',
           label: 'GitHub',
           position: 'right',
         },
@@ -56,7 +60,7 @@ const config: Config = {
     },
     footer: {
       style: 'dark',
-      copyright: `Copyright © ${new Date().getFullYear()} My Project, Inc. Built with Docusaurus.`,
+      copyright: `Copyright © ${new Date().getFullYear()} AI Christianson. Built with RA.Aid and Docusaurus.`,
     },
     prism: {
       theme: prismThemes.github,
