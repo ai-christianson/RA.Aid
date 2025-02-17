@@ -4,7 +4,7 @@ List of model parameters
 
 DEFAULT_TOKEN_LIMIT = 100000
 DEFAULT_TEMPERATURE = 0.7
-DEFAULT_BASE_LATENCY = 180
+DEFAULT_BASE_LATENCY = 240
 
 models_params = {
     "openai": {
