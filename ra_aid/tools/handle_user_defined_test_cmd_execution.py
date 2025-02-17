@@ -8,6 +8,7 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 
+from ra_aid.config import DEFAULT_TEST_CMD_TIMEOUT
 from ra_aid.logging_config import get_logger
 from ra_aid.tools.human import ask_human
 from ra_aid.tools.shell import run_shell_command
@@ -85,7 +86,7 @@ class TestCommandExecutor:
             cmd: Test command to execute
             original_prompt: Original prompt text
         """
-        timeout = self.config.get("timeout", 30)
+        timeout = self.config.get("test_cmd_timeout", DEFAULT_TEST_CMD_TIMEOUT)
         try:
             logger.info(f"Executing test command: {cmd} with timeout {timeout}s")
             test_result = run_shell_command(cmd, timeout=timeout)
@@ -99,11 +100,11 @@ class TestCommandExecutor:
             logger.info("Test command executed successfully")
 
         except subprocess.TimeoutExpired:
-            logger.warning(f"Test command timed out after {timeout}s: {cmd}")
-            self.state.test_attempts += 1
-            self.state.prompt = (
-                f"{original_prompt}. Previous attempt timed out after {timeout} seconds"
+            logger.warning(
+                f"Test command timed out after {DEFAULT_TEST_CMD_TIMEOUT}s: {cmd}"
             )
+            self.state.test_attempts += 1
+            self.state.prompt = f"{original_prompt}. Previous attempt timed out after {DEFAULT_TEST_CMD_TIMEOUT} seconds"
             self.display_test_failure()
 
         except subprocess.CalledProcessError as e:

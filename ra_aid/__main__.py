@@ -12,7 +12,6 @@ from rich.text import Text
 from ra_aid import print_error, print_stage_header
 from ra_aid.__version__ import __version__
 from ra_aid.agent_utils import (
-    AgentInterrupt,
     create_agent,
     run_agent_with_retry,
     run_planning_agent,
@@ -21,11 +20,13 @@ from ra_aid.agent_utils import (
 from ra_aid.config import (
     DEFAULT_MAX_TEST_CMD_RETRIES,
     DEFAULT_RECURSION_LIMIT,
+    DEFAULT_TEST_CMD_TIMEOUT,
     VALID_PROVIDERS,
 )
 from ra_aid.console.output import cpm
 from ra_aid.dependencies import check_dependencies
 from ra_aid.env import validate_environment
+from ra_aid.exceptions import AgentInterrupt
 from ra_aid.llm import initialize_llm
 from ra_aid.logging_config import get_logger, setup_logging
 from ra_aid.models_params import DEFAULT_TEMPERATURE, models_params
@@ -181,7 +182,13 @@ Examples:
         "--max-test-cmd-retries",
         type=int,
         default=DEFAULT_MAX_TEST_CMD_RETRIES,
-        help="Maximum number of retries for the test command (default: 10)",
+        help="Maximum number of retries for the test command (default: 3)",
+    )
+    parser.add_argument(
+        "--test-cmd-timeout",
+        type=int,
+        default=DEFAULT_TEST_CMD_TIMEOUT,
+        help=f"Timeout in seconds for test command execution (default: {DEFAULT_TEST_CMD_TIMEOUT})",
     )
     parser.add_argument(
         "--webui",
@@ -441,6 +448,7 @@ def main():
             "test_cmd": args.test_cmd,
             "max_test_cmd_retries": args.max_test_cmd_retries,
             "experimental_fallback_handler": args.experimental_fallback_handler,
+            "test_cmd_timeout": args.test_cmd_timeout,
         }
 
         # Store config in global memory for access by is_informational_query

@@ -10,6 +10,7 @@ from rich.panel import Panel
 from rich.text import Text
 
 from ra_aid.logging_config import get_logger
+from ra_aid.models_params import DEFAULT_BASE_LATENCY, models_params
 from ra_aid.proc.interactive import run_interactive_command
 from ra_aid.text.processing import truncate_output
 from ra_aid.tools.memory import _global_memory, log_work_event
@@ -138,7 +139,16 @@ def run_programming_task(
     try:
         # Run the command interactively
         print()
-        result = run_interactive_command(command)
+        # Get provider/model specific latency coefficient
+        provider = _global_memory.get("config", {}).get("provider", "")
+        model = _global_memory.get("config", {}).get("model", "")
+        latency = (
+            models_params.get(provider, {})
+            .get(model, {})
+            .get("latency_coefficient", DEFAULT_BASE_LATENCY)
+        )
+
+        result = run_interactive_command(command, expected_runtime_seconds=latency)
         print()
 
         # Log the programming task
