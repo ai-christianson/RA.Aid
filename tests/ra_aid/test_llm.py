@@ -75,7 +75,6 @@ def test_initialize_expert_openai_custom(clean_env, mock_openai, monkeypatch):
         api_key="test-key",
         model="gpt-4-preview",
         temperature=0,
-        reasoning_effort="high",
         timeout=180,
         max_retries=5,
     )
@@ -564,6 +563,40 @@ def mock_deepseek_reasoner():
     with patch("ra_aid.llm.ChatDeepseekReasoner") as mock:
         mock.return_value = Mock()
         yield mock
+
+
+def test_reasoning_effort_only_passed_to_supported_models(clean_env, mock_openai, monkeypatch):
+    """Test that reasoning_effort is only passed to supported models."""
+    monkeypatch.setenv("EXPERT_OPENAI_API_KEY", "test-key")
+    
+    # Initialize expert LLM with GPT-4 (which doesn't support reasoning_effort)
+    _llm = initialize_expert_llm("openai", "gpt-4")
+    
+    # Verify reasoning_effort was not included in kwargs
+    mock_openai.assert_called_with(
+        api_key="test-key",
+        model="gpt-4",
+        temperature=0,
+        timeout=180,
+        max_retries=5,
+    )
+
+
+def test_reasoning_effort_passed_to_supported_models(clean_env, mock_openai, monkeypatch):
+    """Test that reasoning_effort is passed to models that support it."""
+    monkeypatch.setenv("EXPERT_OPENAI_API_KEY", "test-key")
+    
+    # Initialize expert LLM with o1 (which supports reasoning_effort)
+    _llm = initialize_expert_llm("openai", "o1")
+    
+    # Verify reasoning_effort was included in kwargs
+    mock_openai.assert_called_with(
+        api_key="test-key",
+        model="o1",
+        reasoning_effort="high",
+        timeout=180,
+        max_retries=5,
+    )
 
 
 def test_initialize_deepseek(

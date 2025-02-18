@@ -257,8 +257,9 @@ def create_llm_client(
             "model": model_name,
             **temp_kwargs,
         }
-        if is_expert:
+        if is_expert and model_config.get("supports_reasoning_effort", False):
             openai_kwargs["reasoning_effort"] = "high"
+
         return ChatOpenAI(
             **{
                 **openai_kwargs,
