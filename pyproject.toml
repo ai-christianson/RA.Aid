@@ -25,9 +25,8 @@ dependencies = [
     "langchain-anthropic>=0.3.7",
     "langchain-openai>=0.3.5",
     "langchain-google-genai>=2.0.9",
-    "langgraph>=0.2.71",
+    "langgraph>=0.2.73",
     "langgraph-checkpoint>=2.0.12",
-    "langgraph-sdk>=0.1.51",
     "langchain-core>=0.3.35",
     "langchain>=0.3.18",
     "rich>=13.0.0",
@@ -36,14 +35,14 @@ dependencies = [
     "rapidfuzz>=3.11.0",
     "pathspec>=0.11.0",
     "pyte>=0.8.2",
-    "aider-chat>=0.72.0",
+    "aider-chat>=0.74.2",
     "tavily-python>=0.5.0",
-    "litellm",
+    "litellm>=1.60.6",
     "fastapi>=0.104.0",
     "uvicorn>=0.24.0",
     "websockets>=12.0",
     "jinja2>=3.1.2",
-    "python-Levenshtein>=0.26.1"
+    "python-Levenshtein>=0.26.1",
 ]
 
 [project.optional-dependencies]
