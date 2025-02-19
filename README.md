@@ -175,7 +175,7 @@ More information is available in our [Usage Examples](https://docs.ra-aid.ai/cat
 - `--hil, -H`: Enable human-in-the-loop mode for interactive assistance during task execution
 - `--chat`: Enable chat mode with direct human interaction (implies --hil)
 - `--verbose`: Enable verbose logging output
-- `--experimental-fallback-handler`: Enable experimental fallback handler to attempt to fix too calls when they fail 3 times consecutively.
+- `--experimental-fallback-handler`: Enable experimental fallback handler to attempt to fix too calls when the same tool fails 3 times consecutively. (OPENAI_API_KEY recommended as openai has the top 5 tool calling models.) See `ra_aid/tool_leaderboard.py` for more info.
 - `--pretty-logger`: Enables panel markdown formatted logger messages for debugging purposes.
 - `--temperature`: LLM temperature (0.0-2.0) to control randomness in responses
 - `--disable-limit-tokens`: Disable token limiting for Anthropic Claude react agents

@@ -27,6 +27,7 @@ from ra_aid.console.output import cpm
 from ra_aid.dependencies import check_dependencies
 from ra_aid.env import validate_environment
 from ra_aid.exceptions import AgentInterrupt
+from ra_aid.fallback_handler import FallbackHandler
 from ra_aid.llm import initialize_llm
 from ra_aid.logging_config import get_logger, setup_logging
 from ra_aid.models_params import DEFAULT_TEMPERATURE, models_params
@@ -286,6 +287,40 @@ def is_stage_requested(stage: str) -> bool:
     return False
 
 
+def build_status(
+    args: argparse.Namespace, expert_enabled: bool, web_research_enabled: bool
+):
+    status = Text()
+    status.append("🤖 ")
+    status.append(f"{args.provider}/{args.model}")
+    if args.temperature is not None:
+        status.append(f" @ T{args.temperature}")
+    status.append("\n")
+
+    status.append("🤔 ")
+    if expert_enabled:
+        status.append(f"{args.expert_provider}/{args.expert_model}")
+    else:
+        status.append("Expert: ")
+        status.append("Disabled", style="italic")
+    status.append("\n")
+
+    status.append("🔍 Search: ")
+    status.append(
+        "Enabled" if web_research_enabled else "Disabled",
+        style=None if web_research_enabled else "italic",
+    )
+
+    if args.experimental_fallback_handler:
+        fb_handler = FallbackHandler({}, [])
+        status.append("\n🔧 FallbackHandler Enabled: ")
+        msg = ", ".join(
+            [fb_handler._format_model(m) for m in fb_handler.fallback_tool_models]
+        )
+        status.append(msg)
+    return status
+
+
 def main():
     """Main entry point for the ra-aid command line tool."""
     args = parse_arguments()
@@ -326,30 +361,7 @@ def main():
                 f"Using default temperature {args.temperature} for model {args.model}"
             )
 
-        # Display status lines
-        status = Text()
-        # Model info
-        status.append("🤖 ")
-        status.append(f"{args.provider}/{args.model}")
-        if args.temperature is not None:
-            status.append(f" @ T{args.temperature}")
-        status.append("\n")
-
-        # Expert info
-        status.append("🤔 ")
-        if expert_enabled:
-            status.append(f"{args.expert_provider}/{args.expert_model}")
-        else:
-            status.append("Expert: ")
-            status.append("Disabled", style="italic")
-        status.append("\n")
-
-        # Search info
-        status.append("🔍 Search: ")
-        status.append(
-            "Enabled" if web_research_enabled else "Disabled",
-            style=None if web_research_enabled else "italic",
-        )
+        status = build_status(args, expert_enabled, web_research_enabled)
 
         console.print(
             Panel(status, title="Config", border_style="bright_blue", padding=(0, 1))

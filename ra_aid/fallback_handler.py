@@ -51,12 +51,6 @@ class FallbackHandler:
         self.current_tool_to_bind: None | BaseTool = None
         self.msg_list: list[BaseMessage] = []
 
-        cpm(
-            "Fallback models selected: "
-            + ", ".join([self._format_model(m) for m in self.fallback_tool_models]),
-            title="Fallback Models",
-        )
-
     def _format_model(self, m: dict) -> str:
         return f"{m.get('model', '')} ({m.get('type', 'prompt')})"
 
@@ -85,6 +79,7 @@ class FallbackHandler:
                     break
             else:
                 skipped.append(model_name)
+
         final_models = []
         for item in supported:
             if "type" not in item:
@@ -99,6 +94,9 @@ class FallbackHandler:
                 "\nSkipped top tool calling models due to missing provider ENV API keys: "
                 + ", ".join(skipped)
             )
+
+        logger.debug(f"Fallback Handler: {message}")
+
         return final_models
 
     def handle_failure(
