@@ -236,11 +236,11 @@ def is_anthropic_claude(config: Dict[str, Any]) -> bool:
     """
     provider = config.get("provider", "")
     model_name = config.get("model", "")
-    return (
-        provider.lower() == "anthropic"
-        and model_name
-        and "claude" in model_name.lower()
+    result = (
+        (provider.lower() == "anthropic" and model_name and "claude" in model_name.lower())
+        or (provider.lower() == "openrouter" and model_name.lower().startswith("anthropic/claude-"))
     )
+    return result
 
 
 def create_agent(
