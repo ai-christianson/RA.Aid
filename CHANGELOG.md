@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.2] - 2025-02-19
+
+### Added
+- Added automatic fallback mechanism to alternative LLM models on consecutive failures
+- Added FallbackHandler class to manage tool failures and fallback logic
+- Added console notification for tool fallback activation
+- Added detailed fallback configuration options in command line arguments
+- Added validation for required environment variables for LLM providers
+
+### Changed
+- Enhanced CiaynAgent to handle chat history and improve context management
+- Improved error handling and logging in fallback mechanism
+- Streamlined fallback model selection and invocation process
+- Refactored agent stream handling for better clarity
+- Reduced maximum tool failures from 3 to 2
+
+### Fixed
+- Fixed tool execution error handling and retry logic
+- Enhanced error resilience and user experience with fallback handler
+- Improved error message formatting and logging
+- Updated error handling to include base message for better debugging
+
 ## [0.14.1] - 2025-02-13
 
 ### Added
