@@ -120,6 +120,10 @@ def test_initialize_expert_openrouter(clean_env, mock_openai, monkeypatch):
         temperature=0,
         timeout=180,
         max_retries=5,
+        default_headers={
+            "HTTP-Referer": "https://ra-aid.ai",
+            "X-Title": "RA.Aid"
+        }
     )
 
 
@@ -215,6 +219,10 @@ def test_initialize_openrouter(clean_env, mock_openai):
         temperature=0.7,
         timeout=180,
         max_retries=5,
+        default_headers={
+            "HTTP-Referer": "https://ra-aid.ai",
+            "X-Title": "RA.Aid"
+        }
     )
 
 
@@ -356,6 +364,10 @@ def test_explicit_temperature(clean_env, mock_openai, mock_anthropic, mock_gemin
         temperature=test_temp,
         timeout=180,
         max_retries=5,
+        default_headers={
+            "HTTP-Referer": "https://ra-aid.ai",
+            "X-Title": "RA.Aid"
+        }
     )
 
 
@@ -643,4 +655,8 @@ def test_initialize_openrouter_deepseek(
         temperature=0.7,
         timeout=180,
         max_retries=5,
+        default_headers={
+            "HTTP-Referer": "https://ra-aid.ai",
+            "X-Title": "RA.Aid"
+        }
     )
