@@ -97,6 +97,31 @@ What sets RA.Aid apart is its ability to handle complex programming tasks that e
 
 ## Installation
 
+### Windows Installation
+1. Install Python 3.8 or higher from [python.org](https://www.python.org/downloads/)
+2. Install required system dependencies:
+   ```powershell
+   # Install Chocolatey if not already installed (run in admin PowerShell)
+   Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+   
+   # Install ripgrep using Chocolatey
+   choco install ripgrep
+   ```
+3. Install RA.Aid:
+   ```powershell
+   pip install ra-aid
+   ```
+4. Install Windows-specific dependencies:
+   ```powershell
+   pip install pywin32
+   ```
+5. Set up your API keys in a `.env` file:
+   ```env
+   ANTHROPIC_API_KEY=your_anthropic_key
+   OPENAI_API_KEY=your_openai_key
+   ```
+
+### Unix/Linux Installation
 RA.Aid can be installed directly using pip:
 
 ```bash

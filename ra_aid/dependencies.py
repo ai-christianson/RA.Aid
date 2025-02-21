@@ -2,6 +2,7 @@
 
 import os
 import sys
+import subprocess
 from abc import ABC, abstractmethod
 
 from ra_aid import print_error
@@ -21,8 +22,13 @@ class RipGrepDependency(Dependency):
 
     def check(self):
         """Check if ripgrep is installed."""
-        result = os.system("rg --version > /dev/null 2>&1")
-        if result != 0:
+        try:
+            result = subprocess.run(['rg', '--version'], 
+                                 stdout=subprocess.DEVNULL, 
+                                 stderr=subprocess.DEVNULL)
+            if result.returncode != 0:
+                raise FileNotFoundError()
+        except (FileNotFoundError, subprocess.SubprocessError):
             print_error("Required dependency 'ripgrep' is not installed.")
             print("Please install ripgrep:")
             print("  - Ubuntu/Debian: sudo apt-get install ripgrep")
