@@ -1,90 +1,214 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full bg-gray-900">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="server-port" content="{{ server_port }}">
-    <title>RA.Aid Web Interface</title>
+    <title>RA.Aid Web UI</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/tokyo-night-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
     <script>
         tailwind.config = {
-            darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
                         'dark-primary': '#1a1b26',
                         'dark-secondary': '#24283b',
-                        'dark-accent': '#7aa2f7',
-                        'dark-text': '#c0caf5'
+                        'dark-accent': '#414868',
+                        'dark-text': '#a9b1d6',
+                        'dark-background': '#16161e'
                     }
                 }
             }
         }
     </script>
+    <style>
+        /* Core styles */
+        body {
+            background-color: #16161e;
+            color: #a9b1d6;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Output area */
+        #stream-output {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            background-color: #1a1b26;
+            margin: 0;
+            display: block !important;
+            min-height: 300px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        /* Message styling */
+        .message {
+            margin-bottom: 1.5rem;
+            padding: 0.75rem 1rem;
+            border-radius: 0.375rem;
+            background-color: #24283b;
+            color: #a9b1d6;
+            display: block !important;
+            border: 1px solid #414868;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: slideIn 0.3s ease forwards;
+        }
+
+        @keyframes slideIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Message types */
+        .message.info {
+            border-color: #7aa2f7;
+        }
+
+        .message.success {
+            border-color: #9ece6a;
+            background-color: rgba(158, 206, 106, 0.1);
+        }
+
+        .message.error {
+            border-color: #f7768e;
+            background-color: rgba(247, 118, 142, 0.1);
+        }
+
+        .message.warning {
+            border-color: #e0af68;
+            background-color: rgba(224, 175, 104, 0.1);
+        }
+
+        /* Section spacing */
+        .message.section {
+            margin-top: 2rem;
+            margin-bottom: 2rem;
+            padding: 1rem;
+            background-color: rgba(122, 162, 247, 0.1);
+        }
+
+        /* Code blocks */
+        .message pre {
+            margin: 0.5rem 0;
+            padding: 0.75rem;
+            border-radius: 0.25rem;
+            background-color: #1a1b26 !important;
+            border: 1px solid #414868;
+            overflow-x: auto;
+        }
+
+        .message code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+        }
+
+        /* Input area */
+        .input-area {
+            padding: 1rem;
+            background-color: #24283b;
+            border-top: 1px solid #414868;
+        }
+
+        .input-container {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        #user-input {
+            flex: 1;
+            padding: 0.75rem;
+            background-color: #1a1b26;
+            border: 1px solid #414868;
+            border-radius: 0.375rem;
+            color: #a9b1d6;
+            font-family: 'JetBrains Mono', monospace;
+            transition: border-color 0.2s;
+        }
+
+        #user-input:focus {
+            outline: none;
+            border-color: #7aa2f7;
+        }
+
+        /* Buttons */
+        .button {
+            padding: 0.75rem 1rem;
+            background-color: #7aa2f7;
+            color: white;
+            border: none;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            min-width: 80px;
+            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .button:hover {
+            background-color: #5d87e6;
+        }
+
+        .button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .button.clear {
+            background-color: #414868;
+        }
+
+        .button.clear:hover {
+            background-color: #363b54;
+        }
+
+        /* Icons */
+        .icon {
+            font-size: 1.2em;
+            line-height: 1;
+        }
+    </style>
 </head>
-<body class="h-full bg-dark-primary text-dark-text">
-    <div class="flex h-full">
-        <!-- Sidebar -->
-        <div class="w-64 bg-dark-secondary border-r border-gray-700 flex flex-col">
-            <div class="p-4 border-b border-gray-700">
-                <h2 class="text-xl font-semibold text-dark-accent">History</h2>
-            </div>
-            <div id="history-list" class="flex-1 overflow-y-auto p-4 space-y-2"></div>
-        </div>
+<body>
+    <!-- Main Container -->
+    <div id="stream-output">
+        <!-- Messages will appear here -->
+    </div>
 
-        <!-- Main Content -->
-        <div class="flex-1 flex flex-col min-w-0">
-            <!-- Chat Container -->
-            <div class="flex-1 overflow-y-auto p-4 space-y-4" id="chat-container">
-                <div id="chat-messages"></div>
-                <div id="stream-output" class="hidden font-mono bg-dark-secondary rounded-lg p-4 text-sm"></div>
-            </div>
-
-            <!-- Input Area -->
-            <div class="border-t border-gray-700 p-4 bg-dark-secondary">
-                <div class="flex space-x-4">
-                    <textarea 
-                        id="user-input" 
-                        class="flex-1 bg-dark-primary border border-gray-700 rounded-lg p-3 text-dark-text placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-dark-accent resize-none"
-                        placeholder="Type your request here..."
-                        rows="3"
-                    ></textarea>
-                    <button 
-                        id="send-button"
-                        class="px-6 py-2 bg-dark-accent text-white rounded-lg hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-dark-accent disabled:opacity-50 disabled:cursor-not-allowed h-fit"
-                    >
-                        Send
-                    </button>
-                </div>
-            </div>
+    <!-- Input Area -->
+    <div class="input-area">
+        <div class="input-container">
+            <input 
+                type="text" 
+                id="user-input" 
+                placeholder="Type your message..."
+            >
+            <button id="clear-button" class="button clear" title="Clear conversation">
+                <span class="icon">🗑️</span>
+            </button>
+            <button id="send-button" class="button">
+                <span class="icon">📤</span>
+                Send
+            </button>
         </div>
     </div>
 
-    <script>
-        // Add dynamic styles for messages
-        const style = document.createElement('style');
-        style.textContent = `
-            .message {
-                @apply mb-4 p-4 rounded-lg max-w-3xl;
-            }
-            .user-message {
-                @apply bg-dark-accent text-white ml-auto;
-            }
-            .system-message {
-                @apply bg-dark-secondary mr-auto;
-            }
-            .error-message {
-                @apply bg-red-900 text-red-100 mr-auto;
-            }
-            .history-item {
-                @apply p-3 rounded-lg hover:bg-dark-primary cursor-pointer transition-colors duration-200 text-sm;
-            }
-            #stream-output:not(:empty) {
-                @apply block;
-            }
-        `;
-        document.head.appendChild(style);
-    </script>
     <script src="/static/script.js"></script>
+    <script>
+        hljs.highlightAll();
+    </script>
 </body>
 </html>
