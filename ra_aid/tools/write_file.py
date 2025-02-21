@@ -64,22 +64,23 @@ def put_complete_file_contents(
             result["bytes_written"] = len(complete_file_contents.encode(encoding))
 
         elapsed = time.time() - start_time
+        bytes_written = result["bytes_written"]
         result["elapsed_time"] = elapsed
         result["success"] = True
         result["filepath"] = filepath
         result["message"] = (
-            f"Successfully {'initialized empty file' if not complete_file_contents else f'wrote {result['bytes_written']} bytes'} "
+            f"Successfully {'initialized empty file' if not complete_file_contents else f'wrote {bytes_written} bytes'} "
             f"at {filepath} in {result['elapsed_time']:.3f}s"
         )
 
         logging.debug(
-            f"File write complete: {result['bytes_written']} bytes in {elapsed:.2f}s"
+            f"File write complete: {bytes_written} bytes in {elapsed:.2f}s"
         )
 
         if verbose:
             console.print(
                 Panel(
-                    f"{'Initialized empty file' if not complete_file_contents else f'Wrote {result['bytes_written']} bytes'} at {filepath} in {elapsed:.2f}s",
+                    f"{'Initialized empty file' if not complete_file_contents else f'Wrote {bytes_written} bytes'} at {filepath} in {elapsed:.2f}s",
                     title="💾 File Write",
                     border_style="bright_green",
                 )
