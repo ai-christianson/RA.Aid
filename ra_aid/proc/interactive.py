@@ -23,10 +23,14 @@ import pyte
 # Windows-specific imports
 if sys.platform == "win32":
     try:
+        # msvcrt: Provides Windows console I/O functionality
         import msvcrt
+        # win32pipe, win32file: For low-level pipe operations
         import win32pipe
         import win32file
+        # win32con: Windows API constants
         import win32con
+        # win32process: Process management on Windows
         import win32process
     except ImportError as e:
         print("Error: Required Windows dependencies not found.")
@@ -34,6 +38,7 @@ if sys.platform == "win32":
         print("  pip install pywin32")
         sys.exit(1)
 else:
+    # Unix-specific imports for terminal handling
     import termios
     import fcntl
     import pty
@@ -54,21 +59,34 @@ def get_terminal_size():
             return 80, 24
 
 def create_process(cmd: List[str]) -> Tuple[subprocess.Popen, Optional[int]]:
-    """Create a subprocess with appropriate handling for the platform."""
+    """Create a subprocess with appropriate handling for the platform.
+    
+    On Windows:
+    - Uses STARTUPINFO to hide the console window
+    - Creates a new process group for proper signal handling
+    - Returns direct pipe handles for I/O
+    
+    On Unix:
+    - Creates a pseudo-terminal (PTY) for proper terminal emulation
+    - Sets up process group for signal handling
+    - Returns master PTY file descriptor for I/O
+    """
     if sys.platform == "win32":
-        # Windows process creation
+        # Windows process creation with hidden console
         startupinfo = subprocess.STARTUPINFO()
-        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW  # Hide the console window
         
+        # Create process with proper pipe handling
         proc = subprocess.Popen(
             cmd,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stdin=subprocess.PIPE,   # Allow writing to stdin
+            stdout=subprocess.PIPE,  # Capture stdout
+            stderr=subprocess.PIPE,  # Capture stderr
             startupinfo=startupinfo,
+            # CREATE_NEW_PROCESS_GROUP allows proper Ctrl+C handling
             creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
         )
-        return proc, None
+        return proc, None  # No PTY master_fd needed on Windows
     else:
         # Unix process creation with PTY
         master_fd, slave_fd = pty.openpty()
@@ -137,23 +155,32 @@ def run_interactive_command(
     captured_data = []
     start_time = time.time()
     was_terminated = False
+    timeout_type = None
 
     def check_timeout():
+        nonlocal timeout_type
         elapsed = time.time() - start_time
         if elapsed > 3 * expected_runtime_seconds:
             if sys.platform == "win32":
+                print("\nProcess exceeded hard timeout limit, forcefully terminating...")
                 proc.terminate()
                 time.sleep(0.5)
                 if proc.poll() is None:
+                    print("Process did not respond to termination, killing...")
                     proc.kill()
             else:
+                print("\nProcess exceeded hard timeout limit, sending SIGKILL...")
                 os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+            timeout_type = "hard_timeout"
             return True
         elif elapsed > 2 * expected_runtime_seconds:
             if sys.platform == "win32":
+                print("\nProcess exceeded soft timeout limit, attempting graceful termination...")
                 proc.terminate()
             else:
+                print("\nProcess exceeded soft timeout limit, sending SIGTERM...")
                 os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+            timeout_type = "soft_timeout"
             return True
         return False
 
@@ -165,26 +192,45 @@ def run_interactive_command(
                 if check_timeout():
                     was_terminated = True
                     break
-                # Check stdout
-                stdout_data = proc.stdout.read1(1024)
-                if stdout_data:
-                    captured_data.append(stdout_data)
-                    stream.feed(stdout_data.decode(errors='ignore'))
                 
-                # Check stderr
-                stderr_data = proc.stderr.read1(1024)
-                if stderr_data:
-                    captured_data.append(stderr_data)
-                    stream.feed(stderr_data.decode(errors='ignore'))
-                
-                # Check for input
-                if msvcrt.kbhit():
-                    char = msvcrt.getch()
-                    proc.stdin.write(char)
-                    proc.stdin.flush()
-                
-        except (IOError, OSError):
-            pass
+                try:
+                    # Check stdout with proper error handling
+                    stdout_data = proc.stdout.read1(1024)
+                    if stdout_data:
+                        captured_data.append(stdout_data)
+                        try:
+                            stream.feed(stdout_data.decode(errors='ignore'))
+                        except Exception as e:
+                            print(f"Warning: Error processing stdout: {e}")
+
+                    # Check stderr with proper error handling
+                    stderr_data = proc.stderr.read1(1024)
+                    if stderr_data:
+                        captured_data.append(stderr_data)
+                        try:
+                            stream.feed(stderr_data.decode(errors='ignore'))
+                        except Exception as e:
+                            print(f"Warning: Error processing stderr: {e}")
+
+                    # Check for input with proper error handling
+                    if msvcrt.kbhit():
+                        try:
+                            char = msvcrt.getch()
+                            proc.stdin.write(char)
+                            proc.stdin.flush()
+                        except (IOError, OSError) as e:
+                            print(f"Warning: Error handling keyboard input: {e}")
+                            break
+
+                except (IOError, OSError) as e:
+                    if isinstance(e, OSError) and e.winerror == 6:  # Invalid handle
+                        break
+                    print(f"Warning: I/O error during process communication: {e}")
+                    break
+
+        except Exception as e:
+            print(f"Error in Windows process handling: {e}")
+            proc.terminate()
     else:
         # Unix handling
         import tty
@@ -242,7 +288,10 @@ def run_interactive_command(
 
     # Add timeout message if process was terminated
     if was_terminated:
-        timeout_msg = f"\n[Process exceeded timeout ({expected_runtime_seconds} seconds expected)]"
+        if timeout_type == "hard_timeout":
+            timeout_msg = f"\n[Process forcefully terminated after exceeding {3 * expected_runtime_seconds:.1f} seconds (expected: {expected_runtime_seconds} seconds)]"
+        else:
+            timeout_msg = f"\n[Process gracefully terminated after exceeding {2 * expected_runtime_seconds:.1f} seconds (expected: {expected_runtime_seconds} seconds)]"
         final_output.append(timeout_msg)
 
     # Limit output size
