@@ -364,7 +364,7 @@ def main():
         status = build_status(args, expert_enabled, web_research_enabled)
 
         console.print(
-            Panel(status, title="Config", border_style="bright_blue", padding=(0, 1))
+            Panel(status, title=f"RA.Aid v{__version__}", border_style="bright_blue", padding=(0, 1))
         )
 
         # Handle chat mode
