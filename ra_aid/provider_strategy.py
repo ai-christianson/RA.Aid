@@ -157,9 +157,12 @@ class AnthropicStrategy(ProviderStrategy):
                     os.environ["EXPERT_ANTHROPIC_API_KEY"] = base_key
                     key = base_key
             if not key:
-                missing.append(
-                    "EXPERT_ANTHROPIC_API_KEY environment variable is not set"
-                )
+                # If neither expert nor base key is set, show base key message
+                base_key = os.environ.get("ANTHROPIC_API_KEY")
+                if not base_key:
+                    missing.append("ANTHROPIC_API_KEY environment variable is not set")
+                else:
+                    missing.append("EXPERT_ANTHROPIC_API_KEY environment variable is not set")
         else:
             key = os.environ.get("ANTHROPIC_API_KEY")
             if not key:
