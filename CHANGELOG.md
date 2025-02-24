@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.3] - 2025-02-24
+
+### Added
+- Added support for Claude 3.7 Sonnet model
+- Added version display in startup configuration panel
+
+### Changed
+- Updated language library dependencies (langgraph, langchain-core, langchain, langchain-openai, langchain-google-genai)
+- Changed default Anthropic model from Claude 3.5 Sonnet to Claude 3.7 Sonnet
+
+### Fixed
+- Fixed f-string syntax error in write_file.py
+- Fixed bug where model selection on Anthropic was always using default instead of respecting user selection
+- Fixed Anthropic key error message to reference the correct variable
+- Added test for user-specified Anthropic model selection
+
 ## [0.14.2] - 2025-02-19
 
 ### Added
