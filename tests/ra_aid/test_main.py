@@ -85,7 +85,7 @@ def test_config_settings(mock_dependencies):
             "--provider",
             "anthropic",
             "--model",
-            "claude-3-5-sonnet-20241022",
+            "claude-3-7-sonnet-20250219",
             "--expert-provider",
             "openai",
             "--expert-model",
@@ -100,7 +100,7 @@ def test_config_settings(mock_dependencies):
         assert config["cowboy_mode"] is True
         assert config["research_only"] is True
         assert config["provider"] == "anthropic"
-        assert config["model"] == "claude-3-5-sonnet-20241022"
+        assert config["model"] == "claude-3-7-sonnet-20250219"
         assert config["expert_provider"] == "openai"
         assert config["expert_model"] == "gpt-4"
         assert config["limit_tokens"] is False

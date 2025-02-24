@@ -324,7 +324,7 @@ ra-aid -m "Update all deprecated API calls" --cowboy-mode
 
 ### Model Configuration
 
-RA.Aid supports multiple AI providers and models. The default model is Anthropic's Claude 3 Sonnet (`claude-3-5-sonnet-20241022`).
+RA.Aid supports multiple AI providers and models. The default model is Anthropic's Claude 3 Sonnet (`claude-3-7-sonnet-20250219`).
 
 The programmer tool (aider) automatically selects its model based on your available API keys. It will use Claude models if ANTHROPIC_API_KEY is set, or fall back to OpenAI models if only OPENAI_API_KEY is available.
 
@@ -372,7 +372,7 @@ export GEMINI_API_KEY=your_api_key_here
 
 1. **Using Anthropic (Default)**
    ```bash
-   # Uses default model (claude-3-5-sonnet-20241022)
+   # Uses default model (claude-3-7-sonnet-20250219)
    ra-aid -m "Your task"
 
    # Or explicitly specify:
@@ -438,7 +438,7 @@ Note: For `AIDER_FLAGS`, you can specify flags with or without the leading `--`.
 **Important Notes:**
 - Performance varies between models. The default Claude 3 Sonnet model currently provides the best and most reliable results.
 - Model configuration is done via command line arguments: `--provider` and `--model`
-- The `--model` argument is required for all providers except Anthropic (which defaults to `claude-3-5-sonnet-20241022`)
+- The `--model` argument is required for all providers except Anthropic (which defaults to `claude-3-7-sonnet-20250219`)
 
 More information is available in our [Open Models Setup](https://docs.ra-aid.ai/quickstart/open-models) guide.
 

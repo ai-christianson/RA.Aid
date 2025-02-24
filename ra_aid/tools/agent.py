@@ -37,7 +37,7 @@ def request_research(query: str) -> ResearchResult:
     config = _global_memory.get("config", {})
     model = initialize_llm(
         config.get("provider", "anthropic"),
-        config.get("model", "claude-3-5-sonnet-20241022"),
+        config.get("model", "claude-3-7-sonnet-20250219"),
         temperature=config.get("temperature"),
     )
 
@@ -120,7 +120,7 @@ def request_web_research(query: str) -> ResearchResult:
     config = _global_memory.get("config", {})
     model = initialize_llm(
         config.get("provider", "anthropic"),
-        config.get("model", "claude-3-5-sonnet-20241022"),
+        config.get("model", "claude-3-7-sonnet-20250219"),
         temperature=config.get("temperature"),
     )
 
@@ -189,7 +189,7 @@ def request_research_and_implementation(query: str) -> Dict[str, Any]:
     config = _global_memory.get("config", {})
     model = initialize_llm(
         config.get("provider", "anthropic"),
-        config.get("model", "claude-3-5-sonnet-20241022"),
+        config.get("model", "claude-3-7-sonnet-20250219"),
         temperature=config.get("temperature"),
     )
 
