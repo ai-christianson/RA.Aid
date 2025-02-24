@@ -936,6 +936,12 @@ models_params = {
             "default_temperature": 1.0,
             "latency_coefficient": DEFAULT_BASE_LATENCY,
         },
+        "claude-3-7-sonnet-20250219": {
+            "token_limit": 200000,
+            "supports_temperature": True,
+            "default_temperature": 1.0,
+            "latency_coefficient": DEFAULT_BASE_LATENCY,
+        },
         "claude-3-5-haiku-latest": {
             "token_limit": 200000,
             "supports_temperature": True,

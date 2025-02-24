@@ -49,7 +49,7 @@ def launch_webui(host: str, port: int):
 
 
 def parse_arguments(args=None):
-    ANTHROPIC_DEFAULT_MODEL = "claude-3-5-sonnet-20241022"
+    ANTHROPIC_DEFAULT_MODEL = "claude-3-7-sonnet-20250219"
     OPENAI_DEFAULT_MODEL = "gpt-4o"
 
     parser = argparse.ArgumentParser(
@@ -224,8 +224,8 @@ Examples:
     if parsed_args.provider == "openai":
         parsed_args.model = parsed_args.model or OPENAI_DEFAULT_MODEL
     elif parsed_args.provider == "anthropic":
-        # Always use default model for Anthropic
-        parsed_args.model = ANTHROPIC_DEFAULT_MODEL
+        # Use default model for Anthropic only if not specified
+        parsed_args.model = parsed_args.model or ANTHROPIC_DEFAULT_MODEL
     elif not parsed_args.model and not parsed_args.research_only:
         # Require model for other providers unless in research mode
         parser.error(
