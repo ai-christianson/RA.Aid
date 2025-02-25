@@ -81,6 +81,7 @@ def run_programming_task(
     command = [
         aider_exe,
         "--yes-always",
+        "--no-git",
         "--no-auto-commits",
         "--dark-mode",
         "--no-suggest-shell-commands",
