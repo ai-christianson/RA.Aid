@@ -22,9 +22,9 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules"
 ]
 dependencies = [
-    "langchain-anthropic>=0.3.7",
+    "langchain-anthropic>=0.3.8",
     "langchain-openai>=0.3.7",
-    "langchain-google-genai>=2.0.10",
+    "langchain-google-genai>=2.0.11",
     "langgraph>=0.2.74",
     "langgraph-checkpoint>=2.0.16",
     "langchain-core>=0.3.39",
