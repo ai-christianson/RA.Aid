@@ -203,6 +203,10 @@ def emit_key_snippet(snippet_info: SnippetInfo) -> str:
 
     This is for **existing**, or **just-written** files, not for things to be created in the future.
 
+    ONLY emit snippets if they will be relevant to UPCOMING work.
+
+    Focus on external interfaces and things that are very specific and relevant to UPCOMING work.
+
     Args:
         snippet_info: Dict with keys:
                  - filepath: Path to the source file
