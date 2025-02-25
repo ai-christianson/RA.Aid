@@ -106,7 +106,8 @@ def test_unicode_handling():
     output, retcode = run_interactive_command(
         ["/bin/bash", "-c", f"echo '{test_string}'"]
     )
-    assert test_string.encode() in output
+    # Since we now strip trailing whitespace, we should check for the string without trailing space
+    assert test_string.strip().encode() in output
     assert retcode == 0
 
 
@@ -167,6 +168,23 @@ def test_realtime_output():
     assert b"first" in lines[0]
     assert b"second" in lines[1]
     assert b"third" in lines[2]
+    assert retcode == 0
+
+
+def test_strip_trailing_whitespace():
+    """Test that trailing whitespace is properly stripped from each line."""
+    # Create a command that outputs text with trailing whitespace
+    cmd = 'echo "Line with spaces at end    "; echo "Another trailing space line  "; echo "Line with tabs at end\t\t"'
+    output, retcode = run_interactive_command(["/bin/bash", "-c", cmd])
+    
+    # Check that the output contains the lines without trailing whitespace
+    lines = output.splitlines()
+    assert b"Line with spaces at end" in lines[0]
+    assert not lines[0].endswith(b" ")
+    assert b"Another trailing space line" in lines[1]
+    assert not lines[1].endswith(b" ")
+    assert b"Line with tabs at end" in lines[2]
+    assert not lines[2].endswith(b"\t")
     assert retcode == 0
 
 
