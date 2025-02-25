@@ -403,17 +403,29 @@ def run_interactive_command(
         all_lines = []
         
         # Add history.top lines (older history)
-        for line_num in sorted(screen.history.top):
-            line = screen.history.top[line_num]
-            all_lines.append(render_line(line, cols))
+        if hasattr(screen.history.top, 'keys'):
+            # Dictionary-like object
+            for line_num in sorted(screen.history.top.keys()):
+                line = screen.history.top[line_num]
+                all_lines.append(render_line(line, cols))
+        else:
+            # Deque or other iterable
+            for i, line in enumerate(screen.history.top):
+                all_lines.append(render_line(line, cols))
             
         # Add current display lines
         all_lines.extend([render_line(line, cols) for line in screen.display])
         
         # Add history.bottom lines (newer history)
-        for line_num in sorted(screen.history.bottom):
-            line = screen.history.bottom[line_num]
-            all_lines.append(render_line(line, cols))
+        if hasattr(screen.history.bottom, 'keys'):
+            # Dictionary-like object
+            for line_num in sorted(screen.history.bottom.keys()):
+                line = screen.history.bottom[line_num]
+                all_lines.append(render_line(line, cols))
+        else:
+            # Deque or other iterable
+            for i, line in enumerate(screen.history.bottom):
+                all_lines.append(render_line(line, cols))
         
         # Trim out empty lines to get only meaningful lines
         # Also strip trailing whitespace from each line
