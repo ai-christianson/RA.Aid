@@ -58,7 +58,9 @@ _global_memory: Dict[
 
 @tool("emit_research_notes")
 def emit_research_notes(notes: str) -> str:
-    """Use this when you have completed your research to share your notes in markdown format, no more than 500 words.
+    """Use this when you have completed your research to share your notes in markdown format.
+
+    Keep your research notes information dense and no more than 300 words.
 
     Args:
         notes: REQUIRED The research notes to store

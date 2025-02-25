@@ -60,9 +60,11 @@ def run_programming_task(
 
     The programmer sees only what you provide, no conversation history.
 
-    Give detailed instructions including multi-file tasks but do not write their code.
+    Give detailed instructions including multi-file tasks but do not write the code in the instructions.
 
-    The programmer cannot run commands.
+    Keep your instructions information dense and no more than 300 words.
+
+    The programmer cannot run commands or see context other than related files and what you say in the instructions.
 
     If new files are created, emit them after finishing.
 
