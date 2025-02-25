@@ -5,7 +5,7 @@ from ra_aid.tools import (
     ask_human,
     emit_expert_context,
     emit_key_facts,
-    emit_key_snippets,
+    emit_key_snippet,
     emit_related_files,
     emit_research_notes,
     fuzzy_find_project_files,
@@ -41,9 +41,9 @@ def get_read_only_tools(
         List of tool functions
     """
     tools = [
+        emit_key_snippet,
         emit_related_files,
         emit_key_facts,
-        emit_key_snippets,
         # *TEMPORARILY* disabled to improve tool calling perf.
         # delete_key_facts,
         # delete_key_snippets,

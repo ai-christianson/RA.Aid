@@ -115,7 +115,7 @@ def test_create_agent_anthropic(mock_model, mock_memory):
 
         assert agent == "react_agent"
         mock_react.assert_called_once_with(
-            mock_model, [], state_modifier=mock_react.call_args[1]["state_modifier"]
+            mock_model, [], version='v2', state_modifier=mock_react.call_args[1]["state_modifier"]
         )
 
 
@@ -258,7 +258,7 @@ def test_create_agent_anthropic_token_limiting_disabled(mock_model, mock_memory)
         agent = create_agent(mock_model, [])
 
         assert agent == "react_agent"
-        mock_react.assert_called_once_with(mock_model, [])
+        mock_react.assert_called_once_with(mock_model, [], version='v2')
 
 
 def test_get_model_token_limit_research(mock_memory):

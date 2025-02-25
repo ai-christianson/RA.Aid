@@ -158,7 +158,7 @@ Project State Handling:
             Be aware there may be additional relevant files
             Use tools like ripgrep_search and fuzzy_find_project_files to locate specific files
 
-Be very thorough in your research and emit lots of snippets, key facts. If you take more than a few steps, be eager to emit research subtasks.{research_only_note}
+When necessary, emit research subtasks.{research_only_note}
 
 Objective
     Investigate and understand the codebase as it relates to the query.
@@ -259,11 +259,12 @@ Thoroughness and Completeness:
     - For tasks requiring UI changes, not researching existing UI libraries and conventions.
     - Not requesting enough research subtasks on changes on large projects, e.g. to discover testing or UI conventions, etc.
     - Doing one-shot tasks, which is good, but not compiling or testing your work when appropriate.
-    - Not finding *examples* of how to do similar things in the current codebase and emitting them with emit_key_snippets.
+    - Not finding *examples* of how to do similar things in the current codebase and calling emit_key_snippet to report them.
     - Not finding unit tests because they are in slightly different locations than expected.
     - Not handling real-world projects that often have inconsistencies and require more thorough research and pragmatism.
     - Not finding *ALL* related files and snippets. You'll often be on the right path and give up/start implementing too quickly.
-    - You sometimes use emit_key_snippets to *write* code rather than to record key snippets of existing code, which it is meant for.
+    - Not calling tools/functions properly, e.g. leaving off required arguments, calling a tool in a loop, calling tools inappropriately.
+    - Doing redundant research and taking way more steps than necessary.
 
     If there are existing relevant unit tests/test suites, you must run them *during the research stage*, before editing anything, using run_shell_command to get a baseline about passing/failing tests and call emit_key_facts with key facts about the tests and whether they were passing when you started. This ensures a proper baseline is established before any changes.
 
@@ -535,18 +536,6 @@ Work done so far:
 {work_log}
 </work log>
 
-Fact Management:
-    Each fact is identified with [Fact ID: X].
-    Facts may be deleted if they become outdated, irrelevant, or duplicates.
-    Use delete_key_facts([id1, id2, ...]) with a list of numeric Fact IDs to remove unnecessary facts.
-
-Snippet Management:
-    Each snippet is identified with [Snippet ID: X].
-    Snippets include file path, line number, and source code.
-    Snippets may have optional descriptions explaining their significance.
-    Delete snippets with delete_key_snippets([id1, id2, ...]) to remove outdated or irrelevant ones.
-    Use emit_key_snippets to store important code sections needed for reference in batches.
-
 Guidelines:
 
     If you need additional input or assistance from the expert (if expert is available), especially for debugging, deeper logic analysis, or correctness checks, use emit_expert_context to provide all relevant context and wait for the expert’s response.
@@ -615,7 +604,6 @@ Working Directory: {working_directory}
 Important Notes:
 - Focus solely on the given task and implement it as described.
 - Scale the complexity of your solution to the complexity of the request. For simple requests, keep it straightforward and minimal. For complex requests, maintain the previously planned depth.
-- Use emit_key_snippets to manage code sections before and after modifications in batches.
 
 - Work incrementally, validating as you go. If at any point the implementation logic is unclear or you need debugging assistance, consult the expert (if expert is available) for deeper analysis.
 - Do not add features not explicitly required.
@@ -712,11 +700,6 @@ Exit Criteria:
     - The conversation ends only when the user confirms that no further actions are needed.
     - Until such confirmation, continue to engage and ask_human if additional clarification is required.
     - If there are any doubts about final correctness or thoroughness, consult the expert (if expert is available) before concluding.
-
-Context Cleanup:
-    - Use delete_key_facts to remove any key facts that no longer apply.
-    - Use delete_key_snippets to remove any key snippets that no longer apply.
-    - Use deregister_related_files to remove any related files that no longer apply.
 
 When processing request_* tool responses:
     - Always check completion_message and work_log for implementation status
@@ -941,11 +924,6 @@ Exit Criteria:
     - The conversation ends only when the user confirms that no further actions are needed.
     - Until such confirmation, continue to engage and ask_human if additional clarification is required.
     - If there are any doubts about final correctness or thoroughness, consult the expert (if expert is available) before concluding.
-
-Context Cleanup:
-    - Use delete_key_facts to remove any key facts that no longer apply.
-    - Use delete_key_snippets to remove any key snippets that no longer apply.
-    - Use deregister_related_files to remove any related files that no longer apply.
 
 When processing request_* tool responses:
     - Always check completion_message and work_log for implementation status

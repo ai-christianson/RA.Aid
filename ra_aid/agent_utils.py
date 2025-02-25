@@ -209,7 +209,9 @@ def build_agent_kwargs(
     Returns:
         Dictionary of kwargs for agent creation
     """
-    agent_kwargs = {}
+    agent_kwargs = {
+        "version": "v2",
+    }
 
     if checkpointer is not None:
         agent_kwargs["checkpointer"] = checkpointer

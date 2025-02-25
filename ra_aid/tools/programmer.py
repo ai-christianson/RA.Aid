@@ -73,8 +73,6 @@ def run_programming_task(
     Args:
      instructions: REQUIRED Programming task instructions (markdown format, use newlines and as many tokens as needed, no commands allowed)
      files: Optional; if not provided, uses related_files
-
-    Returns: { "output": stdout+stderr, "return_code": 0 if success, "success": True/False }
     """
     # Build command
     aider_exe = get_aider_executable()

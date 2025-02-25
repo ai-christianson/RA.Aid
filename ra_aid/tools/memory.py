@@ -14,8 +14,6 @@ class WorkLogEntry(TypedDict):
 
 
 class SnippetInfo(TypedDict):
-    """Type definition for source code snippet information"""
-
     filepath: str
     line_number: int
     snippet: str
@@ -30,12 +28,13 @@ _global_memory: Dict[
     Union[
         Dict[int, str],
         Dict[int, SnippetInfo],
+        Dict[int, WorkLogEntry],
         int,
         Set[str],
         bool,
         str,
         List[str],
-        List[WorkLogEntry],
+        List[WorkLogEntry]
     ],
 ] = {
     "research_notes": [],
@@ -59,17 +58,14 @@ _global_memory: Dict[
 
 @tool("emit_research_notes")
 def emit_research_notes(notes: str) -> str:
-    """Store research notes in global memory.
+    """Use this when you have completed your research to share your notes in markdown format, no more than 500 words.
 
     Args:
         notes: REQUIRED The research notes to store
-
-    Returns:
-        The stored notes
     """
     _global_memory["research_notes"].append(notes)
     console.print(Panel(Markdown(notes), title="🔍 Research Notes"))
-    return notes
+    return "Research notes stored."
 
 
 @tool("emit_plan")
@@ -78,14 +74,11 @@ def emit_plan(plan: str) -> str:
 
     Args:
         plan: The plan step to store (markdown format; be clear, complete, use newlines, and use as many tokens as you need)
-
-    Returns:
-        The stored plan
     """
     _global_memory["plans"].append(plan)
     console.print(Panel(Markdown(plan), title="📋 Plan"))
     log_work_event(f"Added plan step:\n\n{plan}")
-    return plan
+    return "Plan stored."
 
 
 @tool("emit_task")
@@ -94,9 +87,6 @@ def emit_task(task: str) -> str:
 
     Args:
         task: The task to store
-
-    Returns:
-        String confirming task storage with ID number
     """
     # Get and increment task ID
     task_id = _global_memory["task_id_counter"]
@@ -116,9 +106,6 @@ def emit_key_facts(facts: List[str]) -> str:
 
     Args:
         facts: List of key facts to store
-
-    Returns:
-        List of stored fact confirmation messages
     """
     results = []
     for fact in facts:
@@ -152,9 +139,6 @@ def delete_key_facts(fact_ids: List[int]) -> str:
 
     Args:
         fact_ids: List of fact IDs to delete
-
-    Returns:
-        List of success messages for deleted facts
     """
     results = []
     for fact_id in fact_ids:
@@ -178,9 +162,6 @@ def delete_tasks(task_ids: List[int]) -> str:
 
     Args:
         task_ids: List of task IDs to delete
-
-    Returns:
-        Confirmation message
     """
     results = []
     for task_id in task_ids:
@@ -206,74 +187,62 @@ def request_implementation() -> str:
       Do you need to request research subtasks first?
       Have you run relevant unit tests, if they exist, to get a baseline (this can be a subtask)?
       Do you need to crawl deeper to find all related files and symbols?
-
-    Returns:
-        Empty string
     """
     _global_memory["implementation_requested"] = True
     console.print(Panel("🚀 Implementation Requested", style="yellow", padding=0))
     log_work_event("Implementation requested.")
-    return ""
+    return "Implementation requested."
 
 
-@tool("emit_key_snippets")
-def emit_key_snippets(snippets: List[SnippetInfo]) -> str:
-    """Store multiple key source code snippets in global memory.
-    Automatically adds the filepaths of the snippets to related files.
+@tool("emit_key_snippet")
+def emit_key_snippet(snippet_info: SnippetInfo) -> str:
+    """Store a single source code snippet in global memory which represents key information.
+    Automatically adds the filepath of the snippet to related files.
 
     This is for **existing**, or **just-written** files, not for things to be created in the future.
 
     Args:
-        snippets: REQUIRED List of snippet information dictionaries containing:
+        snippet_info: Dict with keys:
                  - filepath: Path to the source file
                  - line_number: Line number where the snippet starts
                  - snippet: The source code snippet text
                  - description: Optional description of the significance
-
-    Returns:
-        List of stored snippet confirmation messages
     """
-    # First collect unique filepaths to add as related files
-    emit_related_files.invoke(
-        {"files": [snippet_info["filepath"] for snippet_info in snippets]}
+    # Add filepath to related files
+    emit_related_files.invoke({"files": [snippet_info["filepath"]]})
+
+    # Get and increment snippet ID
+    snippet_id = _global_memory["key_snippet_id_counter"]
+    _global_memory["key_snippet_id_counter"] += 1
+
+    # Store snippet info
+    _global_memory["key_snippets"][snippet_id] = snippet_info
+
+    # Format display text as markdown
+    display_text = [
+        "**Source Location**:",
+        f"- File: `{snippet_info['filepath']}`",
+        f"- Line: `{snippet_info['line_number']}`",
+        "",  # Empty line before code block
+        "**Code**:",
+        "```python",
+        snippet_info["snippet"].rstrip(),  # Remove trailing whitespace
+        "```",
+    ]
+    if snippet_info["description"]:
+        display_text.extend(["", "**Description**:", snippet_info["description"]])
+
+    # Display panel
+    console.print(
+        Panel(
+            Markdown("\n".join(display_text)),
+            title=f"📝 Key Snippet #{snippet_id}",
+            border_style="bright_cyan",
+        )
     )
 
-    results = []
-    for snippet_info in snippets:
-        # Get and increment snippet ID
-        snippet_id = _global_memory["key_snippet_id_counter"]
-        _global_memory["key_snippet_id_counter"] += 1
-
-        # Store snippet info
-        _global_memory["key_snippets"][snippet_id] = snippet_info
-
-        # Format display text as markdown
-        display_text = [
-            "**Source Location**:",
-            f"- File: `{snippet_info['filepath']}`",
-            f"- Line: `{snippet_info['line_number']}`",
-            "",  # Empty line before code block
-            "**Code**:",
-            "```python",
-            snippet_info["snippet"].rstrip(),  # Remove trailing whitespace
-            "```",
-        ]
-        if snippet_info["description"]:
-            display_text.extend(["", "**Description**:", snippet_info["description"]])
-
-        # Display panel
-        console.print(
-            Panel(
-                Markdown("\n".join(display_text)),
-                title=f"📝 Key Snippet #{snippet_id}",
-                border_style="bright_cyan",
-            )
-        )
-
-        results.append(f"Stored snippet #{snippet_id}")
-
-    log_work_event(f"Stored {len(snippets)} code snippets.")
-    return "Snippets stored."
+    log_work_event(f"Stored code snippet #{snippet_id}.")
+    return f"Snippet #{snippet_id} stored."
 
 
 @tool("delete_key_snippets")
@@ -283,9 +252,6 @@ def delete_key_snippets(snippet_ids: List[int]) -> str:
 
     Args:
         snippet_ids: List of snippet IDs to delete
-
-    Returns:
-        List of success messages for deleted snippets
     """
     results = []
     for snippet_id in snippet_ids:
@@ -311,9 +277,6 @@ def swap_task_order(id1: int, id2: int) -> str:
     Args:
         id1: First task ID
         id2: Second task ID
-
-    Returns:
-        Success or error message depending on outcome
     """
     # Validate IDs are different
     if id1 == id2:
@@ -338,7 +301,7 @@ def swap_task_order(id1: int, id2: int) -> str:
         )
     )
 
-    return "Tasks swapped."
+    return "Tasks deleted."
 
 
 @tool("one_shot_completed")
@@ -366,9 +329,6 @@ def task_completed(message: str) -> str:
 
     Args:
         message: Message explaining how/why the task is complete
-
-    Returns:
-        The completion message
     """
     _global_memory["task_completed"] = True
     _global_memory["completion_message"] = message
@@ -382,9 +342,6 @@ def plan_implementation_completed(message: str) -> str:
 
     Args:
         message: Message explaining how the implementation plan was completed
-
-    Returns:
-        Confirmation message
     """
     _global_memory["task_completed"] = True
     _global_memory["completion_message"] = message
@@ -413,9 +370,6 @@ def emit_related_files(files: List[str]) -> str:
 
     Args:
         files: List of file paths to add
-
-    Returns:
-        Formatted string containing file IDs and paths for all processed files
     """
     results = []
     added_files = []
@@ -476,7 +430,7 @@ def emit_related_files(files: List[str]) -> str:
             )
         )
 
-    return "\n".join(results)
+    return "Files noted."
 
 
 def log_work_event(event: str) -> str:
@@ -550,9 +504,6 @@ def deregister_related_files(file_ids: List[int]) -> str:
 
     Args:
         file_ids: List of file IDs to delete
-
-    Returns:
-        Success message string
     """
     results = []
     for file_id in file_ids:
@@ -571,7 +522,7 @@ def deregister_related_files(file_ids: List[int]) -> str:
             )
             results.append(success_msg)
 
-    return "File references removed."
+    return "Files noted."
 
 
 def get_memory_value(key: str) -> str:
