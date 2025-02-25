@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.7] - 2025-02-25
+
+### Added
+- Windows compatibility improvements
+  - Add error handling for Windows-specific modules
+  - Add Windows-specific tests for compatibility
+
+### Changed
+- Improve cross-platform support in interactive.py
+- WebUI improvements
+  - Improve message display
+  - Add syntax highlighting
+  - Add animations
+- Expert tool prompt improvements
+
+### Fixed
+- WebUI improvements
+  - Fix WebSocket communication
+- Interactive command handling improvements
+  - Fix interactive history capture
+  - Fix command capture bugs
+  - Multiple fixes for interactive command execution on both Linux and Windows
+  - Enhance error handling for interactive processes
+
 ## [0.14.6] - 2025-02-25
 
 ### Added
