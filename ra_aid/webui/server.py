@@ -1,29 +1,37 @@
-"""Web interface server implementation for RA.Aid."""
-
-import asyncio
-import logging
-import shutil
+#!/usr/bin/env python3
 import sys
+import os
 from pathlib import Path
-from typing import Any, Dict, List
+import asyncio
+from typing import List
+import json
+import threading
+import queue
+import traceback
+import shutil
+import logging
 
-import uvicorn
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
-from fastapi.middleware.cors import CORSMiddleware
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.__stderr__)  # Use the real stderr
+    ]
+)
+logger = logging.getLogger(__name__)
+
+# Add project root to Python path
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
+from fastapi import FastAPI, WebSocket, Request, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-
-# Configure logging
-logging.basicConfig(level=logging.DEBUG)  # Set to DEBUG for more info
-logger = logging.getLogger(__name__)
-
-# Verify ra-aid is available
-if not shutil.which("ra-aid"):
-    logger.error(
-        "ra-aid command not found. Please ensure it's installed and in your PATH"
-    )
-    sys.exit(1)
+from fastapi.middleware.cors import CORSMiddleware
+import uvicorn
 
 app = FastAPI()
 
@@ -36,67 +44,105 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Get the directory containing static files
-STATIC_DIR = Path(__file__).parent / "static"
-if not STATIC_DIR.exists():
-    logger.error(f"Static directory not found at {STATIC_DIR}")
-    sys.exit(1)
+# Setup templates and static files directories
+CURRENT_DIR = Path(__file__).parent
+templates = Jinja2Templates(directory=CURRENT_DIR)
 
-logger.info(f"Using static directory: {STATIC_DIR}")
+# Mount static files for js and other assets
+static_dir = CURRENT_DIR / "static"
+app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
-# Setup templates
-templates = Jinja2Templates(directory=str(STATIC_DIR))
+# Store active WebSocket connections
+active_connections: List[WebSocket] = []
 
+def run_ra_aid(message_content, output_queue):
+    """Run ra-aid in a separate thread"""
+    try:
+        import ra_aid.__main__
+        logger.info("Successfully imported ra_aid.__main__")
 
-class ConnectionManager:
-    def __init__(self):
-        self.active_connections: List[WebSocket] = []
+        # Override sys.argv
+        sys.argv = [sys.argv[0], "-m", message_content, "--cowboy-mode"]
+        logger.info(f"Set sys.argv to: {sys.argv}")
 
-    async def connect(self, websocket: WebSocket) -> bool:
+        # Create custom output handler
+        class QueueHandler:
+            def __init__(self, queue):
+                self.queue = queue
+                self.buffer = []
+                self.box_start = False
+                self._real_stderr = sys.__stderr__
+            
+            def write(self, text):
+                # Always log raw output for debugging
+                logger.debug(f"Raw output: {repr(text)}")
+                
+                # Check if this is a box drawing character
+                if any(c in text for c in '╭╮╰╯│─'):
+                    self.box_start = True
+                    self.buffer.append(text)
+                elif self.box_start and text.strip():
+                    self.buffer.append(text)
+                    if '╯' in text:  # End of box
+                        full_text = ''.join(self.buffer)
+                        # Extract content from inside the box
+                        lines = full_text.split('\n')
+                        content_lines = []
+                        for line in lines:
+                            # Remove box characters and leading/trailing spaces
+                            clean_line = line.strip('╭╮╰╯│─ ')
+                            if clean_line:
+                                content_lines.append(clean_line)
+                        if content_lines:
+                            self.queue.put('\n'.join(content_lines))
+                        self.buffer = []
+                        self.box_start = False
+                elif not self.box_start and text.strip():
+                    self.queue.put(text.strip())
+            
+            def flush(self):
+                if self.buffer:
+                    full_text = ''.join(self.buffer)
+                    # Extract content from partial box
+                    lines = full_text.split('\n')
+                    content_lines = []
+                    for line in lines:
+                        # Remove box characters and leading/trailing spaces
+                        clean_line = line.strip('╭╮╰╯│─ ')
+                        if clean_line:
+                            content_lines.append(clean_line)
+                    if content_lines:
+                        self.queue.put('\n'.join(content_lines))
+                    self.buffer = []
+                    self.box_start = False
+
+        # Replace stdout and stderr
+        old_stdout = sys.stdout
+        old_stderr = sys.stderr
+        queue_handler = QueueHandler(output_queue)
+        sys.stdout = queue_handler
+        sys.stderr = queue_handler
+
         try:
-            logger.debug("Accepting WebSocket connection...")
-            await websocket.accept()
-            logger.debug("WebSocket connection accepted")
-            self.active_connections.append(websocket)
-            return True
+            logger.info("Starting ra_aid.main()")
+            ra_aid.__main__.main()
+            logger.info("Finished ra_aid.main()")
+        except SystemExit:
+            logger.info("Caught SystemExit - this is normal")
         except Exception as e:
-            logger.error(f"Error accepting WebSocket connection: {e}")
-            return False
+            logger.error(f"Error in main: {str(e)}")
+            traceback.print_exc(file=sys.__stderr__)
+        finally:
+            # Flush any remaining output
+            queue_handler.flush()
+            # Restore stdout and stderr
+            sys.stdout = old_stdout
+            sys.stderr = old_stderr
 
-    def disconnect(self, websocket: WebSocket):
-        if websocket in self.active_connections:
-            self.active_connections.remove(websocket)
-
-    async def send_message(self, websocket: WebSocket, message: Dict[str, Any]):
-        try:
-            await websocket.send_json(message)
-        except Exception as e:
-            logger.error(f"Error sending message: {e}")
-            await self.handle_error(websocket, str(e))
-
-    async def handle_error(self, websocket: WebSocket, error_message: str):
-        try:
-            await websocket.send_json(
-                {
-                    "type": "chunk",
-                    "chunk": {
-                        "tools": {
-                            "messages": [
-                                {
-                                    "content": f"Error: {error_message}",
-                                    "status": "error",
-                                }
-                            ]
-                        }
-                    },
-                }
-            )
-        except Exception as e:
-            logger.error(f"Error sending error message: {e}")
-
-
-manager = ConnectionManager()
-
+    except Exception as e:
+        logger.error(f"Error in thread: {str(e)}")
+        traceback.print_exc(file=sys.__stderr__)
+        output_queue.put(f"Error: {str(e)}")
 
 @app.get("/", response_class=HTMLResponse)
 async def get_root(request: Request):
@@ -105,135 +151,108 @@ async def get_root(request: Request):
         "index.html", {"request": request, "server_port": request.url.port or 8080}
     )
 
-
-# Mount static files for js and other assets
-app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
-
-
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    client_id = id(websocket)
-    logger.info(f"New WebSocket connection attempt from client {client_id}")
-
-    if not await manager.connect(websocket):
-        logger.error(f"Failed to accept WebSocket connection for client {client_id}")
-        return
-
-    logger.info(f"WebSocket connection accepted for client {client_id}")
+    await websocket.accept()
+    logger.info("WebSocket connection established")
+    active_connections.append(websocket)
 
     try:
-        # Send initial connection success message
-        await manager.send_message(
-            websocket,
-            {
-                "type": "chunk",
-                "chunk": {
-                    "agent": {
-                        "messages": [
-                            {"content": "Connected to RA.Aid server", "status": "info"}
-                        ]
-                    }
-                },
-            },
-        )
-
         while True:
-            try:
-                message = await websocket.receive_json()
-                logger.debug(f"Received message from client {client_id}: {message}")
+            message = await websocket.receive_json()
+            logger.info(f"Received message: {message}")
 
-                if message["type"] == "request":
-                    await manager.send_message(websocket, {"type": "stream_start"})
+            if message["type"] == "request":
+                content = message["content"]
+                logger.info(f"Processing request: {content}")
 
-                    try:
-                        # Run ra-aid with the request
-                        cmd = ["ra-aid", "-m", message["content"], "--cowboy-mode"]
-                        logger.info(f"Executing command: {' '.join(cmd)}")
+                # Create queue for output
+                output_queue = queue.Queue()
 
-                        process = await asyncio.create_subprocess_exec(
-                            *cmd,
-                            stdout=asyncio.subprocess.PIPE,
-                            stderr=asyncio.subprocess.PIPE,
-                        )
-                        logger.info(f"Process started with PID: {process.pid}")
+                # Create and start thread
+                thread = threading.Thread(target=run_ra_aid, args=(content, output_queue))
+                thread.start()
 
-                        async def read_stream(stream, is_error=False):
-                            while True:
-                                line = await stream.readline()
-                                if not line:
-                                    break
+                try:
+                    # Send stream start
+                    await websocket.send_json({"type": "stream_start"})
 
-                                try:
-                                    decoded_line = line.decode().strip()
-                                    if decoded_line:
-                                        await manager.send_message(
-                                            websocket,
-                                            {
-                                                "type": "chunk",
-                                                "chunk": {
-                                                    "tools" if is_error else "agent": {
-                                                        "messages": [
-                                                            {
-                                                                "content": decoded_line,
-                                                                "status": "error"
-                                                                if is_error
-                                                                else "info",
-                                                            }
-                                                        ]
-                                                    }
-                                                },
-                                            },
-                                        )
-                                except Exception as e:
-                                    logger.error(f"Error processing output: {e}")
+                    while thread.is_alive() or not output_queue.empty():
+                        try:
+                            # Get output with timeout to allow checking thread status
+                            line = output_queue.get(timeout=0.1)
+                            if line and line.strip():  # Only send non-empty messages
+                                logger.debug(f"WebSocket sending: {repr(line)}")
+                                await websocket.send_json({
+                                    "type": "chunk",
+                                    "chunk": {
+                                        "agent": {
+                                            "messages": [{
+                                                "content": line.strip(),
+                                                "status": "info"
+                                            }]
+                                        }
+                                    }
+                                })
+                        except queue.Empty:
+                            await asyncio.sleep(0.1)
+                        except Exception as e:
+                            logger.error(f"WebSocket error: {e}")
+                            traceback.print_exc(file=sys.__stderr__)
 
-                        # Create tasks for reading stdout and stderr
-                        stdout_task = asyncio.create_task(read_stream(process.stdout))
-                        stderr_task = asyncio.create_task(
-                            read_stream(process.stderr, True)
-                        )
+                    # Wait for thread to finish
+                    thread.join()
+                    logger.info("Thread finished")
 
-                        # Wait for both streams to complete
-                        await asyncio.gather(stdout_task, stderr_task)
+                    # Send stream end
+                    await websocket.send_json({"type": "stream_end"})
+                    logger.info("Sent stream_end message")
 
-                        # Wait for process to complete
-                        return_code = await process.wait()
+                except Exception as e:
+                    error_msg = f"Error running ra-aid: {str(e)}"
+                    logger.error(error_msg)
+                    await websocket.send_json({
+                        "type": "error",
+                        "message": error_msg
+                    })
 
-                        if return_code != 0:
-                            await manager.handle_error(
-                                websocket, f"Process exited with code {return_code}"
-                            )
-
-                        await manager.send_message(
-                            websocket,
-                            {"type": "stream_end", "request": message["content"]},
-                        )
-
-                    except Exception as e:
-                        logger.error(f"Error executing ra-aid: {e}")
-                        await manager.handle_error(websocket, str(e))
-
-            except Exception as e:
-                logger.error(f"Error processing message: {e}")
-                await manager.handle_error(websocket, str(e))
+            logger.info("Waiting for message...")
 
     except WebSocketDisconnect:
-        logger.info(f"WebSocket client {client_id} disconnected")
+        logger.info("WebSocket client disconnected")
+        active_connections.remove(websocket)
     except Exception as e:
-        logger.error(f"WebSocket error for client {client_id}: {e}")
+        logger.error(f"WebSocket error: {e}")
+        traceback.print_exc()
     finally:
-        manager.disconnect(websocket)
-        logger.info(f"WebSocket connection cleaned up for client {client_id}")
+        if websocket in active_connections:
+            active_connections.remove(websocket)
+        logger.info("WebSocket connection closed")
+
+
+@app.get("/config")
+async def get_config(request: Request):
+    """Return server configuration including host and port."""
+    return {"host": request.client.host, "port": request.scope.get("server")[1]}
 
 
 def run_server(host: str = "0.0.0.0", port: int = 8080):
     """Run the FastAPI server."""
-    logger.info(f"Starting server on {host}:{port}")
-    uvicorn.run(
-        app,
-        host=host,
-        port=port,
-        log_level="debug",
-        ws_max_size=16777216,  # 16MB
-        timeout_keep_alive=0,  # Disable keep-alive timeout
+    uvicorn.run(app, host=host, port=port)
+
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="RA.Aid Web Interface Server")
+    parser.add_argument(
+        "--port", type=int, default=8080, help="Port to listen on (default: 8080)"
     )
+    parser.add_argument(
+        "--host",
+        type=str,
+        default="0.0.0.0",
+        help="Host to listen on (default: 0.0.0.0)",
+    )
+
+    args = parser.parse_args()
+    run_server(host=args.host, port=args.port)
