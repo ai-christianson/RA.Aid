@@ -1,4 +1,8 @@
-<img src="assets/RA-black-bg.png" alt="RA.Aid - Develop software autonomously." style="margin-bottom: 20px;">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/logo-white-transparent.gif">
+  <source media="(prefers-color-scheme: light)" srcset="assets/logo-black-transparent.png">
+  <img src="assets/logo-black-transparent.png" alt="RA.Aid - Develop software autonomously." style="margin-bottom: 20px;">
+</picture>
 
 [![Python Versions](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
