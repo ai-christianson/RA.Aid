@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.6] - 2025-02-25
+
+### Added
+- Added `--no-git` flag to aider commands to prevent git operations
+
+### Changed
+- Updated aider-chat dependency from 0.75 to 0.75.1
+- Improved prompts for better tool effectiveness
+- Enhanced emit_key_snippet documentation to focus on upcoming work relevance
+
 ## [0.14.5] - 2025-02-24
 
 ### Changed
