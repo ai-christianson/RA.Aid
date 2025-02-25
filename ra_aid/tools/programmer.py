@@ -58,15 +58,15 @@ def run_programming_task(
 
     Before using this tool, ensure all related files have been emitted with emit_related_files.
 
-    The programmer sees only what you provide, no conversation history.
+    The programmer sees *ONLY* what you provide, no conversation history.
+
+    If you have not called emit_related_files on files that the programmer will need, the programmer will *NOT* be able to see them.
 
     Give detailed instructions including multi-file tasks but do not write the code in the instructions.
 
     Keep your instructions information dense and no more than 300 words.
 
     The programmer cannot run commands or see context other than related files and what you say in the instructions.
-
-    If new files are created, emit them after finishing.
 
     They can add/modify files, but not remove. Use run_shell_command to remove files. If referencing files you'll delete, remove them after they finish.
 
@@ -155,9 +155,11 @@ def run_programming_task(
         # Log the programming task
         log_work_event(f"Executed programming task: {_truncate_for_log(instructions)}")
 
+        extra_ins = "\n\nRemember to call emit_related_files on any new files created!"
+
         # Return structured output
         return {
-            "output": truncate_output(result[0].decode()) if result[0] else "",
+            "output": (truncate_output(result[0].decode()) + extra_ins) if result[0] else "",
             "return_code": result[1],
             "success": result[1] == 0,
         }
