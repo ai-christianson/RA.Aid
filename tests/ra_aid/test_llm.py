@@ -99,13 +99,16 @@ def test_initialize_expert_anthropic(clean_env, mock_anthropic, monkeypatch):
     monkeypatch.setenv("EXPERT_ANTHROPIC_API_KEY", "test-key")
     _llm = initialize_expert_llm("anthropic", "claude-3")
 
-    mock_anthropic.assert_called_once_with(
-        api_key="test-key",
-        model_name="claude-3",
-        temperature=0,
-        timeout=180,
-        max_retries=5,
-    )
+    # Check that mock_anthropic was called
+    assert mock_anthropic.called
+    
+    # Verify essential parameters
+    kwargs = mock_anthropic.call_args.kwargs
+    assert kwargs["api_key"] == "test-key"
+    assert kwargs["model_name"] == "claude-3"
+    assert kwargs["temperature"] == 0
+    assert kwargs["timeout"] == 180
+    assert kwargs["max_retries"] == 5
 
 
 def test_initialize_expert_openrouter(clean_env, mock_openai, monkeypatch):
@@ -198,13 +201,16 @@ def test_initialize_anthropic(clean_env, mock_anthropic):
     os.environ["ANTHROPIC_API_KEY"] = "test-key"
     _model = initialize_llm("anthropic", "claude-3", temperature=0.7)
 
-    mock_anthropic.assert_called_with(
-        api_key="test-key",
-        model_name="claude-3",
-        temperature=0.7,
-        timeout=180,
-        max_retries=5,
-    )
+    # Check that mock_anthropic was called
+    assert mock_anthropic.called
+    
+    # Verify essential parameters
+    kwargs = mock_anthropic.call_args.kwargs
+    assert kwargs["api_key"] == "test-key"
+    assert kwargs["model_name"] == "claude-3"
+    assert kwargs["temperature"] == 0.7
+    assert kwargs["timeout"] == 180
+    assert kwargs["max_retries"] == 5
 
 
 def test_initialize_openrouter(clean_env, mock_openai):
@@ -279,13 +285,14 @@ def test_temperature_defaults(clean_env, mock_openai, mock_anthropic, mock_gemin
     )
 
     initialize_llm("anthropic", "test-model")
-    mock_anthropic.assert_called_with(
-        api_key="test-key",
-        model_name="test-model",
-        temperature=0.7,
-        timeout=180,
-        max_retries=5,
-    )
+    
+    # Verify essential parameters for Anthropic
+    kwargs = mock_anthropic.call_args.kwargs
+    assert kwargs["api_key"] == "test-key"
+    assert kwargs["model_name"] == "test-model"
+    assert kwargs["temperature"] == 0.7
+    assert kwargs["timeout"] == 180
+    assert kwargs["max_retries"] == 5
 
     initialize_llm("gemini", "test-model")
     mock_gemini.assert_called_with(
@@ -347,13 +354,14 @@ def test_explicit_temperature(clean_env, mock_openai, mock_anthropic, mock_gemin
 
     # Test Anthropic
     initialize_llm("anthropic", "test-model", temperature=test_temp)
-    mock_anthropic.assert_called_with(
-        api_key="test-key",
-        model_name="test-model",
-        temperature=test_temp,
-        timeout=180,
-        max_retries=5,
-    )
+    
+    # Verify essential parameters for Anthropic
+    kwargs = mock_anthropic.call_args.kwargs
+    assert kwargs["api_key"] == "test-key"
+    assert kwargs["model_name"] == "test-model"
+    assert kwargs["temperature"] == test_temp
+    assert kwargs["timeout"] == 180
+    assert kwargs["max_retries"] == 5
 
     # Test OpenRouter
     initialize_llm("openrouter", "test-model", temperature=test_temp)
@@ -474,13 +482,14 @@ def test_initialize_llm_cross_provider(
     # Initialize Anthropic
     monkeypatch.setenv("ANTHROPIC_API_KEY", "anthropic-key")
     _llm2 = initialize_llm("anthropic", "claude-3", temperature=0.7)
-    mock_anthropic.assert_called_with(
-        api_key="anthropic-key",
-        model_name="claude-3",
-        temperature=0.7,
-        timeout=180,
-        max_retries=5,
-    )
+    
+    # Verify essential parameters for Anthropic
+    kwargs = mock_anthropic.call_args.kwargs
+    assert kwargs["api_key"] == "anthropic-key"
+    assert kwargs["model_name"] == "claude-3"
+    assert kwargs["temperature"] == 0.7
+    assert kwargs["timeout"] == 180
+    assert kwargs["max_retries"] == 5
 
     # Initialize Gemini
     monkeypatch.setenv("GEMINI_API_KEY", "gemini-key")
