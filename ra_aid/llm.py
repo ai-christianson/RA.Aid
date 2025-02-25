@@ -229,6 +229,7 @@ def create_llm_client(
         model_config["supports_temperature"] = provider in known_temp_providers
 
     supports_temperature = model_config["supports_temperature"]
+    supports_thinking = model_config.get("supports_thinking", False)
 
     # Handle temperature settings
     if is_expert:
@@ -242,6 +243,12 @@ def create_llm_client(
         temp_kwargs = {"temperature": temperature}
     else:
         temp_kwargs = {}
+    
+    if supports_thinking:
+        temp_kwargs = {"thinking": {
+            "type": "enabled",
+            "budget_tokens": 8000
+        }}
 
     if provider == "deepseek":
         return create_deepseek_client(
@@ -280,6 +287,7 @@ def create_llm_client(
             model_name=model_name,
             timeout=LLM_REQUEST_TIMEOUT,
             max_retries=LLM_MAX_RETRIES,
+            max_tokens=model_config.get("max_tokens", 64000),
             **temp_kwargs,
         )
     elif provider == "openai-compatible":

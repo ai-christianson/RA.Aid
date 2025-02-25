@@ -714,3 +714,51 @@ def test_swap_task_order_after_delete(reset_memory):
     # Verify swap worked
     assert _global_memory["tasks"][0] == "Task 3"
     assert _global_memory["tasks"][2] == "Task 1"
+
+
+def test_emit_related_files_binary_filtering(reset_memory, tmp_path, monkeypatch):
+    """Test that binary files are filtered out when adding related files"""
+    # Create test text files
+    text_file1 = tmp_path / "text1.txt"
+    text_file1.write_text("Text file 1 content")
+    text_file2 = tmp_path / "text2.txt"
+    text_file2.write_text("Text file 2 content")
+    
+    # Create test "binary" files
+    binary_file1 = tmp_path / "binary1.bin"
+    binary_file1.write_text("Binary file 1 content")
+    binary_file2 = tmp_path / "binary2.bin"
+    binary_file2.write_text("Binary file 2 content")
+    
+    # Mock the is_binary_file function to identify our "binary" files
+    def mock_is_binary_file(filepath):
+        return ".bin" in str(filepath)
+    
+    # Apply the mock
+    import ra_aid.tools.memory
+    monkeypatch.setattr(ra_aid.tools.memory, "is_binary_file", mock_is_binary_file)
+    
+    # Call emit_related_files with mix of text and binary files
+    result = emit_related_files.invoke({
+        "files": [
+            str(text_file1), 
+            str(binary_file1), 
+            str(text_file2), 
+            str(binary_file2)
+        ]
+    })
+    
+    # Verify the result message mentions skipped binary files
+    assert "Files noted." in result
+    assert "2 binary files were skipped" in result
+    
+    # Verify only text files were added to related_files
+    assert len(_global_memory["related_files"]) == 2
+    file_values = list(_global_memory["related_files"].values())
+    assert str(text_file1) in file_values
+    assert str(text_file2) in file_values
+    assert str(binary_file1) not in file_values
+    assert str(binary_file2) not in file_values
+    
+    # Verify counter is correct (only incremented for text files)
+    assert _global_memory["related_file_id_counter"] == 2

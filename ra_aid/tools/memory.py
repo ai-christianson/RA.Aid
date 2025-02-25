@@ -1,6 +1,11 @@
 import os
 from typing import Dict, List, Optional, Set, Union
 
+try:
+    import magic
+except ImportError:
+    magic = None
+
 from langchain_core.tools import tool
 from rich.console import Console
 from rich.markdown import Markdown
@@ -380,6 +385,7 @@ def emit_related_files(files: List[str]) -> str:
     results = []
     added_files = []
     invalid_paths = []
+    binary_files = []
 
     # Process files
     for file in files:
@@ -399,6 +405,12 @@ def emit_related_files(files: List[str]) -> str:
         if not os.path.isfile(file):
             invalid_paths.append(file)
             results.append(f"Error: Path '{file}' exists but is not a regular file")
+            continue
+            
+        # Check if it's a binary file
+        if is_binary_file(file):
+            binary_files.append(file)
+            results.append(f"Skipped binary file: '{file}'")
             continue
 
         # Normalize the path
@@ -424,7 +436,7 @@ def emit_related_files(files: List[str]) -> str:
             added_files.append((file_id, file))  # Keep original path for display
             results.append(f"File ID #{file_id}: {file}")
 
-    # Rich output - single consolidated panel
+    # Rich output - single consolidated panel for added files
     if added_files:
         files_added_md = "\n".join(f"- `{file}`" for id, file in added_files)
         md_content = f"**Files Noted:**\n{files_added_md}"
@@ -435,8 +447,24 @@ def emit_related_files(files: List[str]) -> str:
                 border_style="green",
             )
         )
+    
+    # Display skipped binary files
+    if binary_files:
+        binary_files_md = "\n".join(f"- `{file}`" for file in binary_files)
+        md_content = f"**Binary Files Skipped:**\n{binary_files_md}"
+        console.print(
+            Panel(
+                Markdown(md_content),
+                title="⚠️ Binary Files Not Added",
+                border_style="yellow",
+            )
+        )
 
-    return "Files noted."
+    # Return summary message
+    if binary_files:
+        return f"Files noted. {len(binary_files)} binary files were skipped."
+    else:
+        return "Files noted."
 
 
 def log_work_event(event: str) -> str:
@@ -459,6 +487,25 @@ def log_work_event(event: str) -> str:
     entry = WorkLogEntry(timestamp=datetime.now().isoformat(), event=event)
     _global_memory["work_log"].append(entry)
     return f"Event logged: {event}"
+
+
+def is_binary_file(filepath):
+    """Check if a file is binary using magic library if available."""
+    if magic:
+        try:
+            mime = magic.from_file(filepath, mime=True)
+            return not mime.startswith('text/')
+        except Exception:
+            # Fallback if magic fails
+            return False
+    else:
+        # Basic binary detection if magic is not available
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                f.read(1024)  # Try to read as text
+                return False
+        except UnicodeDecodeError:
+            return True
 
 
 def get_work_log() -> str:

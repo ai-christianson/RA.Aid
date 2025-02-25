@@ -939,6 +939,8 @@ models_params = {
         "claude-3-7-sonnet-20250219": {
             "token_limit": 200000,
             "supports_temperature": True,
+            "supports_thinking": True,
+            "max_tokens": 64000,
             "default_temperature": 1.0,
             "latency_coefficient": DEFAULT_BASE_LATENCY,
         },
