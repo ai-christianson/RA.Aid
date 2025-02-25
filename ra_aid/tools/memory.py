@@ -39,7 +39,7 @@ _global_memory: Dict[
         bool,
         str,
         List[str],
-        List[WorkLogEntry]
+        List[WorkLogEntry],
     ],
 ] = {
     "research_notes": [],
@@ -462,7 +462,8 @@ def emit_related_files(files: List[str]) -> str:
 
     # Return summary message
     if binary_files:
-        return f"Files noted. {len(binary_files)} binary files were skipped."
+        binary_files_list = ", ".join(f"'{file}'" for file in binary_files)
+        return f"Files noted. Binary files skipped: {binary_files_list}"
     else:
         return "Files noted."
 

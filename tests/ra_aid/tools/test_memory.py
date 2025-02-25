@@ -750,7 +750,9 @@ def test_emit_related_files_binary_filtering(reset_memory, tmp_path, monkeypatch
     
     # Verify the result message mentions skipped binary files
     assert "Files noted." in result
-    assert "2 binary files were skipped" in result
+    assert "Binary files skipped:" in result
+    assert f"'{binary_file1}'" in result
+    assert f"'{binary_file2}'" in result
     
     # Verify only text files were added to related_files
     assert len(_global_memory["related_files"]) == 2
