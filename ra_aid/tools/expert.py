@@ -49,7 +49,7 @@ def emit_expert_context(context: str) -> str:
 
     Do not include your question in the additional context.
 
-    Err on the side of adding more context rather than less.
+    Err on the side of adding more context rather than less, but keep it information dense and under 500 words total.
 
     You must give the complete contents.
 
@@ -135,7 +135,7 @@ def ask_expert(question: str) -> str:
 
     The expert can be extremely useful at logic questions, debugging, and reviewing complex source code, but you must provide all context including source manually.
 
-    The can see any key facts and code snippets previously noted, along with any additional context you've provided.
+    The expert can see any key facts and code snippets previously noted, along with any additional context you've provided.
       But the expert cannot see or reason about anything you have not explicitly provided in this way.
 
     Try to phrase your question in a way that it does not expand the scope of our top-level task.
