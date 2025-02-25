@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.4] - 2025-02-24
+
+### Changed
+- Updated aider-chat dependency from 0.74.2 to 0.75
+- Improved tool calling performance by minimizing tool return values
+- Replaced emit_key_snippets with emit_key_snippet for simpler code snippet management
+- Simplified return values for multiple tools to improve tool calling accuracy
+- Updated tool prompts to remove unnecessary context cleanup references
+- Reorganized order of tools in read-only tools list
+
+### Fixed
+- Fixed tests to align with updated tool return values
+- Updated test assertions to match new simplified tool outputs
+
 ## [0.14.3] - 2025-02-24
 
 ### Added
