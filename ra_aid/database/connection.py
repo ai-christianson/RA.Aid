@@ -108,7 +108,6 @@ def init_db(in_memory: bool = False) -> peewee.SqliteDatabase:
         # Get current working directory and create .ra-aid directory if it doesn't exist
         cwd = os.getcwd()
         logger.debug(f"Current working directory: {cwd}")
-        print(f"DIRECT DEBUG: Current working directory: {cwd}")
         
         # Define the .ra-aid directory path
         ra_aid_dir_str = os.path.join(cwd, ".ra-aid")
@@ -117,7 +116,6 @@ def init_db(in_memory: bool = False) -> peewee.SqliteDatabase:
         ra_aid_dir_str = str(ra_aid_dir)  # Update string representation with absolute path
         
         logger.debug(f"Creating database directory at: {ra_aid_dir_str}")
-        print(f"DIRECT DEBUG: Creating database directory at: {ra_aid_dir_str}")
         
         # Multiple approaches to ensure directory creation
         directory_created = False
@@ -127,52 +125,42 @@ def init_db(in_memory: bool = False) -> peewee.SqliteDatabase:
         if not os.path.exists(ra_aid_dir_str):
             try:
                 logger.debug("Attempting directory creation with os.mkdir")
-                print(f"DIRECT DEBUG: Attempting directory creation with os.mkdir: {ra_aid_dir_str}")
                 os.mkdir(ra_aid_dir_str, mode=0o755)
                 directory_created = os.path.exists(ra_aid_dir_str) and os.path.isdir(ra_aid_dir_str)
                 if directory_created:
                     logger.debug("Directory created successfully with os.mkdir")
-                    print(f"DIRECT DEBUG: Directory created successfully with os.mkdir")
             except Exception as e:
                 error_msg = f"os.mkdir failed: {str(e)}"
                 logger.debug(error_msg)
-                print(f"DIRECT DEBUG: {error_msg}")
                 error_messages.append(error_msg)
         else:
             logger.debug("Directory already exists, skipping creation")
-            print(f"DIRECT DEBUG: Directory already exists at {ra_aid_dir_str}")
             directory_created = True
         
         # Approach 2: Try os.makedirs if os.mkdir failed
         if not directory_created:
             try:
                 logger.debug("Attempting directory creation with os.makedirs")
-                print(f"DIRECT DEBUG: Attempting directory creation with os.makedirs: {ra_aid_dir_str}")
                 os.makedirs(ra_aid_dir_str, exist_ok=True, mode=0o755)
                 directory_created = os.path.exists(ra_aid_dir_str) and os.path.isdir(ra_aid_dir_str)
                 if directory_created:
                     logger.debug("Directory created successfully with os.makedirs")
-                    print(f"DIRECT DEBUG: Directory created successfully with os.makedirs")
             except Exception as e:
                 error_msg = f"os.makedirs failed: {str(e)}"
                 logger.debug(error_msg)
-                print(f"DIRECT DEBUG: {error_msg}")
                 error_messages.append(error_msg)
         
         # Approach 3: Try Path.mkdir if previous methods failed
         if not directory_created:
             try:
                 logger.debug("Attempting directory creation with Path.mkdir")
-                print(f"DIRECT DEBUG: Attempting directory creation with Path.mkdir: {ra_aid_dir}")
                 ra_aid_dir.mkdir(mode=0o755, parents=True, exist_ok=True)
                 directory_created = os.path.exists(ra_aid_dir_str) and os.path.isdir(ra_aid_dir_str)
                 if directory_created:
                     logger.debug("Directory created successfully with Path.mkdir")
-                    print(f"DIRECT DEBUG: Directory created successfully with Path.mkdir")
             except Exception as e:
                 error_msg = f"Path.mkdir failed: {str(e)}"
                 logger.debug(error_msg)
-                print(f"DIRECT DEBUG: {error_msg}")
                 error_messages.append(error_msg)
         
         # Verify the directory was actually created
@@ -181,7 +169,6 @@ def init_db(in_memory: bool = False) -> peewee.SqliteDatabase:
         is_dir = os.path.isdir(ra_aid_dir_str) if os_exists else False
         
         logger.debug(f"Directory verification: Path.exists={path_exists}, os.path.exists={os_exists}, os.path.isdir={is_dir}")
-        print(f"DIRECT DEBUG: Directory verification: Path.exists={path_exists}, os.path.exists={os_exists}, os.path.isdir={is_dir}")
         
         # Check parent directory permissions and contents for debugging
         try:
@@ -190,39 +177,30 @@ def init_db(in_memory: bool = False) -> peewee.SqliteDatabase:
             parent_contents = os.listdir(parent_dir)
             logger.debug(f"Parent directory {parent_dir} permissions: {parent_perms}")
             logger.debug(f"Parent directory contents: {parent_contents}")
-            print(f"DIRECT DEBUG: Parent directory {parent_dir} permissions: {parent_perms}")
-            print(f"DIRECT DEBUG: Parent directory contents: {parent_contents}")
         except Exception as e:
             logger.debug(f"Could not check parent directory: {str(e)}")
-            print(f"DIRECT DEBUG: Could not check parent directory: {str(e)}")
         
         if not os_exists or not is_dir:
             error_msg = f"Directory does not exist or is not a directory after creation attempts: {ra_aid_dir_str}"
             logger.error(error_msg)
-            print(f"DIRECT DEBUG ERROR: {error_msg}")
             if error_messages:
                 logger.error(f"Previous errors: {', '.join(error_messages)}")
-                print(f"DIRECT DEBUG ERROR: Previous errors: {', '.join(error_messages)}")
             raise FileNotFoundError(f"Failed to create directory: {ra_aid_dir_str}")
         
         # Check directory permissions
         try:
             permissions = oct(os.stat(ra_aid_dir_str).st_mode)[-3:]
             logger.debug(f"Directory created/verified: {ra_aid_dir_str} with permissions {permissions}")
-            print(f"DIRECT DEBUG: Directory created/verified: {ra_aid_dir_str} with permissions {permissions}")
             
             # List directory contents for debugging
             dir_contents = os.listdir(ra_aid_dir_str)
             logger.debug(f"Directory contents: {dir_contents}")
-            print(f"DIRECT DEBUG: Directory contents: {dir_contents}")
         except Exception as e:
             logger.debug(f"Could not check directory details: {str(e)}")
-            print(f"DIRECT DEBUG: Could not check directory details: {str(e)}")
 
         # Database path for file-based database - use os.path.join for maximum compatibility
         db_path = os.path.join(ra_aid_dir_str, "pk.db")
         logger.debug(f"Database path: {db_path}")
-        print(f"DIRECT DEBUG: Database path: {db_path}")
     
     try:
         # For file-based databases, ensure the file exists or can be created
@@ -230,31 +208,25 @@ def init_db(in_memory: bool = False) -> peewee.SqliteDatabase:
             # Check if the database file exists
             db_file_exists = os.path.exists(db_path)
             logger.debug(f"Database file exists check: {db_file_exists}")
-            print(f"DIRECT DEBUG: Database file exists check: {db_file_exists}")
             
             # If the file doesn't exist, try to create an empty file to ensure we have write permissions
             if not db_file_exists:
                 try:
                     logger.debug(f"Creating empty database file at: {db_path}")
-                    print(f"DIRECT DEBUG: Creating empty database file at: {db_path}")
                     with open(db_path, 'w') as f:
                         pass  # Create empty file
                     
                     # Verify the file was created
                     if os.path.exists(db_path):
                         logger.debug("Empty database file created successfully")
-                        print(f"DIRECT DEBUG: Empty database file created successfully")
                     else:
                         logger.error(f"Failed to create database file at: {db_path}")
-                        print(f"DIRECT DEBUG ERROR: Failed to create database file at: {db_path}")
                 except Exception as e:
                     logger.error(f"Error creating database file: {str(e)}")
-                    print(f"DIRECT DEBUG ERROR: Error creating database file: {str(e)}")
                     # Continue anyway, as SQLite might be able to create the file itself
         
         # Initialize the database connection
         logger.debug(f"Initializing SQLite database at: {db_path}")
-        print(f"DIRECT DEBUG: Initializing SQLite database at: {db_path}")
         db = peewee.SqliteDatabase(
             db_path,
             pragmas={
@@ -267,7 +239,6 @@ def init_db(in_memory: bool = False) -> peewee.SqliteDatabase:
         # Always explicitly connect to ensure the connection is established
         if db.is_closed():
             logger.debug("Explicitly connecting to database")
-            print(f"DIRECT DEBUG: Explicitly connecting to database")
             db.connect()
         
         # Store the database connection in the contextvar
@@ -281,16 +252,13 @@ def init_db(in_memory: bool = False) -> peewee.SqliteDatabase:
             try:
                 db.execute_sql("SELECT 1")
                 logger.debug("Database connection verified with test query")
-                print(f"DIRECT DEBUG: Database connection verified with test query")
                 
                 # Check if the database file exists after initialization
                 db_file_exists = os.path.exists(db_path)
                 db_file_size = os.path.getsize(db_path) if db_file_exists else 0
                 logger.debug(f"Database file check after init: exists={db_file_exists}, size={db_file_size} bytes")
-                print(f"DIRECT DEBUG: Database file check after init: exists={db_file_exists}, size={db_file_size} bytes")
             except Exception as e:
                 logger.error(f"Database verification failed: {str(e)}")
-                print(f"DIRECT DEBUG ERROR: Database verification failed: {str(e)}")
                 # Continue anyway, as this is just a verification step
         
         # Only show initialization message if it hasn't been shown before

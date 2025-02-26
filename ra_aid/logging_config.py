@@ -38,7 +38,7 @@ class PrettyHandler(logging.Handler):
 
 def setup_logging(verbose: bool = False, pretty: bool = False) -> None:
     logger = logging.getLogger("ra_aid")
-    logger.setLevel(logging.DEBUG if verbose else logging.INFO)
+    logger.setLevel(logging.DEBUG if verbose else logging.WARNING)
 
     if not logger.handlers:
         if pretty:
