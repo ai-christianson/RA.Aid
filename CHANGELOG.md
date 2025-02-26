@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.9] - 2025-02-25
+
+### Added
+- Added binary file detection and filtering to prevent binary files from being added to related files
+- Added python-magic dependency for improved binary file detection
+- Added support for "thinking" budget parameter for Claude 3.7 Sonnet
+
+### Changed
+- Updated dependencies:
+  - langchain-anthropic from 0.3.7 to 0.3.8
+  - langchain-google-genai from 2.0.10 to 2.0.11
+- Improved shell command tool description to recommend keeping commands under 300 words
+- Enhanced binary file filtering to include detailed reporting of skipped files
+- Updated test assertions to be more flexible with parameter checking
+
 ## [0.14.8] - 2025-02-25
 
 ### Changed
