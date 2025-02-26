@@ -17,7 +17,7 @@ from ra_aid.agent_utils import (
     run_planning_agent,
     run_research_agent,
 )
-from ra_aid.database import init_db, close_db, DatabaseManager
+from ra_aid.database import init_db, close_db, DatabaseManager, ensure_migrations_applied
 from ra_aid.config import (
     DEFAULT_MAX_TEST_CMD_RETRIES,
     DEFAULT_RECURSION_LIMIT,
@@ -335,6 +335,14 @@ def main():
 
     try:
         with DatabaseManager() as db:
+            # Apply any pending database migrations
+            try:
+                migration_result = ensure_migrations_applied()
+                if not migration_result:
+                    logger.warning("Database migrations failed but execution will continue")
+            except Exception as e:
+                logger.error(f"Database migration error: {str(e)}")
+            
             # Check dependencies before proceeding
             check_dependencies()
 

@@ -332,7 +332,7 @@ def close_db() -> None:
             db.close()
             logger.info("Database connection closed successfully")
         else:
-            logger.warning("Database connection was already closed")
+            logger.debug("Database connection was already closed (normal during shutdown)")
     except peewee.DatabaseError as e:
         logger.error(f"Database Error: Failed to close connection: {str(e)}")
     except Exception as e:

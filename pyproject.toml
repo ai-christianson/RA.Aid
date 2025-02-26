@@ -45,6 +45,7 @@ dependencies = [
     "python-Levenshtein>=0.26.1",
     "python-magic>=0.4.27",
     "peewee>=3.17.9",
+    "peewee-migrate>=1.13.0",
     "platformdirs>=3.17.9",
 ]
 
