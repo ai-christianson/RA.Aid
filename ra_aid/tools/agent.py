@@ -315,7 +315,7 @@ def request_task_implementation(task_spec: str) -> Dict[str, Any]:
 
 
 @tool("request_implementation")
-def request_implementation(task_spec: str) -> Dict[str, Any]:
+def request_implementation(task_spec: str) -> str:
     """Spawn a planning agent to create an implementation plan for the given task.
 
     Args:
@@ -377,4 +377,38 @@ def request_implementation(task_spec: str) -> Dict[str, Any]:
     if work_log is not None:
         response_data["work_log"] = work_log
     
-    return response_data
+    # Convert the response data to a markdown string
+    markdown_parts = []
+    
+    # Add header and completion message
+    markdown_parts.append("# Implementation Plan")
+    if response_data.get("completion_message"):
+        markdown_parts.append(f"\n## Completion Message\n\n{response_data['completion_message']}")
+    
+    # Add success status
+    status = "Success" if response_data.get("success", False) else "Failed"
+    reason_text = f": {response_data.get('reason')}" if response_data.get("reason") else ""
+    markdown_parts.append(f"\n## Status\n\n**{status}**{reason_text}")
+    
+    # Add key facts
+    if response_data.get("key_facts"):
+        markdown_parts.append(f"\n## Key Facts\n\n{response_data['key_facts']}")
+    
+    # Add related files
+    if response_data.get("related_files"):
+        files_list = "\n".join([f"- {file}" for file in response_data["related_files"]])
+        markdown_parts.append(f"\n## Related Files\n\n{files_list}")
+    
+    # Add key snippets
+    if response_data.get("key_snippets"):
+        markdown_parts.append(f"\n## Key Snippets\n\n{response_data['key_snippets']}")
+    
+    # Add work log
+    if response_data.get("work_log"):
+        markdown_parts.append(f"\n## Work Log\n\n{response_data['work_log']}")
+        markdown_parts.append(f"\n\nTHE ABOVE WORK HAS ALREADY BEEN COMPLETED --**DO NOT DO THIS WORK AGAIN**")
+    
+    # Join all parts into a single markdown string
+    markdown_output = "".join(markdown_parts)
+    
+    return markdown_output

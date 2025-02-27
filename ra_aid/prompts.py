@@ -442,6 +442,8 @@ You have often been criticized for:
 
 DO NOT WRITE ANY FILES YET. CODE WILL BE WRITTEN AS YOU CALL request_task_implementation.
 
+DO NOT USE run_shell_command TO WRITE ANY FILE CONTENTS! USE request_task_implementation.
+
 NEVER ANNOUNCE WHAT YOU ARE DOING, JUST DO IT!
 """
 
