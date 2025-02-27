@@ -281,7 +281,7 @@ If the task requires *ANY* compilation, unit tests, or any other non-trivial cha
 If this is a trivial task that can be completed in one shot, do the change using tools available, call one_shot_completed, and immediately exit without saying anything.
   Remember, many tasks are more complex and nuanced than they seem and still require requesting implementation.
   For one shot tasks, still take some time to consider whether compilation, testing, or additional validation should be done to check your work.
-    Even if it is something as simple as a hello world, make sure it runs and compiles. Do not hesitate to request implementation if needed.
+    Even if it is something as simple as a hello world, snake game, or a simple web app, make sure it runs and compiles/lints etc. Do not hesitate to request implementation if needed.
   If you implement the task yourself, do not request implementation.
 
 If this is a top-level README.md or docs folder, start there. If relevant tests exist, run them upfront as part of the research phase to establish a baseline.
