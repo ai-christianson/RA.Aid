@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.0] - 2025-02-27
+
+### Added
+- Added database infrastructure with models, connections, and migrations
+- Added agent context system for improved context management
+- Added aider-free mode with command line option to disable aider-related functionality
+- Added database-related dependencies
+
+### Changed
+- Improved file editing tools with enhanced functionality
+- Enhanced agent implementation tools with modified return values and logic
+- Improved agent tool prompts for better clarity and effectiveness
+- Fixed langgraph prebuilt dependency
+
+### Fixed
+- Fixed project state detection logic with added tests
+
 ## [0.14.9] - 2025-02-25
 
 ### Added
