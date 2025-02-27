@@ -34,7 +34,7 @@ from ra_aid.logging_config import get_logger, setup_logging
 from ra_aid.models_params import DEFAULT_TEMPERATURE, models_params
 from ra_aid.project_info import format_project_info, get_project_info
 from ra_aid.prompts import CHAT_PROMPT, WEB_RESEARCH_PROMPT_SECTION_CHAT
-from ra_aid.tool_configs import get_chat_tools
+from ra_aid.tool_configs import get_chat_tools, set_modification_tools
 from ra_aid.tools.human import ask_human
 from ra_aid.tools.memory import _global_memory
 
@@ -169,6 +169,10 @@ Examples:
     )
     parser.add_argument(
         "--aider-config", type=str, help="Specify the aider config file path"
+    )
+    parser.add_argument(
+        "--use-aider", action="store_true", 
+        help="Use aider for code modifications instead of default file tools (file_str_replace, put_complete_file_contents)"
     )
     parser.add_argument(
         "--test-cmd",
@@ -425,6 +429,9 @@ def main():
                 _global_memory["config"]["expert_provider"] = args.expert_provider
                 _global_memory["config"]["expert_model"] = args.expert_model
                 _global_memory["config"]["temperature"] = args.temperature
+                
+                # Set modification tools based on use_aider flag
+                set_modification_tools(args.use_aider)
 
                 # Create chat agent with appropriate tools
                 chat_agent = create_agent(
@@ -465,6 +472,7 @@ def main():
                 "cowboy_mode": args.cowboy_mode,
                 "web_research_enabled": web_research_enabled,
                 "aider_config": args.aider_config,
+                "use_aider": args.use_aider,
                 "limit_tokens": args.disable_limit_tokens,
                 "auto_test": args.auto_test,
                 "test_cmd": args.test_cmd,
@@ -498,6 +506,9 @@ def main():
 
             # Store temperature in global config
             _global_memory["config"]["temperature"] = args.temperature
+            
+            # Set modification tools based on use_aider flag
+            set_modification_tools(args.use_aider)
 
             # Run research stage
             print_stage_header("Research Stage")

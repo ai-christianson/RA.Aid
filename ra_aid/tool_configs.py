@@ -29,6 +29,21 @@ from ra_aid.tools.agent import (
 from ra_aid.tools.memory import one_shot_completed, plan_implementation_completed
 
 
+def set_modification_tools(use_aider=False):
+    """Set the MODIFICATION_TOOLS list based on configuration.
+    
+    Args:
+        use_aider: Whether to use run_programming_task (True) or file modification tools (False)
+    """
+    global MODIFICATION_TOOLS
+    if use_aider:
+        MODIFICATION_TOOLS.clear()
+        MODIFICATION_TOOLS.append(run_programming_task)
+    else:
+        MODIFICATION_TOOLS.clear()
+        MODIFICATION_TOOLS.extend([file_str_replace, put_complete_file_contents])
+
+
 # Read-only tools that don't modify system state
 def get_read_only_tools(
     human_interaction: bool = False, web_research_enabled: bool = False
@@ -80,10 +95,9 @@ def get_all_tools() -> list[BaseTool]:
 
 # Define constant tool groups
 READ_ONLY_TOOLS = get_read_only_tools()
+
+# MODIFICATION_TOOLS will be set dynamically based on config, default defined here
 MODIFICATION_TOOLS = [file_str_replace, put_complete_file_contents]
-# MODIFICATION_TOOLS = [
-#     run_programming_task
-# ]  # having put_complete_file_contents causes trouble :(
 COMMON_TOOLS = get_read_only_tools()
 EXPERT_TOOLS = [emit_expert_context, ask_expert]
 RESEARCH_TOOLS = [

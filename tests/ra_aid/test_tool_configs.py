@@ -4,6 +4,8 @@ from ra_aid.tool_configs import (
     get_read_only_tools,
     get_research_tools,
     get_web_research_tools,
+    set_modification_tools,
+    MODIFICATION_TOOLS,
 )
 
 
@@ -82,3 +84,22 @@ def test_get_web_research_tools():
     assert sorted(tool_names_no_expert) == sorted(
         ["web_search_tavily", "emit_research_notes", "task_completed"]
     )
+
+
+def test_set_modification_tools():
+    # Test with use_aider=False (default setting)
+    set_modification_tools(use_aider=False)
+    tool_names = [tool.name for tool in MODIFICATION_TOOLS]
+    assert "file_str_replace" in tool_names
+    assert "put_complete_file_contents" in tool_names
+    assert "run_programming_task" not in tool_names
+    
+    # Test with use_aider=True
+    set_modification_tools(use_aider=True)
+    tool_names = [tool.name for tool in MODIFICATION_TOOLS]
+    assert "file_str_replace" not in tool_names
+    assert "put_complete_file_contents" not in tool_names
+    assert "run_programming_task" in tool_names
+    
+    # Reset to default for other tests
+    set_modification_tools(use_aider=False)
