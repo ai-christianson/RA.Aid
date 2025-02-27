@@ -112,8 +112,8 @@ COMMON_TOOLS = get_read_only_tools(use_aider=_config.get("use_aider", False))
 EXPERT_TOOLS = [emit_expert_context, ask_expert]
 RESEARCH_TOOLS = [
     emit_research_notes,
-    one_shot_completed,
     # *TEMPORARILY* disabled to improve tool calling perf.
+    # one_shot_completed,
     # monorepo_detected,
     # ui_detected,
 ]
