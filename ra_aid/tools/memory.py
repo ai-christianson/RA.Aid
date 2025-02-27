@@ -12,7 +12,7 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from typing_extensions import TypedDict
 
-from ra_aid.agent_context import mark_task_completed, mark_plan_completed
+from ra_aid.agent_context import mark_task_completed, mark_plan_completed, mark_should_exit
 
 
 class WorkLogEntry(TypedDict):
@@ -339,6 +339,7 @@ def plan_implementation_completed(message: str) -> str:
     Args:
         message: Message explaining how the implementation plan was completed
     """
+    mark_should_exit()
     mark_plan_completed(message)
     _global_memory["tasks"].clear()  # Clear task list when plan is completed
     _global_memory["task_id_counter"] = 1

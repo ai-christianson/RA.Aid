@@ -75,6 +75,7 @@ from ra_aid.agent_context import (
     is_completed,
     reset_completion_flags,
     get_completion_message,
+    should_exit,
 )
 from ra_aid.tools.memory import (
     _global_memory,
@@ -903,7 +904,7 @@ def _run_agent_stream(agent: RAgents, msg_list: list[BaseMessage], config: dict)
         check_interrupt()
         agent_type = get_agent_type(agent)
         print_agent_output(chunk, agent_type)
-        if is_completed():
+        if is_completed() or should_exit():
             reset_completion_flags()
             break
 

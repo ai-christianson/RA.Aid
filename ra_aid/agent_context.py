@@ -21,12 +21,14 @@ class AgentContext:
         self.task_completed = False
         self.plan_completed = False
         self.completion_message = ""
+        self.agent_should_exit = False
         
         # Inherit state from parent if provided
         if parent_context:
             self.task_completed = parent_context.task_completed
             self.plan_completed = parent_context.plan_completed
             self.completion_message = parent_context.completion_message
+            self.agent_should_exit = parent_context.agent_should_exit
 
     def mark_task_completed(self, message: str) -> None:
         """Mark the current task as completed.
@@ -52,6 +54,10 @@ class AgentContext:
         self.task_completed = False
         self.plan_completed = False
         self.completion_message = ""
+
+    def mark_should_exit(self) -> None:
+        """Mark that the agent should exit execution."""
+        self.agent_should_exit = True
 
     @property
     def is_completed(self) -> bool:
@@ -148,3 +154,20 @@ def get_completion_message() -> str:
     """
     context = get_current_context()
     return context.completion_message if context else ""
+
+
+def should_exit() -> bool:
+    """Check if the agent should exit execution.
+
+    Returns:
+        True if the agent should exit, False otherwise
+    """
+    context = get_current_context()
+    return context.agent_should_exit if context else False
+
+
+def mark_should_exit() -> None:
+    """Mark that the agent should exit execution."""
+    context = get_current_context()
+    if context:
+        context.mark_should_exit()
