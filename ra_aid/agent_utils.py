@@ -19,9 +19,23 @@ from langchain_core.messages import (
     trim_messages,
 )
 from langchain_core.tools import tool
-from langgraph.checkpoint.memory import MemorySaver
-from langgraph.prebuilt import create_react_agent
-from langgraph.prebuilt.chat_agent_executor import AgentState
+# Handle missing langgraph modules
+try:
+    from langgraph.checkpoint.memory import MemorySaver
+    from langgraph.prebuilt import create_react_agent
+    from langgraph.prebuilt.chat_agent_executor import AgentState
+    _HAS_LANGGRAPH = True
+except ImportError:
+    _HAS_LANGGRAPH = False
+    # Create dummy classes/functions for compatibility
+    class MemorySaver:
+        pass
+    
+    class AgentState(dict):
+        pass
+    
+    def create_react_agent(*args, **kwargs):
+        return None
 from litellm import get_model_info
 from rich.console import Console
 from rich.markdown import Markdown
@@ -284,7 +298,7 @@ def create_agent(
         )
 
         # Use REACT agent for Anthropic Claude models, otherwise use CIAYN
-        if is_anthropic_claude(config):
+        if is_anthropic_claude(config) and _HAS_LANGGRAPH:
             logger.debug("Using create_react_agent to instantiate agent.")
             agent_kwargs = build_agent_kwargs(checkpointer, config, max_input_tokens)
             return create_react_agent(model, tools, **agent_kwargs)
@@ -915,6 +929,12 @@ def run_agent_with_retry(
     fallback_handler: Optional[FallbackHandler] = None,
 ) -> Optional[str]:
     """Run an agent with retry logic for API errors."""
+    # Handle case where agent is None (could happen if langgraph is missing)
+    if agent is None:
+        logger.error("Agent is None. Cannot run agent.")
+        print_error("Failed to initialize agent. Please check your installation.")
+        return None
+        
     logger.debug("Running agent with prompt length: %d", len(prompt))
     original_handler = _setup_interrupt_handling()
     max_retries = 20

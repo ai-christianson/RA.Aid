@@ -110,7 +110,7 @@ def test_create_agent_anthropic(mock_model, mock_memory):
     """Test create_agent with Anthropic Claude model."""
     mock_memory.get.return_value = {"provider": "anthropic", "model": "claude-2"}
 
-    with patch("ra_aid.agent_utils.create_react_agent") as mock_react:
+    with patch("ra_aid.agent_utils._HAS_LANGGRAPH", True), patch("ra_aid.agent_utils.create_react_agent") as mock_react:
         mock_react.return_value = "react_agent"
         agent = create_agent(mock_model, [])
 
@@ -227,6 +227,7 @@ def test_create_agent_anthropic_token_limiting_enabled(mock_model, mock_memory):
     }
 
     with (
+        patch("ra_aid.agent_utils._HAS_LANGGRAPH", True),
         patch("ra_aid.agent_utils.create_react_agent") as mock_react,
         patch("ra_aid.agent_utils.get_model_token_limit") as mock_limit,
     ):
@@ -250,6 +251,7 @@ def test_create_agent_anthropic_token_limiting_disabled(mock_model, mock_memory)
     }
 
     with (
+        patch("ra_aid.agent_utils._HAS_LANGGRAPH", True),
         patch("ra_aid.agent_utils.create_react_agent") as mock_react,
         patch("ra_aid.agent_utils.get_model_token_limit") as mock_limit,
     ):
