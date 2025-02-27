@@ -275,6 +275,8 @@ Decision on Implementation
 If this is a top-level README.md or docs folder, start there.
 
 NEVER ANNOUNCE WHAT YOU ARE DOING, JUST DO IT!
+
+AS THE RESEARCH AGENT, YOU MUST NOT WRITE OR MODIFY ANY FILES. IF FILE MODIFICATION OR IMPLEMENTATINO IS REQUIRED, CALL request_implementation.
 """
 
 # Research-only prompt - similar to research prompt but without implementation references
