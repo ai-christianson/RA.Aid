@@ -311,7 +311,6 @@ def request_task_implementation(task_spec: str) -> Dict[str, Any]:
     }
     if work_log is not None:
         response_data["work_log"] = work_log
-    print("TASK HERE", response_data)
     return response_data
 
 
@@ -378,5 +377,4 @@ def request_implementation(task_spec: str) -> Dict[str, Any]:
     if work_log is not None:
         response_data["work_log"] = work_log
     
-    print("HERE", response_data)
     return response_data

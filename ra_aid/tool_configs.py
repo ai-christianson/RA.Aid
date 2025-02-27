@@ -8,6 +8,8 @@ from ra_aid.tools import (
     emit_key_snippet,
     emit_related_files,
     emit_research_notes,
+    file_str_replace,
+    put_complete_file_contents,
     fuzzy_find_project_files,
     list_directory_tree,
     read_file_tool,
@@ -78,10 +80,10 @@ def get_all_tools() -> list[BaseTool]:
 
 # Define constant tool groups
 READ_ONLY_TOOLS = get_read_only_tools()
-# MODIFICATION_TOOLS = [run_programming_task, put_complete_file_contents]
-MODIFICATION_TOOLS = [
-    run_programming_task
-]  # having put_complete_file_contents causes trouble :(
+MODIFICATION_TOOLS = [file_str_replace, put_complete_file_contents]
+# MODIFICATION_TOOLS = [
+#     run_programming_task
+# ]  # having put_complete_file_contents causes trouble :(
 COMMON_TOOLS = get_read_only_tools()
 EXPERT_TOOLS = [emit_expert_context, ask_expert]
 RESEARCH_TOOLS = [

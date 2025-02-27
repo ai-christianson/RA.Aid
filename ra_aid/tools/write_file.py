@@ -15,7 +15,6 @@ def put_complete_file_contents(
     filepath: str,
     complete_file_contents: str = "",
     encoding: str = "utf-8",
-    verbose: bool = True,
 ) -> Dict[str, any]:
     """Write the complete contents of a file, creating it if it doesn't exist.
     This tool is specifically for writing the entire contents of a file at once,
@@ -28,17 +27,6 @@ def put_complete_file_contents(
         complete_file_contents: Complete string content to write to the file. Defaults to
                               an empty string, which will create an empty file.
         encoding: File encoding to use (default: utf-8)
-        verbose: Whether to display a Rich panel with write statistics (default: True)
-
-    Returns:
-        Dict containing:
-            - success: Boolean indicating if write was successful
-            - bytes_written: Number of bytes written
-            - elapsed_time: Time taken in seconds
-            - error: Error message if any (None if successful)
-
-    Raises:
-        RuntimeError: If file cannot be written
     """
     start_time = time.time()
     result = {
@@ -77,14 +65,13 @@ def put_complete_file_contents(
             f"File write complete: {bytes_written} bytes in {elapsed:.2f}s"
         )
 
-        if verbose:
-            console.print(
-                Panel(
-                    f"{'Initialized empty file' if not complete_file_contents else f'Wrote {bytes_written} bytes'} at {filepath} in {elapsed:.2f}s",
-                    title="💾 File Write",
-                    border_style="bright_green",
-                )
+        console.print(
+            Panel(
+                f"{'Initialized empty file' if not complete_file_contents else f'Wrote {bytes_written} bytes'} at {filepath} in {elapsed:.2f}s",
+                title="💾 File Write",
+                border_style="bright_green",
             )
+        )
 
     except Exception as e:
         elapsed = time.time() - start_time
@@ -97,13 +84,12 @@ def put_complete_file_contents(
         else:
             result["message"] = error_msg
 
-        if verbose:
-            console.print(
-                Panel(
-                    f"Failed to write {filepath}\nError: {error_msg}",
-                    title="❌ File Write Error",
-                    border_style="red",
-                )
+        console.print(
+            Panel(
+                f"Failed to write {filepath}\nError: {error_msg}",
+                title="❌ File Write Error",
+                border_style="red",
             )
+        )
 
     return result

@@ -47,11 +47,6 @@ def file_str_replace(filepath: str, old_str: str, new_str: str) -> Dict[str, any
         filepath: Path to the file to modify
         old_str: Exact string to replace
         new_str: String to replace with
-
-    Returns:
-        Dict containing:
-            - success: Whether the operation succeeded
-            - message: Success confirmation or error details
     """
     try:
         path = Path(filepath)

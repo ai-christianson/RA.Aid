@@ -487,7 +487,6 @@ Important Notes:
 - Do not add features not explicitly required.
 - Only create or modify files directly related to this task.
 - Use file_str_replace and put_complete_file_contents for simple file modifications.
-- Delegate to run_programming_task for more complex programming tasks. This is a capable human programmer that can work on multiple files at once.
 
 Testing:
 
@@ -526,8 +525,6 @@ KEEP IT SIMPLE
 FOLLOW TEST DRIVEN DEVELOPMENT (TDD) PRACTICES WHERE POSSIBE. E.G. COMPILE CODE REGULARLY, WRITE/RUN UNIT TESTS BEFORE AND AFTER CODING (RED TO GREEN FOR THIS TASK), DO THROWAWAY INTERPRETER/TEST PROGRAMS IF NEEDED.
 
 IF YOU CAN SEE THE CODE WRITTEN/CHANGED BY THE PROGRAMMER, TRUST IT. YOU DO NOT NEED TO RE-READ EVERY FILE WITH EVERY SMALL EDIT.
-
-YOU MUST CALL emit_related_files BEFORE CALLING run_programming_task WITH ALL RELEVANT FILES, UNLESS THEY ARE ALREADY RECORDED AS RELATED FILES.
 
 NEVER ANNOUNCE WHAT YOU ARE DOING, JUST DO IT!
 """
