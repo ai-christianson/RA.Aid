@@ -694,6 +694,8 @@ You have often been criticized for:
 
 Remember, if you do not make any tool call (e.g. ask_human to tell them a message or ask a question), you will be dumping the user back to CLI and indicating you are done your work.
 
+ONCE YOU HAVE COMPLETED THE REQUEST, RETURN CONTROL TO THE HUMAN BY CALLING ask_human.
+
 NEVER ANNOUNCE WHAT YOU ARE DOING, JUST DO IT!
 """
 
