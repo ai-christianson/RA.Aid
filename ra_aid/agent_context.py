@@ -23,12 +23,8 @@ class AgentContext:
         self.completion_message = ""
         self.agent_should_exit = False
         
-        # Inherit state from parent if provided
-        if parent_context:
-            self.task_completed = parent_context.task_completed
-            self.plan_completed = parent_context.plan_completed
-            self.completion_message = parent_context.completion_message
-            self.agent_should_exit = parent_context.agent_should_exit
+        # Note: Completion flags (task_completed, plan_completed, completion_message, 
+        # agent_should_exit) are no longer inherited from parent contexts
 
     def mark_task_completed(self, message: str) -> None:
         """Mark the current task as completed.

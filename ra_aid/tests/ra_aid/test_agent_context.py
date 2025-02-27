@@ -221,12 +221,12 @@ class TestAgentContext:
         assert context.completion_message == ""
 
     def test_context_inheritance(self):
-        """Test that child contexts inherit state from parent contexts."""
+        """Test that child contexts do not inherit completion flags from parent contexts."""
         parent = AgentContext()
         parent.mark_task_completed("Parent task completed")
         child = AgentContext(parent_context=parent)
-        assert child.task_completed is True
-        assert child.completion_message == "Parent task completed"
+        assert child.task_completed is False
+        assert child.completion_message == ""
 
     def test_mark_task_completed(self):
         """Test marking a task as completed."""
@@ -290,16 +290,16 @@ class TestContextManager:
         parent = AgentContext()
         parent.mark_task_completed("Parent task")
         with agent_context(parent_context=parent) as ctx:
-            assert ctx.task_completed is True
-            assert ctx.completion_message == "Parent task"
+            assert ctx.task_completed is False
+            assert ctx.completion_message == ""
 
     def test_context_manager_inheritance(self):
-        """Test that nested contexts inherit from outer contexts by default."""
+        """Test that nested contexts do not inherit completion flags from outer contexts."""
         with agent_context() as outer:
             outer.mark_task_completed("Outer task")
             with agent_context() as inner:
-                assert inner.task_completed is True
-                assert inner.completion_message == "Outer task"
+                assert inner.task_completed is False
+                assert inner.completion_message == ""
                 inner.mark_plan_completed("Inner plan")
             # Outer context should not be affected by inner context changes
             assert outer.task_completed is True
