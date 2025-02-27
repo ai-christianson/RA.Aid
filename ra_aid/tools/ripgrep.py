@@ -71,6 +71,8 @@ FILE_TYPE_MAP = {
 def ripgrep_search(
     pattern: str,
     *,
+    before_context_lines: int = None,
+    after_context_lines: int = None,
     file_type: str = None,
     case_sensitive: bool = True,
     include_hidden: bool = False,
@@ -79,22 +81,26 @@ def ripgrep_search(
 ) -> Dict[str, Union[str, int, bool]]:
     """Execute a ripgrep (rg) search with formatting and common options.
 
+    Prefer to use this with after_context_lines and/or before_context_lines over reading entire file contents, to conserve tokens and resources.
+
     Args:
         pattern: Search pattern to find
+        before_context_lines: Number of lines to show before each match (default: None)
+        after_context_lines: Number of lines to show after each match (default: None)
         file_type: Optional file type to filter results (e.g. 'py' for Python files)
         case_sensitive: Whether to do case-sensitive search (default: True)
         include_hidden: Whether to search hidden files and directories (default: False)
         follow_links: Whether to follow symbolic links (default: False)
         exclude_dirs: Additional directories to exclude (combines with defaults)
-
-    Returns:
-        Dict containing:
-            - output: The formatted search results
-            - return_code: Process return code (0 means success)
-            - success: Boolean indicating if search succeeded
     """
     # Build rg command with options
     cmd = ["rg", "--color", "always"]
+
+    if before_context_lines is not None:
+        cmd.extend(["-B", str(before_context_lines)])
+
+    if after_context_lines is not None:
+        cmd.extend(["-A", str(after_context_lines)])
 
     if not case_sensitive:
         cmd.append("-i")
@@ -128,6 +134,11 @@ def ripgrep_search(
         f"**Case Sensitive**: {case_sensitive}",
         f"**File Type**: {file_type or 'all'}",
     ]
+    if before_context_lines is not None:
+        params.append(f"**Before Context Lines**: {before_context_lines}")
+    if after_context_lines is not None:
+        params.append(f"**After Context Lines**: {after_context_lines}")
+    
     if include_hidden:
         params.append("**Including Hidden Files**: yes")
     if follow_links:
