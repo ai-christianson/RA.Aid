@@ -17,6 +17,9 @@ class AgentContext:
         Args:
             parent_context: Optional parent context to inherit state from
         """
+        # Store reference to parent context
+        self.parent = parent_context
+        
         # Initialize completion flags
         self.task_completed = False
         self.plan_completed = False
@@ -52,8 +55,15 @@ class AgentContext:
         self.completion_message = ""
 
     def mark_should_exit(self) -> None:
-        """Mark that the agent should exit execution."""
+        """Mark that the agent should exit execution.
+        
+        This propagates the exit state to all parent contexts.
+        """
         self.agent_should_exit = True
+        
+        # Propagate to parent context if it exists
+        if self.parent:
+            self.parent.mark_should_exit()
 
     @property
     def is_completed(self) -> bool:

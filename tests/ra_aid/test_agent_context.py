@@ -13,6 +13,8 @@ from ra_aid.agent_context import (
     reset_completion_flags,
     is_completed,
     get_completion_message,
+    mark_should_exit,
+    should_exit,
 )
 
 
@@ -113,6 +115,60 @@ class TestContextManager:
             assert outer.completion_message == "Outer task"
 
 
+class TestExitPropagation:
+    """Test cases for the agent_should_exit flag propagation."""
+    
+    def test_mark_should_exit_propagation(self):
+        """Test that mark_should_exit propagates to parent contexts."""
+        parent = AgentContext()
+        child = AgentContext(parent_context=parent)
+        
+        # Initially both contexts should have agent_should_exit as False
+        assert parent.agent_should_exit is False
+        assert child.agent_should_exit is False
+        
+        # Mark the child context as should exit
+        child.mark_should_exit()
+        
+        # Both child and parent should now have agent_should_exit as True
+        assert child.agent_should_exit is True
+        assert parent.agent_should_exit is True
+    
+    def test_nested_should_exit_propagation(self):
+        """Test that mark_should_exit propagates through multiple levels of parent contexts."""
+        grandparent = AgentContext()
+        parent = AgentContext(parent_context=grandparent)
+        child = AgentContext(parent_context=parent)
+        
+        # Initially all contexts should have agent_should_exit as False
+        assert grandparent.agent_should_exit is False
+        assert parent.agent_should_exit is False
+        assert child.agent_should_exit is False
+        
+        # Mark the child context as should exit
+        child.mark_should_exit()
+        
+        # All contexts should now have agent_should_exit as True
+        assert child.agent_should_exit is True
+        assert parent.agent_should_exit is True
+        assert grandparent.agent_should_exit is True
+    
+    def test_context_manager_should_exit_propagation(self):
+        """Test that mark_should_exit propagates when using context managers."""
+        with agent_context() as outer:
+            with agent_context() as inner:
+                # Initially both contexts should have agent_should_exit as False
+                assert outer.agent_should_exit is False
+                assert inner.agent_should_exit is False
+                
+                # Mark the inner context as should exit
+                inner.mark_should_exit()
+                
+                # Both inner and outer should now have agent_should_exit as True
+                assert inner.agent_should_exit is True
+                assert outer.agent_should_exit is True
+
+
 class TestThreadIsolation:
     """Test thread isolation of context variables."""
 
@@ -176,3 +232,18 @@ class TestUtilityFunctions:
         # These should have safe default returns
         assert is_completed() is False
         assert get_completion_message() == ""
+    
+    def test_mark_should_exit_utility(self):
+        """Test the mark_should_exit utility function."""
+        with agent_context() as outer:
+            with agent_context() as inner:
+                # Initially both contexts should have agent_should_exit as False
+                assert should_exit() is False
+                
+                # Mark the current context (inner) as should exit
+                mark_should_exit()
+                
+                # Both inner and outer should now have agent_should_exit as True
+                assert should_exit() is True
+                assert inner.agent_should_exit is True
+                assert outer.agent_should_exit is True
