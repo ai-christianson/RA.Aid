@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Union
 from langchain_core.tools import tool
 from rich.console import Console
 
-from ra_aid.agent_context import get_completion_message, reset_completion_flags
+from ra_aid.agent_context import get_completion_message, get_crash_message, is_crashed, reset_completion_flags
 from ra_aid.console.formatting import print_error
 from ra_aid.exceptions import AgentInterrupt
 from ra_aid.tools.memory import _global_memory
@@ -301,13 +301,19 @@ def request_task_implementation(task_spec: str) -> str:
     # Clear completion state
     reset_completion_flags()
 
+    # Check if the agent has crashed
+    agent_crashed = is_crashed()
+    crash_message = get_crash_message() if agent_crashed else None
+
     response_data = {
         "key_facts": get_memory_value("key_facts"),
         "related_files": get_related_files(),
         "key_snippets": get_memory_value("key_snippets"),
         "completion_message": completion_message,
-        "success": success,
+        "success": success and not agent_crashed,
         "reason": reason,
+        "agent_crashed": agent_crashed,
+        "crash_message": crash_message,
     }
     if work_log is not None:
         response_data["work_log"] = work_log
@@ -319,6 +325,10 @@ def request_task_implementation(task_spec: str) -> str:
     markdown_parts.append("# Task Implementation")
     if response_data.get("completion_message"):
         markdown_parts.append(f"\n## Completion Message\n\n{response_data['completion_message']}")
+    
+    # Add crash information if applicable
+    if response_data.get("agent_crashed"):
+        markdown_parts.append(f"\n## ⚠️ Agent Crashed ⚠️\n\n**Error:** {response_data.get('crash_message', 'Unknown error')}")
     
     # Add success status
     status = "Success" if response_data.get("success", False) else "Failed"
@@ -401,13 +411,19 @@ def request_implementation(task_spec: str) -> str:
     # Clear completion state
     reset_completion_flags()
 
+    # Check if the agent has crashed
+    agent_crashed = is_crashed()
+    crash_message = get_crash_message() if agent_crashed else None
+
     response_data = {
         "completion_message": completion_message,
         "key_facts": get_memory_value("key_facts"),
         "related_files": get_related_files(),
         "key_snippets": get_memory_value("key_snippets"),
-        "success": success,
+        "success": success and not agent_crashed,
         "reason": reason,
+        "agent_crashed": agent_crashed,
+        "crash_message": crash_message,
     }
     if work_log is not None:
         response_data["work_log"] = work_log
@@ -419,6 +435,10 @@ def request_implementation(task_spec: str) -> str:
     markdown_parts.append("# Implementation Plan")
     if response_data.get("completion_message"):
         markdown_parts.append(f"\n## Completion Message\n\n{response_data['completion_message']}")
+    
+    # Add crash information if applicable
+    if response_data.get("agent_crashed"):
+        markdown_parts.append(f"\n## ⚠️ Agent Crashed ⚠️\n\n**Error:** {response_data.get('crash_message', 'Unknown error')}")
     
     # Add success status
     status = "Success" if response_data.get("success", False) else "Failed"

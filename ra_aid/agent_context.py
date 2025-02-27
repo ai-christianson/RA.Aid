@@ -25,6 +25,8 @@ class AgentContext:
         self.plan_completed = False
         self.completion_message = ""
         self.agent_should_exit = False
+        self.agent_has_crashed = False
+        self.agent_crashed_message = None
         
         # Note: Completion flags (task_completed, plan_completed, completion_message, 
         # agent_should_exit) are no longer inherited from parent contexts
@@ -64,6 +66,25 @@ class AgentContext:
         # Propagate to parent context if it exists
         if self.parent:
             self.parent.mark_should_exit()
+            
+    def mark_agent_crashed(self, message: str) -> None:
+        """Mark the agent as crashed with the given message.
+        
+        Unlike exit state, crash state does not propagate to parent contexts.
+        
+        Args:
+            message: Error message explaining the crash
+        """
+        self.agent_has_crashed = True
+        self.agent_crashed_message = message
+            
+    def is_crashed(self) -> bool:
+        """Check if the agent has crashed.
+        
+        Returns:
+            True if the agent has crashed, False otherwise
+        """
+        return self.agent_has_crashed
 
     @property
     def is_completed(self) -> bool:
@@ -177,3 +198,34 @@ def mark_should_exit() -> None:
     context = get_current_context()
     if context:
         context.mark_should_exit()
+
+
+def is_crashed() -> bool:
+    """Check if the current agent has crashed.
+    
+    Returns:
+        True if the current agent has crashed, False otherwise
+    """
+    context = get_current_context()
+    return context.is_crashed() if context else False
+
+
+def mark_agent_crashed(message: str) -> None:
+    """Mark the current agent as crashed with the given message.
+    
+    Args:
+        message: Error message explaining the crash
+    """
+    context = get_current_context()
+    if context:
+        context.mark_agent_crashed(message)
+
+
+def get_crash_message() -> Optional[str]:
+    """Get the crash message from the current context.
+    
+    Returns:
+        The crash message or None if the agent has not crashed
+    """
+    context = get_current_context()
+    return context.agent_crashed_message if context and context.is_crashed() else None

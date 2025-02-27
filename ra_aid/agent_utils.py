@@ -933,6 +933,14 @@ def run_agent_with_retry(
             for attempt in range(max_retries):
                 logger.debug("Attempt %d/%d", attempt + 1, max_retries)
                 check_interrupt()
+                
+                # Check if the agent has crashed before attempting to run it
+                from ra_aid.agent_context import is_crashed, get_crash_message
+                if is_crashed():
+                    crash_message = get_crash_message()
+                    logger.error("Agent has crashed: %s", crash_message)
+                    return f"Agent has crashed: {crash_message}"
+                
                 try:
                     _run_agent_stream(agent, msg_list, config)
                     if fallback_handler:
@@ -950,6 +958,15 @@ def run_agent_with_retry(
                     logger.debug("Agent run completed successfully")
                     return "Agent run completed successfully"
                 except ToolExecutionError as e:
+                    # Check if this is a BadRequestError (HTTP 400) which is unretryable
+                    error_str = str(e).lower()
+                    if "400" in error_str or "bad request" in error_str:
+                        from ra_aid.agent_context import mark_agent_crashed
+                        crash_message = f"Unretryable error: {str(e)}"
+                        mark_agent_crashed(crash_message)
+                        logger.error("Agent has crashed: %s", crash_message)
+                        return f"Agent has crashed: {crash_message}"
+                    
                     _handle_fallback_response(e, fallback_handler, agent, msg_list)
                     continue
                 except FallbackToolExecutionError as e:
@@ -965,6 +982,15 @@ def run_agent_with_retry(
                     APIError,
                     ValueError,
                 ) as e:
+                    # Check if this is a BadRequestError (HTTP 400) which is unretryable
+                    error_str = str(e).lower()
+                    if ("400" in error_str or "bad request" in error_str) and isinstance(e, APIError):
+                        from ra_aid.agent_context import mark_agent_crashed
+                        crash_message = f"Unretryable API error: {str(e)}"
+                        mark_agent_crashed(crash_message)
+                        logger.error("Agent has crashed: %s", crash_message)
+                        return f"Agent has crashed: {crash_message}"
+                    
                     _handle_api_error(e, attempt, max_retries, base_delay)
         finally:
             _decrement_agent_depth()
