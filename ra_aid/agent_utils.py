@@ -7,7 +7,7 @@ import threading
 import time
 import uuid
 from datetime import datetime
-from typing import Any, Dict, List, Literal, Optional, Sequence
+from typing import Any, Dict, List, Literal, Optional, Sequence, ContextManager
 
 import litellm
 from anthropic import APIError, APITimeoutError, InternalServerError, RateLimitError
@@ -69,6 +69,13 @@ from ra_aid.tool_configs import (
     get_web_research_tools,
 )
 from ra_aid.tools.handle_user_defined_test_cmd_execution import execute_test_command
+from ra_aid.agent_context import (
+    agent_context,
+    get_current_context,
+    is_completed,
+    reset_completion_flags,
+    get_completion_message,
+)
 from ra_aid.tools.memory import (
     _global_memory,
     get_memory_value,
@@ -821,9 +828,8 @@ def _decrement_agent_depth():
 
 
 def reset_agent_completion_flags():
-    _global_memory["plan_completed"] = False
-    _global_memory["task_completed"] = False
-    _global_memory["completion_message"] = ""
+    """Reset completion flags in the current context."""
+    reset_completion_flags()
 
 
 def _execute_test_command_wrapper(original_prompt, config, test_attempts, auto_test):
@@ -897,8 +903,8 @@ def _run_agent_stream(agent: RAgents, msg_list: list[BaseMessage], config: dict)
         check_interrupt()
         agent_type = get_agent_type(agent)
         print_agent_output(chunk, agent_type)
-        if _global_memory["plan_completed"] or _global_memory["task_completed"]:
-            reset_agent_completion_flags()
+        if is_completed():
+            reset_completion_flags()
             break
 
 
@@ -919,7 +925,8 @@ def run_agent_with_retry(
     original_prompt = prompt
     msg_list = [HumanMessage(content=prompt)]
 
-    with InterruptibleSection():
+    # Create a new agent context for this run
+    with InterruptibleSection(), agent_context() as ctx:
         try:
             _increment_agent_depth()
             for attempt in range(max_retries):

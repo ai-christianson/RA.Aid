@@ -247,7 +247,7 @@ def create_llm_client(
     if supports_thinking:
         temp_kwargs = {"thinking": {
             "type": "enabled",
-            "budget_tokens": 8000
+            "budget_tokens": 12000
         }}
 
     if provider == "deepseek":

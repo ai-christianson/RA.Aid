@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Union
 from langchain_core.tools import tool
 from rich.console import Console
 
+from ra_aid.agent_context import get_completion_message, reset_completion_flags
 from ra_aid.console.formatting import print_error
 from ra_aid.exceptions import AgentInterrupt
 from ra_aid.tools.memory import _global_memory
@@ -84,16 +85,12 @@ def request_research(query: str) -> ResearchResult:
         reason = f"error: {str(e)}"
     finally:
         # Get completion message if available
-        completion_message = _global_memory.get(
-            "completion_message",
-            "Task was completed successfully." if success else None,
-        )
+        completion_message = get_completion_message() or ("Task was completed successfully." if success else None)
 
         work_log = get_work_log()
 
-        # Clear completion state from global memory
-        _global_memory["completion_message"] = ""
-        _global_memory["task_completed"] = False
+        # Clear completion state
+        reset_completion_flags()
 
     response_data = {
         "completion_message": completion_message,
@@ -152,16 +149,12 @@ def request_web_research(query: str) -> ResearchResult:
         reason = f"error: {str(e)}"
     finally:
         # Get completion message if available
-        completion_message = _global_memory.get(
-            "completion_message",
-            "Task was completed successfully." if success else None,
-        )
+        completion_message = get_completion_message() or ("Task was completed successfully." if success else None)
 
         work_log = get_work_log()
 
-        # Clear completion state from global memory
-        _global_memory["completion_message"] = ""
-        _global_memory["task_completed"] = False
+        # Clear completion state
+        reset_completion_flags()
 
     response_data = {
         "completion_message": completion_message,
@@ -222,16 +215,12 @@ def request_research_and_implementation(query: str) -> Dict[str, Any]:
         reason = f"error: {str(e)}"
 
     # Get completion message if available
-    completion_message = _global_memory.get(
-        "completion_message", "Task was completed successfully." if success else None
-    )
+    completion_message = get_completion_message() or ("Task was completed successfully." if success else None)
 
     work_log = get_work_log()
 
-    # Clear completion state from global memory
-    _global_memory["completion_message"] = ""
-    _global_memory["task_completed"] = False
-    _global_memory["plan_completed"] = False
+    # Clear completion state
+    reset_completion_flags()
 
     response_data = {
         "completion_message": completion_message,
@@ -276,7 +265,7 @@ def request_task_implementation(task_spec: str) -> Dict[str, Any]:
         # Run implementation agent
         from ..agent_utils import run_task_implementation_agent
 
-        _global_memory["completion_message"] = ""
+        reset_completion_flags()
 
         _result = run_task_implementation_agent(
             base_task=_global_memory.get("base_task", ""),
@@ -304,16 +293,13 @@ def request_task_implementation(task_spec: str) -> Dict[str, Any]:
         reason = f"error: {str(e)}"
 
     # Get completion message if available
-    completion_message = _global_memory.get(
-        "completion_message", "Task was completed successfully." if success else None
-    )
+    completion_message = get_completion_message() or ("Task was completed successfully." if success else None)
 
     # Get and reset work log if at root depth
     work_log = get_work_log()
 
-    # Clear completion state from global memory
-    _global_memory["completion_message"] = ""
-    _global_memory["task_completed"] = False
+    # Clear completion state
+    reset_completion_flags()
 
     response_data = {
         "key_facts": get_memory_value("key_facts"),
@@ -325,6 +311,7 @@ def request_task_implementation(task_spec: str) -> Dict[str, Any]:
     }
     if work_log is not None:
         response_data["work_log"] = work_log
+    print("TASK HERE", response_data)
     return response_data
 
 
@@ -347,7 +334,7 @@ def request_implementation(task_spec: str) -> Dict[str, Any]:
         # Run planning agent
         from ..agent_utils import run_planning_agent
 
-        _global_memory["completion_message"] = ""
+        reset_completion_flags()
 
         _result = run_planning_agent(
             task_spec,
@@ -372,17 +359,13 @@ def request_implementation(task_spec: str) -> Dict[str, Any]:
         reason = f"error: {str(e)}"
 
     # Get completion message if available
-    completion_message = _global_memory.get(
-        "completion_message", "Task was completed successfully." if success else None
-    )
+    completion_message = get_completion_message() or ("Task was completed successfully." if success else None)
 
     # Get and reset work log if at root depth
     work_log = get_work_log()
 
-    # Clear completion state from global memory
-    _global_memory["completion_message"] = ""
-    _global_memory["task_completed"] = False
-    _global_memory["plan_completed"] = False
+    # Clear completion state
+    reset_completion_flags()
 
     response_data = {
         "completion_message": completion_message,
@@ -394,4 +377,6 @@ def request_implementation(task_spec: str) -> Dict[str, Any]:
     }
     if work_log is not None:
         response_data["work_log"] = work_log
+    
+    print("HERE", response_data)
     return response_data

@@ -8,6 +8,7 @@ import pytest
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
+from ra_aid.agent_context import agent_context, get_current_context, reset_completion_flags
 from ra_aid.agent_utils import (
     AgentState,
     create_agent,
@@ -325,7 +326,7 @@ def test_increment_and_decrement_agent_depth():
 
 
 def test_run_agent_stream(monkeypatch):
-    from ra_aid.agent_utils import _global_memory, _run_agent_stream
+    from ra_aid.agent_utils import _run_agent_stream
 
     # Create a dummy agent that yields one chunk
     class DummyAgent:
@@ -334,9 +335,11 @@ def test_run_agent_stream(monkeypatch):
 
     dummy_agent = DummyAgent()
     # Set flags so that _run_agent_stream will reset them
-    _global_memory["plan_completed"] = True
-    _global_memory["task_completed"] = True
-    _global_memory["completion_message"] = "existing"
+    with agent_context() as ctx:
+        ctx.plan_completed = True
+        ctx.task_completed = True
+        ctx.completion_message = "existing"
+    
     call_flag = {"called": False}
 
     def fake_print_agent_output(
@@ -349,9 +352,11 @@ def test_run_agent_stream(monkeypatch):
     )
     _run_agent_stream(dummy_agent, [HumanMessage("dummy prompt")], {})
     assert call_flag["called"]
-    assert _global_memory["plan_completed"] is False
-    assert _global_memory["task_completed"] is False
-    assert _global_memory["completion_message"] == ""
+    
+    with agent_context() as ctx:
+        assert ctx.plan_completed is False
+        assert ctx.task_completed is False
+        assert ctx.completion_message == ""
 
 
 def test_execute_test_command_wrapper(monkeypatch):

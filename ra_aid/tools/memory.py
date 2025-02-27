@@ -1,5 +1,5 @@
 import os
-from typing import Dict, List, Optional, Set, Union
+from typing import Any, Dict, List, Optional, Set, Union
 
 try:
     import magic
@@ -11,6 +11,8 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 from typing_extensions import TypedDict
+
+from ra_aid.agent_context import mark_task_completed, mark_plan_completed
 
 
 class WorkLogEntry(TypedDict):
@@ -28,25 +30,10 @@ class SnippetInfo(TypedDict):
 console = Console()
 
 # Global memory store
-_global_memory: Dict[
-    str,
-    Union[
-        Dict[int, str],
-        Dict[int, SnippetInfo],
-        Dict[int, WorkLogEntry],
-        int,
-        Set[str],
-        bool,
-        str,
-        List[str],
-        List[WorkLogEntry],
-    ],
-] = {
+_global_memory: Dict[str, Any] = {
     "research_notes": [],
     "plans": [],
     "tasks": {},  # Dict[int, str] - ID to task mapping
-    "task_completed": False,  # Flag indicating if task is complete
-    "completion_message": "",  # Message explaining completion
     "task_id_counter": 1,  # Counter for generating unique task IDs
     "key_facts": {},  # Dict[int, str] - ID to fact mapping
     "key_fact_id_counter": 1,  # Counter for generating unique fact IDs
@@ -55,7 +42,6 @@ _global_memory: Dict[
     "implementation_requested": False,
     "related_files": {},  # Dict[int, str] - ID to filepath mapping
     "related_file_id_counter": 1,  # Counter for generating unique file IDs
-    "plan_completed": False,
     "agent_depth": 0,
     "work_log": [],  # List[WorkLogEntry] - Timestamped work events
 }
@@ -327,10 +313,9 @@ def one_shot_completed(message: str) -> str:
     if _global_memory.get("implementation_requested", False):
         return "Cannot complete in one shot - implementation was requested"
 
-    _global_memory["task_completed"] = True
-    _global_memory["completion_message"] = message
+    mark_task_completed(message)
     console.print(Panel(Markdown(message), title="✅ Task Completed"))
-    log_work_event(f"Task completed\n\n{message}")
+    log_work_event(f"Task completed:\n\n{message}")
     return "Completion noted."
 
 
@@ -341,9 +326,9 @@ def task_completed(message: str) -> str:
     Args:
         message: Message explaining how/why the task is complete
     """
-    _global_memory["task_completed"] = True
-    _global_memory["completion_message"] = message
+    mark_task_completed(message)
     console.print(Panel(Markdown(message), title="✅ Task Completed"))
+    log_work_event(f"Task completed:\n\n{message}")
     return "Completion noted."
 
 
@@ -354,14 +339,11 @@ def plan_implementation_completed(message: str) -> str:
     Args:
         message: Message explaining how the implementation plan was completed
     """
-    _global_memory["task_completed"] = True
-    _global_memory["completion_message"] = message
-    _global_memory["plan_completed"] = True
-    _global_memory["completion_message"] = message
+    mark_plan_completed(message)
     _global_memory["tasks"].clear()  # Clear task list when plan is completed
     _global_memory["task_id_counter"] = 1
     console.print(Panel(Markdown(message), title="✅ Plan Executed"))
-    log_work_event(f"Plan execution completed:\n\n{message}")
+    log_work_event(f"Completed implementation:\n\n{message}")
     return "Plan completion noted and task list cleared."
 
 
