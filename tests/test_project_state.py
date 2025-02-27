@@ -29,6 +29,26 @@ def git_only_dir(tmp_path):
 
 
 @pytest.fixture
+def ra_aid_only_dir(tmp_path):
+    """Create a directory with only a .ra-aid directory."""
+    ra_aid_dir = tmp_path / ".ra-aid"
+    ra_aid_dir.mkdir()
+    return tmp_path
+
+
+@pytest.fixture
+def mixed_allowed_dir(tmp_path):
+    """Create a directory with all allowed items (.git, .gitignore, and .ra-aid)."""
+    git_dir = tmp_path / ".git"
+    git_dir.mkdir()
+    gitignore = tmp_path / ".gitignore"
+    gitignore.write_text("*.pyc\n")
+    ra_aid_dir = tmp_path / ".ra-aid"
+    ra_aid_dir.mkdir()
+    return tmp_path
+
+
+@pytest.fixture
 def project_dir(tmp_path):
     """Create a directory with some project files."""
     (tmp_path / "src").mkdir()
@@ -44,6 +64,16 @@ def test_empty_directory(empty_dir):
 def test_git_only_directory(git_only_dir):
     """Test that a directory with only git files is considered a new project."""
     assert is_new_project(str(git_only_dir)) is True
+
+
+def test_ra_aid_only_directory(ra_aid_only_dir):
+    """Test that a directory with only a .ra-aid directory is considered a new project."""
+    assert is_new_project(str(ra_aid_only_dir)) is True
+
+
+def test_mixed_allowed_directory(mixed_allowed_dir):
+    """Test that a directory with all allowed items is considered a new project."""
+    assert is_new_project(str(mixed_allowed_dir)) is True
 
 
 @pytest.fixture
@@ -98,3 +128,23 @@ def test_permission_error(tmp_path):
     finally:
         # Restore permissions to allow cleanup
         os.chmod(tmp_path, 0o755)
+
+
+def test_verify_fix(tmp_path):
+    """
+    Verify fix: a project with only .ra-aid directory is considered new,
+    but adding other files makes it recognized as an existing project.
+    """
+    # Create a .ra-aid directory inside the temporary directory
+    ra_aid_dir = tmp_path / ".ra-aid"
+    ra_aid_dir.mkdir()
+    
+    # Check that is_new_project() returns True (only .ra-aid directory)
+    assert is_new_project(str(tmp_path)) is True
+    
+    # Add a README.md file to the directory
+    readme_file = tmp_path / "README.md"
+    readme_file.write_text("# Test Project")
+    
+    # Check that is_new_project() now returns False (has actual content)
+    assert is_new_project(str(tmp_path)) is False

@@ -28,7 +28,7 @@ def is_new_project(directory: str) -> bool:
 
     A project is considered new if it either:
     - Is an empty directory
-    - Contains only .git directory and/or .gitignore file
+    - Contains only .git directory, .gitignore file, and/or .ra-aid directory
 
     Args:
         directory: String path to the directory to check
@@ -49,8 +49,8 @@ def is_new_project(directory: str) -> bool:
         if not path.is_dir():
             raise DirectoryNotFoundError(f"Path is not a directory: {directory}")
 
-        # Get all files/dirs in the directory, excluding contents of .git
-        _allowed_items: Set[str] = {".git", ".gitignore"}
+        # Get all files/dirs in the directory, excluding allowed items
+        _allowed_items: Set[str] = {".git", ".gitignore", ".ra-aid"}
         try:
             contents = set()
             for item in path.iterdir():
@@ -60,8 +60,8 @@ def is_new_project(directory: str) -> bool:
         except PermissionError as e:
             raise DirectoryAccessError(f"Cannot access directory {directory}: {e}")
 
-        # Directory is new if empty or only contains .gitignore
-        return len(contents) == 0 or contents.issubset({".gitignore"})
+        # Directory is new if empty or only contains allowed items
+        return len(contents) == 0 or contents.issubset(_allowed_items)
 
     except Exception as e:
         if isinstance(e, ProjectStateError):
