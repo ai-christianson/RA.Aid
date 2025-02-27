@@ -10,13 +10,22 @@ from ra_aid.tool_configs import (
 
 
 def test_get_read_only_tools():
-    # Test without human interaction
-    tools = get_read_only_tools(human_interaction=False)
+    # Test without human interaction, without aider
+    tools = get_read_only_tools(human_interaction=False, use_aider=False)
     assert len(tools) > 0
     assert all(callable(tool) for tool in tools)
-
+    
+    # Check emit_related_files is not included when use_aider is False
+    tool_names = [tool.name for tool in tools]
+    assert "emit_related_files" not in tool_names
+    
+    # Test with use_aider=True
+    tools_with_aider = get_read_only_tools(human_interaction=False, use_aider=True)
+    tool_names_with_aider = [tool.name for tool in tools_with_aider]
+    assert "emit_related_files" in tool_names_with_aider
+    
     # Test with human interaction
-    tools_with_human = get_read_only_tools(human_interaction=True)
+    tools_with_human = get_read_only_tools(human_interaction=True, use_aider=False)
     assert len(tools_with_human) == len(tools) + 1
 
 

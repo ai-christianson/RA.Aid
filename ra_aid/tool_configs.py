@@ -46,20 +46,22 @@ def set_modification_tools(use_aider=False):
 
 # Read-only tools that don't modify system state
 def get_read_only_tools(
-    human_interaction: bool = False, web_research_enabled: bool = False
+    human_interaction: bool = False, web_research_enabled: bool = False, use_aider: bool = False
 ):
     """Get the list of read-only tools, optionally including human interaction tools.
 
     Args:
         human_interaction: Whether to include human interaction tools
         web_research_enabled: Whether to include web research tools
+        use_aider: Whether aider is being used for code modifications
 
     Returns:
         List of tool functions
     """
     tools = [
         emit_key_snippet,
-        emit_related_files,
+        # Only include emit_related_files if use_aider is True
+        *([emit_related_files] if use_aider else []),
         emit_key_facts,
         # *TEMPORARILY* disabled to improve tool calling perf.
         # delete_key_facts,
@@ -94,11 +96,19 @@ def get_all_tools() -> list[BaseTool]:
 
 
 # Define constant tool groups
-READ_ONLY_TOOLS = get_read_only_tools()
+# Get config from global memory for use_aider value
+_config = {}
+try:
+    from ra_aid.tools.memory import _global_memory
+    _config = _global_memory.get("config", {})
+except ImportError:
+    pass
+
+READ_ONLY_TOOLS = get_read_only_tools(use_aider=_config.get("use_aider", False))
 
 # MODIFICATION_TOOLS will be set dynamically based on config, default defined here
 MODIFICATION_TOOLS = [file_str_replace, put_complete_file_contents]
-COMMON_TOOLS = get_read_only_tools()
+COMMON_TOOLS = get_read_only_tools(use_aider=_config.get("use_aider", False))
 EXPERT_TOOLS = [emit_expert_context, ask_expert]
 RESEARCH_TOOLS = [
     emit_research_notes,
@@ -123,8 +133,20 @@ def get_research_tools(
         human_interaction: Whether to include human interaction tools
         web_research_enabled: Whether to include web research tools
     """
+    # Get config for use_aider value
+    use_aider = False
+    try:
+        from ra_aid.tools.memory import _global_memory
+        use_aider = _global_memory.get("config", {}).get("use_aider", False)
+    except ImportError:
+        pass
+    
     # Start with read-only tools
-    tools = get_read_only_tools(human_interaction, web_research_enabled).copy()
+    tools = get_read_only_tools(
+        human_interaction, 
+        web_research_enabled,
+        use_aider=use_aider
+    ).copy()
 
     tools.extend(RESEARCH_TOOLS)
 
@@ -152,8 +174,19 @@ def get_planning_tools(
         expert_enabled: Whether to include expert tools
         web_research_enabled: Whether to include web research tools
     """
+    # Get config for use_aider value
+    use_aider = False
+    try:
+        from ra_aid.tools.memory import _global_memory
+        use_aider = _global_memory.get("config", {}).get("use_aider", False)
+    except ImportError:
+        pass
+    
     # Start with read-only tools
-    tools = get_read_only_tools(web_research_enabled=web_research_enabled).copy()
+    tools = get_read_only_tools(
+        web_research_enabled=web_research_enabled,
+        use_aider=use_aider
+    ).copy()
 
     # Add planning-specific tools
     planning_tools = [
@@ -180,8 +213,19 @@ def get_implementation_tools(
         expert_enabled: Whether to include expert tools
         web_research_enabled: Whether to include web research tools
     """
+    # Get config for use_aider value
+    use_aider = False
+    try:
+        from ra_aid.tools.memory import _global_memory
+        use_aider = _global_memory.get("config", {}).get("use_aider", False)
+    except ImportError:
+        pass
+    
     # Start with read-only tools
-    tools = get_read_only_tools(web_research_enabled=web_research_enabled).copy()
+    tools = get_read_only_tools(
+        web_research_enabled=web_research_enabled,
+        use_aider=use_aider
+    ).copy()
 
     # Add modification tools since it's not research-only
     tools.extend(MODIFICATION_TOOLS)

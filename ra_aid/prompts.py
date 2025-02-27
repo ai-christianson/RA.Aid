@@ -197,7 +197,6 @@ Reporting Findings
         Document discovered documentation files and their contents at a high level (e.g., "There is a README.md in the root directory that explains the folder structure").
         Document code files by type or apparent purpose (e.g., "There is a main.py file containing code to launch an application").
         Document configuration files, dependencies (like package.json, requirements.txt), testing files, and anything else present.
-    Use emit_related_files to note all files that are relevant to the base task.
 
 No Planning or Problem-Solving
 
@@ -500,8 +499,6 @@ Testing:
 - If you are writing code that *should* compile, make sure to test that it *does* compile.
 
 Test before and after making changes, if relevant.
-
-Once the task is complete, ensure all updated files are registered with emit_related_files.
 
 {expert_section}
 {human_section}
