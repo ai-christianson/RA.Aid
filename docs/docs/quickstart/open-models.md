@@ -111,6 +111,36 @@ ra-aid -m "Your task" --provider openai-compatible --model your-model-name
 - Supports temperature control
 - Compatible with most OpenAI-style APIs
 </TabItem>
+<TabItem value="gemini" label="Google Gemini">
+
+### Google Gemini Models
+
+Google's Gemini models offer powerful multimodal capabilities with extensive code generation support.
+
+```bash
+# Environment setup
+export GEMINI_API_KEY=your_api_key_here
+
+# Basic usage
+ra-aid -m "Your task" --provider gemini --model gemini-1.5-pro-latest
+
+# With temperature control
+ra-aid -m "Your task" --provider gemini --model gemini-1.5-flash-latest --temperature 0.5
+```
+
+**Available Models:**
+- `gemini-pro`: Original Gemini Pro model
+- `gemini-1.5-flash-latest`: Latest Gemini 1.5 Flash model (fast responses)
+- `gemini-1.5-pro-latest`: Latest Gemini 1.5 Pro model (strong reasoning)
+- `gemini-1.5-flash`: Gemini 1.5 Flash release
+- `gemini-1.5-pro`: Gemini 1.5 Pro release 
+- `gemini-1.0-pro`: Original Gemini 1.0 Pro model
+
+**Configuration Notes:**
+- All Gemini models support a 128,000 token context window
+- Temperature control is supported for creative vs. deterministic responses
+- Obtain your API key from [AI Studio](https://aistudio.google.com/app/apikey)
+</TabItem>
 </Tabs>
 
 ## Advanced Configuration
@@ -130,6 +160,10 @@ ra-aid -m "Your task" --expert-provider deepseek --expert-model deepseek-reasone
 # OpenRouter expert
 export EXPERT_OPENROUTER_API_KEY=your_key
 ra-aid -m "Your task" --expert-provider openrouter --expert-model mistralai/mistral-large-2411
+
+# Gemini expert
+export EXPERT_GEMINI_API_KEY=your_key
+ra-aid -m "Your task" --expert-provider gemini --expert-model gemini-2.0-flash-thinking-exp-1219
 ```
 
 </TabItem>
@@ -172,6 +206,7 @@ Complete list of supported environment variables:
 | `GEMINI_API_KEY` | Gemini | API access |
 | `EXPERT_OPENROUTER_API_KEY` | OpenRouter | Expert tool |
 | `EXPERT_DEEPSEEK_API_KEY` | DeepSeek | Expert tool |
+| `EXPERT_GEMINI_API_KEY` | Gemini | Expert tool |
 
 ## Troubleshooting
 
