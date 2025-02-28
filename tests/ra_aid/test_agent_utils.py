@@ -376,9 +376,51 @@ def test_handle_api_error_valueerror():
 
     from ra_aid.agent_utils import _handle_api_error
 
-    # ValueError not containing "code" or "429" should be re-raised
+    # ValueError not containing "code" or rate limit phrases should be re-raised
     with pytest.raises(ValueError):
-        _handle_api_error(ValueError("some error"), 0, 5, 1)
+        _handle_api_error(ValueError("some unrelated error"), 0, 5, 1)
+        
+    # ValueError with "429" should be handled without raising
+    _handle_api_error(ValueError("error code 429"), 0, 5, 1)
+    
+    # ValueError with "rate limit" phrase should be handled without raising
+    _handle_api_error(ValueError("hit rate limit"), 0, 5, 1)
+    
+    # ValueError with "too many requests" phrase should be handled without raising
+    _handle_api_error(ValueError("too many requests, try later"), 0, 5, 1)
+    
+    # ValueError with "quota exceeded" phrase should be handled without raising
+    _handle_api_error(ValueError("quota exceeded for this month"), 0, 5, 1)
+
+
+def test_handle_api_error_status_code():
+    from ra_aid.agent_utils import _handle_api_error
+    
+    # Error with status_code=429 attribute should be handled without raising
+    error_with_status = Exception("Rate limited")
+    error_with_status.status_code = 429
+    _handle_api_error(error_with_status, 0, 5, 1)
+    
+    # Error with http_status=429 attribute should be handled without raising
+    error_with_http_status = Exception("Too many requests")
+    error_with_http_status.http_status = 429
+    _handle_api_error(error_with_http_status, 0, 5, 1)
+
+
+def test_handle_api_error_rate_limit_phrases():
+    from ra_aid.agent_utils import _handle_api_error
+    
+    # Generic exception with "rate limit" phrase should be handled without raising
+    _handle_api_error(Exception("You have exceeded your rate limit"), 0, 5, 1)
+    
+    # Generic exception with "too many requests" phrase should be handled without raising
+    _handle_api_error(Exception("Too many requests, please slow down"), 0, 5, 1)
+    
+    # Generic exception with "quota exceeded" phrase should be handled without raising
+    _handle_api_error(Exception("API quota exceeded for this billing period"), 0, 5, 1)
+    
+    # Generic exception with "rate" and "limit" separate but in message should be handled
+    _handle_api_error(Exception("You hit the rate at which we limit requests"), 0, 5, 1)
 
 
 def test_handle_api_error_max_retries():
@@ -614,3 +656,11 @@ def test_run_agent_with_retry_handles_api_badrequest_error(monkeypatch):
         assert "Agent has crashed: Unretryable API error" in result
         # Verify the agent is marked as crashed
         assert is_crashed()
+
+def test_handle_api_error_resource_exhausted():
+    from google.api_core.exceptions import ResourceExhausted
+    from ra_aid.agent_utils import _handle_api_error
+    
+    # ResourceExhausted exception should be handled without raising
+    resource_exhausted_error = ResourceExhausted("429 Resource has been exhausted (e.g. check quota).")
+    _handle_api_error(resource_exhausted_error, 0, 5, 1)

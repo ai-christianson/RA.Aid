@@ -11,6 +11,9 @@ from typing import Any, Dict, List, Literal, Optional, Sequence, ContextManager
 
 import litellm
 from anthropic import APIError, APITimeoutError, InternalServerError, RateLimitError
+from openai import RateLimitError as OpenAIRateLimitError
+from litellm.exceptions import RateLimitError as LiteLLMRateLimitError
+from google.api_core.exceptions import ResourceExhausted
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import (
     BaseMessage,
@@ -838,13 +841,30 @@ def _execute_test_command_wrapper(original_prompt, config, test_attempts, auto_t
 
 
 def _handle_api_error(e, attempt, max_retries, base_delay):
+    # 1. Check if this is a ValueError with 429 code or rate limit phrases
     if isinstance(e, ValueError):
         error_str = str(e).lower()
-        if "code" not in error_str or "429" not in error_str:
+        rate_limit_phrases = ["429", "rate limit", "too many requests", "quota exceeded"]
+        if "code" not in error_str and not any(phrase in error_str for phrase in rate_limit_phrases):
             raise e
+    
+    # 2. Check for status_code or http_status attribute equal to 429
+    if hasattr(e, 'status_code') and e.status_code == 429:
+        pass  # This is a rate limit error, continue with retry logic
+    elif hasattr(e, 'http_status') and e.http_status == 429:
+        pass  # This is a rate limit error, continue with retry logic
+    # 3. Check for rate limit phrases in error message
+    elif isinstance(e, Exception) and not isinstance(e, ValueError):
+        error_str = str(e).lower()
+        if not any(phrase in error_str for phrase in ["rate limit", "too many requests", "quota exceeded", "429"]) and not ("rate" in error_str and "limit" in error_str):
+            # This doesn't look like a rate limit error, but we'll still retry other API errors
+            pass
+    
+    # Apply common retry logic for all identified errors
     if attempt == max_retries - 1:
         logger.error("Max retries reached, failing: %s", str(e))
         raise RuntimeError(f"Max retries ({max_retries}) exceeded. Last error: {e}")
+    
     logger.warning("API error (attempt %d/%d): %s", attempt + 1, max_retries, str(e))
     delay = base_delay * (2**attempt)
     print_error(
@@ -979,6 +999,9 @@ def run_agent_with_retry(
                     InternalServerError,
                     APITimeoutError,
                     RateLimitError,
+                    OpenAIRateLimitError,
+                    LiteLLMRateLimitError,
+                    ResourceExhausted,
                     APIError,
                     ValueError,
                 ) as e:
