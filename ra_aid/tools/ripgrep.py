@@ -138,7 +138,7 @@ def ripgrep_search(
         params.append(f"**Before Context Lines**: {before_context_lines}")
     if after_context_lines is not None:
         params.append(f"**After Context Lines**: {after_context_lines}")
-    
+
     if include_hidden:
         params.append("**Including Hidden Files**: yes")
     if follow_links:

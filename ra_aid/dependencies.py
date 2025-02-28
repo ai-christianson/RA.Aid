@@ -1,8 +1,7 @@
 """Module for checking system dependencies required by RA.Aid."""
 
-import os
-import sys
 import subprocess
+import sys
 from abc import ABC, abstractmethod
 
 from ra_aid import print_error
@@ -23,9 +22,11 @@ class RipGrepDependency(Dependency):
     def check(self):
         """Check if ripgrep is installed."""
         try:
-            result = subprocess.run(['rg', '--version'], 
-                                 stdout=subprocess.DEVNULL, 
-                                 stderr=subprocess.DEVNULL)
+            result = subprocess.run(
+                ["rg", "--version"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
             if result.returncode != 0:
                 raise FileNotFoundError()
         except (FileNotFoundError, subprocess.SubprocessError):

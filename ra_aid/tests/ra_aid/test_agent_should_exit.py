@@ -1,11 +1,9 @@
 """Unit tests for agent_should_exit functionality."""
 
-import pytest
 
 from ra_aid.agent_context import (
     AgentContext,
     agent_context,
-    get_current_context,
     mark_should_exit,
     should_exit,
 )
@@ -18,7 +16,7 @@ class TestAgentShouldExit:
         """Test basic mark_should_exit functionality."""
         context = AgentContext()
         assert context.agent_should_exit is False
-        
+
         context.mark_should_exit()
         assert context.agent_should_exit is True
 
@@ -34,10 +32,10 @@ class TestAgentShouldExit:
         """Test that mark_should_exit propagates to parent contexts."""
         parent = AgentContext()
         child = AgentContext(parent_context=parent)
-        
+
         # Mark child as should exit
         child.mark_should_exit()
-        
+
         # Verify both child and parent are marked
         assert child.agent_should_exit is True
         assert parent.agent_should_exit is True
@@ -49,10 +47,10 @@ class TestAgentShouldExit:
                 # Initially both should be False
                 assert outer.agent_should_exit is False
                 assert inner.agent_should_exit is False
-                
+
                 # Mark inner as should exit
                 inner.mark_should_exit()
-                
+
                 # Both should now be True
                 assert inner.agent_should_exit is True
                 assert outer.agent_should_exit is True

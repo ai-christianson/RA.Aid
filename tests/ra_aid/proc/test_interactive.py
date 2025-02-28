@@ -176,7 +176,7 @@ def test_strip_trailing_whitespace():
     # Create a command that outputs text with trailing whitespace
     cmd = 'echo "Line with spaces at end    "; echo "Another trailing space line  "; echo "Line with tabs at end\t\t"'
     output, retcode = run_interactive_command(["/bin/bash", "-c", cmd])
-    
+
     # Check that the output contains the lines without trailing whitespace
     lines = output.splitlines()
     assert b"Line with spaces at end" in lines[0]

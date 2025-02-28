@@ -17,7 +17,6 @@ from ra_aid.agent_utils import (
     run_planning_agent,
     run_research_agent,
 )
-from ra_aid.database import init_db, close_db, DatabaseManager, ensure_migrations_applied
 from ra_aid.config import (
     DEFAULT_MAX_TEST_CMD_RETRIES,
     DEFAULT_RECURSION_LIMIT,
@@ -25,6 +24,10 @@ from ra_aid.config import (
     VALID_PROVIDERS,
 )
 from ra_aid.console.output import cpm
+from ra_aid.database import (
+    DatabaseManager,
+    ensure_migrations_applied,
+)
 from ra_aid.dependencies import check_dependencies
 from ra_aid.env import validate_environment
 from ra_aid.exceptions import AgentInterrupt
@@ -171,8 +174,9 @@ Examples:
         "--aider-config", type=str, help="Specify the aider config file path"
     )
     parser.add_argument(
-        "--use-aider", action="store_true", 
-        help="Use aider for code modifications instead of default file tools (file_str_replace, put_complete_file_contents)"
+        "--use-aider",
+        action="store_true",
+        help="Use aider for code modifications instead of default file tools (file_str_replace, put_complete_file_contents)",
     )
     parser.add_argument(
         "--test-cmd",
@@ -343,24 +347,37 @@ def main():
             try:
                 migration_result = ensure_migrations_applied()
                 if not migration_result:
-                    logger.warning("Database migrations failed but execution will continue")
+                    logger.warning(
+                        "Database migrations failed but execution will continue"
+                    )
             except Exception as e:
                 logger.error(f"Database migration error: {str(e)}")
-            
+
             # Check dependencies before proceeding
             check_dependencies()
 
-            expert_enabled, expert_missing, web_research_enabled, web_research_missing = (
-                validate_environment(args)
-            )  # Will exit if main env vars missing
+            (
+                expert_enabled,
+                expert_missing,
+                web_research_enabled,
+                web_research_missing,
+            ) = validate_environment(args)  # Will exit if main env vars missing
             logger.debug("Environment validation successful")
 
             # Validate model configuration early
-            model_config = models_params.get(args.provider, {}).get(args.model or "", {})
+            model_config = models_params.get(args.provider, {}).get(
+                args.model or "", {}
+            )
             supports_temperature = model_config.get(
                 "supports_temperature",
                 args.provider
-                in ["anthropic", "openai", "openrouter", "openai-compatible", "deepseek"],
+                in [
+                    "anthropic",
+                    "openai",
+                    "openrouter",
+                    "openai-compatible",
+                    "deepseek",
+                ],
             )
 
             if supports_temperature and args.temperature is None:
@@ -377,7 +394,12 @@ def main():
             status = build_status(args, expert_enabled, web_research_enabled)
 
             console.print(
-                Panel(status, title=f"RA.Aid v{__version__}", border_style="bright_blue", padding=(0, 1))
+                Panel(
+                    status,
+                    title=f"RA.Aid v{__version__}",
+                    border_style="bright_blue",
+                    padding=(0, 1),
+                )
             )
 
             # Handle chat mode
@@ -386,7 +408,7 @@ def main():
                 chat_model = initialize_llm(
                     args.provider, args.model, temperature=args.temperature
                 )
-                
+
                 if args.research_only:
                     print_error("Chat mode cannot be used with --research-only")
                     sys.exit(1)
@@ -429,7 +451,7 @@ def main():
                 _global_memory["config"]["expert_provider"] = args.expert_provider
                 _global_memory["config"]["expert_model"] = args.expert_model
                 _global_memory["config"]["temperature"] = args.temperature
-                
+
                 # Set modification tools based on use_aider flag
                 set_modification_tools(args.use_aider)
 
@@ -449,7 +471,9 @@ def main():
                     CHAT_PROMPT.format(
                         initial_request=initial_request,
                         web_research_section=(
-                            WEB_RESEARCH_PROMPT_SECTION_CHAT if web_research_enabled else ""
+                            WEB_RESEARCH_PROMPT_SECTION_CHAT
+                            if web_research_enabled
+                            else ""
                         ),
                         working_directory=working_directory,
                         current_date=current_date,
@@ -502,11 +526,13 @@ def main():
             _global_memory["config"]["research_provider"] = (
                 args.research_provider or args.provider
             )
-            _global_memory["config"]["research_model"] = args.research_model or args.model
+            _global_memory["config"]["research_model"] = (
+                args.research_model or args.model
+            )
 
             # Store temperature in global config
             _global_memory["config"]["temperature"] = args.temperature
-            
+
             # Set modification tools based on use_aider flag
             set_modification_tools(args.use_aider)
 

@@ -101,7 +101,7 @@ def test_initialize_expert_anthropic(clean_env, mock_anthropic, monkeypatch):
 
     # Check that mock_anthropic was called
     assert mock_anthropic.called
-    
+
     # Verify essential parameters
     kwargs = mock_anthropic.call_args.kwargs
     assert kwargs["api_key"] == "test-key"
@@ -123,10 +123,7 @@ def test_initialize_expert_openrouter(clean_env, mock_openai, monkeypatch):
         temperature=0,
         timeout=180,
         max_retries=5,
-        default_headers={
-            "HTTP-Referer": "https://ra-aid.ai",
-            "X-Title": "RA.Aid"
-        }
+        default_headers={"HTTP-Referer": "https://ra-aid.ai", "X-Title": "RA.Aid"},
     )
 
 
@@ -203,7 +200,7 @@ def test_initialize_anthropic(clean_env, mock_anthropic):
 
     # Check that mock_anthropic was called
     assert mock_anthropic.called
-    
+
     # Verify essential parameters
     kwargs = mock_anthropic.call_args.kwargs
     assert kwargs["api_key"] == "test-key"
@@ -225,10 +222,7 @@ def test_initialize_openrouter(clean_env, mock_openai):
         temperature=0.7,
         timeout=180,
         max_retries=5,
-        default_headers={
-            "HTTP-Referer": "https://ra-aid.ai",
-            "X-Title": "RA.Aid"
-        }
+        default_headers={"HTTP-Referer": "https://ra-aid.ai", "X-Title": "RA.Aid"},
     )
 
 
@@ -285,7 +279,7 @@ def test_temperature_defaults(clean_env, mock_openai, mock_anthropic, mock_gemin
     )
 
     initialize_llm("anthropic", "test-model")
-    
+
     # Verify essential parameters for Anthropic
     kwargs = mock_anthropic.call_args.kwargs
     assert kwargs["api_key"] == "test-key"
@@ -354,7 +348,7 @@ def test_explicit_temperature(clean_env, mock_openai, mock_anthropic, mock_gemin
 
     # Test Anthropic
     initialize_llm("anthropic", "test-model", temperature=test_temp)
-    
+
     # Verify essential parameters for Anthropic
     kwargs = mock_anthropic.call_args.kwargs
     assert kwargs["api_key"] == "test-key"
@@ -372,10 +366,7 @@ def test_explicit_temperature(clean_env, mock_openai, mock_anthropic, mock_gemin
         temperature=test_temp,
         timeout=180,
         max_retries=5,
-        default_headers={
-            "HTTP-Referer": "https://ra-aid.ai",
-            "X-Title": "RA.Aid"
-        }
+        default_headers={"HTTP-Referer": "https://ra-aid.ai", "X-Title": "RA.Aid"},
     )
 
 
@@ -482,7 +473,7 @@ def test_initialize_llm_cross_provider(
     # Initialize Anthropic
     monkeypatch.setenv("ANTHROPIC_API_KEY", "anthropic-key")
     _llm2 = initialize_llm("anthropic", "claude-3", temperature=0.7)
-    
+
     # Verify essential parameters for Anthropic
     kwargs = mock_anthropic.call_args.kwargs
     assert kwargs["api_key"] == "anthropic-key"
@@ -586,13 +577,15 @@ def mock_deepseek_reasoner():
         yield mock
 
 
-def test_reasoning_effort_only_passed_to_supported_models(clean_env, mock_openai, monkeypatch):
+def test_reasoning_effort_only_passed_to_supported_models(
+    clean_env, mock_openai, monkeypatch
+):
     """Test that reasoning_effort is only passed to supported models."""
     monkeypatch.setenv("EXPERT_OPENAI_API_KEY", "test-key")
-    
+
     # Initialize expert LLM with GPT-4 (which doesn't support reasoning_effort)
     _llm = initialize_expert_llm("openai", "gpt-4")
-    
+
     # Verify reasoning_effort was not included in kwargs
     mock_openai.assert_called_with(
         api_key="test-key",
@@ -603,13 +596,15 @@ def test_reasoning_effort_only_passed_to_supported_models(clean_env, mock_openai
     )
 
 
-def test_reasoning_effort_passed_to_supported_models(clean_env, mock_openai, monkeypatch):
+def test_reasoning_effort_passed_to_supported_models(
+    clean_env, mock_openai, monkeypatch
+):
     """Test that reasoning_effort is passed to models that support it."""
     monkeypatch.setenv("EXPERT_OPENAI_API_KEY", "test-key")
-    
+
     # Initialize expert LLM with o1 (which supports reasoning_effort)
     _llm = initialize_expert_llm("openai", "o1")
-    
+
     # Verify reasoning_effort was included in kwargs
     mock_openai.assert_called_with(
         api_key="test-key",
@@ -664,8 +659,5 @@ def test_initialize_openrouter_deepseek(
         temperature=0.7,
         timeout=180,
         max_retries=5,
-        default_headers={
-            "HTTP-Referer": "https://ra-aid.ai",
-            "X-Title": "RA.Aid"
-        }
+        default_headers={"HTTP-Referer": "https://ra-aid.ai", "X-Title": "RA.Aid"},
     )

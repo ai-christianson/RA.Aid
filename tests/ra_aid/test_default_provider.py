@@ -45,12 +45,23 @@ def test_default_anthropic_provider(clean_env, monkeypatch):
     """Test that Anthropic is the default provider when no environment variables are set."""
     args = parse_arguments(["-m", "test message"])
     assert args.provider == "anthropic"
-    assert args.model == "claude-3-7-sonnet-20250219"  # Updated to match current default
+    assert (
+        args.model == "claude-3-7-sonnet-20250219"
+    )  # Updated to match current default
 
 
 def test_respects_user_specified_anthropic_model(clean_env):
     """Test that user-specified Anthropic models are respected."""
-    args = parse_arguments(["-m", "test message", "--provider", "anthropic", "--model", "claude-3-5-sonnet-20241022"])
+    args = parse_arguments(
+        [
+            "-m",
+            "test message",
+            "--provider",
+            "anthropic",
+            "--model",
+            "claude-3-5-sonnet-20241022",
+        ]
+    )
     assert args.provider == "anthropic"
     assert args.model == "claude-3-5-sonnet-20241022"  # Should not be overridden
 

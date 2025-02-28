@@ -2,22 +2,19 @@
 
 import threading
 import time
-import pytest
+
 
 from ra_aid.agent_context import (
     AgentContext,
     agent_context,
-    get_current_context,
-    mark_task_completed,
-    mark_plan_completed,
-    reset_completion_flags,
-    is_completed,
     get_completion_message,
+    get_current_context,
+    is_completed,
+    mark_plan_completed,
     mark_should_exit,
+    mark_task_completed,
+    reset_completion_flags,
     should_exit,
-    mark_agent_crashed,
-    is_crashed,
-    get_crash_message,
 )
 
 
@@ -120,42 +117,42 @@ class TestContextManager:
 
 class TestExitPropagation:
     """Test cases for the agent_should_exit flag propagation."""
-    
+
     def test_mark_should_exit_propagation(self):
         """Test that mark_should_exit propagates to parent contexts."""
         parent = AgentContext()
         child = AgentContext(parent_context=parent)
-        
+
         # Initially both contexts should have agent_should_exit as False
         assert parent.agent_should_exit is False
         assert child.agent_should_exit is False
-        
+
         # Mark the child context as should exit
         child.mark_should_exit()
-        
+
         # Both child and parent should now have agent_should_exit as True
         assert child.agent_should_exit is True
         assert parent.agent_should_exit is True
-    
+
     def test_nested_should_exit_propagation(self):
         """Test that mark_should_exit propagates through multiple levels of parent contexts."""
         grandparent = AgentContext()
         parent = AgentContext(parent_context=grandparent)
         child = AgentContext(parent_context=parent)
-        
+
         # Initially all contexts should have agent_should_exit as False
         assert grandparent.agent_should_exit is False
         assert parent.agent_should_exit is False
         assert child.agent_should_exit is False
-        
+
         # Mark the child context as should exit
         child.mark_should_exit()
-        
+
         # All contexts should now have agent_should_exit as True
         assert child.agent_should_exit is True
         assert parent.agent_should_exit is True
         assert grandparent.agent_should_exit is True
-    
+
     def test_context_manager_should_exit_propagation(self):
         """Test that mark_should_exit propagates when using context managers."""
         with agent_context() as outer:
@@ -163,10 +160,10 @@ class TestExitPropagation:
                 # Initially both contexts should have agent_should_exit as False
                 assert outer.agent_should_exit is False
                 assert inner.agent_should_exit is False
-                
+
                 # Mark the inner context as should exit
                 inner.mark_should_exit()
-                
+
                 # Both inner and outer should now have agent_should_exit as True
                 assert inner.agent_should_exit is True
                 assert outer.agent_should_exit is True
@@ -174,39 +171,39 @@ class TestExitPropagation:
 
 class TestCrashPropagation:
     """Test cases for the agent_has_crashed flag non-propagation."""
-    
+
     def test_mark_agent_crashed_no_propagation(self):
         """Test that mark_agent_crashed does not propagate to parent contexts."""
         parent = AgentContext()
         child = AgentContext(parent_context=parent)
-        
+
         # Initially both contexts should have agent_has_crashed as False
         assert parent.is_crashed() is False
         assert child.is_crashed() is False
-        
+
         # Mark the child context as crashed
         child.mark_agent_crashed("Child crashed")
-        
+
         # Child should be crashed, but parent should not
         assert child.is_crashed() is True
         assert parent.is_crashed() is False
         assert child.agent_crashed_message == "Child crashed"
         assert parent.agent_crashed_message is None
-    
+
     def test_nested_crash_no_propagation(self):
         """Test that crash states don't propagate through multiple levels of parent contexts."""
         grandparent = AgentContext()
         parent = AgentContext(parent_context=grandparent)
         child = AgentContext(parent_context=parent)
-        
+
         # Initially all contexts should have agent_has_crashed as False
         assert grandparent.is_crashed() is False
         assert parent.is_crashed() is False
         assert child.is_crashed() is False
-        
+
         # Mark the child context as crashed
         child.mark_agent_crashed("Child crashed")
-        
+
         # Only child should be crashed, parent and grandparent should not
         assert child.is_crashed() is True
         assert parent.is_crashed() is False
@@ -214,7 +211,7 @@ class TestCrashPropagation:
         assert child.agent_crashed_message == "Child crashed"
         assert parent.agent_crashed_message is None
         assert grandparent.agent_crashed_message is None
-    
+
     def test_context_manager_crash_no_propagation(self):
         """Test that crash state doesn't propagate when using context managers."""
         with agent_context() as outer:
@@ -222,27 +219,27 @@ class TestCrashPropagation:
                 # Initially both contexts should have agent_has_crashed as False
                 assert outer.is_crashed() is False
                 assert inner.is_crashed() is False
-                
+
                 # Mark the inner context as crashed
                 inner.mark_agent_crashed("Inner crashed")
-                
+
                 # Inner should be crashed, but outer should not
                 assert inner.is_crashed() is True
                 assert outer.is_crashed() is False
                 assert inner.agent_crashed_message == "Inner crashed"
                 assert outer.agent_crashed_message is None
-    
+
     def test_crash_state_not_inherited(self):
         """Test that new child contexts don't inherit crash states from parent contexts."""
         parent = AgentContext()
-        
+
         # Mark the parent as crashed
         parent.mark_agent_crashed("Parent crashed")
         assert parent.is_crashed() is True
-        
+
         # Create a child context with the crashed parent as parent_context
         child = AgentContext(parent_context=parent)
-        
+
         # Child should not be crashed even though parent is
         assert parent.is_crashed() is True
         assert child.is_crashed() is False
@@ -313,17 +310,17 @@ class TestUtilityFunctions:
         # These should have safe default returns
         assert is_completed() is False
         assert get_completion_message() == ""
-    
+
     def test_mark_should_exit_utility(self):
         """Test the mark_should_exit utility function."""
         with agent_context() as outer:
             with agent_context() as inner:
                 # Initially both contexts should have agent_should_exit as False
                 assert should_exit() is False
-                
+
                 # Mark the current context (inner) as should exit
                 mark_should_exit()
-                
+
                 # Both inner and outer should now have agent_should_exit as True
                 assert should_exit() is True
                 assert inner.agent_should_exit is True

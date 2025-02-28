@@ -5,7 +5,12 @@ from typing import Any, Dict, List, Union
 from langchain_core.tools import tool
 from rich.console import Console
 
-from ra_aid.agent_context import get_completion_message, get_crash_message, is_crashed, reset_completion_flags
+from ra_aid.agent_context import (
+    get_completion_message,
+    get_crash_message,
+    is_crashed,
+    reset_completion_flags,
+)
 from ra_aid.console.formatting import print_error
 from ra_aid.exceptions import AgentInterrupt
 from ra_aid.tools.memory import _global_memory
@@ -85,7 +90,9 @@ def request_research(query: str) -> ResearchResult:
         reason = f"error: {str(e)}"
     finally:
         # Get completion message if available
-        completion_message = get_completion_message() or ("Task was completed successfully." if success else None)
+        completion_message = get_completion_message() or (
+            "Task was completed successfully." if success else None
+        )
 
         work_log = get_work_log()
 
@@ -149,7 +156,9 @@ def request_web_research(query: str) -> ResearchResult:
         reason = f"error: {str(e)}"
     finally:
         # Get completion message if available
-        completion_message = get_completion_message() or ("Task was completed successfully." if success else None)
+        completion_message = get_completion_message() or (
+            "Task was completed successfully." if success else None
+        )
 
         work_log = get_work_log()
 
@@ -215,7 +224,9 @@ def request_research_and_implementation(query: str) -> Dict[str, Any]:
         reason = f"error: {str(e)}"
 
     # Get completion message if available
-    completion_message = get_completion_message() or ("Task was completed successfully." if success else None)
+    completion_message = get_completion_message() or (
+        "Task was completed successfully." if success else None
+    )
 
     work_log = get_work_log()
 
@@ -293,7 +304,9 @@ def request_task_implementation(task_spec: str) -> str:
         reason = f"error: {str(e)}"
 
     # Get completion message if available
-    completion_message = get_completion_message() or ("Task was completed successfully." if success else None)
+    completion_message = get_completion_message() or (
+        "Task was completed successfully." if success else None
+    )
 
     # Get and reset work log if at root depth
     work_log = get_work_log()
@@ -317,45 +330,53 @@ def request_task_implementation(task_spec: str) -> str:
     }
     if work_log is not None:
         response_data["work_log"] = work_log
-    
+
     # Convert the response data to a markdown string
     markdown_parts = []
-    
+
     # Add header and completion message
     markdown_parts.append("# Task Implementation")
     if response_data.get("completion_message"):
-        markdown_parts.append(f"\n## Completion Message\n\n{response_data['completion_message']}")
-    
+        markdown_parts.append(
+            f"\n## Completion Message\n\n{response_data['completion_message']}"
+        )
+
     # Add crash information if applicable
     if response_data.get("agent_crashed"):
-        markdown_parts.append(f"\n## ⚠️ Agent Crashed ⚠️\n\n**Error:** {response_data.get('crash_message', 'Unknown error')}")
-    
+        markdown_parts.append(
+            f"\n## ⚠️ Agent Crashed ⚠️\n\n**Error:** {response_data.get('crash_message', 'Unknown error')}"
+        )
+
     # Add success status
     status = "Success" if response_data.get("success", False) else "Failed"
-    reason_text = f": {response_data.get('reason')}" if response_data.get("reason") else ""
+    reason_text = (
+        f": {response_data.get('reason')}" if response_data.get("reason") else ""
+    )
     markdown_parts.append(f"\n## Status\n\n**{status}**{reason_text}")
-    
+
     # Add key facts
     if response_data.get("key_facts"):
         markdown_parts.append(f"\n## Key Facts\n\n{response_data['key_facts']}")
-    
+
     # Add related files
     if response_data.get("related_files"):
         files_list = "\n".join([f"- {file}" for file in response_data["related_files"]])
         markdown_parts.append(f"\n## Related Files\n\n{files_list}")
-    
+
     # Add key snippets
     if response_data.get("key_snippets"):
         markdown_parts.append(f"\n## Key Snippets\n\n{response_data['key_snippets']}")
-    
+
     # Add work log
     if response_data.get("work_log"):
         markdown_parts.append(f"\n## Work Log\n\n{response_data['work_log']}")
-        markdown_parts.append(f"\n\nTHE ABOVE WORK HAS ALREADY BEEN COMPLETED --**DO NOT REQUEST IMPLEMENTATION OF IT AGAIN**")
-    
+        markdown_parts.append(
+            "\n\nTHE ABOVE WORK HAS ALREADY BEEN COMPLETED --**DO NOT REQUEST IMPLEMENTATION OF IT AGAIN**"
+        )
+
     # Join all parts into a single markdown string
     markdown_output = "".join(markdown_parts)
-    
+
     return markdown_output
 
 
@@ -403,7 +424,9 @@ def request_implementation(task_spec: str) -> str:
         reason = f"error: {str(e)}"
 
     # Get completion message if available
-    completion_message = get_completion_message() or ("Task was completed successfully." if success else None)
+    completion_message = get_completion_message() or (
+        "Task was completed successfully." if success else None
+    )
 
     # Get and reset work log if at root depth
     work_log = get_work_log()
@@ -427,43 +450,51 @@ def request_implementation(task_spec: str) -> str:
     }
     if work_log is not None:
         response_data["work_log"] = work_log
-    
+
     # Convert the response data to a markdown string
     markdown_parts = []
-    
+
     # Add header and completion message
     markdown_parts.append("# Implementation Plan")
     if response_data.get("completion_message"):
-        markdown_parts.append(f"\n## Completion Message\n\n{response_data['completion_message']}")
-    
+        markdown_parts.append(
+            f"\n## Completion Message\n\n{response_data['completion_message']}"
+        )
+
     # Add crash information if applicable
     if response_data.get("agent_crashed"):
-        markdown_parts.append(f"\n## ⚠️ Agent Crashed ⚠️\n\n**Error:** {response_data.get('crash_message', 'Unknown error')}")
-    
+        markdown_parts.append(
+            f"\n## ⚠️ Agent Crashed ⚠️\n\n**Error:** {response_data.get('crash_message', 'Unknown error')}"
+        )
+
     # Add success status
     status = "Success" if response_data.get("success", False) else "Failed"
-    reason_text = f": {response_data.get('reason')}" if response_data.get("reason") else ""
+    reason_text = (
+        f": {response_data.get('reason')}" if response_data.get("reason") else ""
+    )
     markdown_parts.append(f"\n## Status\n\n**{status}**{reason_text}")
-    
+
     # Add key facts
     if response_data.get("key_facts"):
         markdown_parts.append(f"\n## Key Facts\n\n{response_data['key_facts']}")
-    
+
     # Add related files
     if response_data.get("related_files"):
         files_list = "\n".join([f"- {file}" for file in response_data["related_files"]])
         markdown_parts.append(f"\n## Related Files\n\n{files_list}")
-    
+
     # Add key snippets
     if response_data.get("key_snippets"):
         markdown_parts.append(f"\n## Key Snippets\n\n{response_data['key_snippets']}")
-    
+
     # Add work log
     if response_data.get("work_log"):
         markdown_parts.append(f"\n## Work Log\n\n{response_data['work_log']}")
-        markdown_parts.append(f"\n\nTHE ABOVE WORK HAS ALREADY BEEN COMPLETED --**DO NOT REQUEST IMPLEMENTATION OF IT AGAIN**")
-    
+        markdown_parts.append(
+            "\n\nTHE ABOVE WORK HAS ALREADY BEEN COMPLETED --**DO NOT REQUEST IMPLEMENTATION OF IT AGAIN**"
+        )
+
     # Join all parts into a single markdown string
     markdown_output = "".join(markdown_parts)
-    
+
     return markdown_output

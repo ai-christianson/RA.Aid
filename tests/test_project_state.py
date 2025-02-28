@@ -138,13 +138,13 @@ def test_verify_fix(tmp_path):
     # Create a .ra-aid directory inside the temporary directory
     ra_aid_dir = tmp_path / ".ra-aid"
     ra_aid_dir.mkdir()
-    
+
     # Check that is_new_project() returns True (only .ra-aid directory)
     assert is_new_project(str(tmp_path)) is True
-    
+
     # Add a README.md file to the directory
     readme_file = tmp_path / "README.md"
     readme_file.write_text("# Test Project")
-    
+
     # Check that is_new_project() now returns False (has actual content)
     assert is_new_project(str(tmp_path)) is False

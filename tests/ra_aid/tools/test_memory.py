@@ -222,7 +222,7 @@ def test_emit_key_snippet(reset_memory):
 
     # Verify counter incremented correctly
     assert _global_memory["key_snippet_id_counter"] == 1
-    
+
     # Test snippet without description
     snippet2 = {
         "filepath": "main.py",
@@ -230,16 +230,16 @@ def test_emit_key_snippet(reset_memory):
         "snippet": "print('hello')",
         "description": None,
     }
-    
+
     # Emit second snippet
     result = emit_key_snippet.invoke({"snippet_info": snippet2})
-    
+
     # Verify return message
     assert result == "Snippet #1 stored."
-    
+
     # Verify snippet stored correctly
     assert _global_memory["key_snippets"][1] == snippet2
-    
+
     # Verify counter incremented correctly
     assert _global_memory["key_snippet_id_counter"] == 2
 
@@ -723,37 +723,40 @@ def test_emit_related_files_binary_filtering(reset_memory, tmp_path, monkeypatch
     text_file1.write_text("Text file 1 content")
     text_file2 = tmp_path / "text2.txt"
     text_file2.write_text("Text file 2 content")
-    
+
     # Create test "binary" files
     binary_file1 = tmp_path / "binary1.bin"
     binary_file1.write_text("Binary file 1 content")
     binary_file2 = tmp_path / "binary2.bin"
     binary_file2.write_text("Binary file 2 content")
-    
+
     # Mock the is_binary_file function to identify our "binary" files
     def mock_is_binary_file(filepath):
         return ".bin" in str(filepath)
-    
+
     # Apply the mock
     import ra_aid.tools.memory
+
     monkeypatch.setattr(ra_aid.tools.memory, "is_binary_file", mock_is_binary_file)
-    
+
     # Call emit_related_files with mix of text and binary files
-    result = emit_related_files.invoke({
-        "files": [
-            str(text_file1), 
-            str(binary_file1), 
-            str(text_file2), 
-            str(binary_file2)
-        ]
-    })
-    
+    result = emit_related_files.invoke(
+        {
+            "files": [
+                str(text_file1),
+                str(binary_file1),
+                str(text_file2),
+                str(binary_file2),
+            ]
+        }
+    )
+
     # Verify the result message mentions skipped binary files
     assert "Files noted." in result
     assert "Binary files skipped:" in result
     assert f"'{binary_file1}'" in result
     assert f"'{binary_file2}'" in result
-    
+
     # Verify only text files were added to related_files
     assert len(_global_memory["related_files"]) == 2
     file_values = list(_global_memory["related_files"].values())
@@ -761,6 +764,60 @@ def test_emit_related_files_binary_filtering(reset_memory, tmp_path, monkeypatch
     assert str(text_file2) in file_values
     assert str(binary_file1) not in file_values
     assert str(binary_file2) not in file_values
-    
+
     # Verify counter is correct (only incremented for text files)
     assert _global_memory["related_file_id_counter"] == 2
+
+
+def test_is_binary_file_with_ascii(reset_memory, monkeypatch):
+    """Test that ASCII files are correctly identified as text files"""
+    import os
+
+    import ra_aid.tools.memory
+
+    # Path to the mock ASCII file
+    ascii_file_path = os.path.join(
+        os.path.dirname(__file__), "..", "mocks", "ascii.txt"
+    )
+
+    # Test with magic library if available
+    if ra_aid.tools.memory.magic:
+        # Test real implementation with ASCII file
+        is_binary = ra_aid.tools.memory.is_binary_file(ascii_file_path)
+        assert not is_binary, "ASCII file should not be identified as binary"
+
+    # Test fallback implementation
+    # Mock magic to be None to force fallback implementation
+    monkeypatch.setattr(ra_aid.tools.memory, "magic", None)
+
+    # Test fallback with ASCII file
+    is_binary = ra_aid.tools.memory.is_binary_file(ascii_file_path)
+    assert (
+        not is_binary
+    ), "ASCII file should not be identified as binary with fallback method"
+
+
+def test_is_binary_file_with_null_bytes(reset_memory, tmp_path, monkeypatch):
+    """Test that files with null bytes are correctly identified as binary"""
+    import ra_aid.tools.memory
+
+    # Create a file with null bytes (binary content)
+    binary_file = tmp_path / "binary_with_nulls.bin"
+    with open(binary_file, "wb") as f:
+        f.write(b"Some text with \x00 null \x00 bytes")
+
+    # Test with magic library if available
+    if ra_aid.tools.memory.magic:
+        # Test real implementation with binary file
+        is_binary = ra_aid.tools.memory.is_binary_file(str(binary_file))
+        assert is_binary, "File with null bytes should be identified as binary"
+
+    # Test fallback implementation
+    # Mock magic to be None to force fallback implementation
+    monkeypatch.setattr(ra_aid.tools.memory, "magic", None)
+
+    # Test fallback with binary file
+    is_binary = ra_aid.tools.memory.is_binary_file(str(binary_file))
+    assert (
+        is_binary
+    ), "File with null bytes should be identified as binary with fallback method"

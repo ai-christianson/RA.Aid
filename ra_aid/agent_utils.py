@@ -7,7 +7,7 @@ import threading
 import time
 import uuid
 from datetime import datetime
-from typing import Any, Dict, List, Literal, Optional, Sequence, ContextManager
+from typing import Any, Dict, List, Literal, Optional, Sequence
 
 import litellm
 from anthropic import APIError, APITimeoutError, InternalServerError, RateLimitError
@@ -30,6 +30,12 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 
+from ra_aid.agent_context import (
+    agent_context,
+    is_completed,
+    reset_completion_flags,
+    should_exit,
+)
 from ra_aid.agents.ciayn_agent import CiaynAgent
 from ra_aid.agents_alias import RAgents
 from ra_aid.config import DEFAULT_MAX_TEST_CMD_RETRIES, DEFAULT_RECURSION_LIMIT
@@ -72,14 +78,6 @@ from ra_aid.tool_configs import (
     get_web_research_tools,
 )
 from ra_aid.tools.handle_user_defined_test_cmd_execution import execute_test_command
-from ra_aid.agent_context import (
-    agent_context,
-    get_current_context,
-    is_completed,
-    reset_completion_flags,
-    get_completion_message,
-    should_exit,
-)
 from ra_aid.tools.memory import (
     _global_memory,
     get_memory_value,
@@ -250,8 +248,12 @@ def is_anthropic_claude(config: Dict[str, Any]) -> bool:
     provider = config.get("provider", "")
     model_name = config.get("model", "")
     result = (
-        (provider.lower() == "anthropic" and model_name and "claude" in model_name.lower())
-        or (provider.lower() == "openrouter" and model_name.lower().startswith("anthropic/claude-"))
+        provider.lower() == "anthropic"
+        and model_name
+        and "claude" in model_name.lower()
+    ) or (
+        provider.lower() == "openrouter"
+        and model_name.lower().startswith("anthropic/claude-")
     )
     return result
 
@@ -953,14 +955,15 @@ def run_agent_with_retry(
             for attempt in range(max_retries):
                 logger.debug("Attempt %d/%d", attempt + 1, max_retries)
                 check_interrupt()
-                
+
                 # Check if the agent has crashed before attempting to run it
-                from ra_aid.agent_context import is_crashed, get_crash_message
+                from ra_aid.agent_context import get_crash_message, is_crashed
+
                 if is_crashed():
                     crash_message = get_crash_message()
                     logger.error("Agent has crashed: %s", crash_message)
                     return f"Agent has crashed: {crash_message}"
-                
+
                 try:
                     _run_agent_stream(agent, msg_list, config)
                     if fallback_handler:
@@ -982,11 +985,12 @@ def run_agent_with_retry(
                     error_str = str(e).lower()
                     if "400" in error_str or "bad request" in error_str:
                         from ra_aid.agent_context import mark_agent_crashed
+
                         crash_message = f"Unretryable error: {str(e)}"
                         mark_agent_crashed(crash_message)
                         logger.error("Agent has crashed: %s", crash_message)
                         return f"Agent has crashed: {crash_message}"
-                    
+
                     _handle_fallback_response(e, fallback_handler, agent, msg_list)
                     continue
                 except FallbackToolExecutionError as e:
@@ -1007,13 +1011,16 @@ def run_agent_with_retry(
                 ) as e:
                     # Check if this is a BadRequestError (HTTP 400) which is unretryable
                     error_str = str(e).lower()
-                    if ("400" in error_str or "bad request" in error_str) and isinstance(e, APIError):
+                    if (
+                        "400" in error_str or "bad request" in error_str
+                    ) and isinstance(e, APIError):
                         from ra_aid.agent_context import mark_agent_crashed
+
                         crash_message = f"Unretryable API error: {str(e)}"
                         mark_agent_crashed(crash_message)
                         logger.error("Agent has crashed: %s", crash_message)
                         return f"Agent has crashed: {crash_message}"
-                    
+
                     _handle_api_error(e, attempt, max_retries, base_delay)
         finally:
             _decrement_agent_depth()

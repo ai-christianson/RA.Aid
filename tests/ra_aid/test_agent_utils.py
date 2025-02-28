@@ -8,7 +8,9 @@ import pytest
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
-from ra_aid.agent_context import agent_context, get_current_context, reset_completion_flags
+from ra_aid.agent_context import (
+    agent_context,
+)
 from ra_aid.agent_utils import (
     AgentState,
     create_agent,
@@ -116,7 +118,10 @@ def test_create_agent_anthropic(mock_model, mock_memory):
 
         assert agent == "react_agent"
         mock_react.assert_called_once_with(
-            mock_model, [], version='v2', state_modifier=mock_react.call_args[1]["state_modifier"]
+            mock_model,
+            [],
+            version="v2",
+            state_modifier=mock_react.call_args[1]["state_modifier"],
         )
 
 
@@ -259,7 +264,7 @@ def test_create_agent_anthropic_token_limiting_disabled(mock_model, mock_memory)
         agent = create_agent(mock_model, [])
 
         assert agent == "react_agent"
-        mock_react.assert_called_once_with(mock_model, [], version='v2')
+        mock_react.assert_called_once_with(mock_model, [], version="v2")
 
 
 def test_get_model_token_limit_research(mock_memory):
@@ -339,7 +344,7 @@ def test_run_agent_stream(monkeypatch):
         ctx.plan_completed = True
         ctx.task_completed = True
         ctx.completion_message = "existing"
-    
+
     call_flag = {"called": False}
 
     def fake_print_agent_output(
@@ -352,7 +357,7 @@ def test_run_agent_stream(monkeypatch):
     )
     _run_agent_stream(dummy_agent, [HumanMessage("dummy prompt")], {})
     assert call_flag["called"]
-    
+
     with agent_context() as ctx:
         assert ctx.plan_completed is False
         assert ctx.task_completed is False
@@ -457,74 +462,93 @@ def test_is_anthropic_claude():
     assert is_anthropic_claude({"provider": "anthropic", "model": "claude-2"})
     assert is_anthropic_claude({"provider": "ANTHROPIC", "model": "claude-instant"})
     assert not is_anthropic_claude({"provider": "anthropic", "model": "gpt-4"})
-    
+
     # Test OpenRouter provider cases
-    assert is_anthropic_claude({"provider": "openrouter", "model": "anthropic/claude-2"})
-    assert is_anthropic_claude({"provider": "openrouter", "model": "anthropic/claude-instant"})
+    assert is_anthropic_claude(
+        {"provider": "openrouter", "model": "anthropic/claude-2"}
+    )
+    assert is_anthropic_claude(
+        {"provider": "openrouter", "model": "anthropic/claude-instant"}
+    )
     assert not is_anthropic_claude({"provider": "openrouter", "model": "openai/gpt-4"})
-    
+
     # Test edge cases
     assert not is_anthropic_claude({})  # Empty config
     assert not is_anthropic_claude({"provider": "anthropic"})  # Missing model
     assert not is_anthropic_claude({"model": "claude-2"})  # Missing provider
-    assert not is_anthropic_claude({"provider": "other", "model": "claude-2"})  # Wrong provider
-    
-    
+    assert not is_anthropic_claude(
+        {"provider": "other", "model": "claude-2"}
+    )  # Wrong provider
+
+
 def test_run_agent_with_retry_checks_crash_status(monkeypatch):
     """Test that run_agent_with_retry checks for crash status at the beginning of each iteration."""
-    from ra_aid.agent_utils import run_agent_with_retry
     from ra_aid.agent_context import agent_context, mark_agent_crashed
-    
+    from ra_aid.agent_utils import run_agent_with_retry
+
     # Setup mocks for dependencies to isolate our test
     dummy_agent = Mock()
-    
+
     # Track function calls
     mock_calls = {"run_agent_stream": 0}
-    
+
     def mock_run_agent_stream(*args, **kwargs):
         mock_calls["run_agent_stream"] += 1
-        
+
     def mock_setup_interrupt_handling():
         return None
-        
+
     def mock_restore_interrupt_handling(handler):
         pass
-        
+
     def mock_increment_agent_depth():
         pass
-        
+
     def mock_decrement_agent_depth():
         pass
-        
+
     def mock_is_crashed():
         return ctx.is_crashed() if ctx else False
-        
+
     def mock_get_crash_message():
         return ctx.agent_crashed_message if ctx and ctx.is_crashed() else None
-    
+
     # Apply mocks
     monkeypatch.setattr("ra_aid.agent_utils._run_agent_stream", mock_run_agent_stream)
-    monkeypatch.setattr("ra_aid.agent_utils._setup_interrupt_handling", mock_setup_interrupt_handling)
-    monkeypatch.setattr("ra_aid.agent_utils._restore_interrupt_handling", mock_restore_interrupt_handling)
-    monkeypatch.setattr("ra_aid.agent_utils._increment_agent_depth", mock_increment_agent_depth)
-    monkeypatch.setattr("ra_aid.agent_utils._decrement_agent_depth", mock_decrement_agent_depth)
+    monkeypatch.setattr(
+        "ra_aid.agent_utils._setup_interrupt_handling", mock_setup_interrupt_handling
+    )
+    monkeypatch.setattr(
+        "ra_aid.agent_utils._restore_interrupt_handling",
+        mock_restore_interrupt_handling,
+    )
+    monkeypatch.setattr(
+        "ra_aid.agent_utils._increment_agent_depth", mock_increment_agent_depth
+    )
+    monkeypatch.setattr(
+        "ra_aid.agent_utils._decrement_agent_depth", mock_decrement_agent_depth
+    )
     monkeypatch.setattr("ra_aid.agent_utils.check_interrupt", lambda: None)
-    
+
     # First, run without a crash - agent should be run
     with agent_context() as ctx:
         monkeypatch.setattr("ra_aid.agent_context.is_crashed", mock_is_crashed)
-        monkeypatch.setattr("ra_aid.agent_context.get_crash_message", mock_get_crash_message)
+        monkeypatch.setattr(
+            "ra_aid.agent_context.get_crash_message", mock_get_crash_message
+        )
         result = run_agent_with_retry(dummy_agent, "test prompt", {})
         assert mock_calls["run_agent_stream"] == 1
-    
+
     # Reset call counter
     mock_calls["run_agent_stream"] = 0
-    
+
     # Now run with a crash - agent should not be run
     with agent_context() as ctx:
         mark_agent_crashed("Test crash message")
         monkeypatch.setattr("ra_aid.agent_context.is_crashed", mock_is_crashed)
-        monkeypatch.setattr("ra_aid.agent_context.get_crash_message", mock_get_crash_message)
+        monkeypatch.setattr(
+            "ra_aid.agent_context.get_crash_message", mock_get_crash_message
+        )
         result = run_agent_with_retry(dummy_agent, "test prompt", {})
         # Verify _run_agent_stream was not called
         assert mock_calls["run_agent_stream"] == 0
@@ -534,54 +558,65 @@ def test_run_agent_with_retry_checks_crash_status(monkeypatch):
 
 def test_run_agent_with_retry_handles_badrequest_error(monkeypatch):
     """Test that run_agent_with_retry properly handles BadRequestError as unretryable."""
+    from ra_aid.agent_context import agent_context, is_crashed
     from ra_aid.agent_utils import run_agent_with_retry
     from ra_aid.exceptions import ToolExecutionError
-    from ra_aid.agent_context import agent_context, is_crashed
-    
+
     # Setup mocks
     dummy_agent = Mock()
-    
+
     # Track function calls and simulate BadRequestError
     run_count = [0]
-    
+
     def mock_run_agent_stream(*args, **kwargs):
         run_count[0] += 1
         if run_count[0] == 1:
             # First call throws a 400 BadRequestError
             raise ToolExecutionError("400 Bad Request: Invalid input")
         # If it's called again, it should run normally
-    
+
     def mock_setup_interrupt_handling():
         return None
-        
+
     def mock_restore_interrupt_handling(handler):
         pass
-        
+
     def mock_increment_agent_depth():
         pass
-        
+
     def mock_decrement_agent_depth():
         pass
-        
+
     def mock_mark_agent_crashed(message):
         ctx.agent_has_crashed = True
         ctx.agent_crashed_message = message
-        
+
     def mock_is_crashed():
         return ctx.is_crashed() if ctx else False
-    
+
     # Apply mocks
     monkeypatch.setattr("ra_aid.agent_utils._run_agent_stream", mock_run_agent_stream)
-    monkeypatch.setattr("ra_aid.agent_utils._setup_interrupt_handling", mock_setup_interrupt_handling)
-    monkeypatch.setattr("ra_aid.agent_utils._restore_interrupt_handling", mock_restore_interrupt_handling)
-    monkeypatch.setattr("ra_aid.agent_utils._increment_agent_depth", mock_increment_agent_depth)
-    monkeypatch.setattr("ra_aid.agent_utils._decrement_agent_depth", mock_decrement_agent_depth)
+    monkeypatch.setattr(
+        "ra_aid.agent_utils._setup_interrupt_handling", mock_setup_interrupt_handling
+    )
+    monkeypatch.setattr(
+        "ra_aid.agent_utils._restore_interrupt_handling",
+        mock_restore_interrupt_handling,
+    )
+    monkeypatch.setattr(
+        "ra_aid.agent_utils._increment_agent_depth", mock_increment_agent_depth
+    )
+    monkeypatch.setattr(
+        "ra_aid.agent_utils._decrement_agent_depth", mock_decrement_agent_depth
+    )
     monkeypatch.setattr("ra_aid.agent_utils.check_interrupt", lambda: None)
-    
+
     with agent_context() as ctx:
-        monkeypatch.setattr("ra_aid.agent_context.mark_agent_crashed", mock_mark_agent_crashed)
+        monkeypatch.setattr(
+            "ra_aid.agent_context.mark_agent_crashed", mock_mark_agent_crashed
+        )
         monkeypatch.setattr("ra_aid.agent_context.is_crashed", mock_is_crashed)
-        
+
         result = run_agent_with_retry(dummy_agent, "test prompt", {})
         # Verify the agent was only run once and not retried
         assert run_count[0] == 1
@@ -594,60 +629,73 @@ def test_run_agent_with_retry_handles_badrequest_error(monkeypatch):
 def test_run_agent_with_retry_handles_api_badrequest_error(monkeypatch):
     """Test that run_agent_with_retry properly handles API BadRequestError as unretryable."""
     # Import APIError from anthropic module and patch it on the agent_utils module
-    from anthropic import APIError as AnthropicAPIError
-    from ra_aid.agent_utils import run_agent_with_retry
+
     from ra_aid.agent_context import agent_context, is_crashed
-    
+    from ra_aid.agent_utils import run_agent_with_retry
+
     # Setup mocks
     dummy_agent = Mock()
-    
+
     # Track function calls and simulate BadRequestError
     run_count = [0]
-    
+
     # Create a mock APIError class that simulates Anthropic's APIError
     class MockAPIError(Exception):
         pass
-    
+
     def mock_run_agent_stream(*args, **kwargs):
         run_count[0] += 1
         if run_count[0] == 1:
             # First call throws a 400 Bad Request APIError
             mock_error = MockAPIError("400 Bad Request")
-            mock_error.__class__.__name__ = "APIError"  # Make it look like Anthropic's APIError
+            mock_error.__class__.__name__ = (
+                "APIError"  # Make it look like Anthropic's APIError
+            )
             raise mock_error
         # If it's called again, it should run normally
-    
+
     def mock_setup_interrupt_handling():
         return None
-        
+
     def mock_restore_interrupt_handling(handler):
         pass
-        
+
     def mock_increment_agent_depth():
         pass
-        
+
     def mock_decrement_agent_depth():
         pass
-        
+
     def mock_mark_agent_crashed(message):
         ctx.agent_has_crashed = True
         ctx.agent_crashed_message = message
-        
+
     def mock_is_crashed():
         return ctx.is_crashed() if ctx else False
-    
+
     # Apply mocks
     monkeypatch.setattr("ra_aid.agent_utils._run_agent_stream", mock_run_agent_stream)
-    monkeypatch.setattr("ra_aid.agent_utils._setup_interrupt_handling", mock_setup_interrupt_handling)
-    monkeypatch.setattr("ra_aid.agent_utils._restore_interrupt_handling", mock_restore_interrupt_handling)
-    monkeypatch.setattr("ra_aid.agent_utils._increment_agent_depth", mock_increment_agent_depth)
-    monkeypatch.setattr("ra_aid.agent_utils._decrement_agent_depth", mock_decrement_agent_depth)
+    monkeypatch.setattr(
+        "ra_aid.agent_utils._setup_interrupt_handling", mock_setup_interrupt_handling
+    )
+    monkeypatch.setattr(
+        "ra_aid.agent_utils._restore_interrupt_handling",
+        mock_restore_interrupt_handling,
+    )
+    monkeypatch.setattr(
+        "ra_aid.agent_utils._increment_agent_depth", mock_increment_agent_depth
+    )
+    monkeypatch.setattr(
+        "ra_aid.agent_utils._decrement_agent_depth", mock_decrement_agent_depth
+    )
     monkeypatch.setattr("ra_aid.agent_utils.check_interrupt", lambda: None)
     monkeypatch.setattr("ra_aid.agent_utils._handle_api_error", lambda *args: None)
     monkeypatch.setattr("ra_aid.agent_utils.APIError", MockAPIError)
-    monkeypatch.setattr("ra_aid.agent_context.mark_agent_crashed", mock_mark_agent_crashed)
+    monkeypatch.setattr(
+        "ra_aid.agent_context.mark_agent_crashed", mock_mark_agent_crashed
+    )
     monkeypatch.setattr("ra_aid.agent_context.is_crashed", mock_is_crashed)
-    
+
     with agent_context() as ctx:
         result = run_agent_with_retry(dummy_agent, "test prompt", {})
         # Verify the agent was only run once and not retried

@@ -241,7 +241,9 @@ If you find this is an empty directory, you can stop research immediately and as
 
 """
 
-RESEARCH_PROMPT = RESEARCH_COMMON_PROMPT_HEADER + """
+RESEARCH_PROMPT = (
+    RESEARCH_COMMON_PROMPT_HEADER
+    + """
 
 Project State Handling:
     For new/empty projects:
@@ -280,9 +282,12 @@ NEVER ANNOUNCE WHAT YOU ARE DOING, JUST DO IT!
 AS THE RESEARCH AGENT, YOU MUST NOT WRITE OR MODIFY ANY FILES. IF FILE MODIFICATION OR IMPLEMENTATINO IS REQUIRED, CALL request_implementation.
 IF THE USER ASKED YOU TO UPDATE A FILE, JUST DO RESEARCH FIRST, EMIT YOUR RESEARCH NOTES, THEN CALL request_implementation.
 """
+)
 
 # Research-only prompt - similar to research prompt but without implementation references
-RESEARCH_ONLY_PROMPT = RESEARCH_COMMON_PROMPT_HEADER + """
+RESEARCH_ONLY_PROMPT = (
+    RESEARCH_COMMON_PROMPT_HEADER
+    + """
 
 You have been spawned by a higher level research agent, so only spawn more research tasks sparingly if absolutely necessary. Keep your research *very* scoped and efficient.
 
@@ -290,6 +295,7 @@ When you emit research notes, keep it extremely concise and relevant only to the
 
 NEVER ANNOUNCE WHAT YOU ARE DOING, JUST DO IT!
 """
+)
 
 # Web research prompt - guides web search and information gathering
 WEB_RESEARCH_PROMPT = """Current Date: {current_date}

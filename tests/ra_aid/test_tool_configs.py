@@ -1,11 +1,11 @@
 from ra_aid.tool_configs import (
+    MODIFICATION_TOOLS,
     get_implementation_tools,
     get_planning_tools,
     get_read_only_tools,
     get_research_tools,
     get_web_research_tools,
     set_modification_tools,
-    MODIFICATION_TOOLS,
 )
 
 
@@ -14,16 +14,16 @@ def test_get_read_only_tools():
     tools = get_read_only_tools(human_interaction=False, use_aider=False)
     assert len(tools) > 0
     assert all(callable(tool) for tool in tools)
-    
+
     # Check emit_related_files is not included when use_aider is False
     tool_names = [tool.name for tool in tools]
     assert "emit_related_files" not in tool_names
-    
+
     # Test with use_aider=True
     tools_with_aider = get_read_only_tools(human_interaction=False, use_aider=True)
     tool_names_with_aider = [tool.name for tool in tools_with_aider]
     assert "emit_related_files" in tool_names_with_aider
-    
+
     # Test with human interaction
     tools_with_human = get_read_only_tools(human_interaction=True, use_aider=False)
     assert len(tools_with_human) == len(tools) + 1
@@ -102,13 +102,13 @@ def test_set_modification_tools():
     assert "file_str_replace" in tool_names
     assert "put_complete_file_contents" in tool_names
     assert "run_programming_task" not in tool_names
-    
+
     # Test with use_aider=True
     set_modification_tools(use_aider=True)
     tool_names = [tool.name for tool in MODIFICATION_TOOLS]
     assert "file_str_replace" not in tool_names
     assert "put_complete_file_contents" not in tool_names
     assert "run_programming_task" in tool_names
-    
+
     # Reset to default for other tests
     set_modification_tools(use_aider=False)

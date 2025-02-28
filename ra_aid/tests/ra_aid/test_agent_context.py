@@ -2,17 +2,17 @@
 
 import threading
 import time
-import pytest
+
 
 from ra_aid.agent_context import (
     AgentContext,
     agent_context,
-    get_current_context,
-    mark_task_completed,
-    mark_plan_completed,
-    reset_completion_flags,
-    is_completed,
     get_completion_message,
+    get_current_context,
+    is_completed,
+    mark_plan_completed,
+    mark_task_completed,
+    reset_completion_flags,
 )
 
 
@@ -30,7 +30,7 @@ class TestAgentContext:
         """Test that child contexts inherit state from parent contexts."""
         parent = AgentContext()
         parent.mark_task_completed("Parent task completed")
-        
+
         child = AgentContext(parent_context=parent)
         assert child.task_completed is True
         assert child.completion_message == "Parent task completed"
@@ -39,7 +39,7 @@ class TestAgentContext:
         """Test marking a task as completed."""
         context = AgentContext()
         context.mark_task_completed("Task done")
-        
+
         assert context.task_completed is True
         assert context.plan_completed is False
         assert context.completion_message == "Task done"
@@ -48,7 +48,7 @@ class TestAgentContext:
         """Test marking a plan as completed."""
         context = AgentContext()
         context.mark_plan_completed("Plan done")
-        
+
         assert context.task_completed is True
         assert context.plan_completed is True
         assert context.completion_message == "Plan done"
@@ -57,7 +57,7 @@ class TestAgentContext:
         """Test resetting completion flags."""
         context = AgentContext()
         context.mark_task_completed("Task done")
-        
+
         context.reset_completion_flags()
         assert context.task_completed is False
         assert context.plan_completed is False
@@ -67,13 +67,13 @@ class TestAgentContext:
         """Test the is_completed property."""
         context = AgentContext()
         assert context.is_completed is False
-        
+
         context.mark_task_completed("Task done")
         assert context.is_completed is True
-        
+
         context.reset_completion_flags()
         assert context.is_completed is False
-        
+
         context.mark_plan_completed("Plan done")
         assert context.is_completed is True
 
@@ -84,29 +84,29 @@ class TestContextManager:
     def test_context_manager_basic(self):
         """Test basic context manager functionality."""
         assert get_current_context() is None
-        
+
         with agent_context() as ctx:
             assert get_current_context() is ctx
             assert ctx.task_completed is False
-        
+
         assert get_current_context() is None
 
     def test_nested_context_managers(self):
         """Test nested context managers."""
         with agent_context() as outer_ctx:
             assert get_current_context() is outer_ctx
-            
+
             with agent_context() as inner_ctx:
                 assert get_current_context() is inner_ctx
                 assert inner_ctx is not outer_ctx
-            
+
             assert get_current_context() is outer_ctx
 
     def test_context_manager_with_parent(self):
         """Test context manager with explicit parent context."""
         parent = AgentContext()
         parent.mark_task_completed("Parent task")
-        
+
         with agent_context(parent_context=parent) as ctx:
             assert ctx.task_completed is True
             assert ctx.completion_message == "Parent task"
@@ -115,13 +115,13 @@ class TestContextManager:
         """Test that nested contexts inherit from outer contexts by default."""
         with agent_context() as outer:
             outer.mark_task_completed("Outer task")
-            
+
             with agent_context() as inner:
                 assert inner.task_completed is True
                 assert inner.completion_message == "Outer task"
-                
+
                 inner.mark_plan_completed("Inner plan")
-            
+
             # Outer context should not be affected by inner context changes
             assert outer.task_completed is True
             assert outer.plan_completed is False
@@ -134,23 +134,23 @@ class TestThreadIsolation:
     def test_thread_isolation(self):
         """Test that contexts are isolated between threads."""
         results = {}
-        
+
         def thread_func(thread_id):
             with agent_context() as ctx:
                 ctx.mark_task_completed(f"Thread {thread_id}")
                 time.sleep(0.1)  # Give other threads time to run
                 # Store the context's message for verification
                 results[thread_id] = get_completion_message()
-        
+
         threads = []
         for i in range(3):
             t = threading.Thread(target=thread_func, args=(i,))
             threads.append(t)
             t.start()
-        
+
         for t in threads:
             t.join()
-        
+
         # Each thread should have its own message
         assert results[0] == "Thread 0"
         assert results[1] == "Thread 1"
@@ -188,26 +188,16 @@ class TestUtilityFunctions:
         mark_task_completed("No context")
         mark_plan_completed("No context")
         reset_completion_flags()
-        
+
         # These should have safe default returns
         assert is_completed() is False
         assert get_completion_message() == ""
+
+
 """Unit tests for the agent_context module."""
 
-import threading
-import time
-import pytest
 
-from ra_aid.agent_context import (
-    AgentContext,
-    agent_context,
-    get_current_context,
-    mark_task_completed,
-    mark_plan_completed,
-    reset_completion_flags,
-    is_completed,
-    get_completion_message,
-)
+
 
 
 class TestAgentContext:

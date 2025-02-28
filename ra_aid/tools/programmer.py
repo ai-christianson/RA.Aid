@@ -159,7 +159,9 @@ def run_programming_task(
 
         # Return structured output
         return {
-            "output": (truncate_output(result[0].decode()) + extra_ins) if result[0] else "",
+            "output": (truncate_output(result[0].decode()) + extra_ins)
+            if result[0]
+            else "",
             "return_code": result[1],
             "success": result[1] == 0,
         }

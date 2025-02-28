@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict, List, Optional, Set, Union
+from typing import Any, Dict, List, Optional
 
 try:
     import magic
@@ -12,7 +12,11 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from typing_extensions import TypedDict
 
-from ra_aid.agent_context import mark_task_completed, mark_plan_completed, mark_should_exit
+from ra_aid.agent_context import (
+    mark_plan_completed,
+    mark_should_exit,
+    mark_task_completed,
+)
 
 
 class WorkLogEntry(TypedDict):
@@ -389,7 +393,7 @@ def emit_related_files(files: List[str]) -> str:
             invalid_paths.append(file)
             results.append(f"Error: Path '{file}' exists but is not a regular file")
             continue
-            
+
         # Check if it's a binary file
         if is_binary_file(file):
             binary_files.append(file)
@@ -430,7 +434,7 @@ def emit_related_files(files: List[str]) -> str:
                 border_style="green",
             )
         )
-    
+
     # Display skipped binary files
     if binary_files:
         binary_files_md = "\n".join(f"- `{file}`" for file in binary_files)
@@ -478,18 +482,36 @@ def is_binary_file(filepath):
     if magic:
         try:
             mime = magic.from_file(filepath, mime=True)
-            return not mime.startswith('text/')
-        except Exception:
-            # Fallback if magic fails
-            return False
-    else:
-        # Basic binary detection if magic is not available
-        try:
-            with open(filepath, 'r', encoding='utf-8') as f:
-                f.read(1024)  # Try to read as text
+            file_type = magic.from_file(filepath)
+
+            if not mime.startswith("text/"):
+                return True
+
+            if "ASCII text" in file_type:
                 return False
-        except UnicodeDecodeError:
+
             return True
+        except Exception:
+            return _is_binary_fallback(filepath)
+    else:
+        return _is_binary_fallback(filepath)
+
+
+def _is_binary_fallback(filepath):
+    """Fallback method to detect binary files without using magic."""
+    try:
+        with open(filepath, "r", encoding="utf-8") as f:
+            chunk = f.read(1024)
+
+            # Check for null bytes which indicate binary content
+            if "\0" in chunk:
+                return True
+
+            # If we can read it as text without errors, it's probably not binary
+            return False
+    except UnicodeDecodeError:
+        # If we can't decode as UTF-8, it's likely binary
+        return True
 
 
 def get_work_log() -> str:

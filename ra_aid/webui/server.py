@@ -1,23 +1,21 @@
 #!/usr/bin/env python3
-import sys
-import os
-from pathlib import Path
 import asyncio
-from typing import List
-import json
-import threading
-import queue
-import traceback
-import shutil
 import logging
+import os
+import queue
+import sys
+import threading
+import traceback
+from pathlib import Path
+from typing import List
 
 # Configure logging
 logging.basicConfig(
     level=logging.WARNING,
-    format='%(asctime)s - %(levelname)s - %(message)s',
+    format="%(asctime)s - %(levelname)s - %(message)s",
     handlers=[
         logging.StreamHandler(sys.__stderr__)  # Use the real stderr
-    ]
+    ],
 )
 logger = logging.getLogger(__name__)
 
@@ -26,12 +24,12 @@ project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-from fastapi import FastAPI, WebSocket, Request, WebSocketDisconnect
+import uvicorn
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
 
 app = FastAPI()
 
@@ -55,10 +53,12 @@ app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 # Store active WebSocket connections
 active_connections: List[WebSocket] = []
 
+
 def run_ra_aid(message_content, output_queue):
     """Run ra-aid in a separate thread"""
     try:
         import ra_aid.__main__
+
         logger.info("Successfully imported ra_aid.__main__")
 
         # Override sys.argv
@@ -72,47 +72,47 @@ def run_ra_aid(message_content, output_queue):
                 self.buffer = []
                 self.box_start = False
                 self._real_stderr = sys.__stderr__
-            
+
             def write(self, text):
                 # Always log raw output for debugging
                 logger.debug(f"Raw output: {repr(text)}")
-                
+
                 # Check if this is a box drawing character
-                if any(c in text for c in '╭╮╰╯│─'):
+                if any(c in text for c in "╭╮╰╯│─"):
                     self.box_start = True
                     self.buffer.append(text)
                 elif self.box_start and text.strip():
                     self.buffer.append(text)
-                    if '╯' in text:  # End of box
-                        full_text = ''.join(self.buffer)
+                    if "╯" in text:  # End of box
+                        full_text = "".join(self.buffer)
                         # Extract content from inside the box
-                        lines = full_text.split('\n')
+                        lines = full_text.split("\n")
                         content_lines = []
                         for line in lines:
                             # Remove box characters and leading/trailing spaces
-                            clean_line = line.strip('╭╮╰╯│─ ')
+                            clean_line = line.strip("╭╮╰╯│─ ")
                             if clean_line:
                                 content_lines.append(clean_line)
                         if content_lines:
-                            self.queue.put('\n'.join(content_lines))
+                            self.queue.put("\n".join(content_lines))
                         self.buffer = []
                         self.box_start = False
                 elif not self.box_start and text.strip():
                     self.queue.put(text.strip())
-            
+
             def flush(self):
                 if self.buffer:
-                    full_text = ''.join(self.buffer)
+                    full_text = "".join(self.buffer)
                     # Extract content from partial box
-                    lines = full_text.split('\n')
+                    lines = full_text.split("\n")
                     content_lines = []
                     for line in lines:
                         # Remove box characters and leading/trailing spaces
-                        clean_line = line.strip('╭╮╰╯│─ ')
+                        clean_line = line.strip("╭╮╰╯│─ ")
                         if clean_line:
                             content_lines.append(clean_line)
                     if content_lines:
-                        self.queue.put('\n'.join(content_lines))
+                        self.queue.put("\n".join(content_lines))
                     self.buffer = []
                     self.box_start = False
 
@@ -144,12 +144,14 @@ def run_ra_aid(message_content, output_queue):
         traceback.print_exc(file=sys.__stderr__)
         output_queue.put(f"Error: {str(e)}")
 
+
 @app.get("/", response_class=HTMLResponse)
 async def get_root(request: Request):
     """Serve the index.html file with port parameter."""
     return templates.TemplateResponse(
         "index.html", {"request": request, "server_port": request.url.port or 8080}
     )
+
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -170,7 +172,9 @@ async def websocket_endpoint(websocket: WebSocket):
                 output_queue = queue.Queue()
 
                 # Create and start thread
-                thread = threading.Thread(target=run_ra_aid, args=(content, output_queue))
+                thread = threading.Thread(
+                    target=run_ra_aid, args=(content, output_queue)
+                )
                 thread.start()
 
                 try:
@@ -183,17 +187,21 @@ async def websocket_endpoint(websocket: WebSocket):
                             line = output_queue.get(timeout=0.1)
                             if line and line.strip():  # Only send non-empty messages
                                 logger.debug(f"WebSocket sending: {repr(line)}")
-                                await websocket.send_json({
-                                    "type": "chunk",
-                                    "chunk": {
-                                        "agent": {
-                                            "messages": [{
-                                                "content": line.strip(),
-                                                "status": "info"
-                                            }]
-                                        }
+                                await websocket.send_json(
+                                    {
+                                        "type": "chunk",
+                                        "chunk": {
+                                            "agent": {
+                                                "messages": [
+                                                    {
+                                                        "content": line.strip(),
+                                                        "status": "info",
+                                                    }
+                                                ]
+                                            }
+                                        },
                                     }
-                                })
+                                )
                         except queue.Empty:
                             await asyncio.sleep(0.1)
                         except Exception as e:
@@ -211,10 +219,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 except Exception as e:
                     error_msg = f"Error running ra-aid: {str(e)}"
                     logger.error(error_msg)
-                    await websocket.send_json({
-                        "type": "error",
-                        "message": error_msg
-                    })
+                    await websocket.send_json({"type": "error", "message": error_msg})
 
             logger.info("Waiting for message...")
 
@@ -243,6 +248,7 @@ def run_server(host: str = "0.0.0.0", port: int = 8080):
 
 if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser(description="RA.Aid Web Interface Server")
     parser.add_argument(
         "--port", type=int, default=8080, help="Port to listen on (default: 8080)"

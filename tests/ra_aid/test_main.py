@@ -204,15 +204,15 @@ def test_use_aider_flag(mock_dependencies):
     """Test that use-aider flag is correctly stored in config."""
     import sys
     from unittest.mock import patch
-    from ra_aid.tool_configs import MODIFICATION_TOOLS, set_modification_tools
 
     from ra_aid.__main__ import main
+    from ra_aid.tool_configs import MODIFICATION_TOOLS, set_modification_tools
 
     _global_memory.clear()
-    
+
     # Reset to default state
     set_modification_tools(False)
-    
+
     # Check default behavior (use_aider=False)
     with patch.object(
         sys,
@@ -222,15 +222,15 @@ def test_use_aider_flag(mock_dependencies):
         main()
         config = _global_memory["config"]
         assert config.get("use_aider") is False
-        
+
         # Check that file tools are enabled by default
         tool_names = [tool.name for tool in MODIFICATION_TOOLS]
         assert "file_str_replace" in tool_names
         assert "put_complete_file_contents" in tool_names
         assert "run_programming_task" not in tool_names
-    
+
     _global_memory.clear()
-    
+
     # Check with --use-aider flag
     with patch.object(
         sys,
@@ -240,12 +240,12 @@ def test_use_aider_flag(mock_dependencies):
         main()
         config = _global_memory["config"]
         assert config.get("use_aider") is True
-        
+
         # Check that run_programming_task is enabled
         tool_names = [tool.name for tool in MODIFICATION_TOOLS]
         assert "file_str_replace" not in tool_names
         assert "put_complete_file_contents" not in tool_names
         assert "run_programming_task" in tool_names
-    
+
     # Reset to default state for other tests
     set_modification_tools(False)

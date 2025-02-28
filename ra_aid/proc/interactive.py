@@ -17,7 +17,7 @@ import signal
 import subprocess
 import sys
 import time
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple
 
 import pyte
 from pyte.screens import HistoryScreen
@@ -33,17 +33,20 @@ else:
 
 
 def create_process(
-    cmd: List[str], env: Optional[dict] = None, cols: Optional[int] = None, rows: Optional[int] = None
+    cmd: List[str],
+    env: Optional[dict] = None,
+    cols: Optional[int] = None,
+    rows: Optional[int] = None,
 ) -> Tuple[subprocess.Popen, Optional[int]]:
     """
     Create a subprocess with appropriate settings for the current platform.
-    
+
     Args:
         cmd: Command to execute as a list of strings
         env: Environment variables dictionary, defaults to os.environ.copy()
         cols: Number of columns for the terminal, defaults to current terminal width
         rows: Number of rows for the terminal, defaults to current terminal height
-        
+
     Returns:
         On Unix: (process, master_fd) where master_fd is the file descriptor for the pty master
         On Windows: (process, None) as Windows doesn't use ptys
@@ -61,7 +64,7 @@ def create_process(
         # Windows-specific process creation
         startupinfo = subprocess.STARTUPINFO()
         startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-        
+
         proc = subprocess.Popen(
             cmd,
             stdin=subprocess.PIPE,
@@ -78,7 +81,7 @@ def create_process(
         master_fd, slave_fd = os.openpty()
         # Set master_fd to non-blocking to avoid indefinite blocking
         os.set_blocking(master_fd, False)
-        
+
         proc = subprocess.Popen(
             cmd,
             stdin=slave_fd,
@@ -90,18 +93,18 @@ def create_process(
             preexec_fn=os.setsid,  # Create new process group for proper signal handling
         )
         os.close(slave_fd)  # Close slave end in the parent process
-        
+
         return proc, master_fd
 
 
 def get_terminal_size() -> Tuple[int, int]:
     """
     Get the current terminal size in a cross-platform way.
-    
+
     This function works on both Unix and Windows systems, using shutil.get_terminal_size()
     which is available in Python 3.3+. If the terminal size cannot be determined
     (e.g., when running in a non-interactive environment), it falls back to default values.
-    
+
     Returns:
         A tuple of (columns, rows) representing the terminal dimensions.
     """
@@ -117,11 +120,11 @@ def render_line(line, columns: int) -> str:
     """Render a single screen line from the pyte buffer (a mapping of column to Char)."""
     if not line:
         return ""
-    
+
     # Handle string lines directly (from screen.display)
     if isinstance(line, str):
         return line
-        
+
     # Handle dictionary-style lines (from history)
     try:
         return "".join(line[x].data for x in range(columns) if x in line)
@@ -135,21 +138,21 @@ def run_interactive_command(
 ) -> Tuple[bytes, int]:
     """
     Runs an interactive command with output capture, capturing final scrollback history.
-    
+
     This function provides a cross-platform way to run interactive commands with:
     - Full terminal emulation using pyte's HistoryScreen
     - Real-time display of command output
     - Input forwarding when running in an interactive terminal
     - Timeout handling to prevent runaway processes
     - Comprehensive output capture including ANSI escape sequences
-    
+
     The implementation differs significantly between Windows and Unix:
-    
+
     On Windows:
     - Uses threading to handle I/O operations
     - Relies on msvcrt for keyboard input detection
     - Uses pipes for process communication
-    
+
     On Unix:
     - Uses pseudo-terminals (PTY) for full terminal emulation
     - Uses select() for non-blocking I/O
@@ -230,7 +233,7 @@ def run_interactive_command(
         # Windows implementation using threads for I/O
         running = True
         stdin_thread = None
-        
+
         def read_stdout():
             nonlocal running
             while running and proc.poll() is None:
@@ -246,7 +249,7 @@ def run_interactive_command(
                 except Exception as e:
                     print(f"Error reading stdout: {e}", file=sys.stderr)
                     break
-        
+
         def read_stderr():
             nonlocal running
             while running and proc.poll() is None:
@@ -262,7 +265,7 @@ def run_interactive_command(
                 except Exception as e:
                     print(f"Error reading stderr: {e}", file=sys.stderr)
                     break
-        
+
         def handle_input():
             nonlocal running
             try:
@@ -276,7 +279,7 @@ def run_interactive_command(
                 pass
             except Exception as e:
                 print(f"Error handling input: {e}", file=sys.stderr)
-        
+
         # Start I/O threads
         stdout_thread = threading.Thread(target=read_stdout)
         stderr_thread = threading.Thread(target=read_stderr)
@@ -284,13 +287,13 @@ def run_interactive_command(
         stderr_thread.daemon = True
         stdout_thread.start()
         stderr_thread.start()
-        
+
         # Only start stdin thread if we're in an interactive terminal
         if sys.stdin.isatty():
             stdin_thread = threading.Thread(target=handle_input)
             stdin_thread.daemon = True
             stdin_thread.start()
-        
+
         try:
             # Main thread monitors timeout
             while proc.poll() is None:
@@ -307,7 +310,7 @@ def run_interactive_command(
             stderr_thread.join(1.0)
             if stdin_thread:
                 stdin_thread.join(1.0)
-            
+
             # Close pipes
             if proc.stdout:
                 proc.stdout.close()
@@ -387,23 +390,23 @@ def run_interactive_command(
 
     # Ensure we have captured data even if the screen processing failed
     raw_output = b"".join(captured_data)
-    
+
     # Process the captured output through a fresh screen
     try:
         # Create a new screen and stream for final processing
         screen = HistoryScreen(cols, rows, history=2000, ratio=0.5)
         stream = pyte.Stream(screen)
-        
+
         # Feed all captured data at once to get the final state
         raw_output = b"".join(captured_data)
         decoded = raw_output.decode("utf-8", errors="ignore")
         stream.feed(decoded)
-        
+
         # Get all history lines (top and bottom) and current display
         all_lines = []
-        
+
         # Add history.top lines (older history)
-        if hasattr(screen.history.top, 'keys'):
+        if hasattr(screen.history.top, "keys"):
             # Dictionary-like object
             for line_num in sorted(screen.history.top.keys()):
                 line = screen.history.top[line_num]
@@ -412,12 +415,12 @@ def run_interactive_command(
             # Deque or other iterable
             for i, line in enumerate(screen.history.top):
                 all_lines.append(render_line(line, cols))
-            
+
         # Add current display lines
         all_lines.extend([render_line(line, cols) for line in screen.display])
-        
+
         # Add history.bottom lines (newer history)
-        if hasattr(screen.history.bottom, 'keys'):
+        if hasattr(screen.history.bottom, "keys"):
             # Dictionary-like object
             for line_num in sorted(screen.history.bottom.keys()):
                 line = screen.history.bottom[line_num]
@@ -426,23 +429,23 @@ def run_interactive_command(
             # Deque or other iterable
             for i, line in enumerate(screen.history.bottom):
                 all_lines.append(render_line(line, cols))
-        
+
         # Trim out empty lines to get only meaningful lines
         # Also strip trailing whitespace from each line
         trimmed_lines = [line.rstrip() for line in all_lines if line and line.strip()]
-        
+
         final_output = "\n".join(trimmed_lines)
     except Exception as e:
         # If anything goes wrong with screen processing, fall back to raw output
         print(f"Warning: Error processing terminal output: {e}", file=sys.stderr)
         try:
             # Decode raw output, strip trailing whitespace from each line
-            decoded = raw_output.decode('utf-8', errors='replace')
+            decoded = raw_output.decode("utf-8", errors="replace")
             lines = [line.rstrip() for line in decoded.splitlines()]
             final_output = "\n".join(lines)
         except Exception:
             # Ultimate fallback if line processing fails
-            final_output = raw_output.decode('utf-8', errors='replace').strip()
+            final_output = raw_output.decode("utf-8", errors="replace").strip()
 
     # Add timeout message if process was terminated due to timeout.
     if was_terminated:
@@ -458,7 +461,7 @@ def run_interactive_command(
     else:
         # Handle any unexpected type
         final_output = str(final_output)[-8000:].encode("utf-8")
-    
+
     return final_output, proc.returncode
 
 

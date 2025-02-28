@@ -61,9 +61,7 @@ def put_complete_file_contents(
             f"at {filepath} in {result['elapsed_time']:.3f}s"
         )
 
-        logging.debug(
-            f"File write complete: {bytes_written} bytes in {elapsed:.2f}s"
-        )
+        logging.debug(f"File write complete: {bytes_written} bytes in {elapsed:.2f}s")
 
         console.print(
             Panel(

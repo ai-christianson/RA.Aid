@@ -6,9 +6,8 @@ This script creates a baseline migration representing the current database schem
 It serves as the foundation for future schema changes.
 """
 
-import sys
 import os
-from pathlib import Path
+import sys
 
 # Add the project root to the Python path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -20,10 +19,11 @@ from ra_aid.logging_config import get_logger, setup_logging
 setup_logging(verbose=True)
 logger = get_logger(__name__)
 
+
 def create_initial_migration():
     """
     Create the initial migration for the current database schema.
-    
+
     Returns:
         bool: True if migration was created successfully, False otherwise
     """
@@ -31,11 +31,11 @@ def create_initial_migration():
         with DatabaseManager() as db:
             # Create a descriptive name for the initial migration
             migration_name = "initial_schema"
-            
+
             # Create the migration
             logger.info(f"Creating initial migration '{migration_name}'...")
             result = create_new_migration(migration_name, auto=True)
-            
+
             if result:
                 logger.info(f"Successfully created initial migration: {result}")
                 print(f"✅ Initial migration created successfully: {result}")
@@ -49,9 +49,10 @@ def create_initial_migration():
         print(f"❌ Error creating initial migration: {str(e)}")
         return False
 
+
 if __name__ == "__main__":
     print("Creating initial database migration...")
     success = create_initial_migration()
-    
+
     # Exit with appropriate code
     sys.exit(0 if success else 1)

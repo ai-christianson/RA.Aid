@@ -9,9 +9,9 @@ from ra_aid.tools import (
     emit_related_files,
     emit_research_notes,
     file_str_replace,
-    put_complete_file_contents,
     fuzzy_find_project_files,
     list_directory_tree,
+    put_complete_file_contents,
     read_file_tool,
     ripgrep_search,
     run_programming_task,
@@ -26,12 +26,12 @@ from ra_aid.tools.agent import (
     request_task_implementation,
     request_web_research,
 )
-from ra_aid.tools.memory import one_shot_completed, plan_implementation_completed
+from ra_aid.tools.memory import plan_implementation_completed
 
 
 def set_modification_tools(use_aider=False):
     """Set the MODIFICATION_TOOLS list based on configuration.
-    
+
     Args:
         use_aider: Whether to use run_programming_task (True) or file modification tools (False)
     """
@@ -46,7 +46,9 @@ def set_modification_tools(use_aider=False):
 
 # Read-only tools that don't modify system state
 def get_read_only_tools(
-    human_interaction: bool = False, web_research_enabled: bool = False, use_aider: bool = False
+    human_interaction: bool = False,
+    web_research_enabled: bool = False,
+    use_aider: bool = False,
 ):
     """Get the list of read-only tools, optionally including human interaction tools.
 
@@ -100,6 +102,7 @@ def get_all_tools() -> list[BaseTool]:
 _config = {}
 try:
     from ra_aid.tools.memory import _global_memory
+
     _config = _global_memory.get("config", {})
 except ImportError:
     pass
@@ -137,15 +140,14 @@ def get_research_tools(
     use_aider = False
     try:
         from ra_aid.tools.memory import _global_memory
+
         use_aider = _global_memory.get("config", {}).get("use_aider", False)
     except ImportError:
         pass
-    
+
     # Start with read-only tools
     tools = get_read_only_tools(
-        human_interaction, 
-        web_research_enabled,
-        use_aider=use_aider
+        human_interaction, web_research_enabled, use_aider=use_aider
     ).copy()
 
     tools.extend(RESEARCH_TOOLS)
@@ -179,14 +181,14 @@ def get_planning_tools(
     use_aider = False
     try:
         from ra_aid.tools.memory import _global_memory
+
         use_aider = _global_memory.get("config", {}).get("use_aider", False)
     except ImportError:
         pass
-    
+
     # Start with read-only tools
     tools = get_read_only_tools(
-        web_research_enabled=web_research_enabled,
-        use_aider=use_aider
+        web_research_enabled=web_research_enabled, use_aider=use_aider
     ).copy()
 
     # Add planning-specific tools
@@ -218,14 +220,14 @@ def get_implementation_tools(
     use_aider = False
     try:
         from ra_aid.tools.memory import _global_memory
+
         use_aider = _global_memory.get("config", {}).get("use_aider", False)
     except ImportError:
         pass
-    
+
     # Start with read-only tools
     tools = get_read_only_tools(
-        web_research_enabled=web_research_enabled,
-        use_aider=use_aider
+        web_research_enabled=web_research_enabled, use_aider=use_aider
     ).copy()
 
     # Add modification tools since it's not research-only

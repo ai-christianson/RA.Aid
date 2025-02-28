@@ -1,17 +1,22 @@
 """
 Tests for the database connection module.
 """
+
 import os
-import shutil
 from pathlib import Path
-import pytest
+from unittest.mock import patch
+
 import peewee
-from unittest.mock import patch, MagicMock
+import pytest
 
 from ra_aid.database.connection import (
-    init_db, get_db, close_db,
-    db_var, DatabaseManager, logger
+    DatabaseManager,
+    close_db,
+    db_var,
+    get_db,
+    init_db,
 )
+
 
 @pytest.fixture
 def cleanup_db():
@@ -48,20 +53,23 @@ def cleanup_db():
         # Log but don't fail if cleanup has issues
         print(f"Cleanup error (non-fatal): {str(e)}")
 
+
 @pytest.fixture
 def mock_logger():
     """Mock the logger to test for output messages."""
-    with patch('ra_aid.database.connection.logger') as mock:
+    with patch("ra_aid.database.connection.logger") as mock:
         yield mock
+
 
 class TestInitDb:
     """Tests for the init_db function."""
+
     def test_init_db_default(self, cleanup_db):
         """Test init_db with default parameters."""
         db = init_db()
         assert isinstance(db, peewee.SqliteDatabase)
         assert not db.is_closed()
-        assert hasattr(db, '_is_in_memory')
+        assert hasattr(db, "_is_in_memory")
         assert db._is_in_memory is False
         # Verify the database file was created
         ra_aid_dir = Path(os.getcwd()) / ".ra-aid"
@@ -73,7 +81,7 @@ class TestInitDb:
         db = init_db(in_memory=True)
         assert isinstance(db, peewee.SqliteDatabase)
         assert not db.is_closed()
-        assert hasattr(db, '_is_in_memory')
+        assert hasattr(db, "_is_in_memory")
         assert db._is_in_memory is True
 
     def test_init_db_reuses_connection(self, cleanup_db):
@@ -91,8 +99,10 @@ class TestInitDb:
         assert db1 is db2
         assert not db1.is_closed()
 
+
 class TestGetDb:
     """Tests for the get_db function."""
+
     def test_get_db_creates_connection(self, cleanup_db):
         """Test that get_db creates a new connection if none exists."""
         # Reset the contextvar to ensure no connection exists
@@ -100,7 +110,7 @@ class TestGetDb:
         db = get_db()
         assert isinstance(db, peewee.SqliteDatabase)
         assert not db.is_closed()
-        assert hasattr(db, '_is_in_memory')
+        assert hasattr(db, "_is_in_memory")
         assert db._is_in_memory is False
 
     def test_get_db_reuses_connection(self, cleanup_db):
@@ -118,8 +128,10 @@ class TestGetDb:
         assert db1 is db2
         assert not db1.is_closed()
 
+
 class TestCloseDb:
     """Tests for the close_db function."""
+
     def test_close_db(self, cleanup_db):
         """Test that close_db closes an open connection."""
         db = init_db()
@@ -142,14 +154,16 @@ class TestCloseDb:
         # This should not raise an exception
         close_db()
 
+
 class TestDatabaseManager:
     """Tests for the DatabaseManager class."""
+
     def test_database_manager_default(self, cleanup_db):
         """Test DatabaseManager with default parameters."""
         with DatabaseManager() as db:
             assert isinstance(db, peewee.SqliteDatabase)
             assert not db.is_closed()
-            assert hasattr(db, '_is_in_memory')
+            assert hasattr(db, "_is_in_memory")
             assert db._is_in_memory is False
             # Verify the database file was created
             ra_aid_dir = Path(os.getcwd()) / ".ra-aid"
@@ -163,7 +177,7 @@ class TestDatabaseManager:
         with DatabaseManager(in_memory=True) as db:
             assert isinstance(db, peewee.SqliteDatabase)
             assert not db.is_closed()
-            assert hasattr(db, '_is_in_memory')
+            assert hasattr(db, "_is_in_memory")
             assert db._is_in_memory is True
         # Verify the connection is closed after exiting the context
         assert db.is_closed()
