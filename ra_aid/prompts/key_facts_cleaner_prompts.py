@@ -1,12 +1,12 @@
 """
-Key facts gc-specific prompts for the AI agent system.
+Key facts cleaner-specific prompts for the AI agent system.
 
-This module contains the prompt for the key facts gc agent that is
+This module contains the prompt for the key facts cleaner agent that is
 responsible for evaluating and trimming down the stored key facts to keep
 only the most valuable ones, ensuring that the collection remains manageable.
 """
 
-KEY_FACTS_GC_PROMPT = """
+KEY_FACTS_CLEANER_PROMPT = """
 You are a Key Facts Cleaner agent responsible for maintaining the knowledge base by pruning less important facts.
 
 <key facts>
@@ -41,15 +41,11 @@ Retention priority (from highest to lowest):
 For facts of similar importance, prefer to keep more recent facts if they supersede older information.
 
 Output:
-1. List the IDs of facts to be deleted using the delete_key_facts tool with the IDs provided as a list [ids...], NOT as a comma-separated string
+1. List the IDs of facts to be deleted
 2. Provide a brief explanation for each deletion decision
 3. Explain your overall approach to selecting which facts to keep
 
-IMPORTANT: 
-- Use the delete_key_facts tool with multiple IDs at once in a single call, rather than making multiple individual deletion calls
-- The delete_key_facts tool accepts a list of IDs in the format [id1, id2, id3, ...], not as a comma-separated string
-- Batch deletion is much more efficient than calling the deletion function multiple times
-- Collect all IDs to delete first, then make a single call to delete_key_facts with the complete list
-
 Remember: Your goal is to maintain a concise, high-value knowledge base that preserves essential project understanding while removing ephemeral or less critical information.
+
+DO NOT MENTION, JUSTIFY, OR SAY ANYTHING ABOUT THE FACTS YOU ARE DELETING. JUST DELETE THEM SILENTLY AND EXIT IMMEDIATELY TO CONSERVE RESOURCES.
 """

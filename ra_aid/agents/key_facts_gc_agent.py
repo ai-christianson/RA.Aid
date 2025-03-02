@@ -25,31 +25,51 @@ key_fact_repository = KeyFactRepository()
 
 
 @tool
-def delete_key_fact(fact_id: int) -> str:
-    """Delete a key fact by its ID.
+def delete_key_facts(fact_ids: List[int]) -> str:
+    """Delete multiple key facts by their IDs.
 
     Args:
-        fact_id: The ID of the key fact to delete
+        fact_ids: List of IDs of the key facts to delete
         
     Returns:
         str: Success or failure message
     """
-    # Get the fact first to display information
-    fact = key_fact_repository.get(fact_id)
-    if fact:
-        # Delete the fact
-        was_deleted = key_fact_repository.delete(fact_id)
-        if was_deleted:
-            success_msg = f"Successfully deleted fact #{fact_id}: {fact.content}"
-            console.print(
-                Panel(Markdown(success_msg), title="Fact Deleted", border_style="green")
-            )
-            log_work_event(f"Deleted fact {fact_id}.")
-            return success_msg
+    deleted_facts = []
+    not_found_facts = []
+    failed_facts = []
+    
+    for fact_id in fact_ids:
+        # Get the fact first to display information
+        fact = key_fact_repository.get(fact_id)
+        if fact:
+            # Delete the fact
+            was_deleted = key_fact_repository.delete(fact_id)
+            if was_deleted:
+                deleted_facts.append((fact_id, fact.content))
+                log_work_event(f"Deleted fact {fact_id}.")
+            else:
+                failed_facts.append(fact_id)
         else:
-            return f"Failed to delete fact #{fact_id}"
-    else:
-        return f"Fact #{fact_id} not found"
+            not_found_facts.append(fact_id)
+
+    # Prepare result message
+    result_parts = []
+    if deleted_facts:
+        deleted_msg = "Successfully deleted facts:\n" + "\n".join([f"- #{fact_id}: {content}" for fact_id, content in deleted_facts])
+        result_parts.append(deleted_msg)
+        console.print(
+            Panel(Markdown(deleted_msg), title="Facts Deleted", border_style="green")
+        )
+    
+    if not_found_facts:
+        not_found_msg = f"Facts not found: {', '.join([f'#{fact_id}' for fact_id in not_found_facts])}"
+        result_parts.append(not_found_msg)
+    
+    if failed_facts:
+        failed_msg = f"Failed to delete facts: {', '.join([f'#{fact_id}' for fact_id in failed_facts])}"
+        result_parts.append(failed_msg)
+    
+    return "\n".join(result_parts)
 
 
 def run_key_facts_gc_agent() -> None:
@@ -81,8 +101,8 @@ def run_key_facts_gc_agent() -> None:
             temperature=llm_config.get("temperature")
         )
         
-        # Create the agent with the delete_key_fact tool
-        agent = create_agent(model, [delete_key_fact])
+        # Create the agent with the delete_key_facts tool
+        agent = create_agent(model, [delete_key_facts])
         
         # Format the prompt with the current facts
         prompt = KEY_FACTS_GC_PROMPT.format(key_facts=formatted_facts)
@@ -103,8 +123,8 @@ def run_key_facts_gc_agent() -> None:
         console.print(
             Panel(
                 f"Cleaned key facts: {fact_count} → {updated_count}",
-                title="🗑️ GC Complete"
+                title="🗑 GC Complete"
             )
         )
     else:
-        console.print(Panel("No key facts to clean.", title="🗑️ GC Info"))
+        console.print(Panel("No key facts to clean.", title="🗑 GC Info"))
