@@ -12,7 +12,9 @@ from ra_aid.agent_context import (
     reset_completion_flags,
 )
 from ra_aid.console.formatting import print_error
+from ra_aid.database.repositories.key_fact_repository import KeyFactRepository
 from ra_aid.exceptions import AgentInterrupt
+from ra_aid.text.key_facts_formatter import format_key_facts_dict
 from ra_aid.tools.memory import _global_memory
 
 from ..console import print_task_header
@@ -27,6 +29,7 @@ CANCELLED_BY_USER_REASON = "The operation was explicitly cancelled by the user. 
 RESEARCH_AGENT_RECURSION_LIMIT = 3
 
 console = Console()
+key_fact_repository = KeyFactRepository()
 
 
 @tool("request_research")
@@ -53,7 +56,7 @@ def request_research(query: str) -> ResearchResult:
         print_error("Maximum research recursion depth reached")
         return {
             "completion_message": "Research stopped - maximum recursion depth reached",
-            "key_facts": get_memory_value("key_facts"),
+            "key_facts": format_key_facts_dict(key_fact_repository.get_facts_dict()),
             "related_files": get_related_files(),
             "research_notes": get_memory_value("research_notes"),
             "key_snippets": get_memory_value("key_snippets"),
@@ -101,7 +104,7 @@ def request_research(query: str) -> ResearchResult:
 
     response_data = {
         "completion_message": completion_message,
-        "key_facts": get_memory_value("key_facts"),
+        "key_facts": format_key_facts_dict(key_fact_repository.get_facts_dict()),
         "related_files": get_related_files(),
         "research_notes": get_memory_value("research_notes"),
         "key_snippets": get_memory_value("key_snippets"),
@@ -235,7 +238,7 @@ def request_research_and_implementation(query: str) -> Dict[str, Any]:
 
     response_data = {
         "completion_message": completion_message,
-        "key_facts": get_memory_value("key_facts"),
+        "key_facts": format_key_facts_dict(key_fact_repository.get_facts_dict()),
         "related_files": get_related_files(),
         "research_notes": get_memory_value("research_notes"),
         "key_snippets": get_memory_value("key_snippets"),
@@ -319,7 +322,7 @@ def request_task_implementation(task_spec: str) -> str:
     crash_message = get_crash_message() if agent_crashed else None
 
     response_data = {
-        "key_facts": get_memory_value("key_facts"),
+        "key_facts": format_key_facts_dict(key_fact_repository.get_facts_dict()),
         "related_files": get_related_files(),
         "key_snippets": get_memory_value("key_snippets"),
         "completion_message": completion_message,
@@ -440,7 +443,7 @@ def request_implementation(task_spec: str) -> str:
 
     response_data = {
         "completion_message": completion_message,
-        "key_facts": get_memory_value("key_facts"),
+        "key_facts": format_key_facts_dict(key_fact_repository.get_facts_dict()),
         "related_files": get_related_files(),
         "key_snippets": get_memory_value("key_snippets"),
         "success": success and not agent_crashed,

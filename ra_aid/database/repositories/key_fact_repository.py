@@ -9,7 +9,7 @@ from typing import Dict, List, Optional
 
 import peewee
 
-from ra_aid.database.connection import DatabaseManager, get_db
+from ra_aid.database.connection import get_db
 from ra_aid.database.models import KeyFact
 from ra_aid.logging_config import get_logger
 
@@ -43,10 +43,10 @@ class KeyFactRepository:
             peewee.DatabaseError: If there's an error creating the fact
         """
         try:
-            with DatabaseManager() as db:
-                fact = KeyFact.create(content=content)
-                logger.debug(f"Created key fact ID {fact.id}: {content}")
-                return fact
+            db = get_db()
+            fact = KeyFact.create(content=content)
+            logger.debug(f"Created key fact ID {fact.id}: {content}")
+            return fact
         except peewee.DatabaseError as e:
             logger.error(f"Failed to create key fact: {str(e)}")
             raise
@@ -65,8 +65,8 @@ class KeyFactRepository:
             peewee.DatabaseError: If there's an error accessing the database
         """
         try:
-            with DatabaseManager() as db:
-                return KeyFact.get_or_none(KeyFact.id == fact_id)
+            db = get_db()
+            return KeyFact.get_or_none(KeyFact.id == fact_id)
         except peewee.DatabaseError as e:
             logger.error(f"Failed to fetch key fact {fact_id}: {str(e)}")
             raise
@@ -86,18 +86,18 @@ class KeyFactRepository:
             peewee.DatabaseError: If there's an error updating the fact
         """
         try:
-            with DatabaseManager() as db:
-                # First check if the fact exists
-                fact = self.get(fact_id)
-                if not fact:
-                    logger.warning(f"Attempted to update non-existent key fact {fact_id}")
-                    return None
-                
-                # Update the fact
-                fact.content = content
-                fact.save()
-                logger.debug(f"Updated key fact ID {fact_id}: {content}")
-                return fact
+            db = get_db()
+            # First check if the fact exists
+            fact = self.get(fact_id)
+            if not fact:
+                logger.warning(f"Attempted to update non-existent key fact {fact_id}")
+                return None
+            
+            # Update the fact
+            fact.content = content
+            fact.save()
+            logger.debug(f"Updated key fact ID {fact_id}: {content}")
+            return fact
         except peewee.DatabaseError as e:
             logger.error(f"Failed to update key fact {fact_id}: {str(e)}")
             raise
@@ -116,17 +116,17 @@ class KeyFactRepository:
             peewee.DatabaseError: If there's an error deleting the fact
         """
         try:
-            with DatabaseManager() as db:
-                # First check if the fact exists
-                fact = self.get(fact_id)
-                if not fact:
-                    logger.warning(f"Attempted to delete non-existent key fact {fact_id}")
-                    return False
-                
-                # Delete the fact
-                fact.delete_instance()
-                logger.debug(f"Deleted key fact ID {fact_id}")
-                return True
+            db = get_db()
+            # First check if the fact exists
+            fact = self.get(fact_id)
+            if not fact:
+                logger.warning(f"Attempted to delete non-existent key fact {fact_id}")
+                return False
+            
+            # Delete the fact
+            fact.delete_instance()
+            logger.debug(f"Deleted key fact ID {fact_id}")
+            return True
         except peewee.DatabaseError as e:
             logger.error(f"Failed to delete key fact {fact_id}: {str(e)}")
             raise
@@ -142,8 +142,8 @@ class KeyFactRepository:
             peewee.DatabaseError: If there's an error accessing the database
         """
         try:
-            with DatabaseManager() as db:
-                return list(KeyFact.select().order_by(KeyFact.id))
+            db = get_db()
+            return list(KeyFact.select().order_by(KeyFact.id))
         except peewee.DatabaseError as e:
             logger.error(f"Failed to fetch all key facts: {str(e)}")
             raise

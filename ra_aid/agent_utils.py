@@ -84,6 +84,8 @@ from ra_aid.tool_configs import (
     get_web_research_tools,
 )
 from ra_aid.tools.handle_user_defined_test_cmd_execution import execute_test_command
+from ra_aid.database.repositories.key_fact_repository import KeyFactRepository
+from ra_aid.text.key_facts_formatter import format_key_facts_dict
 from ra_aid.tools.memory import (
     _global_memory,
     get_memory_value,
@@ -94,6 +96,9 @@ from ra_aid.tools.memory import (
 console = Console()
 
 logger = get_logger(__name__)
+
+# Initialize key fact repository
+key_fact_repository = KeyFactRepository()
 
 
 @tool
@@ -381,7 +386,7 @@ def run_research_agent(
         else ""
     )
 
-    key_facts = _global_memory.get("key_facts", "")
+    key_facts = format_key_facts_dict(key_fact_repository.get_facts_dict())
     code_snippets = _global_memory.get("code_snippets", "")
     related_files = _global_memory.get("related_files", "")
 
@@ -520,7 +525,7 @@ def run_web_research_agent(
     expert_section = EXPERT_PROMPT_SECTION_RESEARCH if expert_enabled else ""
     human_section = HUMAN_PROMPT_SECTION_RESEARCH if hil else ""
 
-    key_facts = _global_memory.get("key_facts", "")
+    key_facts = format_key_facts_dict(key_fact_repository.get_facts_dict())
     code_snippets = _global_memory.get("code_snippets", "")
     related_files = _global_memory.get("related_files", "")
 
@@ -640,7 +645,7 @@ def run_planning_agent(
         project_info=formatted_project_info,
         research_notes=get_memory_value("research_notes"),
         related_files="\n".join(get_related_files()),
-        key_facts=get_memory_value("key_facts"),
+        key_facts=format_key_facts_dict(key_fact_repository.get_facts_dict()),
         key_snippets=get_memory_value("key_snippets"),
         work_log=get_memory_value("work_log"),
         research_only_note=(
@@ -742,7 +747,7 @@ def run_task_implementation_agent(
         tasks=tasks,
         plan=plan,
         related_files=related_files,
-        key_facts=get_memory_value("key_facts"),
+        key_facts=format_key_facts_dict(key_fact_repository.get_facts_dict()),
         key_snippets=get_memory_value("key_snippets"),
         research_notes=get_memory_value("research_notes"),
         work_log=get_memory_value("work_log"),

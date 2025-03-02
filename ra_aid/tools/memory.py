@@ -577,10 +577,13 @@ def deregister_related_files(file_ids: List[int]) -> str:
 
 
 def get_memory_value(key: str) -> str:
-    """Get a value from global memory.
+    """
+    Get a value from global memory.
+    
+    Note: Key facts are now handled by KeyFactRepository and the key_facts_formatter module,
+    not through this function.
 
     Different memory types return different formats:
-    - key_facts: Returns numbered list of facts in format '#ID: fact'
     - key_snippets: Returns formatted snippets with file path, line number and content
     - All other types: Returns newline-separated list of values
 
@@ -589,48 +592,9 @@ def get_memory_value(key: str) -> str:
 
     Returns:
         String representation of the memory values:
-        - For key_facts: '#ID: fact' format, one per line
         - For key_snippets: Formatted snippet blocks
         - For other types: One value per line
     """
-    if key == "key_facts":
-        try:
-            # Get facts from repository as a dictionary
-            facts_dict = key_fact_repository.get_facts_dict()
-            
-            # For empty dict, return empty string
-            if not facts_dict:
-                return ""
-                
-            # Sort by ID for consistent output and format as markdown sections
-            facts = []
-            for k, v in sorted(facts_dict.items()):
-                facts.extend(
-                    [
-                        f"## 🔑 Key Fact #{k}",
-                        "",  # Empty line for better markdown spacing
-                        v,
-                        "",  # Empty line between facts
-                    ]
-                )
-            return "\n".join(facts).rstrip()  # Remove trailing newline
-        except Exception:
-            # Fallback to old memory if database access fails
-            values = _global_memory.get(key, {})
-            if not values:
-                return ""
-            facts = []
-            for k, v in sorted(values.items()):
-                facts.extend(
-                    [
-                        f"## 🔑 Key Fact #{k}",
-                        "",
-                        v,
-                        "",
-                    ]
-                )
-            return "\n".join(facts).rstrip()
-
     if key == "key_snippets":
         values = _global_memory.get(key, {})
         if not values:

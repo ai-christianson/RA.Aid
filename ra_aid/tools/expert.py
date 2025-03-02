@@ -6,11 +6,14 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 
+from ..database.repositories.key_fact_repository import KeyFactRepository
 from ..llm import initialize_expert_llm
+from ..text.key_facts_formatter import format_key_facts_dict
 from .memory import _global_memory, get_memory_value
 
 console = Console()
 _model = None
+key_fact_repository = KeyFactRepository()
 
 
 def get_model():
@@ -148,7 +151,9 @@ def ask_expert(question: str) -> str:
     file_paths = list(_global_memory["related_files"].values())
     related_contents = read_related_files(file_paths)
     key_snippets = get_memory_value("key_snippets")
-    key_facts = get_memory_value("key_facts")
+    # Get key facts directly from repository and format using the formatter
+    facts_dict = key_fact_repository.get_facts_dict()
+    key_facts = format_key_facts_dict(facts_dict)
     research_notes = get_memory_value("research_notes")
 
     # Build display query (just question)

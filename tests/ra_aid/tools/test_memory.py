@@ -123,26 +123,6 @@ def test_emit_key_facts_single_fact(reset_memory, mock_repository):
     mock_repository.create.assert_called_once_with("First fact")
 
 
-def test_get_memory_value_key_facts(reset_memory, mock_repository):
-    """Test get_memory_value with key facts dictionary"""
-    # Empty key facts should return empty string
-    assert get_memory_value("key_facts") == ""
-
-    # Add some facts through the mocked repository
-    fact1 = mock_repository.create("First fact")
-    fact2 = mock_repository.create("Second fact")
-    
-    # Mock get_facts_dict to return our test data
-    mock_repository.get_facts_dict.return_value = {
-        fact1.id: "First fact",
-        fact2.id: "Second fact"
-    }
-
-    # Should return markdown formatted list
-    expected = f"## 🔑 Key Fact #{fact1.id}\n\nFirst fact\n\n## 🔑 Key Fact #{fact2.id}\n\nSecond fact"
-    assert get_memory_value("key_facts") == expected
-
-
 def test_get_memory_value_other_types(reset_memory):
     """Test get_memory_value remains compatible with other memory types"""
     # Add some research notes

@@ -37,6 +37,7 @@ Retention priority (from highest to lowest):
 - Build and deployment information
 - Testing approaches
 - Low-level implementation details that are easily rediscovered
+- If there are contradictory facts, that probably means that the older fact is no longer true and should be deleted.
 
 For facts of similar importance, prefer to keep more recent facts if they supersede older information.
 
