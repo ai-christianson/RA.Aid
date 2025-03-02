@@ -184,6 +184,8 @@ Tools and Methodology
     After identifying files, you may read them to confirm their contents only if needed to understand what currently exists.
     Be meticulous: If you find a directory, explore it thoroughly. If you find files of potential relevance, record them. Make sure you do not skip any directories you discover.
     Prefer to use list_directory_tree and other tools over shell commands.
+    Do not use list_directory_tree if you already have the info in the project file list.
+      list_directory_tree is ideal for non-project files or project files when we're actively changing project structure.
     Do not produce huge outputs from your commands. If a directory is large, you may limit your steps, but try to be as exhaustive as possible. Incrementally gather details as needed.
     Request subtasks for topics that require deeper investigation.
     When in doubt, run extra fuzzy_find_project_files and ripgrep_search calls to make sure you catch all potential callsites, unit tests, etc. that could be relevant to the base task. You don't want to miss anything.
