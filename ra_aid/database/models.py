@@ -62,3 +62,17 @@ class BaseModel(peewee.Model):
             # Log the error with logger
             logger.error(f"Failed in get_or_create: {str(e)}")
             raise
+
+
+class KeyFact(BaseModel):
+    """
+    Model representing a key fact stored in the database.
+    
+    Key facts are important information about the project or current task
+    that need to be referenced later.
+    """
+    content = peewee.TextField()
+    # created_at and updated_at are inherited from BaseModel
+    
+    class Meta:
+        table_name = "key_fact"

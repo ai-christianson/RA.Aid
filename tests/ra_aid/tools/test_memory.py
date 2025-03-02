@@ -1,4 +1,5 @@
 import pytest
+from unittest.mock import patch, MagicMock
 
 from ra_aid.tools.memory import (
     _global_memory,
@@ -13,10 +14,13 @@ from ra_aid.tools.memory import (
     get_memory_value,
     get_related_files,
     get_work_log,
+    key_fact_repository,
     log_work_event,
     reset_work_log,
     swap_task_order,
 )
+from ra_aid.database.connection import DatabaseManager
+from ra_aid.database.models import KeyFact
 
 
 @pytest.fixture
@@ -48,49 +52,111 @@ def reset_memory():
     _global_memory["work_log"] = []
 
 
-def test_emit_key_facts_single_fact(reset_memory):
+@pytest.fixture
+def in_memory_db():
+    """Set up an in-memory database for testing."""
+    with DatabaseManager(in_memory=True) as db:
+        db.create_tables([KeyFact])
+        yield db
+        # Clean up database tables after test
+        KeyFact.delete().execute()
+
+
+@pytest.fixture(autouse=True)
+def mock_repository():
+    """Mock the KeyFactRepository to avoid database operations during tests"""
+    with patch('ra_aid.tools.memory.key_fact_repository') as mock_repo:
+        # Setup the mock repository to behave like the original, but using memory
+        facts = {}  # Local in-memory storage
+        fact_id_counter = 0
+        
+        # Mock KeyFact objects
+        class MockKeyFact:
+            def __init__(self, id, content):
+                self.id = id
+                self.content = content
+
+        # Mock create method
+        def mock_create(content):
+            nonlocal fact_id_counter
+            fact = MockKeyFact(fact_id_counter, content)
+            facts[fact_id_counter] = fact
+            fact_id_counter += 1
+            return fact
+        mock_repo.create.side_effect = mock_create
+        
+        # Mock get method
+        def mock_get(fact_id):
+            return facts.get(fact_id)
+        mock_repo.get.side_effect = mock_get
+        
+        # Mock delete method
+        def mock_delete(fact_id):
+            if fact_id in facts:
+                del facts[fact_id]
+                return True
+            return False
+        mock_repo.delete.side_effect = mock_delete
+        
+        # Mock get_facts_dict method
+        def mock_get_facts_dict():
+            return {fact_id: fact.content for fact_id, fact in facts.items()}
+        mock_repo.get_facts_dict.side_effect = mock_get_facts_dict
+        
+        yield mock_repo
+
+
+def test_emit_key_facts_single_fact(reset_memory, mock_repository):
     """Test emitting a single key fact using emit_key_facts"""
     # Test with single fact
     result = emit_key_facts.invoke({"facts": ["First fact"]})
     assert result == "Facts stored."
-    assert _global_memory["key_facts"][0] == "First fact"
-    assert _global_memory["key_fact_id_counter"] == 1
+    
+    # Verify the repository's create method was called
+    mock_repository.create.assert_called_once_with("First fact")
 
 
-def test_delete_key_facts_single_fact(reset_memory):
+def test_delete_key_facts_single_fact(reset_memory, mock_repository):
     """Test deleting a single key fact using delete_key_facts"""
     # Add a fact
-    emit_key_facts.invoke({"facts": ["Test fact"]})
-
+    fact = mock_repository.create("Test fact")
+    fact_id = fact.id
+    
     # Delete the fact
-    result = delete_key_facts.invoke({"fact_ids": [0]})
+    result = delete_key_facts.invoke({"fact_ids": [fact_id]})
     assert result == "Facts deleted."
-    assert 0 not in _global_memory["key_facts"]
+    
+    # Verify the repository's delete method was called
+    mock_repository.delete.assert_called_once_with(fact_id)
 
 
-def test_delete_key_facts_invalid(reset_memory):
+def test_delete_key_facts_invalid(reset_memory, mock_repository):
     """Test deleting non-existent facts returns empty list"""
     # Try to delete non-existent fact
     result = delete_key_facts.invoke({"fact_ids": [999]})
     assert result == "Facts deleted."
 
-    # Add and delete a fact, then try to delete it again
-    emit_key_facts.invoke({"facts": ["Test fact"]})
-    delete_key_facts.invoke({"fact_ids": [0]})
-    result = delete_key_facts.invoke({"fact_ids": [0]})
-    assert result == "Facts deleted."
+    # Verify the repository's get method was called
+    mock_repository.get.assert_called_once_with(999)
 
 
-def test_get_memory_value_key_facts(reset_memory):
+def test_get_memory_value_key_facts(reset_memory, mock_repository):
     """Test get_memory_value with key facts dictionary"""
     # Empty key facts should return empty string
     assert get_memory_value("key_facts") == ""
 
-    # Add some facts
-    emit_key_facts.invoke({"facts": ["First fact", "Second fact"]})
+    # Add some facts through the mocked repository
+    fact1 = mock_repository.create("First fact")
+    fact2 = mock_repository.create("Second fact")
+    
+    # Mock get_facts_dict to return our test data
+    mock_repository.get_facts_dict.return_value = {
+        fact1.id: "First fact",
+        fact2.id: "Second fact"
+    }
 
     # Should return markdown formatted list
-    expected = "## 🔑 Key Fact #0\n\nFirst fact\n\n## 🔑 Key Fact #1\n\nSecond fact"
+    expected = f"## 🔑 Key Fact #{fact1.id}\n\nFirst fact\n\n## 🔑 Key Fact #{fact2.id}\n\nSecond fact"
     assert get_memory_value("key_facts") == expected
 
 
@@ -165,7 +231,7 @@ def test_empty_work_log(reset_memory):
     assert get_memory_value("work_log") == ""
 
 
-def test_emit_key_facts(reset_memory):
+def test_emit_key_facts(reset_memory, mock_repository):
     """Test emitting multiple key facts at once"""
     # Test emitting multiple facts
     facts = ["First fact", "Second fact", "Third fact"]
@@ -174,31 +240,30 @@ def test_emit_key_facts(reset_memory):
     # Verify return message
     assert result == "Facts stored."
 
-    # Verify facts stored in memory with correct IDs
-    assert _global_memory["key_facts"][0] == "First fact"
-    assert _global_memory["key_facts"][1] == "Second fact"
-    assert _global_memory["key_facts"][2] == "Third fact"
-
-    # Verify counter incremented correctly
-    assert _global_memory["key_fact_id_counter"] == 3
+    # Verify create was called for each fact
+    assert mock_repository.create.call_count == 3
+    mock_repository.create.assert_any_call("First fact")
+    mock_repository.create.assert_any_call("Second fact")
+    mock_repository.create.assert_any_call("Third fact")
 
 
-def test_delete_key_facts(reset_memory):
+def test_delete_key_facts(reset_memory, mock_repository):
     """Test deleting multiple key facts"""
     # Add some test facts
-    emit_key_facts.invoke({"facts": ["First fact", "Second fact", "Third fact"]})
+    fact0 = mock_repository.create("First fact")
+    fact1 = mock_repository.create("Second fact")
+    fact2 = mock_repository.create("Third fact")
 
     # Test deleting mix of existing and non-existing IDs
-    result = delete_key_facts.invoke({"fact_ids": [0, 1, 999]})
+    result = delete_key_facts.invoke({"fact_ids": [fact0.id, fact1.id, 999]})
 
     # Verify success message
     assert result == "Facts deleted."
 
-    # Verify correct facts removed from memory
-    assert 0 not in _global_memory["key_facts"]
-    assert 1 not in _global_memory["key_facts"]
-    assert 2 in _global_memory["key_facts"]  # ID 2 should remain
-    assert _global_memory["key_facts"][2] == "Third fact"
+    # Verify delete was called for each valid fact ID
+    assert mock_repository.delete.call_count == 2
+    mock_repository.delete.assert_any_call(fact0.id)
+    mock_repository.delete.assert_any_call(fact1.id)
 
 
 def test_emit_key_snippet(reset_memory):

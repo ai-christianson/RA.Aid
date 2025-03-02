@@ -39,7 +39,7 @@ class MigrationManager:
 
         Args:
             db_path: Optional path to the database file. If None, uses the default.
-            migrations_dir: Optional path to the migrations directory. If None, uses default.
+            migrations_dir: Optional path to the migrations directory. If None, uses source package migrations.
         """
         self.db = get_db()
 
@@ -54,28 +54,56 @@ class MigrationManager:
 
         # Determine migrations directory
         if migrations_dir is None:
-            # Use a directory within .ra-aid
-            ra_aid_dir = os.path.dirname(self.db_path)
-            migrations_dir = os.path.join(ra_aid_dir, MIGRATIONS_DIRNAME)
+            # Use the source package migrations directory
+            migrations_dir = self._get_source_package_migrations_dir()
+            logger.debug(f"Using source package migrations directory: {migrations_dir}")
+        else:
+            # Use the specified migrations directory
+            # Ensure the directory exists if a custom path is provided
+            self._ensure_migrations_dir(migrations_dir)
 
         self.migrations_dir = migrations_dir
-
-        # Ensure migrations directory exists
-        self._ensure_migrations_dir()
 
         # Initialize router
         self.router = self._init_router()
 
-    def _ensure_migrations_dir(self) -> None:
+    def _get_source_package_migrations_dir(self) -> str:
+        """
+        Get the path to the migrations directory in the source package.
+
+        Returns:
+            str: Path to the source package migrations directory
+        """
+        try:
+            # Get the base directory of the ra_aid package
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            source_migrations_dir = os.path.join(base_dir, MIGRATIONS_DIRNAME)
+            
+            if not os.path.exists(source_migrations_dir):
+                error_msg = f"Source migrations directory not found: {source_migrations_dir}"
+                logger.error(error_msg)
+                raise FileNotFoundError(error_msg)
+                
+            logger.debug(f"Found source migrations directory: {source_migrations_dir}")
+            return source_migrations_dir
+        except Exception as e:
+            error_msg = f"Failed to locate source migrations directory: {str(e)}"
+            logger.error(error_msg)
+            raise
+
+    def _ensure_migrations_dir(self, migrations_dir: str) -> None:
         """
         Ensure that the migrations directory exists.
 
         Creates the directory if it doesn't exist.
+        
+        Args:
+            migrations_dir: Path to the migrations directory
         """
         try:
-            migrations_path = Path(self.migrations_dir)
+            migrations_path = Path(migrations_dir)
             if not migrations_path.exists():
-                logger.debug(f"Creating migrations directory at: {self.migrations_dir}")
+                logger.debug(f"Creating migrations directory at: {migrations_dir}")
                 migrations_path.mkdir(parents=True, exist_ok=True)
 
                 # Create __init__.py to make it a proper package
@@ -83,7 +111,7 @@ class MigrationManager:
                 if not init_file.exists():
                     init_file.touch()
 
-            logger.debug(f"Using migrations directory: {self.migrations_dir}")
+            logger.debug(f"Using migrations directory: {migrations_dir}")
         except Exception as e:
             logger.error(f"Failed to create migrations directory: {str(e)}")
             raise
@@ -232,20 +260,37 @@ def init_migrations(
 def ensure_migrations_applied() -> bool:
     """
     Check for and apply any pending migrations.
-
+    
+    Creates the .ra-aid directory if it doesn't exist,
+    but uses migrations directly from the source package.
+    
     This function should be called during application startup to ensure
     the database schema is up to date.
 
     Returns:
         bool: True if migrations were applied successfully or none were pending
     """
-    with DatabaseManager() as db:
-        try:
-            migration_manager = init_migrations()
-            return migration_manager.apply_migrations()
-        except Exception as e:
-            logger.error(f"Failed to apply migrations: {str(e)}")
-            return False
+    try:
+        # Ensure .ra-aid directory exists for the database file
+        cwd = os.getcwd()
+        ra_aid_dir = os.path.join(cwd, ".ra-aid")
+        os.makedirs(ra_aid_dir, exist_ok=True)
+        
+        # Use source package migrations directory
+        import ra_aid
+        package_dir = os.path.dirname(os.path.abspath(ra_aid.__file__))
+        migrations_dir = os.path.join(package_dir, MIGRATIONS_DIRNAME)
+        
+        with DatabaseManager() as db:
+            try:
+                migration_manager = init_migrations(migrations_dir=migrations_dir)
+                return migration_manager.apply_migrations()
+            except Exception as e:
+                logger.error(f"Failed to apply migrations: {str(e)}")
+                return False
+    except Exception as e:
+        logger.error(f"Failed to ensure .ra-aid directory exists: {str(e)}")
+        return False
 
 
 def create_new_migration(name: str, auto: bool = True) -> Optional[str]:

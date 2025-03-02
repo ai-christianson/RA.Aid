@@ -17,6 +17,7 @@ from ra_aid.agent_context import (
     mark_should_exit,
     mark_task_completed,
 )
+from ra_aid.database.repositories.key_fact_repository import KeyFactRepository
 
 
 class WorkLogEntry(TypedDict):
@@ -33,14 +34,17 @@ class SnippetInfo(TypedDict):
 
 console = Console()
 
+# Initialize repository for key facts
+key_fact_repository = KeyFactRepository()
+
 # Global memory store
 _global_memory: Dict[str, Any] = {
     "research_notes": [],
     "plans": [],
     "tasks": {},  # Dict[int, str] - ID to task mapping
     "task_id_counter": 1,  # Counter for generating unique task IDs
-    "key_facts": {},  # Dict[int, str] - ID to fact mapping
-    "key_fact_id_counter": 1,  # Counter for generating unique fact IDs
+    "key_facts": {},  # Dict[int, str] - ID to fact mapping (deprecated, using DB now)
+    "key_fact_id_counter": 1,  # Counter for generating unique fact IDs (deprecated, using DB now)
     "key_snippets": {},  # Dict[int, SnippetInfo] - ID to snippet mapping
     "key_snippet_id_counter": 1,  # Counter for generating unique snippet IDs
     "implementation_requested": False,
@@ -106,12 +110,9 @@ def emit_key_facts(facts: List[str]) -> str:
     """
     results = []
     for fact in facts:
-        # Get and increment fact ID
-        fact_id = _global_memory["key_fact_id_counter"]
-        _global_memory["key_fact_id_counter"] += 1
-
-        # Store fact with ID
-        _global_memory["key_facts"][fact_id] = fact
+        # Create fact in database using repository
+        created_fact = key_fact_repository.create(fact)
+        fact_id = created_fact.id
 
         # Display panel with ID
         console.print(
@@ -139,14 +140,17 @@ def delete_key_facts(fact_ids: List[int]) -> str:
     """
     results = []
     for fact_id in fact_ids:
-        if fact_id in _global_memory["key_facts"]:
+        # Get the fact first to display information
+        fact = key_fact_repository.get(fact_id)
+        if fact:
             # Delete the fact
-            deleted_fact = _global_memory["key_facts"].pop(fact_id)
-            success_msg = f"Successfully deleted fact #{fact_id}: {deleted_fact}"
-            console.print(
-                Panel(Markdown(success_msg), title="Fact Deleted", border_style="green")
-            )
-            results.append(success_msg)
+            was_deleted = key_fact_repository.delete(fact_id)
+            if was_deleted:
+                success_msg = f"Successfully deleted fact #{fact_id}: {fact.content}"
+                console.print(
+                    Panel(Markdown(success_msg), title="Fact Deleted", border_style="green")
+                )
+                results.append(success_msg)
 
     log_work_event(f"Deleted facts {fact_ids}.")
     return "Facts deleted."
@@ -601,26 +605,46 @@ def get_memory_value(key: str) -> str:
         - For key_snippets: Formatted snippet blocks
         - For other types: One value per line
     """
-    values = _global_memory.get(key, [])
-
     if key == "key_facts":
-        # For empty dict, return empty string
-        if not values:
-            return ""
-        # Sort by ID for consistent output and format as markdown sections
-        facts = []
-        for k, v in sorted(values.items()):
-            facts.extend(
-                [
-                    f"## 🔑 Key Fact #{k}",
-                    "",  # Empty line for better markdown spacing
-                    v,
-                    "",  # Empty line between facts
-                ]
-            )
-        return "\n".join(facts).rstrip()  # Remove trailing newline
+        try:
+            # Get facts from repository as a dictionary
+            facts_dict = key_fact_repository.get_facts_dict()
+            
+            # For empty dict, return empty string
+            if not facts_dict:
+                return ""
+                
+            # Sort by ID for consistent output and format as markdown sections
+            facts = []
+            for k, v in sorted(facts_dict.items()):
+                facts.extend(
+                    [
+                        f"## 🔑 Key Fact #{k}",
+                        "",  # Empty line for better markdown spacing
+                        v,
+                        "",  # Empty line between facts
+                    ]
+                )
+            return "\n".join(facts).rstrip()  # Remove trailing newline
+        except Exception:
+            # Fallback to old memory if database access fails
+            values = _global_memory.get(key, {})
+            if not values:
+                return ""
+            facts = []
+            for k, v in sorted(values.items()):
+                facts.extend(
+                    [
+                        f"## 🔑 Key Fact #{k}",
+                        "",
+                        v,
+                        "",
+                    ]
+                )
+            return "\n".join(facts).rstrip()
 
     if key == "key_snippets":
+        values = _global_memory.get(key, {})
         if not values:
             return ""
         # Format each snippet with file info and content using markdown
@@ -645,10 +669,12 @@ def get_memory_value(key: str) -> str:
         return "\n\n".join(snippets)
 
     if key == "work_log":
+        values = _global_memory.get(key, [])
         if not values:
             return ""
         entries = [f"## {entry['timestamp']}\n{entry['event']}" for entry in values]
         return "\n\n".join(entries)
 
     # For other types (lists), join with newlines
+    values = _global_memory.get(key, [])
     return "\n".join(str(v) for v in values)
