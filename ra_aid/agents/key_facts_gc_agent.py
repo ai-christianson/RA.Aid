@@ -17,7 +17,7 @@ from ra_aid.agent_utils import create_agent, run_agent_with_retry
 from ra_aid.database.repositories.key_fact_repository import KeyFactRepository
 from ra_aid.llm import initialize_llm
 from ra_aid.prompts.key_facts_gc_prompts import KEY_FACTS_GC_PROMPT
-from ra_aid.tools.memory import log_work_event
+from ra_aid.tools.memory import log_work_event, _global_memory
 
 
 console = Console()
@@ -58,15 +58,12 @@ def run_key_facts_gc_agent() -> None:
     The agent analyzes all key facts and determines which are the least valuable,
     deleting them to maintain a manageable collection size of high-value facts.
     """
-    # Display status panel
-    console.print(Panel("Gathering my thoughts...", title="🧹 Key Facts Cleaner"))
-    
     # Get the count of key facts
     facts = key_fact_repository.get_all()
     fact_count = len(facts)
     
-    # Show info panel with current count
-    console.print(Panel(f"Current number of key facts: {fact_count}", title="ℹ️ Info"))
+    # Display status panel with fact count included
+    console.print(Panel(f"Gathering my thoughts...\nCurrent number of key facts: {fact_count}", title="🗑️ Garbage Collection"))
     
     # Only run the agent if we actually have facts to clean
     if fact_count > 0:
@@ -74,8 +71,15 @@ def run_key_facts_gc_agent() -> None:
         facts_dict = key_fact_repository.get_facts_dict()
         formatted_facts = "\n".join([f"Fact #{k}: {v}" for k, v in facts_dict.items()])
         
+        # Retrieve configuration
+        llm_config = _global_memory.get("config", {})
+
         # Initialize the LLM model
-        model = initialize_llm("openai", "gpt-4o")
+        model = initialize_llm(
+            llm_config.get("provider", "anthropic"),
+            llm_config.get("model", "claude-3-7-sonnet-20250219"),
+            temperature=llm_config.get("temperature")
+        )
         
         # Create the agent with the delete_key_fact tool
         agent = create_agent(model, [delete_key_fact])
@@ -84,12 +88,12 @@ def run_key_facts_gc_agent() -> None:
         prompt = KEY_FACTS_GC_PROMPT.format(key_facts=formatted_facts)
         
         # Set up the agent configuration
-        config = {
+        agent_config = {
             "recursion_limit": 50  # Set a reasonable recursion limit
         }
         
         # Run the agent
-        run_agent_with_retry(agent, prompt, config)
+        run_agent_with_retry(agent, prompt, agent_config)
         
         # Get updated count
         updated_facts = key_fact_repository.get_all()
@@ -99,8 +103,8 @@ def run_key_facts_gc_agent() -> None:
         console.print(
             Panel(
                 f"Cleaned key facts: {fact_count} → {updated_count}",
-                title="ℹ️ Cleanup Complete"
+                title="🗑️ GC Complete"
             )
         )
     else:
-        console.print(Panel("No key facts to clean.", title="ℹ️ Info"))
+        console.print(Panel("No key facts to clean.", title="🗑️ GC Info"))
