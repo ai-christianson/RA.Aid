@@ -55,6 +55,15 @@ def launch_webui(host: str, port: int):
 def parse_arguments(args=None):
     ANTHROPIC_DEFAULT_MODEL = "claude-3-7-sonnet-20250219"
     OPENAI_DEFAULT_MODEL = "gpt-4o"
+    
+    # Case-insensitive log level argument type
+    def log_level_type(value):
+        value = value.lower()
+        if value not in ["debug", "info", "warning", "error", "critical"]:
+            raise argparse.ArgumentTypeError(
+                f"Invalid log level: {value}. Choose from debug, info, warning, error, critical."
+            )
+        return value
 
     parser = argparse.ArgumentParser(
         description="RA.Aid - AI Agent for executing programming and research tasks",
@@ -147,6 +156,12 @@ Examples:
     )
     parser.add_argument(
         "--pretty-logger", action="store_true", help="Enable pretty logging output"
+    )
+    parser.add_argument(
+        "--log-level",
+        type=log_level_type,
+        default="warning",
+        help="Set specific logging level (case-insensitive, overrides --verbose)",
     )
     parser.add_argument(
         "--temperature",
@@ -333,7 +348,7 @@ def build_status(
 def main():
     """Main entry point for the ra-aid command line tool."""
     args = parse_arguments()
-    setup_logging(args.verbose, args.pretty_logger)
+    setup_logging(args.verbose, args.pretty_logger, args.log_level)
     logger.debug("Starting RA.Aid with arguments: %s", args)
 
     # Launch web interface if requested
