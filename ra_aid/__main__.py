@@ -180,7 +180,7 @@ Examples:
     parser.add_argument(
         "--log-level",
         type=log_level_type,
-        default="warning",
+        default="debug",
         help="Set specific logging level (case-insensitive, affects file and console logging based on --log-mode)",
     )
     parser.add_argument(
