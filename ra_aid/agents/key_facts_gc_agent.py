@@ -83,7 +83,7 @@ def run_key_facts_gc_agent() -> None:
     fact_count = len(facts)
     
     # Display status panel with fact count included
-    console.print(Panel(f"Gathering my thoughts...\nCurrent number of key facts: {fact_count}", title="🗑️ Garbage Collection"))
+    console.print(Panel(f"Gathering my thoughts...\nCurrent number of key facts: {fact_count}", title="🗑 Garbage Collection"))
     
     # Only run the agent if we actually have facts to clean
     if fact_count > 0:
