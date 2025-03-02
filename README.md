@@ -10,7 +10,7 @@
 
 **Develop software autonomously.**
 
-RA.Aid (pronounced "raid") helps you develop software autonomously. It was made by putting `aider` (https://aider.chat/) in a LangChain ReAct agent loop. This unique combination allows developers to leverage `aider`'s code editing capabilities while benefiting from LangChain's agent-based task execution framework. The tool provides an intelligent assistant that can help with research, planning, and implementation of multi-step development tasks.
+RA.Aid (pronounced "raid") helps you develop software autonomously. It is a standalone coding agent built on LangGraph's agent-based task execution framework. The tool provides an intelligent assistant that can help with research, planning, and implementation of multi-step development tasks. RA.Aid can optionally integrate with `aider` (https://aider.chat/) via the `--use-aider` flag to leverage its specialized code editing capabilities.
 
 The result is **near-fully-autonomous software development**.
 
@@ -159,7 +159,7 @@ export GEMINI_API_KEY=your_api_key_here
 export TAVILY_API_KEY=your_api_key_here
 ```
 
-Note: The programmer tool (aider) will automatically select its model based on your available API keys:
+Note: When using the `--use-aider` flag, the programmer tool (aider) will automatically select its model based on your available API keys:
 - If ANTHROPIC_API_KEY is set, it will use Claude models
 - If only OPENAI_API_KEY is set, it will use OpenAI models
 - You can set multiple API keys to enable different features
@@ -198,6 +198,7 @@ More information is available in our [Usage Examples](https://docs.ra-aid.ai/cat
 - `--research-only`: Only perform research without implementation
 - `--provider`: The LLM provider to use (choices: anthropic, openai, openrouter, openai-compatible, gemini)
 - `--model`: The model name to use (required for non-Anthropic providers)
+- `--use-aider`: Enable aider integration for code editing. When enabled, RA.Aid uses aider's specialized code editing capabilities instead of its own native file modification tools. This option is useful when you need aider's specific editing features or prefer its approach to code modifications. This feature is optional and disabled by default.
 - `--research-provider`: Provider to use specifically for research tasks (falls back to --provider if not specified)
 - `--research-model`: Model to use specifically for research tasks (falls back to --model if not specified)
 - `--planner-provider`: Provider to use specifically for planning tasks (falls back to --provider if not specified)
@@ -365,7 +366,7 @@ ra-aid -m "Update all deprecated API calls" --cowboy-mode
 
 RA.Aid supports multiple AI providers and models. The default model is Anthropic's Claude 3 Sonnet (`claude-3-7-sonnet-20250219`).
 
-The programmer tool (aider) automatically selects its model based on your available API keys. It will use Claude models if ANTHROPIC_API_KEY is set, or fall back to OpenAI models if only OPENAI_API_KEY is available.
+When using the `--use-aider` flag, the programmer tool (aider) automatically selects its model based on your available API keys. It will use Claude models if ANTHROPIC_API_KEY is set, or fall back to OpenAI models if only OPENAI_API_KEY is available.
 
 Note: The expert tool can be configured to use different providers (OpenAI, Anthropic, OpenRouter, Gemini) using the --expert-provider flag along with the corresponding EXPERT_*API_KEY environment variables. Each provider requires its own API key set through the appropriate environment variable.
 

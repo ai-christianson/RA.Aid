@@ -55,6 +55,12 @@ Or run with a single command:
 ra-aid -m "Help me understand this code"
 ```
 
+If you prefer to use aider's specialized code editing capabilities instead of RA.Aid's built-in file modification tools:
+
+```bash
+ra-aid -m "Implement this feature" --use-aider
+```
+
 You can control logging verbosity and location using the `--log-mode` and `--log-level` options:
 
 ```bash

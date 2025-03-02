@@ -5,7 +5,7 @@ slug: /
 
 # Welcome to RA.Aid
 
-RA.Aid (pronounced "raid") is your AI-powered development companion that helps you build software autonomously. Whether you're working on new features, refactoring code, or researching solutions, RA.Aid makes development faster and more efficient.
+RA.Aid (pronounced "raid") is your AI-powered development companion that helps you build software autonomously. As a standalone coding agent built on LangChain's agent-based task execution framework, RA.Aid can handle research, planning, and implementation of your development tasks. Whether you're working on new features, refactoring code, or researching solutions, RA.Aid makes development faster and more efficient.
 
 ## Why RA.Aid?
 
@@ -45,6 +45,8 @@ ra-aid -m "Add input validation to the login form"
 - **Interactive Mode**: Get help when you need it through natural conversation
 - **Multiple AI Providers**: Support for various AI models to suit your needs
 - **Git Integration**: Works seamlessly with your version control
+- **Standalone Code Agent**: Built-in code modification capabilities by default
+- **Optional Aider Integration**: Use the `--use-aider` flag to leverage aider's specialized code editing abilities
 
 ## Next Steps
 
