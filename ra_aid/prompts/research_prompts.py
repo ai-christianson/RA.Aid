@@ -58,7 +58,7 @@ You must:
     You can use fuzzy file search to quickly find relevant files matching a search pattern.
     Use ripgrep_search extensively to do *exhaustive* searches for all references to anything that might be changed as part of the base level task.
       Prefer to use ripgrep_search with context params rather than reading whole files in order to preserve context tokens.
-    Call emit_key_facts on key information you discover about this project during your research. This is information you will be writing down to be able to efficiently complete work in the future, so be on the lookout for these and make it count.
+    Call emit_key_facts and emit_key_snippet on key information/facts/snippets of code you discover about this project during your research. This is information you will be writing down to be able to efficiently complete work in the future, so be on the lookout for these and make it count.
 
 You must not:
 
