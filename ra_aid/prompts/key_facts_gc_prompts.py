@@ -1,12 +1,12 @@
 """
-Key facts cleaner-specific prompts for the AI agent system.
+Key facts gc-specific prompts for the AI agent system.
 
-This module contains the prompt for the key facts cleaner agent that is
+This module contains the prompt for the key facts gc agent that is
 responsible for evaluating and trimming down the stored key facts to keep
 only the most valuable ones, ensuring that the collection remains manageable.
 """
 
-KEY_FACTS_CLEANER_PROMPT = """
+KEY_FACTS_GC_PROMPT = """
 You are a Key Facts Cleaner agent responsible for maintaining the knowledge base by pruning less important facts.
 
 <key facts>

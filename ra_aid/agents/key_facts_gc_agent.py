@@ -1,5 +1,5 @@
 """
-Key facts cleaner agent implementation.
+Key facts gc agent implementation.
 
 This agent is responsible for maintaining the knowledge base by pruning less important
 facts when the total number exceeds a specified threshold. The agent evaluates all
@@ -16,7 +16,7 @@ from rich.panel import Panel
 from ra_aid.agent_utils import create_agent, run_agent_with_retry
 from ra_aid.database.repositories.key_fact_repository import KeyFactRepository
 from ra_aid.llm import initialize_llm
-from ra_aid.prompts.key_facts_cleaner_prompts import KEY_FACTS_CLEANER_PROMPT
+from ra_aid.prompts.key_facts_gc_prompts import KEY_FACTS_GC_PROMPT
 from ra_aid.tools.memory import log_work_event
 
 
@@ -52,8 +52,8 @@ def delete_key_fact(fact_id: int) -> str:
         return f"Fact #{fact_id} not found"
 
 
-def run_key_facts_cleaner_agent() -> None:
-    """Run the key facts cleaner agent to maintain a reasonable number of key facts.
+def run_key_facts_gc_agent() -> None:
+    """Run the key facts gc agent to maintain a reasonable number of key facts.
     
     The agent analyzes all key facts and determines which are the least valuable,
     deleting them to maintain a manageable collection size of high-value facts.
@@ -81,7 +81,7 @@ def run_key_facts_cleaner_agent() -> None:
         agent = create_agent(model, [delete_key_fact])
         
         # Format the prompt with the current facts
-        prompt = KEY_FACTS_CLEANER_PROMPT.format(key_facts=formatted_facts)
+        prompt = KEY_FACTS_GC_PROMPT.format(key_facts=formatted_facts)
         
         # Set up the agent configuration
         config = {

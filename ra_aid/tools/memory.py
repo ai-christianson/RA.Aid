@@ -136,8 +136,8 @@ def emit_key_facts(facts: List[str]) -> str:
     if len(all_facts) > 30:
         # Trigger the key facts cleaner agent
         try:
-            from ra_aid.agents.key_facts_cleaner_agent import run_key_facts_cleaner_agent
-            run_key_facts_cleaner_agent()
+            from ra_aid.agents.key_facts_gc_agent import run_key_facts_gc_agent
+            run_key_facts_gc_agent()
         except Exception as e:
             logger.error(f"Failed to run key facts cleaner: {str(e)}")
     

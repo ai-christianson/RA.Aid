@@ -1,5 +1,5 @@
 """
-Key facts cleaner agent package.
+Key facts gc agent package.
 
 This package contains the agent responsible for cleaning up key facts 
 in the database when they exceed a certain threshold.
@@ -7,9 +7,9 @@ in the database when they exceed a certain threshold.
 
 from typing import Optional
 
-def run_key_facts_cleaner_agent(max_facts: int = 20) -> None:
+def run_key_facts_gc_agent(max_facts: int = 20) -> None:
     """
-    Run the key facts cleaner agent to reduce key facts to the specified maximum.
+    Run the key facts gc agent to reduce key facts to the specified maximum.
     
     This agent evaluates the importance of key facts and removes the least important ones
     when the total count exceeds the maximum threshold.
