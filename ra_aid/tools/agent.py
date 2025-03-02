@@ -14,7 +14,7 @@ from ra_aid.agent_context import (
 from ra_aid.console.formatting import print_error
 from ra_aid.database.repositories.key_fact_repository import KeyFactRepository
 from ra_aid.exceptions import AgentInterrupt
-from ra_aid.text.key_facts_formatter import format_key_facts_dict
+from ra_aid.model_formatters import format_key_facts_dict
 from ra_aid.tools.memory import _global_memory
 
 from ..console import print_task_header

@@ -8,7 +8,7 @@ from rich.panel import Panel
 
 from ..database.repositories.key_fact_repository import KeyFactRepository
 from ..llm import initialize_expert_llm
-from ..text.key_facts_formatter import format_key_facts_dict
+from ..model_formatters import format_key_facts_dict
 from .memory import _global_memory, get_memory_value
 
 console = Console()

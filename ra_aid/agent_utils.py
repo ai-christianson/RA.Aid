@@ -85,7 +85,7 @@ from ra_aid.tool_configs import (
 )
 from ra_aid.tools.handle_user_defined_test_cmd_execution import execute_test_command
 from ra_aid.database.repositories.key_fact_repository import KeyFactRepository
-from ra_aid.text.key_facts_formatter import format_key_facts_dict
+from ra_aid.model_formatters import format_key_facts_dict
 from ra_aid.tools.memory import (
     _global_memory,
     get_memory_value,

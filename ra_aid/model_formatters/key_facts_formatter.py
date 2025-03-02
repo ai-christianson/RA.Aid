@@ -1,8 +1,8 @@
 """
-Key facts text formatting module.
+Key facts model formatter module.
 
-This module provides utility functions for formatting key facts
-with consistent markdown styling.
+This module provides utility functions for formatting key facts from database models
+into consistent markdown styling for display or output purposes.
 """
 
 from typing import Dict, Optional

@@ -1,6 +1,6 @@
 """Unit tests for the key_facts_formatter module."""
 
-from ra_aid.text.key_facts_formatter import format_key_fact, format_key_facts_dict
+from ra_aid.model_formatters import format_key_fact, format_key_facts_dict
 
 
 class TestKeyFactsFormatter:
