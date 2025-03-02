@@ -610,6 +610,9 @@ def main():
                     memory=planning_memory,
                     config=config,
                 )
+                
+            # Run cleanup tasks before exiting database context
+            run_cleanup()
 
     except (KeyboardInterrupt, AgentInterrupt):
         print()
@@ -624,21 +627,11 @@ def run_cleanup():
         # Import the key facts cleaner agent
         from ra_aid.agents.key_facts_gc_agent import run_key_facts_gc_agent
         
-        # Get the count of key facts
-        from ra_aid.database.repositories.key_fact_repository import KeyFactRepository
-        key_fact_repository = KeyFactRepository()
-        
-        # Only run the cleaner if we have more than 30 facts
-        facts = key_fact_repository.get_all()
-        if len(facts) > 30:
-            run_key_facts_gc_agent()
+        # Run the key facts garbage collection agent regardless of the number of facts
+        run_key_facts_gc_agent()
     except Exception as e:
         logger.error(f"Failed to run cleanup tasks: {str(e)}")
 
 
 if __name__ == "__main__":
-    try:
-        main()
-    finally:
-        # Run cleanup tasks at program exit
-        run_cleanup()
+    main()
