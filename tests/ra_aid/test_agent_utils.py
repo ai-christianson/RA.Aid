@@ -194,7 +194,7 @@ def test_state_modifier(mock_messages):
     state = AgentState(messages=mock_messages)
 
     with patch(
-        "ra_aid.agents.ciayn_agent.CiaynAgent._estimate_tokens"
+        "ra_aid.agent_backends.ciayn_agent.CiaynAgent._estimate_tokens"
     ) as mock_estimate:
         mock_estimate.side_effect = lambda msg: 100 if msg else 0
 

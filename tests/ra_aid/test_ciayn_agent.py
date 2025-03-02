@@ -4,7 +4,7 @@ from unittest.mock import Mock
 import pytest
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 
-from ra_aid.agents.ciayn_agent import CiaynAgent, validate_function_call_pattern
+from ra_aid.agent_backends.ciayn_agent import CiaynAgent, validate_function_call_pattern
 from ra_aid.exceptions import ToolExecutionError
 
 

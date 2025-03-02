@@ -9,7 +9,7 @@ from langchain_core.messages import HumanMessage
 from langchain_google_genai.chat_models import ChatGoogleGenerativeAI
 from langchain_openai.chat_models import ChatOpenAI
 
-from ra_aid.agents.ciayn_agent import CiaynAgent
+from ra_aid.agent_backends.ciayn_agent import CiaynAgent
 from ra_aid.env import validate_environment
 from ra_aid.llm import (
     create_llm_client,
