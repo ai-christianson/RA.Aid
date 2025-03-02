@@ -54,18 +54,24 @@ from ra_aid.project_info import (
     format_project_info,
     get_project_info,
 )
-from ra_aid.prompts import (
+from ra_aid.prompts.expert_prompts import (
     EXPERT_PROMPT_SECTION_IMPLEMENTATION,
     EXPERT_PROMPT_SECTION_PLANNING,
     EXPERT_PROMPT_SECTION_RESEARCH,
+)
+from ra_aid.prompts.human_prompts import (
     HUMAN_PROMPT_SECTION_IMPLEMENTATION,
     HUMAN_PROMPT_SECTION_PLANNING,
     HUMAN_PROMPT_SECTION_RESEARCH,
-    IMPLEMENTATION_PROMPT,
-    NEW_PROJECT_HINTS,
-    PLANNING_PROMPT,
+)
+from ra_aid.prompts.implementation_prompts import IMPLEMENTATION_PROMPT
+from ra_aid.prompts.common_prompts import NEW_PROJECT_HINTS
+from ra_aid.prompts.planning_prompts import PLANNING_PROMPT
+from ra_aid.prompts.research_prompts import (
     RESEARCH_ONLY_PROMPT,
     RESEARCH_PROMPT,
+)
+from ra_aid.prompts.web_research_prompts import (
     WEB_RESEARCH_PROMPT,
     WEB_RESEARCH_PROMPT_SECTION_CHAT,
     WEB_RESEARCH_PROMPT_SECTION_PLANNING,
