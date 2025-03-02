@@ -29,6 +29,7 @@ Key sections:
 - [Recommended Configuration](https://docs.ra-aid.ai/quickstart/recommended)
 - [Open Models Setup](https://docs.ra-aid.ai/quickstart/open-models)
 - [Usage Examples](https://docs.ra-aid.ai/category/usage)
+- [Logging System](https://docs.ra-aid.ai/usage/logging)
 - [Contributing Guide](https://docs.ra-aid.ai/contributing)
 - [Getting Help](https://docs.ra-aid.ai/getting-help)
 
@@ -186,10 +187,10 @@ ra-aid -m "Explain the authentication flow" --research-only
 ra-aid -m "Add new feature" --log-mode file
 
 # Console-only logging with detailed output
-ra-aid -m "Add new feature" --log-mode console
+ra-aid -m "Add new feature" --log-mode console --log-level debug
 ```
 
-More information is available in our [Usage Examples](https://docs.ra-aid.ai/category/usage).
+More information is available in our [Usage Examples](https://docs.ra-aid.ai/category/usage) and [Logging System](https://docs.ra-aid.ai/usage/logging) documentation.
 
 ### Command Line Options
 
@@ -207,11 +208,14 @@ More information is available in our [Usage Examples](https://docs.ra-aid.ai/cat
 - `--hil, -H`: Enable human-in-the-loop mode for interactive assistance during task execution
 - `--chat`: Enable chat mode with direct human interaction (implies --hil)
 - `--log-mode`: Logging mode (choices: file, console)
-  - `file`: Logs to both file and console (only warnings+ to console)
-  - `console`: Logs to console only at the specified log level
+  - `file` (default): Logs to both file and console (only warnings and errors to console)
+  - `console`: Logs to console only at the specified log level with no file logging
 - `--log-level`: Set specific logging level (debug, info, warning, error, critical)
+  - With `--log-mode=file`: Controls the file logging level (console still shows only warnings+)
+  - With `--log-mode=console`: Controls the console logging level directly
+  - Default: warning
 - `--experimental-fallback-handler`: Enable experimental fallback handler to attempt to fix too calls when the same tool fails 3 times consecutively. (OPENAI_API_KEY recommended as openai has the top 5 tool calling models.) See `ra_aid/tool_leaderboard.py` for more info.
-- `--pretty-logger`: Enables panel markdown formatted logger messages for debugging purposes.
+- `--pretty-logger`: Enables colored panel-style formatted logging output for better readability.
 - `--temperature`: LLM temperature (0.0-2.0) to control randomness in responses
 - `--disable-limit-tokens`: Disable token limiting for Anthropic Claude react agents
 - `--recursion-limit`: Maximum recursion depth for agent operations (default: 100)

@@ -5,7 +5,7 @@ import type * as Preset from '@docusaurus/preset-classic';
 const config: Config = {
   title: 'RA-Aid Documentation',
   favicon: 'img/favicon.ico',
-  url: 'https://ra-aid.0.dev',
+  url: 'https://docs.ra-aid.ai',
   baseUrl: '/',
   
   onDuplicateRoutes: 'ignore',

@@ -54,3 +54,15 @@ Or run with a single command:
 ```bash
 ra-aid -m "Help me understand this code"
 ```
+
+You can control logging verbosity and location using the `--log-mode` and `--log-level` options:
+
+```bash
+# Log to file (with only warnings to console)
+ra-aid -m "Your task" --log-mode file --log-level debug
+
+# Log everything to console
+ra-aid -m "Your task" --log-mode console --log-level info
+```
+
+For more detailed logging configuration, see the [Logging documentation](../usage/logging.md).
