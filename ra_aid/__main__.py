@@ -618,5 +618,27 @@ def main():
         sys.exit(0)
 
 
+def run_cleanup():
+    """Run cleanup tasks after main execution."""
+    try:
+        # Import the key facts cleaner agent
+        from ra_aid.agents.key_facts_cleaner_agent import run_key_facts_cleaner_agent
+        
+        # Get the count of key facts
+        from ra_aid.database.repositories.key_fact_repository import KeyFactRepository
+        key_fact_repository = KeyFactRepository()
+        
+        # Only run the cleaner if we have more than 30 facts
+        facts = key_fact_repository.get_all()
+        if len(facts) > 30:
+            run_key_facts_cleaner_agent()
+    except Exception as e:
+        logger.error(f"Failed to run cleanup tasks: {str(e)}")
+
+
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    finally:
+        # Run cleanup tasks at program exit
+        run_cleanup()

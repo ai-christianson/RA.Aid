@@ -18,6 +18,9 @@ from ra_aid.agent_context import (
     mark_task_completed,
 )
 from ra_aid.database.repositories.key_fact_repository import KeyFactRepository
+from ra_aid.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 class WorkLogEntry(TypedDict):
@@ -127,33 +130,18 @@ def emit_key_facts(facts: List[str]) -> str:
         results.append(f"Stored fact #{fact_id}: {fact}")
 
     log_work_event(f"Stored {len(facts)} key facts.")
+    
+    # Check if we need to clean up facts (more than 30)
+    all_facts = key_fact_repository.get_all()
+    if len(all_facts) > 30:
+        # Trigger the key facts cleaner agent
+        try:
+            from ra_aid.agents.key_facts_cleaner_agent import run_key_facts_cleaner_agent
+            run_key_facts_cleaner_agent()
+        except Exception as e:
+            logger.error(f"Failed to run key facts cleaner: {str(e)}")
+    
     return "Facts stored."
-
-
-@tool("delete_key_facts")
-def delete_key_facts(fact_ids: List[int]) -> str:
-    """Delete multiple key facts from global memory by their IDs.
-    Silently skips any IDs that don't exist.
-
-    Args:
-        fact_ids: List of fact IDs to delete
-    """
-    results = []
-    for fact_id in fact_ids:
-        # Get the fact first to display information
-        fact = key_fact_repository.get(fact_id)
-        if fact:
-            # Delete the fact
-            was_deleted = key_fact_repository.delete(fact_id)
-            if was_deleted:
-                success_msg = f"Successfully deleted fact #{fact_id}: {fact.content}"
-                console.print(
-                    Panel(Markdown(success_msg), title="Fact Deleted", border_style="green")
-                )
-                results.append(success_msg)
-
-    log_work_event(f"Deleted facts {fact_ids}.")
-    return "Facts deleted."
 
 
 @tool("delete_tasks")
