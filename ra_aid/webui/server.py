@@ -9,15 +9,17 @@ import traceback
 from pathlib import Path
 from typing import List
 
-# Configure logging
-logging.basicConfig(
-    level=logging.WARNING,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[
-        logging.StreamHandler(sys.__stderr__)  # Use the real stderr
-    ],
-)
+# Configure module-specific logging without affecting root logger
 logger = logging.getLogger(__name__)
+# Only configure this specific logger, not the root logger
+if not logger.handlers:  # Avoid adding handlers multiple times
+    logger.setLevel(logging.WARNING)
+    handler = logging.StreamHandler(sys.__stderr__)  # Use the real stderr
+    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    # Prevent propagation to avoid affecting the root logger configuration
+    logger.propagate = False
 
 # Add project root to Python path
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))

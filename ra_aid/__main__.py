@@ -1,8 +1,27 @@
 import argparse
+import logging
 import os
 import sys
 import uuid
 from datetime import datetime
+
+# Add litellm import
+import litellm
+
+# Configure litellm to suppress debug logs
+os.environ["LITELLM_LOG"] = "ERROR"
+litellm.suppress_debug_info = True
+litellm.set_verbose = False
+
+# Explicitly configure LiteLLM's loggers
+for logger_name in ["litellm", "LiteLLM"]:
+    litellm_logger = logging.getLogger(logger_name)
+    litellm_logger.setLevel(logging.WARNING)
+    litellm_logger.propagate = True
+
+# Use litellm's internal method to disable debugging
+if hasattr(litellm, "_logging") and hasattr(litellm._logging, "_disable_debugging"):
+    litellm._logging._disable_debugging()
 
 from langgraph.checkpoint.memory import MemorySaver
 from rich.console import Console
@@ -152,7 +171,8 @@ Examples:
         help="Enable chat mode with direct human interaction (implies --hil)",
     )
     parser.add_argument(
-        "--verbose", action="store_true", help="Enable verbose logging output"
+        "--log-mode", choices=["console", "file"], default="file", 
+        help="Logging mode: 'console' shows all logs in console, 'file' logs to file with only warnings+ in console"
     )
     parser.add_argument(
         "--pretty-logger", action="store_true", help="Enable pretty logging output"
@@ -161,7 +181,7 @@ Examples:
         "--log-level",
         type=log_level_type,
         default="warning",
-        help="Set specific logging level (case-insensitive, overrides --verbose)",
+        help="Set specific logging level (case-insensitive, affects file and console logging based on --log-mode)",
     )
     parser.add_argument(
         "--temperature",
@@ -348,7 +368,7 @@ def build_status(
 def main():
     """Main entry point for the ra-aid command line tool."""
     args = parse_arguments()
-    setup_logging(args.verbose, args.pretty_logger, args.log_level)
+    setup_logging(args.log_mode, args.pretty_logger, args.log_level)
     logger.debug("Starting RA.Aid with arguments: %s", args)
 
     # Launch web interface if requested

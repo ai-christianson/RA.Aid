@@ -182,8 +182,11 @@ ra-aid -m "Your task or query here"
 # Research-only mode (no implementation)
 ra-aid -m "Explain the authentication flow" --research-only
 
-# Enable verbose logging for detailed execution information
-ra-aid -m "Add new feature" --verbose
+# File logging with console warnings (default mode)
+ra-aid -m "Add new feature" --log-mode file
+
+# Console-only logging with detailed output
+ra-aid -m "Add new feature" --log-mode console
 ```
 
 More information is available in our [Usage Examples](https://docs.ra-aid.ai/category/usage).
@@ -203,7 +206,10 @@ More information is available in our [Usage Examples](https://docs.ra-aid.ai/cat
 - `--expert-model`: The model name to use for expert knowledge queries (required for non-OpenAI providers)
 - `--hil, -H`: Enable human-in-the-loop mode for interactive assistance during task execution
 - `--chat`: Enable chat mode with direct human interaction (implies --hil)
-- `--verbose`: Enable verbose logging output
+- `--log-mode`: Logging mode (choices: file, console)
+  - `file`: Logs to both file and console (only warnings+ to console)
+  - `console`: Logs to console only at the specified log level
+- `--log-level`: Set specific logging level (debug, info, warning, error, critical)
 - `--experimental-fallback-handler`: Enable experimental fallback handler to attempt to fix too calls when the same tool fails 3 times consecutively. (OPENAI_API_KEY recommended as openai has the top 5 tool calling models.) See `ra_aid/tool_leaderboard.py` for more info.
 - `--pretty-logger`: Enables panel markdown formatted logger messages for debugging purposes.
 - `--temperature`: LLM temperature (0.0-2.0) to control randomness in responses
