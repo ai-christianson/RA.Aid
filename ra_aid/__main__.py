@@ -55,7 +55,8 @@ from ra_aid.llm import initialize_llm
 from ra_aid.logging_config import get_logger, setup_logging
 from ra_aid.models_params import DEFAULT_TEMPERATURE, models_params
 from ra_aid.project_info import format_project_info, get_project_info
-from ra_aid.prompts import CHAT_PROMPT, WEB_RESEARCH_PROMPT_SECTION_CHAT
+from ra_aid.prompts.chat_prompts import CHAT_PROMPT
+from ra_aid.prompts.web_research_prompts import WEB_RESEARCH_PROMPT_SECTION_CHAT
 from ra_aid.tool_configs import get_chat_tools, set_modification_tools
 from ra_aid.tools.human import ask_human
 from ra_aid.tools.memory import _global_memory
