@@ -17,8 +17,6 @@ def reset_memory():
     """Reset global memory before each test"""
     _global_memory["key_facts"] = {}
     _global_memory["key_fact_id_counter"] = 0
-    _global_memory["key_snippets"] = {}
-    _global_memory["key_snippet_id_counter"] = 0
     _global_memory["research_notes"] = []
     _global_memory["plans"] = []
     _global_memory["tasks"] = {}
@@ -30,8 +28,6 @@ def reset_memory():
     # Clean up after test
     _global_memory["key_facts"] = {}
     _global_memory["key_fact_id_counter"] = 0
-    _global_memory["key_snippets"] = {}
-    _global_memory["key_snippet_id_counter"] = 0
     _global_memory["research_notes"] = []
     _global_memory["plans"] = []
     _global_memory["tasks"] = {}
@@ -44,8 +40,10 @@ def reset_memory():
 @pytest.fixture
 def mock_functions():
     """Mock functions used in agent.py"""
-    with patch('ra_aid.tools.agent.key_fact_repository') as mock_repo, \
-         patch('ra_aid.tools.agent.format_key_facts_dict') as mock_formatter, \
+    with patch('ra_aid.tools.agent.key_fact_repository') as mock_fact_repo, \
+         patch('ra_aid.tools.agent.format_key_facts_dict') as mock_fact_formatter, \
+         patch('ra_aid.tools.memory.key_snippet_repository') as mock_snippet_repo, \
+         patch('ra_aid.tools.memory.key_snippets_formatter.format_key_snippets_dict') as mock_snippet_formatter, \
          patch('ra_aid.tools.agent.initialize_llm') as mock_llm, \
          patch('ra_aid.tools.agent.get_related_files') as mock_get_files, \
          patch('ra_aid.tools.agent.get_memory_value') as mock_get_memory, \
@@ -54,8 +52,10 @@ def mock_functions():
          patch('ra_aid.tools.agent.get_completion_message') as mock_get_completion:
 
         # Setup mock return values
-        mock_repo.get_facts_dict.return_value = {1: "Test fact 1", 2: "Test fact 2"}
-        mock_formatter.return_value = "Formatted facts"
+        mock_fact_repo.get_facts_dict.return_value = {1: "Test fact 1", 2: "Test fact 2"}
+        mock_fact_formatter.return_value = "Formatted facts"
+        mock_snippet_repo.get_snippets_dict.return_value = {1: {"filepath": "test.py", "line_number": 10, "snippet": "def test():", "description": "Test function"}}
+        mock_snippet_formatter.return_value = "Formatted snippets"
         mock_llm.return_value = MagicMock()
         mock_get_files.return_value = ["file1.py", "file2.py"]
         mock_get_memory.return_value = "Test memory value"
@@ -64,8 +64,10 @@ def mock_functions():
         
         # Return all mocks as a dictionary
         yield {
-            'key_fact_repository': mock_repo,
-            'format_key_facts_dict': mock_formatter,
+            'key_fact_repository': mock_fact_repo,
+            'key_snippet_repository': mock_snippet_repo,
+            'format_key_facts_dict': mock_fact_formatter,
+            'format_key_snippets_dict': mock_snippet_formatter,
             'initialize_llm': mock_llm,
             'get_related_files': mock_get_files,
             'get_memory_value': mock_get_memory,
@@ -119,7 +121,7 @@ def test_request_research_max_depth(reset_memory, mock_functions):
     
     # Verify get_memory_value is not called with "key_facts"
     for call in mock_functions['get_memory_value'].call_args_list:
-        assert call[0][0] != "key_facts"
+            assert call[0][0] != "key_facts"
 
 
 def test_request_research_and_implementation_uses_key_fact_repository(reset_memory, mock_functions):
