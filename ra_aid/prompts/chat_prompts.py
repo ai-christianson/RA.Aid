@@ -11,6 +11,15 @@ from ra_aid.prompts.web_research_prompts import WEB_RESEARCH_PROMPT_SECTION_CHAT
 # Chat mode prompt for interactive mode
 CHAT_PROMPT = """Working Directory: {working_directory}
 Current Date: {current_date}
+
+<key facts>
+{key_facts}
+</key facts>
+
+<key snippets>
+{key_snippets}
+</key snippets>
+
 Project Info:
 {project_info}
 
@@ -88,6 +97,7 @@ You have often been criticized for:
     - Not calling ask_human at the end, which means the agent loop terminates and dumps the user to the CLI.
     - Not calling tools/functions properly, e.g. leaving off required arguments, calling a tool in a loop, calling tools inappropriately.
     - If the user asks you something like "what does this project do?" you have asked clarifying questions when you should have just launched a research task.
+    - Doing too many research tasks when it could all be done with a single request_research_and_implementation call.
 
 <initial request>
 {initial_request}

@@ -42,6 +42,8 @@ from ra_aid.config import (
     DEFAULT_TEST_CMD_TIMEOUT,
     VALID_PROVIDERS,
 )
+from ra_aid.database.repositories.key_fact_repository import KeyFactRepository
+from ra_aid.model_formatters import format_key_facts_dict
 from ra_aid.console.output import cpm
 from ra_aid.database import (
     DatabaseManager,
@@ -59,7 +61,7 @@ from ra_aid.prompts.chat_prompts import CHAT_PROMPT
 from ra_aid.prompts.web_research_prompts import WEB_RESEARCH_PROMPT_SECTION_CHAT
 from ra_aid.tool_configs import get_chat_tools, set_modification_tools
 from ra_aid.tools.human import ask_human
-from ra_aid.tools.memory import _global_memory
+from ra_aid.tools.memory import _global_memory, get_memory_value
 
 logger = get_logger(__name__)
 
@@ -523,6 +525,8 @@ def main():
                         ),
                         working_directory=working_directory,
                         current_date=current_date,
+                        key_facts=format_key_facts_dict(KeyFactRepository().get_facts_dict()),
+                        key_snippets=get_memory_value("key_snippets"),
                         project_info=formatted_project_info,
                     ),
                     config,
