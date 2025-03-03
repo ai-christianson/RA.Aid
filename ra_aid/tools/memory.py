@@ -242,6 +242,17 @@ def emit_key_snippet(snippet_info: SnippetInfo) -> str:
     )
 
     log_work_event(f"Stored code snippet #{snippet_id}.")
+    
+    # Check if we need to clean up snippets (more than 20)
+    all_snippets = key_snippet_repository.get_all()
+    if len(all_snippets) > 20:
+        # Trigger the key snippets cleaner agent
+        try:
+            from ra_aid.agents.key_snippets_gc_agent import run_key_snippets_gc_agent
+            run_key_snippets_gc_agent()
+        except Exception as e:
+            logger.error(f"Failed to run key snippets cleaner: {str(e)}")
+    
     return f"Snippet #{snippet_id} stored."
 
 
