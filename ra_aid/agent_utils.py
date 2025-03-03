@@ -429,8 +429,6 @@ def run_research_agent(
         new_project_hints=NEW_PROJECT_HINTS if project_info.is_new else "",
     )
 
-    print("HERE", prompt)
-
     config = _global_memory.get("config", {}) if not config else config
     recursion_limit = config.get("recursion_limit", DEFAULT_RECURSION_LIMIT)
     run_config = {
