@@ -55,8 +55,6 @@ _global_memory: Dict[str, Any] = {
     "plans": [],
     "tasks": {},  # Dict[int, str] - ID to task mapping
     "task_id_counter": 1,  # Counter for generating unique task IDs
-    "key_facts": {},  # Dict[int, str] - ID to fact mapping (deprecated, using DB now)
-    "key_fact_id_counter": 1,  # Counter for generating unique fact IDs (deprecated, using DB now)
     "implementation_requested": False,
     "related_files": {},  # Dict[int, str] - ID to filepath mapping
     "related_file_id_counter": 1,  # Counter for generating unique file IDs

@@ -15,8 +15,6 @@ from ra_aid.tools.memory import _global_memory
 @pytest.fixture
 def reset_memory():
     """Reset global memory before each test"""
-    _global_memory["key_facts"] = {}
-    _global_memory["key_fact_id_counter"] = 0
     _global_memory["research_notes"] = []
     _global_memory["plans"] = []
     _global_memory["tasks"] = {}
@@ -26,8 +24,6 @@ def reset_memory():
     _global_memory["work_log"] = []
     yield
     # Clean up after test
-    _global_memory["key_facts"] = {}
-    _global_memory["key_fact_id_counter"] = 0
     _global_memory["research_notes"] = []
     _global_memory["plans"] = []
     _global_memory["tasks"] = {}
