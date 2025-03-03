@@ -215,3 +215,20 @@ class KeySnippetRepository:
         except peewee.DatabaseError as e:
             logger.error(f"Failed to fetch key snippets as dictionary: {str(e)}")
             raise
+
+
+# Global singleton instance
+_key_snippet_repository = None
+
+
+def get_key_snippet_repository() -> KeySnippetRepository:
+    """
+    Get or create a singleton instance of KeySnippetRepository.
+    
+    Returns:
+        KeySnippetRepository: Singleton instance of the repository
+    """
+    global _key_snippet_repository
+    if _key_snippet_repository is None:
+        _key_snippet_repository = KeySnippetRepository()
+    return _key_snippet_repository

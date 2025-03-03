@@ -16,12 +16,12 @@ from ra_aid.tools.memory import (
     get_memory_value,
     get_related_files,
     get_work_log,
-    key_fact_repository,
-    key_snippet_repository,
     log_work_event,
     reset_work_log,
     swap_task_order,
 )
+from ra_aid.database.repositories.key_fact_repository import get_key_fact_repository
+from ra_aid.database.repositories.key_snippet_repository import get_key_snippet_repository
 from ra_aid.database.connection import DatabaseManager
 from ra_aid.database.models import KeyFact
 
@@ -60,7 +60,7 @@ def in_memory_db():
 @pytest.fixture(autouse=True)
 def mock_repository():
     """Mock the KeyFactRepository to avoid database operations during tests"""
-    with patch('ra_aid.tools.memory.key_fact_repository') as mock_repo:
+    with patch('ra_aid.tools.memory.get_key_fact_repository') as mock_repo:
         # Setup the mock repository to behave like the original, but using memory
         facts = {}  # Local in-memory storage
         fact_id_counter = 0
@@ -79,12 +79,12 @@ def mock_repository():
             facts[fact_id_counter] = fact
             fact_id_counter += 1
             return fact
-        mock_repo.create.side_effect = mock_create
+        mock_repo.return_value.create.side_effect = mock_create
         
         # Mock get method
         def mock_get(fact_id):
             return facts.get(fact_id)
-        mock_repo.get.side_effect = mock_get
+        mock_repo.return_value.get.side_effect = mock_get
         
         # Mock delete method
         def mock_delete(fact_id):
@@ -92,17 +92,17 @@ def mock_repository():
                 del facts[fact_id]
                 return True
             return False
-        mock_repo.delete.side_effect = mock_delete
+        mock_repo.return_value.delete.side_effect = mock_delete
         
         # Mock get_facts_dict method
         def mock_get_facts_dict():
             return {fact_id: fact.content for fact_id, fact in facts.items()}
-        mock_repo.get_facts_dict.side_effect = mock_get_facts_dict
+        mock_repo.return_value.get_facts_dict.side_effect = mock_get_facts_dict
         
         # Mock get_all method
         def mock_get_all():
             return list(facts.values())
-        mock_repo.get_all.side_effect = mock_get_all
+        mock_repo.return_value.get_all.side_effect = mock_get_all
         
         yield mock_repo
 
@@ -159,16 +159,16 @@ def mock_key_snippet_repository():
         return list(snippets.values())
     
     # Create the actual mocks for both memory.py and key_snippets_gc_agent.py
-    with patch('ra_aid.tools.memory.key_snippet_repository') as memory_mock_repo, \
-         patch('ra_aid.agents.key_snippets_gc_agent.key_snippet_repository') as agent_mock_repo:
+    with patch('ra_aid.tools.memory.get_key_snippet_repository') as memory_mock_repo, \
+         patch('ra_aid.agents.key_snippets_gc_agent.get_key_snippet_repository') as agent_mock_repo:
         
         # Setup both mocks with the same implementation
         for mock_repo in [memory_mock_repo, agent_mock_repo]:
-            mock_repo.create.side_effect = mock_create
-            mock_repo.get.side_effect = mock_get
-            mock_repo.delete.side_effect = mock_delete
-            mock_repo.get_snippets_dict.side_effect = mock_get_snippets_dict
-            mock_repo.get_all.side_effect = mock_get_all
+            mock_repo.return_value.create.side_effect = mock_create
+            mock_repo.return_value.get.side_effect = mock_get
+            mock_repo.return_value.delete.side_effect = mock_delete
+            mock_repo.return_value.get_snippets_dict.side_effect = mock_get_snippets_dict
+            mock_repo.return_value.get_all.side_effect = mock_get_all
         
         yield memory_mock_repo
 
@@ -180,7 +180,7 @@ def test_emit_key_facts_single_fact(reset_memory, mock_repository):
     assert result == "Facts stored."
     
     # Verify the repository's create method was called
-    mock_repository.create.assert_called_once_with("First fact", human_input_id=ANY)
+    mock_repository.return_value.create.assert_called_once_with("First fact", human_input_id=ANY)
 
 
 def test_get_memory_value_other_types(reset_memory):
@@ -264,10 +264,10 @@ def test_emit_key_facts(reset_memory, mock_repository):
     assert result == "Facts stored."
 
     # Verify create was called for each fact
-    assert mock_repository.create.call_count == 3
-    mock_repository.create.assert_any_call("First fact", human_input_id=ANY)
-    mock_repository.create.assert_any_call("Second fact", human_input_id=ANY)
-    mock_repository.create.assert_any_call("Third fact", human_input_id=ANY)
+    assert mock_repository.return_value.create.call_count == 3
+    mock_repository.return_value.create.assert_any_call("First fact", human_input_id=ANY)
+    mock_repository.return_value.create.assert_any_call("Second fact", human_input_id=ANY)
+    mock_repository.return_value.create.assert_any_call("Third fact", human_input_id=ANY)
 
 
 def test_emit_key_facts_triggers_cleaner(reset_memory, mock_repository):
@@ -278,7 +278,7 @@ def test_emit_key_facts_triggers_cleaner(reset_memory, mock_repository):
         facts.append(MagicMock(id=i, content=f"Test fact {i}", human_input_id=None))
     
     # Mock the get_all method to return more than 30 facts
-    mock_repository.get_all.return_value = facts
+    mock_repository.return_value.get_all.return_value = facts
     
     # Note on testing approach:
     # Rather than trying to mock the dynamic import which is challenging due to
@@ -295,7 +295,7 @@ def test_emit_key_facts_triggers_cleaner(reset_memory, mock_repository):
     
     # Verify that mock_repository.get_all was called,
     # which is the condition that would trigger the GC agent
-    mock_repository.get_all.assert_called_once()
+    mock_repository.return_value.get_all.assert_called_once()
 
 
 def test_emit_key_snippet(reset_memory, mock_key_snippet_repository):
@@ -315,7 +315,7 @@ def test_emit_key_snippet(reset_memory, mock_key_snippet_repository):
     assert result == "Snippet #0 stored."
 
     # Verify create was called correctly
-    mock_key_snippet_repository.create.assert_called_with(
+    mock_key_snippet_repository.return_value.create.assert_called_with(
         filepath="test.py",
         line_number=10,
         snippet="def test():\n    pass",
@@ -338,7 +338,7 @@ def test_emit_key_snippet(reset_memory, mock_key_snippet_repository):
     assert result == "Snippet #1 stored."
 
     # Verify create was called correctly
-    mock_key_snippet_repository.create.assert_called_with(
+    mock_key_snippet_repository.return_value.create.assert_called_with(
         filepath="main.py",
         line_number=20,
         snippet="print('hello')",
@@ -379,16 +379,16 @@ def test_delete_key_snippets(mock_log_work_event, reset_memory, mock_key_snippet
     mock_key_snippet_repository.reset_mock()
 
     # Test deleting mix of valid and invalid IDs
-    with patch('ra_aid.agents.key_snippets_gc_agent.key_snippet_repository', mock_key_snippet_repository):
+    with patch('ra_aid.agents.key_snippets_gc_agent.get_key_snippet_repository', mock_key_snippet_repository):
         result = delete_key_snippets.invoke({"snippet_ids": [0, 1, 999]})
 
         # Verify success message
         assert result == "Snippets deleted."
 
         # Verify repository get was called with correct IDs
-        mock_key_snippet_repository.get.assert_any_call(0)
-        mock_key_snippet_repository.get.assert_any_call(1)
-        mock_key_snippet_repository.get.assert_any_call(999)
+        mock_key_snippet_repository.return_value.get.assert_any_call(0)
+        mock_key_snippet_repository.return_value.get.assert_any_call(1)
+        mock_key_snippet_repository.return_value.get.assert_any_call(999)
         
         # We skip verifying delete calls because they are prone to test environment issues
         # The implementation logic will properly delete IDs 0 and 1 but not 999
@@ -410,12 +410,12 @@ def test_delete_key_snippets_empty(mock_log_work_event, reset_memory, mock_key_s
     mock_key_snippet_repository.reset_mock()
 
     # Test with empty list
-    with patch('ra_aid.agents.key_snippets_gc_agent.key_snippet_repository', mock_key_snippet_repository):
+    with patch('ra_aid.agents.key_snippets_gc_agent.get_key_snippet_repository', mock_key_snippet_repository):
         result = delete_key_snippets.invoke({"snippet_ids": []})
         assert result == "Snippets deleted."
 
         # Verify no call to delete method
-        mock_key_snippet_repository.delete.assert_not_called()
+        mock_key_snippet_repository.return_value.delete.assert_not_called()
 
 
 def test_emit_related_files_basic(reset_memory, tmp_path):
@@ -458,13 +458,13 @@ def test_emit_related_files_duplicates(reset_memory, tmp_path):
     new_file.write_text("# New file")
 
     # Add initial files
-    result = emit_related_files.invoke({"files": [str(test_file), str(main_file)]})
-    assert result == "Files noted."
+    result1 = emit_related_files.invoke({"files": [str(test_file), str(main_file)]})
+    assert result1 == "Files noted."
     _first_id = 0  # ID of test.py
 
     # Try adding duplicates
-    result = emit_related_files.invoke({"files": [str(test_file)]})
-    assert result == "Files noted."
+    result2 = emit_related_files.invoke({"files": [str(test_file)]})
+    assert result2 == "Files noted."
     assert len(_global_memory["related_files"]) == 2  # Count should not increase
 
     # Try mix of new and duplicate files
@@ -670,7 +670,7 @@ def test_key_snippets_integration(mock_log_work_event, reset_memory, mock_key_sn
         mock_key_snippet_repository.reset_mock()
 
         # Delete some but not all snippets (0 and 2)
-        with patch('ra_aid.agents.key_snippets_gc_agent.key_snippet_repository', mock_key_snippet_repository):
+        with patch('ra_aid.agents.key_snippets_gc_agent.get_key_snippet_repository', mock_key_snippet_repository):
             result = delete_key_snippets.invoke({"snippet_ids": [0, 2]})
             assert result == "Snippets deleted."
         
@@ -692,7 +692,7 @@ def test_key_snippets_integration(mock_log_work_event, reset_memory, mock_key_sn
         assert result == "Snippet #3 stored."
         
         # Verify create was called with correct params
-        mock_key_snippet_repository.create.assert_called_with(
+        mock_key_snippet_repository.return_value.create.assert_called_with(
             filepath=file4,
             line_number=40,
             snippet="def func4():\n    return False",
@@ -704,7 +704,7 @@ def test_key_snippets_integration(mock_log_work_event, reset_memory, mock_key_sn
         mock_key_snippet_repository.reset_mock()
 
         # Delete remaining snippets
-        with patch('ra_aid.agents.key_snippets_gc_agent.key_snippet_repository', mock_key_snippet_repository):
+        with patch('ra_aid.agents.key_snippets_gc_agent.get_key_snippet_repository', mock_key_snippet_repository):
             result = delete_key_snippets.invoke({"snippet_ids": [1, 3]})
             assert result == "Snippets deleted."
 

@@ -42,7 +42,7 @@ from ra_aid.config import (
     DEFAULT_TEST_CMD_TIMEOUT,
     VALID_PROVIDERS,
 )
-from ra_aid.database.repositories.key_fact_repository import KeyFactRepository
+from ra_aid.database.repositories.key_fact_repository import KeyFactRepositoryManager, get_key_fact_repository
 from ra_aid.database.repositories.key_snippet_repository import KeySnippetRepository
 from ra_aid.model_formatters import format_key_facts_dict
 from ra_aid.model_formatters.key_snippets_formatter import format_key_snippets_dict
@@ -393,250 +393,255 @@ def main():
             except Exception as e:
                 logger.error(f"Database migration error: {str(e)}")
 
-            # Check dependencies before proceeding
-            check_dependencies()
+            # Initialize repositories with database connection
+            with KeyFactRepositoryManager(db) as key_fact_repo:
+                # This initializes the repository and makes it available via get_key_fact_repository()
+                logger.debug("Initialized KeyFactRepository")
 
-            (
-                expert_enabled,
-                expert_missing,
-                web_research_enabled,
-                web_research_missing,
-            ) = validate_environment(args)  # Will exit if main env vars missing
-            logger.debug("Environment validation successful")
+                # Check dependencies before proceeding
+                check_dependencies()
 
-            # Validate model configuration early
-            model_config = models_params.get(args.provider, {}).get(
-                args.model or "", {}
-            )
-            supports_temperature = model_config.get(
-                "supports_temperature",
-                args.provider
-                in [
-                    "anthropic",
-                    "openai",
-                    "openrouter",
-                    "openai-compatible",
-                    "deepseek",
-                ],
-            )
+                (
+                    expert_enabled,
+                    expert_missing,
+                    web_research_enabled,
+                    web_research_missing,
+                ) = validate_environment(args)  # Will exit if main env vars missing
+                logger.debug("Environment validation successful")
 
-            if supports_temperature and args.temperature is None:
-                args.temperature = model_config.get("default_temperature")
-                if args.temperature is None:
-                    cpm(
-                        f"This model supports temperature argument but none was given. Setting default temperature to {DEFAULT_TEMPERATURE}."
+                # Validate model configuration early
+                model_config = models_params.get(args.provider, {}).get(
+                    args.model or "", {}
+                )
+                supports_temperature = model_config.get(
+                    "supports_temperature",
+                    args.provider
+                    in [
+                        "anthropic",
+                        "openai",
+                        "openrouter",
+                        "openai-compatible",
+                        "deepseek",
+                    ],
+                )
+
+                if supports_temperature and args.temperature is None:
+                    args.temperature = model_config.get("default_temperature")
+                    if args.temperature is None:
+                        cpm(
+                            f"This model supports temperature argument but none was given. Setting default temperature to {DEFAULT_TEMPERATURE}."
+                        )
+                        args.temperature = DEFAULT_TEMPERATURE
+                    logger.debug(
+                        f"Using default temperature {args.temperature} for model {args.model}"
                     )
-                    args.temperature = DEFAULT_TEMPERATURE
-                logger.debug(
-                    f"Using default temperature {args.temperature} for model {args.model}"
+
+                status = build_status(args, expert_enabled, web_research_enabled)
+
+                console.print(
+                    Panel(
+                        status,
+                        title=f"RA.Aid v{__version__}",
+                        border_style="bright_blue",
+                        padding=(0, 1),
+                    )
                 )
 
-            status = build_status(args, expert_enabled, web_research_enabled)
+                # Handle chat mode
+                if args.chat:
+                    # Initialize chat model with default provider/model
+                    chat_model = initialize_llm(
+                        args.provider, args.model, temperature=args.temperature
+                    )
 
-            console.print(
-                Panel(
-                    status,
-                    title=f"RA.Aid v{__version__}",
-                    border_style="bright_blue",
-                    padding=(0, 1),
-                )
-            )
+                    if args.research_only:
+                        print_error("Chat mode cannot be used with --research-only")
+                        sys.exit(1)
 
-            # Handle chat mode
-            if args.chat:
-                # Initialize chat model with default provider/model
-                chat_model = initialize_llm(
-                    args.provider, args.model, temperature=args.temperature
-                )
+                    print_stage_header("Chat Mode")
 
-                if args.research_only:
-                    print_error("Chat mode cannot be used with --research-only")
+                    # Get project info
+                    try:
+                        project_info = get_project_info(".", file_limit=2000)
+                        formatted_project_info = format_project_info(project_info)
+                    except Exception as e:
+                        logger.warning(f"Failed to get project info: {e}")
+                        formatted_project_info = ""
+
+                    # Get initial request from user
+                    initial_request = ask_human.invoke(
+                        {"question": "What would you like help with?"}
+                    )
+                    
+                    # Record chat input in database (redundant as ask_human already records it,
+                    # but needed in case the ask_human implementation changes)
+                    try:
+                        from ra_aid.database.repositories.human_input_repository import HumanInputRepository
+                        human_input_repo = HumanInputRepository(db)
+                        human_input_repo.create(content=initial_request, source='chat')
+                        human_input_repo.garbage_collect()
+                    except Exception as e:
+                        logger.error(f"Failed to record initial chat input: {str(e)}")
+
+                    # Get working directory and current date
+                    working_directory = os.getcwd()
+                    current_date = datetime.now().strftime("%Y-%m-%d")
+
+                    # Run chat agent with CHAT_PROMPT
+                    config = {
+                        "configurable": {"thread_id": str(uuid.uuid4())},
+                        "recursion_limit": args.recursion_limit,
+                        "chat_mode": True,
+                        "cowboy_mode": args.cowboy_mode,
+                        "hil": True,  # Always true in chat mode
+                        "web_research_enabled": web_research_enabled,
+                        "initial_request": initial_request,
+                        "limit_tokens": args.disable_limit_tokens,
+                    }
+
+                    # Store config in global memory
+                    _global_memory["config"] = config
+                    _global_memory["config"]["provider"] = args.provider
+                    _global_memory["config"]["model"] = args.model
+                    _global_memory["config"]["expert_provider"] = args.expert_provider
+                    _global_memory["config"]["expert_model"] = args.expert_model
+                    _global_memory["config"]["temperature"] = args.temperature
+
+                    # Set modification tools based on use_aider flag
+                    set_modification_tools(args.use_aider)
+
+                    # Create chat agent with appropriate tools
+                    chat_agent = create_agent(
+                        chat_model,
+                        get_chat_tools(
+                            expert_enabled=expert_enabled,
+                            web_research_enabled=web_research_enabled,
+                        ),
+                        checkpointer=MemorySaver(),
+                    )
+
+                    # Run chat agent and exit
+                    run_agent_with_retry(
+                        chat_agent,
+                        CHAT_PROMPT.format(
+                            initial_request=initial_request,
+                            web_research_section=(
+                                WEB_RESEARCH_PROMPT_SECTION_CHAT
+                                if web_research_enabled
+                                else ""
+                            ),
+                            working_directory=working_directory,
+                            current_date=current_date,
+                            key_facts=format_key_facts_dict(get_key_fact_repository().get_facts_dict()),
+                            key_snippets=format_key_snippets_dict(KeySnippetRepository(db).get_snippets_dict()),
+                            project_info=formatted_project_info,
+                        ),
+                        config,
+                    )
+                    return
+
+                # Validate message is provided
+                if not args.message:
+                    print_error("--message is required")
                     sys.exit(1)
 
-                print_stage_header("Chat Mode")
-
-                # Get project info
-                try:
-                    project_info = get_project_info(".", file_limit=2000)
-                    formatted_project_info = format_project_info(project_info)
-                except Exception as e:
-                    logger.warning(f"Failed to get project info: {e}")
-                    formatted_project_info = ""
-
-                # Get initial request from user
-                initial_request = ask_human.invoke(
-                    {"question": "What would you like help with?"}
-                )
+                base_task = args.message
                 
-                # Record chat input in database (redundant as ask_human already records it,
-                # but needed in case the ask_human implementation changes)
+                # Record CLI input in database
                 try:
                     from ra_aid.database.repositories.human_input_repository import HumanInputRepository
-                    human_input_repo = HumanInputRepository()
-                    human_input_repo.create(content=initial_request, source='chat')
+                    human_input_repo = HumanInputRepository(db)
+                    human_input_repo.create(content=base_task, source='cli')
+                    # Run garbage collection to ensure we don't exceed 100 inputs
                     human_input_repo.garbage_collect()
+                    logger.debug(f"Recorded CLI input: {base_task}")
                 except Exception as e:
-                    logger.error(f"Failed to record initial chat input: {str(e)}")
-
-                # Get working directory and current date
-                working_directory = os.getcwd()
-                current_date = datetime.now().strftime("%Y-%m-%d")
-
-                # Run chat agent with CHAT_PROMPT
+                    logger.error(f"Failed to record CLI input: {str(e)}")
                 config = {
                     "configurable": {"thread_id": str(uuid.uuid4())},
                     "recursion_limit": args.recursion_limit,
-                    "chat_mode": True,
+                    "research_only": args.research_only,
                     "cowboy_mode": args.cowboy_mode,
-                    "hil": True,  # Always true in chat mode
                     "web_research_enabled": web_research_enabled,
-                    "initial_request": initial_request,
+                    "aider_config": args.aider_config,
+                    "use_aider": args.use_aider,
                     "limit_tokens": args.disable_limit_tokens,
+                    "auto_test": args.auto_test,
+                    "test_cmd": args.test_cmd,
+                    "max_test_cmd_retries": args.max_test_cmd_retries,
+                    "experimental_fallback_handler": args.experimental_fallback_handler,
+                    "test_cmd_timeout": args.test_cmd_timeout,
                 }
 
-                # Store config in global memory
+                # Store config in global memory for access by is_informational_query
                 _global_memory["config"] = config
+
+                # Store base provider/model configuration
                 _global_memory["config"]["provider"] = args.provider
                 _global_memory["config"]["model"] = args.model
+
+                # Store expert provider/model (no fallback)
                 _global_memory["config"]["expert_provider"] = args.expert_provider
                 _global_memory["config"]["expert_model"] = args.expert_model
+
+                # Store planner config with fallback to base values
+                _global_memory["config"]["planner_provider"] = (
+                    args.planner_provider or args.provider
+                )
+                _global_memory["config"]["planner_model"] = args.planner_model or args.model
+
+                # Store research config with fallback to base values
+                _global_memory["config"]["research_provider"] = (
+                    args.research_provider or args.provider
+                )
+                _global_memory["config"]["research_model"] = (
+                    args.research_model or args.model
+                )
+
+                # Store temperature in global config
                 _global_memory["config"]["temperature"] = args.temperature
 
                 # Set modification tools based on use_aider flag
                 set_modification_tools(args.use_aider)
 
-                # Create chat agent with appropriate tools
-                chat_agent = create_agent(
-                    chat_model,
-                    get_chat_tools(
-                        expert_enabled=expert_enabled,
-                        web_research_enabled=web_research_enabled,
-                    ),
-                    checkpointer=MemorySaver(),
+                # Run research stage
+                print_stage_header("Research Stage")
+
+                # Initialize research model with potential overrides
+                research_provider = args.research_provider or args.provider
+                research_model_name = args.research_model or args.model
+                research_model = initialize_llm(
+                    research_provider, research_model_name, temperature=args.temperature
                 )
 
-                # Run chat agent and exit
-                run_agent_with_retry(
-                    chat_agent,
-                    CHAT_PROMPT.format(
-                        initial_request=initial_request,
-                        web_research_section=(
-                            WEB_RESEARCH_PROMPT_SECTION_CHAT
-                            if web_research_enabled
-                            else ""
-                        ),
-                        working_directory=working_directory,
-                        current_date=current_date,
-                        key_facts=format_key_facts_dict(KeyFactRepository().get_facts_dict()),
-                        key_snippets=format_key_snippets_dict(KeySnippetRepository().get_snippets_dict()),
-                        project_info=formatted_project_info,
-                    ),
-                    config,
-                )
-                return
-
-            # Validate message is provided
-            if not args.message:
-                print_error("--message is required")
-                sys.exit(1)
-
-            base_task = args.message
-            
-            # Record CLI input in database
-            try:
-                from ra_aid.database.repositories.human_input_repository import HumanInputRepository
-                human_input_repo = HumanInputRepository()
-                human_input_repo.create(content=base_task, source='cli')
-                # Run garbage collection to ensure we don't exceed 100 inputs
-                human_input_repo.garbage_collect()
-                logger.debug(f"Recorded CLI input: {base_task}")
-            except Exception as e:
-                logger.error(f"Failed to record CLI input: {str(e)}")
-            config = {
-                "configurable": {"thread_id": str(uuid.uuid4())},
-                "recursion_limit": args.recursion_limit,
-                "research_only": args.research_only,
-                "cowboy_mode": args.cowboy_mode,
-                "web_research_enabled": web_research_enabled,
-                "aider_config": args.aider_config,
-                "use_aider": args.use_aider,
-                "limit_tokens": args.disable_limit_tokens,
-                "auto_test": args.auto_test,
-                "test_cmd": args.test_cmd,
-                "max_test_cmd_retries": args.max_test_cmd_retries,
-                "experimental_fallback_handler": args.experimental_fallback_handler,
-                "test_cmd_timeout": args.test_cmd_timeout,
-            }
-
-            # Store config in global memory for access by is_informational_query
-            _global_memory["config"] = config
-
-            # Store base provider/model configuration
-            _global_memory["config"]["provider"] = args.provider
-            _global_memory["config"]["model"] = args.model
-
-            # Store expert provider/model (no fallback)
-            _global_memory["config"]["expert_provider"] = args.expert_provider
-            _global_memory["config"]["expert_model"] = args.expert_model
-
-            # Store planner config with fallback to base values
-            _global_memory["config"]["planner_provider"] = (
-                args.planner_provider or args.provider
-            )
-            _global_memory["config"]["planner_model"] = args.planner_model or args.model
-
-            # Store research config with fallback to base values
-            _global_memory["config"]["research_provider"] = (
-                args.research_provider or args.provider
-            )
-            _global_memory["config"]["research_model"] = (
-                args.research_model or args.model
-            )
-
-            # Store temperature in global config
-            _global_memory["config"]["temperature"] = args.temperature
-
-            # Set modification tools based on use_aider flag
-            set_modification_tools(args.use_aider)
-
-            # Run research stage
-            print_stage_header("Research Stage")
-
-            # Initialize research model with potential overrides
-            research_provider = args.research_provider or args.provider
-            research_model_name = args.research_model or args.model
-            research_model = initialize_llm(
-                research_provider, research_model_name, temperature=args.temperature
-            )
-
-            run_research_agent(
-                base_task,
-                research_model,
-                expert_enabled=expert_enabled,
-                research_only=args.research_only,
-                hil=args.hil,
-                memory=research_memory,
-                config=config,
-            )
-
-            # Proceed with planning and implementation if not an informational query
-            if not is_informational_query():
-                # Initialize planning model with potential overrides
-                planner_provider = args.planner_provider or args.provider
-                planner_model_name = args.planner_model or args.model
-                planning_model = initialize_llm(
-                    planner_provider, planner_model_name, temperature=args.temperature
-                )
-
-                # Run planning agent
-                run_planning_agent(
+                run_research_agent(
                     base_task,
-                    planning_model,
+                    research_model,
                     expert_enabled=expert_enabled,
+                    research_only=args.research_only,
                     hil=args.hil,
-                    memory=planning_memory,
+                    memory=research_memory,
                     config=config,
                 )
+
+                # Proceed with planning and implementation if not an informational query
+                if not is_informational_query():
+                    # Initialize planning model with potential overrides
+                    planner_provider = args.planner_provider or args.provider
+                    planner_model_name = args.planner_model or args.model
+                    planning_model = initialize_llm(
+                        planner_provider, planner_model_name, temperature=args.temperature
+                    )
+
+                    # Run planning agent
+                    run_planning_agent(
+                        base_task,
+                        planning_model,
+                        expert_enabled=expert_enabled,
+                        hil=args.hil,
+                        memory=planning_memory,
+                        config=config,
+                    )
 
     except (KeyboardInterrupt, AgentInterrupt):
         print()

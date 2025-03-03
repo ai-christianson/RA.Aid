@@ -14,7 +14,7 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 
 from ra_aid.agent_utils import create_agent, run_agent_with_retry
-from ra_aid.database.repositories.key_snippet_repository import KeySnippetRepository
+from ra_aid.database.repositories.key_snippet_repository import get_key_snippet_repository
 from ra_aid.database.repositories.human_input_repository import HumanInputRepository
 from ra_aid.llm import initialize_llm
 from ra_aid.prompts.key_snippets_gc_prompts import KEY_SNIPPETS_GC_PROMPT
@@ -22,7 +22,6 @@ from ra_aid.tools.memory import log_work_event, _global_memory
 
 
 console = Console()
-key_snippet_repository = KeySnippetRepository()
 human_input_repository = HumanInputRepository()
 
 
@@ -53,7 +52,7 @@ def delete_key_snippets(snippet_ids: List[int]) -> str:
     
     for snippet_id in snippet_ids:
         # Get the snippet first to capture filepath for the message
-        snippet = key_snippet_repository.get(snippet_id)
+        snippet = get_key_snippet_repository().get(snippet_id)
         if snippet:
             filepath = snippet.filepath
             
@@ -63,7 +62,7 @@ def delete_key_snippets(snippet_ids: List[int]) -> str:
                 continue
                 
             # Delete from database if not protected
-            success = key_snippet_repository.delete(snippet_id)
+            success = get_key_snippet_repository().delete(snippet_id)
             if success:
                 success_msg = f"Successfully deleted snippet #{snippet_id} from {filepath}"
                 console.print(
@@ -110,7 +109,7 @@ def run_key_snippets_gc_agent() -> None:
     Snippets associated with the current human input are excluded from deletion.
     """
     # Get the count of key snippets
-    snippets = key_snippet_repository.get_all()
+    snippets = get_key_snippet_repository().get_all()
     snippet_count = len(snippets)
     
     # Display status panel with snippet count included
@@ -179,7 +178,7 @@ def run_key_snippets_gc_agent() -> None:
             run_agent_with_retry(agent, prompt, agent_config)
             
             # Get updated count
-            updated_snippets = key_snippet_repository.get_all()
+            updated_snippets = get_key_snippet_repository().get_all()
             updated_count = len(updated_snippets)
             
             # Show info panel with updated count and protected snippets count

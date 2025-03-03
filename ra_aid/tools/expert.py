@@ -1,4 +1,5 @@
 import os
+import logging
 from typing import List
 
 from langchain_core.tools import tool
@@ -6,8 +7,10 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 
-from ..database.repositories.key_fact_repository import KeyFactRepository
-from ..database.repositories.key_snippet_repository import KeySnippetRepository
+logger = logging.getLogger(__name__)
+
+from ..database.repositories.key_fact_repository import get_key_fact_repository
+from ..database.repositories.key_snippet_repository import get_key_snippet_repository
 from ..llm import initialize_expert_llm
 from ..model_formatters import format_key_facts_dict
 from ..model_formatters.key_snippets_formatter import format_key_snippets_dict
@@ -15,8 +18,6 @@ from .memory import _global_memory, get_memory_value
 
 console = Console()
 _model = None
-key_fact_repository = KeyFactRepository()
-key_snippet_repository = KeySnippetRepository()
 
 
 def get_model():
@@ -154,10 +155,18 @@ def ask_expert(question: str) -> str:
     file_paths = list(_global_memory["related_files"].values())
     related_contents = read_related_files(file_paths)
     # Get key snippets directly from repository and format using the formatter
-    key_snippets = format_key_snippets_dict(key_snippet_repository.get_snippets_dict())
+    try:
+        key_snippets = format_key_snippets_dict(get_key_snippet_repository().get_snippets_dict())
+    except RuntimeError as e:
+        logger.error(f"Failed to access key snippet repository: {str(e)}")
+        key_snippets = ""
     # Get key facts directly from repository and format using the formatter
-    facts_dict = key_fact_repository.get_facts_dict()
-    key_facts = format_key_facts_dict(facts_dict)
+    try:
+        facts_dict = get_key_fact_repository().get_facts_dict()
+        key_facts = format_key_facts_dict(facts_dict)
+    except RuntimeError as e:
+        logger.error(f"Failed to access key fact repository: {str(e)}")
+        key_facts = ""
     research_notes = get_memory_value("research_notes")
 
     # Build display query (just question)

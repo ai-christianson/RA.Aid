@@ -6,6 +6,7 @@ facts when the total number exceeds a specified threshold. The agent evaluates a
 key facts and deletes the least valuable ones to keep the database clean and relevant.
 """
 
+import logging
 from typing import List
 
 from langchain_core.tools import tool
@@ -13,8 +14,10 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 
+logger = logging.getLogger(__name__)
+
 from ra_aid.agent_utils import create_agent, run_agent_with_retry
-from ra_aid.database.repositories.key_fact_repository import KeyFactRepository
+from ra_aid.database.repositories.key_fact_repository import get_key_fact_repository
 from ra_aid.database.repositories.human_input_repository import HumanInputRepository
 from ra_aid.llm import initialize_llm
 from ra_aid.prompts.key_facts_gc_prompts import KEY_FACTS_GC_PROMPT
@@ -22,7 +25,6 @@ from ra_aid.tools.memory import log_work_event, _global_memory
 
 
 console = Console()
-key_fact_repository = KeyFactRepository()
 human_input_repository = HumanInputRepository()
 
 
@@ -51,24 +53,30 @@ def delete_key_facts(fact_ids: List[int]) -> str:
         console.print(f"Warning: Could not retrieve current human input: {str(e)}")
     
     for fact_id in fact_ids:
-        # Get the fact first to display information
-        fact = key_fact_repository.get(fact_id)
-        if fact:
-            # Check if this fact is associated with the current human input
-            if current_human_input_id is not None and fact.human_input_id == current_human_input_id:
-                protected_facts.append((fact_id, fact.content))
-                continue
+        try:
+            # Get the fact first to display information
+            fact = get_key_fact_repository().get(fact_id)
+            if fact:
+                # Check if this fact is associated with the current human input
+                if current_human_input_id is not None and fact.human_input_id == current_human_input_id:
+                    protected_facts.append((fact_id, fact.content))
+                    continue
+                
+                # Delete the fact if it's not protected
+                was_deleted = get_key_fact_repository().delete(fact_id)
+                if was_deleted:
+                    deleted_facts.append((fact_id, fact.content))
+                    log_work_event(f"Deleted fact {fact_id}.")
+                else:
+                    failed_facts.append(fact_id)
+        except RuntimeError as e:
+            logger.error(f"Failed to access key fact repository: {str(e)}")
+            failed_facts.append(fact_id)
+        except Exception as e:
+            # For any other exceptions, log and continue
+            logger.error(f"Error processing fact {fact_id}: {str(e)}")
+            failed_facts.append(fact_id)
             
-            # Delete the fact if it's not protected
-            was_deleted = key_fact_repository.delete(fact_id)
-            if was_deleted:
-                deleted_facts.append((fact_id, fact.content))
-                log_work_event(f"Deleted fact {fact_id}.")
-            else:
-                failed_facts.append(fact_id)
-        else:
-            not_found_facts.append(fact_id)
-
     # Prepare result message
     result_parts = []
     if deleted_facts:
@@ -104,8 +112,13 @@ def run_key_facts_gc_agent() -> None:
     Facts associated with the current human input are excluded from deletion.
     """
     # Get the count of key facts
-    facts = key_fact_repository.get_all()
-    fact_count = len(facts)
+    try:
+        facts = get_key_fact_repository().get_all()
+        fact_count = len(facts)
+    except RuntimeError as e:
+        logger.error(f"Failed to access key fact repository: {str(e)}")
+        console.print(Panel(f"Error: {str(e)}", title="🗑 GC Error", border_style="red"))
+        return  # Exit the function if we can't access the repository
     
     # Display status panel with fact count included
     console.print(Panel(f"Gathering my thoughts...\nCurrent number of key facts: {fact_count}", title="🗑 Garbage Collection"))
@@ -161,8 +174,12 @@ def run_key_facts_gc_agent() -> None:
             run_agent_with_retry(agent, prompt, agent_config)
             
             # Get updated count
-            updated_facts = key_fact_repository.get_all()
-            updated_count = len(updated_facts)
+            try:
+                updated_facts = get_key_fact_repository().get_all()
+                updated_count = len(updated_facts)
+            except RuntimeError as e:
+                logger.error(f"Failed to access key fact repository for update count: {str(e)}")
+                updated_count = "unknown"
             
             # Show info panel with updated count and protected facts count
             protected_count = len(protected_facts)

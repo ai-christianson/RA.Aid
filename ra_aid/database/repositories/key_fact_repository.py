@@ -6,14 +6,93 @@ following the repository pattern for data access abstraction.
 """
 
 from typing import Dict, List, Optional
+import contextvars
+from contextlib import contextmanager
 
 import peewee
 
-from ra_aid.database.connection import get_db
-from ra_aid.database.models import KeyFact, initialize_database
+from ra_aid.database.models import KeyFact
 from ra_aid.logging_config import get_logger
 
 logger = get_logger(__name__)
+
+# Create contextvar to hold the KeyFactRepository instance
+key_fact_repo_var = contextvars.ContextVar("key_fact_repo", default=None)
+
+
+class KeyFactRepositoryManager:
+    """
+    Context manager for KeyFactRepository.
+
+    This class provides a context manager interface for KeyFactRepository,
+    using the contextvars approach for thread safety.
+
+    Example:
+        with DatabaseManager() as db:
+            with KeyFactRepositoryManager(db) as repo:
+                # Use the repository
+                fact = repo.create("Important fact about the project")
+                all_facts = repo.get_all()
+    """
+
+    def __init__(self, db):
+        """
+        Initialize the KeyFactRepositoryManager.
+
+        Args:
+            db: Database connection to use (required)
+        """
+        self.db = db
+
+    def __enter__(self) -> 'KeyFactRepository':
+        """
+        Initialize the KeyFactRepository and return it.
+
+        Returns:
+            KeyFactRepository: The initialized repository
+        """
+        repo = KeyFactRepository(self.db)
+        key_fact_repo_var.set(repo)
+        return repo
+
+    def __exit__(
+        self,
+        exc_type: Optional[type],
+        exc_val: Optional[Exception],
+        exc_tb: Optional[object],
+    ) -> None:
+        """
+        Reset the repository when exiting the context.
+
+        Args:
+            exc_type: The exception type if an exception was raised
+            exc_val: The exception value if an exception was raised
+            exc_tb: The traceback if an exception was raised
+        """
+        # Reset the contextvar to None
+        key_fact_repo_var.set(None)
+
+        # Don't suppress exceptions
+        return False
+
+
+def get_key_fact_repository() -> 'KeyFactRepository':
+    """
+    Get the current KeyFactRepository instance.
+
+    Returns:
+        KeyFactRepository: The current repository instance
+        
+    Raises:
+        RuntimeError: If no repository has been initialized with KeyFactRepositoryManager
+    """
+    repo = key_fact_repo_var.get()
+    if repo is None:
+        raise RuntimeError(
+            "No KeyFactRepository available. "
+            "Make sure to initialize one with KeyFactRepositoryManager first."
+        )
+    return repo
 
 
 class KeyFactRepository:
@@ -24,18 +103,21 @@ class KeyFactRepository:
     abstracting the database access details from the business logic.
     
     Example:
-        repo = KeyFactRepository()
-        fact = repo.create("Important fact about the project")
-        all_facts = repo.get_all()
+        with DatabaseManager() as db:
+            with KeyFactRepositoryManager(db) as repo:
+                fact = repo.create("Important fact about the project")
+                all_facts = repo.get_all()
     """
     
-    def __init__(self, db=None):
+    def __init__(self, db):
         """
-        Initialize the repository with an optional database connection.
+        Initialize the repository with a database connection.
         
         Args:
-            db: Optional database connection to use. If None, will use initialize_database()
+            db: Database connection to use (required)
         """
+        if db is None:
+            raise ValueError("Database connection is required for KeyFactRepository")
         self.db = db
     
     def create(self, content: str, human_input_id: Optional[int] = None) -> KeyFact:
@@ -53,7 +135,6 @@ class KeyFactRepository:
             peewee.DatabaseError: If there's an error creating the fact
         """
         try:
-            db = self.db if self.db is not None else initialize_database()
             fact = KeyFact.create(content=content, human_input_id=human_input_id)
             logger.debug(f"Created key fact ID {fact.id}: {content}")
             return fact
@@ -75,7 +156,6 @@ class KeyFactRepository:
             peewee.DatabaseError: If there's an error accessing the database
         """
         try:
-            db = self.db if self.db is not None else initialize_database()
             return KeyFact.get_or_none(KeyFact.id == fact_id)
         except peewee.DatabaseError as e:
             logger.error(f"Failed to fetch key fact {fact_id}: {str(e)}")
@@ -96,7 +176,6 @@ class KeyFactRepository:
             peewee.DatabaseError: If there's an error updating the fact
         """
         try:
-            db = self.db if self.db is not None else initialize_database()
             # First check if the fact exists
             fact = self.get(fact_id)
             if not fact:
@@ -126,7 +205,6 @@ class KeyFactRepository:
             peewee.DatabaseError: If there's an error deleting the fact
         """
         try:
-            db = self.db if self.db is not None else initialize_database()
             # First check if the fact exists
             fact = self.get(fact_id)
             if not fact:
@@ -152,7 +230,6 @@ class KeyFactRepository:
             peewee.DatabaseError: If there's an error accessing the database
         """
         try:
-            db = self.db if self.db is not None else initialize_database()
             return list(KeyFact.select().order_by(KeyFact.id))
         except peewee.DatabaseError as e:
             logger.error(f"Failed to fetch all key facts: {str(e)}")

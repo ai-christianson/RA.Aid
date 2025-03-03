@@ -17,8 +17,8 @@ from ra_aid.agent_context import (
     mark_should_exit,
     mark_task_completed,
 )
-from ra_aid.database.repositories.key_fact_repository import KeyFactRepository
-from ra_aid.database.repositories.key_snippet_repository import KeySnippetRepository
+from ra_aid.database.repositories.key_fact_repository import KeyFactRepository, get_key_fact_repository
+from ra_aid.database.repositories.key_snippet_repository import KeySnippetRepository, get_key_snippet_repository
 from ra_aid.database.repositories.human_input_repository import HumanInputRepository
 from ra_aid.model_formatters import key_snippets_formatter
 from ra_aid.logging_config import get_logger
@@ -40,14 +40,8 @@ class SnippetInfo(TypedDict):
 
 console = Console()
 
-# Initialize repository for key facts
-key_fact_repository = KeyFactRepository()
-
-# Initialize repository for key snippets
-key_snippet_repository = KeySnippetRepository()
-
-# Initialize repository for human inputs
-human_input_repository = HumanInputRepository()
+# Import repositories using the get_* functions
+from ra_aid.database.repositories.key_fact_repository import get_key_fact_repository
 
 # Global memory store
 _global_memory: Dict[str, Any] = {
@@ -120,17 +114,23 @@ def emit_key_facts(facts: List[str]) -> str:
     
     # Try to get the latest human input
     human_input_id = None
+    human_input_repo = HumanInputRepository()
     try:
-        recent_inputs = human_input_repository.get_recent(1)
+        recent_inputs = human_input_repo.get_recent(1)
         if recent_inputs and len(recent_inputs) > 0:
             human_input_id = recent_inputs[0].id
     except Exception as e:
         logger.warning(f"Failed to get recent human input: {str(e)}")
     
     for fact in facts:
-        # Create fact in database using repository
-        created_fact = key_fact_repository.create(fact, human_input_id=human_input_id)
-        fact_id = created_fact.id
+        try:
+            # Create fact in database using repository
+            created_fact = get_key_fact_repository().create(fact, human_input_id=human_input_id)
+            fact_id = created_fact.id
+        except RuntimeError as e:
+            logger.error(f"Failed to access key fact repository: {str(e)}")
+            console.print(f"Error storing fact: {str(e)}", style="red")
+            continue
 
         # Display panel with ID
         console.print(
@@ -147,14 +147,17 @@ def emit_key_facts(facts: List[str]) -> str:
     log_work_event(f"Stored {len(facts)} key facts.")
     
     # Check if we need to clean up facts (more than 30)
-    all_facts = key_fact_repository.get_all()
-    if len(all_facts) > 30:
-        # Trigger the key facts cleaner agent
-        try:
-            from ra_aid.agents.key_facts_gc_agent import run_key_facts_gc_agent
-            run_key_facts_gc_agent()
-        except Exception as e:
-            logger.error(f"Failed to run key facts cleaner: {str(e)}")
+    try:
+        all_facts = get_key_fact_repository().get_all()
+        if len(all_facts) > 30:
+            # Trigger the key facts cleaner agent
+            try:
+                from ra_aid.agents.key_facts_gc_agent import run_key_facts_gc_agent
+                run_key_facts_gc_agent()
+            except Exception as e:
+                logger.error(f"Failed to run key facts cleaner: {str(e)}")
+    except RuntimeError as e:
+        logger.error(f"Failed to access key fact repository: {str(e)}")
     
     return "Facts stored."
 
@@ -222,14 +225,15 @@ def emit_key_snippet(snippet_info: SnippetInfo) -> str:
     # Try to get the latest human input
     human_input_id = None
     try:
-        recent_inputs = human_input_repository.get_recent(1)
+        human_input_repo = HumanInputRepository()
+        recent_inputs = human_input_repo.get_recent(1)
         if recent_inputs and len(recent_inputs) > 0:
             human_input_id = recent_inputs[0].id
     except Exception as e:
         logger.warning(f"Failed to get recent human input: {str(e)}")
 
     # Create a new key snippet in the database
-    key_snippet = key_snippet_repository.create(
+    key_snippet = get_key_snippet_repository().create(
         filepath=snippet_info["filepath"],
         line_number=snippet_info["line_number"],
         snippet=snippet_info["snippet"],
@@ -266,7 +270,7 @@ def emit_key_snippet(snippet_info: SnippetInfo) -> str:
     log_work_event(f"Stored code snippet #{snippet_id}.")
     
     # Check if we need to clean up snippets (more than 20)
-    all_snippets = key_snippet_repository.get_all()
+    all_snippets = get_key_snippet_repository().get_all()
     if len(all_snippets) > 20:
         # Trigger the key snippets cleaner agent
         try:
@@ -276,7 +280,6 @@ def emit_key_snippet(snippet_info: SnippetInfo) -> str:
             logger.error(f"Failed to run key snippets cleaner: {str(e)}")
     
     return f"Snippet #{snippet_id} stored."
-
 
 
 

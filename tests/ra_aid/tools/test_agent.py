@@ -36,9 +36,11 @@ def reset_memory():
 @pytest.fixture
 def mock_functions():
     """Mock functions used in agent.py"""
-    with patch('ra_aid.tools.agent.key_fact_repository') as mock_fact_repo, \
+    mock_fact_repo = MagicMock()
+    mock_snippet_repo = MagicMock()
+    with patch('ra_aid.tools.agent.get_key_fact_repository', return_value=mock_fact_repo) as mock_get_fact_repo, \
          patch('ra_aid.tools.agent.format_key_facts_dict') as mock_fact_formatter, \
-         patch('ra_aid.tools.agent.key_snippet_repository') as mock_snippet_repo, \
+         patch('ra_aid.tools.agent.get_key_snippet_repository', return_value=mock_snippet_repo) as mock_get_snippet_repo, \
          patch('ra_aid.tools.agent.format_key_snippets_dict') as mock_snippet_formatter, \
          patch('ra_aid.tools.agent.initialize_llm') as mock_llm, \
          patch('ra_aid.tools.agent.get_related_files') as mock_get_files, \
@@ -60,8 +62,8 @@ def mock_functions():
         
         # Return all mocks as a dictionary
         yield {
-            'key_fact_repository': mock_fact_repo,
-            'key_snippet_repository': mock_snippet_repo,
+            'get_key_fact_repository': mock_get_fact_repo,
+            'get_key_snippet_repository': mock_get_snippet_repo,
             'format_key_facts_dict': mock_fact_formatter,
             'format_key_snippets_dict': mock_snippet_formatter,
             'initialize_llm': mock_llm,
@@ -81,11 +83,12 @@ def test_request_research_uses_key_fact_repository(reset_memory, mock_functions)
         result = request_research("test query")
         
         # Verify repository was called
-        mock_functions['key_fact_repository'].get_facts_dict.assert_called_once()
+        mock_functions['get_key_fact_repository'].assert_called_once()
+        mock_functions['get_key_fact_repository'].return_value.get_facts_dict.assert_called_once()
         
         # Verify formatter was called with repository results
         mock_functions['format_key_facts_dict'].assert_called_once_with(
-            mock_functions['key_fact_repository'].get_facts_dict.return_value
+            mock_functions['get_key_fact_repository'].return_value.get_facts_dict.return_value
         )
         
         # Verify formatted facts are used in response
@@ -105,11 +108,12 @@ def test_request_research_max_depth(reset_memory, mock_functions):
     result = request_research("test query")
     
     # Verify repository was called
-    mock_functions['key_fact_repository'].get_facts_dict.assert_called_once()
+    mock_functions['get_key_fact_repository'].assert_called_once()
+    mock_functions['get_key_fact_repository'].return_value.get_facts_dict.assert_called_once()
     
     # Verify formatter was called with repository results
     mock_functions['format_key_facts_dict'].assert_called_once_with(
-        mock_functions['key_fact_repository'].get_facts_dict.return_value
+        mock_functions['get_key_fact_repository'].return_value.get_facts_dict.return_value
     )
     
     # Verify formatted facts are used in response
@@ -128,11 +132,12 @@ def test_request_research_and_implementation_uses_key_fact_repository(reset_memo
         result = request_research_and_implementation("test query")
         
         # Verify repository was called
-        mock_functions['key_fact_repository'].get_facts_dict.assert_called_once()
+        mock_functions['get_key_fact_repository'].assert_called_once()
+        mock_functions['get_key_fact_repository'].return_value.get_facts_dict.assert_called_once()
         
         # Verify formatter was called with repository results
         mock_functions['format_key_facts_dict'].assert_called_once_with(
-            mock_functions['key_fact_repository'].get_facts_dict.return_value
+            mock_functions['get_key_fact_repository'].return_value.get_facts_dict.return_value
         )
         
         # Verify formatted facts are used in response
@@ -151,11 +156,12 @@ def test_request_implementation_uses_key_fact_repository(reset_memory, mock_func
         result = request_implementation("test task")
         
         # Verify repository was called
-        mock_functions['key_fact_repository'].get_facts_dict.assert_called_once()
+        mock_functions['get_key_fact_repository'].assert_called_once()
+        mock_functions['get_key_fact_repository'].return_value.get_facts_dict.assert_called_once()
         
         # Verify formatter was called with repository results
         mock_functions['format_key_facts_dict'].assert_called_once_with(
-            mock_functions['key_fact_repository'].get_facts_dict.return_value
+            mock_functions['get_key_fact_repository'].return_value.get_facts_dict.return_value
         )
         
         # Check that the formatted key facts are included in the response
@@ -174,11 +180,12 @@ def test_request_task_implementation_uses_key_fact_repository(reset_memory, mock
         result = request_task_implementation("test task")
         
         # Verify repository was called
-        mock_functions['key_fact_repository'].get_facts_dict.assert_called_once()
+        mock_functions['get_key_fact_repository'].assert_called_once()
+        mock_functions['get_key_fact_repository'].return_value.get_facts_dict.assert_called_once()
         
         # Verify formatter was called with repository results
         mock_functions['format_key_facts_dict'].assert_called_once_with(
-            mock_functions['key_fact_repository'].get_facts_dict.return_value
+            mock_functions['get_key_fact_repository'].return_value.get_facts_dict.return_value
         )
         
         # Check that the formatted key facts are included in the response

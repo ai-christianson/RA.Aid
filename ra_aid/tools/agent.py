@@ -1,6 +1,7 @@
 """Tools for spawning and managing sub-agents."""
 
 from typing import Any, Dict, List, Union
+import logging
 
 from langchain_core.tools import tool
 from rich.console import Console
@@ -12,8 +13,9 @@ from ra_aid.agent_context import (
     reset_completion_flags,
 )
 from ra_aid.console.formatting import print_error
-from ra_aid.database.repositories.key_fact_repository import KeyFactRepository
-from ra_aid.database.repositories.key_snippet_repository import KeySnippetRepository
+from ra_aid.database.repositories.human_input_repository import HumanInputRepository
+from ra_aid.database.repositories.key_fact_repository import get_key_fact_repository
+from ra_aid.database.repositories.key_snippet_repository import get_key_snippet_repository
 from ra_aid.exceptions import AgentInterrupt
 from ra_aid.model_formatters import format_key_facts_dict
 from ra_aid.model_formatters.key_snippets_formatter import format_key_snippets_dict
@@ -31,8 +33,7 @@ CANCELLED_BY_USER_REASON = "The operation was explicitly cancelled by the user. 
 RESEARCH_AGENT_RECURSION_LIMIT = 3
 
 console = Console()
-key_fact_repository = KeyFactRepository()
-key_snippet_repository = KeySnippetRepository()
+logger = logging.getLogger(__name__)
 
 
 @tool("request_research")
@@ -57,12 +58,24 @@ def request_research(query: str) -> ResearchResult:
     current_depth = _global_memory.get("agent_depth", 0)
     if current_depth >= RESEARCH_AGENT_RECURSION_LIMIT:
         print_error("Maximum research recursion depth reached")
+        try:
+            key_facts = format_key_facts_dict(get_key_fact_repository().get_facts_dict())
+        except RuntimeError as e:
+            logger.error(f"Failed to access key fact repository: {str(e)}")
+            key_facts = ""
+
+        try:
+            key_snippets = format_key_snippets_dict(get_key_snippet_repository().get_snippets_dict())
+        except RuntimeError as e:
+            logger.error(f"Failed to access key snippet repository: {str(e)}")
+            key_snippets = ""
+            
         return {
             "completion_message": "Research stopped - maximum recursion depth reached",
-            "key_facts": format_key_facts_dict(key_fact_repository.get_facts_dict()),
+            "key_facts": key_facts,
             "related_files": get_related_files(),
             "research_notes": get_memory_value("research_notes"),
-            "key_snippets": format_key_snippets_dict(key_snippet_repository.get_snippets_dict()),
+            "key_snippets": key_snippets,
             "success": False,
             "reason": "max_depth_exceeded",
         }
@@ -105,12 +118,24 @@ def request_research(query: str) -> ResearchResult:
         # Clear completion state
         reset_completion_flags()
 
+    try:
+        key_facts = format_key_facts_dict(get_key_fact_repository().get_facts_dict())
+    except RuntimeError as e:
+        logger.error(f"Failed to access key fact repository: {str(e)}")
+        key_facts = ""
+        
+    try:
+        key_snippets = format_key_snippets_dict(get_key_snippet_repository().get_snippets_dict())
+    except RuntimeError as e:
+        logger.error(f"Failed to access key snippet repository: {str(e)}")
+        key_snippets = ""
+        
     response_data = {
         "completion_message": completion_message,
-        "key_facts": format_key_facts_dict(key_fact_repository.get_facts_dict()),
+        "key_facts": key_facts,
         "related_files": get_related_files(),
         "research_notes": get_memory_value("research_notes"),
-        "key_snippets": format_key_snippets_dict(key_snippet_repository.get_snippets_dict()),
+        "key_snippets": key_snippets,
         "success": success,
         "reason": reason,
     }
@@ -171,9 +196,15 @@ def request_web_research(query: str) -> ResearchResult:
         # Clear completion state
         reset_completion_flags()
 
+    try:
+        key_snippets = format_key_snippets_dict(get_key_snippet_repository().get_snippets_dict())
+    except RuntimeError as e:
+        logger.error(f"Failed to access key snippet repository: {str(e)}")
+        key_snippets = ""
+        
     response_data = {
         "completion_message": completion_message,
-        "key_snippets": format_key_snippets_dict(key_snippet_repository.get_snippets_dict()),
+        "key_snippets": key_snippets,
         "research_notes": get_memory_value("research_notes"),
         "success": success,
         "reason": reason,
@@ -239,12 +270,24 @@ def request_research_and_implementation(query: str) -> Dict[str, Any]:
     # Clear completion state
     reset_completion_flags()
 
+    try:
+        key_facts = format_key_facts_dict(get_key_fact_repository().get_facts_dict())
+    except RuntimeError as e:
+        logger.error(f"Failed to access key fact repository: {str(e)}")
+        key_facts = ""
+        
+    try:
+        key_snippets = format_key_snippets_dict(get_key_snippet_repository().get_snippets_dict())
+    except RuntimeError as e:
+        logger.error(f"Failed to access key snippet repository: {str(e)}")
+        key_snippets = ""
+        
     response_data = {
         "completion_message": completion_message,
-        "key_facts": format_key_facts_dict(key_fact_repository.get_facts_dict()),
+        "key_facts": key_facts,
         "related_files": get_related_files(),
         "research_notes": get_memory_value("research_notes"),
-        "key_snippets": format_key_snippets_dict(key_snippet_repository.get_snippets_dict()),
+        "key_snippets": key_snippets,
         "success": success,
         "reason": reason,
     }
@@ -324,10 +367,22 @@ def request_task_implementation(task_spec: str) -> str:
     agent_crashed = is_crashed()
     crash_message = get_crash_message() if agent_crashed else None
 
+    try:
+        key_facts = format_key_facts_dict(get_key_fact_repository().get_facts_dict())
+    except RuntimeError as e:
+        logger.error(f"Failed to access key fact repository: {str(e)}")
+        key_facts = ""
+        
+    try:
+        key_snippets = format_key_snippets_dict(get_key_snippet_repository().get_snippets_dict())
+    except RuntimeError as e:
+        logger.error(f"Failed to access key snippet repository: {str(e)}")
+        key_snippets = ""
+        
     response_data = {
-        "key_facts": format_key_facts_dict(key_fact_repository.get_facts_dict()),
+        "key_facts": key_facts,
         "related_files": get_related_files(),
-        "key_snippets": format_key_snippets_dict(key_snippet_repository.get_snippets_dict()),
+        "key_snippets": key_snippets,
         "completion_message": completion_message,
         "success": success and not agent_crashed,
         "reason": reason,
@@ -444,11 +499,23 @@ def request_implementation(task_spec: str) -> str:
     agent_crashed = is_crashed()
     crash_message = get_crash_message() if agent_crashed else None
 
+    try:
+        key_facts = format_key_facts_dict(get_key_fact_repository().get_facts_dict())
+    except RuntimeError as e:
+        logger.error(f"Failed to access key fact repository: {str(e)}")
+        key_facts = ""
+        
+    try:
+        key_snippets = format_key_snippets_dict(get_key_snippet_repository().get_snippets_dict())
+    except RuntimeError as e:
+        logger.error(f"Failed to access key snippet repository: {str(e)}")
+        key_snippets = ""
+        
     response_data = {
         "completion_message": completion_message,
-        "key_facts": format_key_facts_dict(key_fact_repository.get_facts_dict()),
+        "key_facts": key_facts,
         "related_files": get_related_files(),
-        "key_snippets": format_key_snippets_dict(key_snippet_repository.get_snippets_dict()),
+        "key_snippets": key_snippets,
         "success": success and not agent_crashed,
         "reason": reason,
         "agent_crashed": agent_crashed,

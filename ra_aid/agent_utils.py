@@ -84,8 +84,8 @@ from ra_aid.tool_configs import (
     get_web_research_tools,
 )
 from ra_aid.tools.handle_user_defined_test_cmd_execution import execute_test_command
-from ra_aid.database.repositories.key_fact_repository import KeyFactRepository
-from ra_aid.database.repositories.key_snippet_repository import KeySnippetRepository
+from ra_aid.database.repositories.key_fact_repository import get_key_fact_repository
+from ra_aid.database.repositories.key_snippet_repository import get_key_snippet_repository
 from ra_aid.database.repositories.human_input_repository import HumanInputRepository
 from ra_aid.model_formatters import format_key_facts_dict
 from ra_aid.model_formatters.key_snippets_formatter import format_key_snippets_dict
@@ -100,10 +100,8 @@ console = Console()
 
 logger = get_logger(__name__)
 
-# Initialize repositories
-key_fact_repository = KeyFactRepository()
-key_snippet_repository = KeySnippetRepository()
-human_input_repository = HumanInputRepository()
+# Import repositories using get_* functions
+from ra_aid.database.repositories.key_fact_repository import get_key_fact_repository
 
 
 @tool
@@ -391,7 +389,11 @@ def run_research_agent(
         else ""
     )
 
-    key_facts = format_key_facts_dict(key_fact_repository.get_facts_dict())
+    try:
+        key_facts = format_key_facts_dict(get_key_fact_repository().get_facts_dict())
+    except RuntimeError as e:
+        logger.error(f"Failed to access key fact repository: {str(e)}")
+        key_facts = ""
     code_snippets = _global_memory.get("code_snippets", "")
     related_files = _global_memory.get("related_files", "")
 
@@ -400,6 +402,7 @@ def run_research_agent(
 
     # Get the last human input, if it exists
     base_task = base_task_or_query
+    human_input_repository = HumanInputRepository()
     recent_inputs = human_input_repository.get_recent(1)
     if recent_inputs and len(recent_inputs) > 0:
         last_human_input = recent_inputs[0].content
@@ -537,7 +540,11 @@ def run_web_research_agent(
     expert_section = EXPERT_PROMPT_SECTION_RESEARCH if expert_enabled else ""
     human_section = HUMAN_PROMPT_SECTION_RESEARCH if hil else ""
 
-    key_facts = format_key_facts_dict(key_fact_repository.get_facts_dict())
+    try:
+        key_facts = format_key_facts_dict(get_key_fact_repository().get_facts_dict())
+    except RuntimeError as e:
+        logger.error(f"Failed to access key fact repository: {str(e)}")
+        key_facts = ""
     code_snippets = _global_memory.get("code_snippets", "")
     related_files = _global_memory.get("related_files", "")
 
@@ -647,6 +654,20 @@ def run_planning_agent(
     current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     working_directory = os.getcwd()
 
+    # Make sure key_facts is defined before using it
+    try:
+        key_facts = format_key_facts_dict(get_key_fact_repository().get_facts_dict())
+    except RuntimeError as e:
+        logger.error(f"Failed to access key fact repository: {str(e)}")
+        key_facts = ""
+        
+    # Make sure key_snippets is defined before using it
+    try:
+        key_snippets = format_key_snippets_dict(get_key_snippet_repository().get_snippets_dict())
+    except RuntimeError as e:
+        logger.error(f"Failed to access key snippet repository: {str(e)}")
+        key_snippets = ""
+    
     planning_prompt = PLANNING_PROMPT.format(
         current_date=current_date,
         working_directory=working_directory,
@@ -657,8 +678,8 @@ def run_planning_agent(
         project_info=formatted_project_info,
         research_notes=get_memory_value("research_notes"),
         related_files="\n".join(get_related_files()),
-        key_facts=format_key_facts_dict(key_fact_repository.get_facts_dict()),
-        key_snippets=format_key_snippets_dict(key_snippet_repository.get_snippets_dict()),
+        key_facts=key_facts,
+        key_snippets=key_snippets,
         work_log=get_memory_value("work_log"),
         research_only_note=(
             ""
@@ -751,6 +772,13 @@ def run_task_implementation_agent(
     current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     working_directory = os.getcwd()
 
+    # Make sure key_facts is defined before using it
+    try:
+        key_facts = format_key_facts_dict(get_key_fact_repository().get_facts_dict())
+    except RuntimeError as e:
+        logger.error(f"Failed to access key fact repository: {str(e)}")
+        key_facts = ""
+        
     prompt = IMPLEMENTATION_PROMPT.format(
         current_date=current_date,
         working_directory=working_directory,
@@ -759,8 +787,8 @@ def run_task_implementation_agent(
         tasks=tasks,
         plan=plan,
         related_files=related_files,
-        key_facts=format_key_facts_dict(key_fact_repository.get_facts_dict()),
-        key_snippets=format_key_snippets_dict(key_snippet_repository.get_snippets_dict()),
+        key_facts=key_facts,
+        key_snippets=format_key_snippets_dict(get_key_snippet_repository().get_snippets_dict()),
         research_notes=get_memory_value("research_notes"),
         work_log=get_memory_value("work_log"),
         expert_section=EXPERT_PROMPT_SECTION_IMPLEMENTATION if expert_enabled else "",

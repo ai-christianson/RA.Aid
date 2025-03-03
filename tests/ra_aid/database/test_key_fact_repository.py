@@ -9,7 +9,12 @@ import peewee
 
 from ra_aid.database.connection import DatabaseManager, db_var
 from ra_aid.database.models import KeyFact, BaseModel
-from ra_aid.database.repositories.key_fact_repository import KeyFactRepository
+from ra_aid.database.repositories.key_fact_repository import (
+    KeyFactRepository, 
+    KeyFactRepositoryManager,
+    get_key_fact_repository,
+    key_fact_repo_var
+)
 
 
 @pytest.fixture
@@ -39,6 +44,19 @@ def cleanup_db():
             # Ignore errors when closing the database
             pass
     db_var.set(None)
+
+
+@pytest.fixture
+def cleanup_repo():
+    """Reset the repository contextvar after each test."""
+    # Reset before the test
+    key_fact_repo_var.set(None)
+    
+    # Run the test
+    yield
+    
+    # Reset after the test
+    key_fact_repo_var.set(None)
 
 
 @pytest.fixture
@@ -196,3 +214,48 @@ def test_get_facts_dict(setup_db):
     for fact in facts:
         assert fact.id in facts_dict
         assert facts_dict[fact.id] == fact.content
+
+
+def test_repository_init_without_db():
+    """Test that KeyFactRepository raises an error when initialized without a db parameter."""
+    # Attempt to create a repository without a database connection
+    with pytest.raises(ValueError) as excinfo:
+        KeyFactRepository(db=None)
+    
+    # Verify the correct error message
+    assert "Database connection is required" in str(excinfo.value)
+
+
+def test_key_fact_repository_manager(setup_db, cleanup_repo):
+    """Test the KeyFactRepositoryManager context manager."""
+    # Use the context manager to create a repository
+    with KeyFactRepositoryManager(setup_db) as repo:
+        # Verify the repository was created correctly
+        assert isinstance(repo, KeyFactRepository)
+        assert repo.db is setup_db
+        
+        # Verify we can use the repository
+        content = "Test fact via context manager"
+        fact = repo.create(content)
+        assert fact.id is not None
+        assert fact.content == content
+        
+        # Verify we can get the repository using get_key_fact_repository
+        repo_from_var = get_key_fact_repository()
+        assert repo_from_var is repo
+    
+    # Verify the repository was removed from the context var
+    with pytest.raises(RuntimeError) as excinfo:
+        get_key_fact_repository()
+    
+    assert "No KeyFactRepository available" in str(excinfo.value)
+
+
+def test_get_key_fact_repository_when_not_set(cleanup_repo):
+    """Test that get_key_fact_repository raises an error when no repository is in context."""
+    # Attempt to get the repository when none exists
+    with pytest.raises(RuntimeError) as excinfo:
+        get_key_fact_repository()
+    
+    # Verify the correct error message
+    assert "No KeyFactRepository available" in str(excinfo.value)
