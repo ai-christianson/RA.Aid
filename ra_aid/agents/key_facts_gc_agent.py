@@ -15,6 +15,7 @@ from rich.panel import Panel
 
 from ra_aid.agent_utils import create_agent, run_agent_with_retry
 from ra_aid.database.repositories.key_fact_repository import KeyFactRepository
+from ra_aid.database.repositories.human_input_repository import HumanInputRepository
 from ra_aid.llm import initialize_llm
 from ra_aid.prompts.key_facts_gc_prompts import KEY_FACTS_GC_PROMPT
 from ra_aid.tools.memory import log_work_event, _global_memory
@@ -22,6 +23,7 @@ from ra_aid.tools.memory import log_work_event, _global_memory
 
 console = Console()
 key_fact_repository = KeyFactRepository()
+human_input_repository = HumanInputRepository()
 
 
 @tool
@@ -37,12 +39,27 @@ def delete_key_facts(fact_ids: List[int]) -> str:
     deleted_facts = []
     not_found_facts = []
     failed_facts = []
+    protected_facts = []
+    
+    # Try to get the current human input to protect its facts
+    current_human_input_id = None
+    try:
+        recent_inputs = human_input_repository.get_recent(1)
+        if recent_inputs and len(recent_inputs) > 0:
+            current_human_input_id = recent_inputs[0].id
+    except Exception as e:
+        console.print(f"Warning: Could not retrieve current human input: {str(e)}")
     
     for fact_id in fact_ids:
         # Get the fact first to display information
         fact = key_fact_repository.get(fact_id)
         if fact:
-            # Delete the fact
+            # Check if this fact is associated with the current human input
+            if current_human_input_id is not None and fact.human_input_id == current_human_input_id:
+                protected_facts.append((fact_id, fact.content))
+                continue
+            
+            # Delete the fact if it's not protected
             was_deleted = key_fact_repository.delete(fact_id)
             if was_deleted:
                 deleted_facts.append((fact_id, fact.content))
@@ -61,6 +78,13 @@ def delete_key_facts(fact_ids: List[int]) -> str:
             Panel(Markdown(deleted_msg), title="Facts Deleted", border_style="green")
         )
     
+    if protected_facts:
+        protected_msg = "Protected facts (associated with current request):\n" + "\n".join([f"- #{fact_id}: {content}" for fact_id, content in protected_facts])
+        result_parts.append(protected_msg)
+        console.print(
+            Panel(Markdown(protected_msg), title="Facts Protected", border_style="blue")
+        )
+    
     if not_found_facts:
         not_found_msg = f"Facts not found: {', '.join([f'#{fact_id}' for fact_id in not_found_facts])}"
         result_parts.append(not_found_msg)
@@ -77,6 +101,7 @@ def run_key_facts_gc_agent() -> None:
     
     The agent analyzes all key facts and determines which are the least valuable,
     deleting them to maintain a manageable collection size of high-value facts.
+    Facts associated with the current human input are excluded from deletion.
     """
     # Get the count of key facts
     facts = key_fact_repository.get_all()
@@ -87,44 +112,75 @@ def run_key_facts_gc_agent() -> None:
     
     # Only run the agent if we actually have facts to clean
     if fact_count > 0:
-        # Get all facts as a formatted string for the prompt
-        facts_dict = key_fact_repository.get_facts_dict()
-        formatted_facts = "\n".join([f"Fact #{k}: {v}" for k, v in facts_dict.items()])
+        # Try to get the current human input ID to exclude its facts
+        current_human_input_id = None
+        try:
+            recent_inputs = human_input_repository.get_recent(1)
+            if recent_inputs and len(recent_inputs) > 0:
+                current_human_input_id = recent_inputs[0].id
+        except Exception as e:
+            console.print(f"Warning: Could not retrieve current human input: {str(e)}")
         
-        # Retrieve configuration
-        llm_config = _global_memory.get("config", {})
+        # Get all facts that are not associated with the current human input
+        eligible_facts = []
+        protected_facts = []
+        for fact in facts:
+            if current_human_input_id is not None and fact.human_input_id == current_human_input_id:
+                protected_facts.append(fact)
+            else:
+                eligible_facts.append(fact)
+        
+        # Only process if we have facts that can be deleted
+        if eligible_facts:
+            # Format facts as a dictionary for the prompt
+            facts_dict = {fact.id: fact.content for fact in eligible_facts}
+            formatted_facts = "\n".join([f"Fact #{k}: {v}" for k, v in facts_dict.items()])
+            
+            # Retrieve configuration
+            llm_config = _global_memory.get("config", {})
 
-        # Initialize the LLM model
-        model = initialize_llm(
-            llm_config.get("provider", "anthropic"),
-            llm_config.get("model", "claude-3-7-sonnet-20250219"),
-            temperature=llm_config.get("temperature")
-        )
-        
-        # Create the agent with the delete_key_facts tool
-        agent = create_agent(model, [delete_key_facts])
-        
-        # Format the prompt with the current facts
-        prompt = KEY_FACTS_GC_PROMPT.format(key_facts=formatted_facts)
-        
-        # Set up the agent configuration
-        agent_config = {
-            "recursion_limit": 50  # Set a reasonable recursion limit
-        }
-        
-        # Run the agent
-        run_agent_with_retry(agent, prompt, agent_config)
-        
-        # Get updated count
-        updated_facts = key_fact_repository.get_all()
-        updated_count = len(updated_facts)
-        
-        # Show info panel with updated count
-        console.print(
-            Panel(
-                f"Cleaned key facts: {fact_count} → {updated_count}",
-                title="🗑 GC Complete"
+            # Initialize the LLM model
+            model = initialize_llm(
+                llm_config.get("provider", "anthropic"),
+                llm_config.get("model", "claude-3-7-sonnet-20250219"),
+                temperature=llm_config.get("temperature")
             )
-        )
+            
+            # Create the agent with the delete_key_facts tool
+            agent = create_agent(model, [delete_key_facts])
+            
+            # Format the prompt with the eligible facts
+            prompt = KEY_FACTS_GC_PROMPT.format(key_facts=formatted_facts)
+            
+            # Set up the agent configuration
+            agent_config = {
+                "recursion_limit": 50  # Set a reasonable recursion limit
+            }
+            
+            # Run the agent
+            run_agent_with_retry(agent, prompt, agent_config)
+            
+            # Get updated count
+            updated_facts = key_fact_repository.get_all()
+            updated_count = len(updated_facts)
+            
+            # Show info panel with updated count and protected facts count
+            protected_count = len(protected_facts)
+            if protected_count > 0:
+                console.print(
+                    Panel(
+                        f"Cleaned key facts: {fact_count} → {updated_count}\nProtected facts (associated with current request): {protected_count}",
+                        title="🗑 GC Complete"
+                    )
+                )
+            else:
+                console.print(
+                    Panel(
+                        f"Cleaned key facts: {fact_count} → {updated_count}",
+                        title="🗑 GC Complete"
+                    )
+                )
+        else:
+            console.print(Panel(f"All {len(protected_facts)} facts are associated with the current request and protected from deletion.", title="🗑 GC Info"))
     else:
         console.print(Panel("No key facts to clean.", title="🗑 GC Info"))
