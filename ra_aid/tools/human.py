@@ -5,6 +5,9 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 
+from ra_aid.logging_config import get_logger
+
+logger = get_logger(__name__)
 console = Console()
 
 
@@ -50,6 +53,32 @@ def ask_human(question: str) -> str:
     print()
 
     response = session.prompt("> ", wrap_lines=True)
-
     print()
+    
+    # Record human response in database
+    try:
+        from ra_aid.database.repositories.human_input_repository import HumanInputRepository
+        from ra_aid.tools.memory import _global_memory
+        
+        # Determine the source based on context
+        config = _global_memory.get("config", {})
+        # If chat_mode is enabled, use 'chat', otherwise determine if hil mode is active
+        if config.get("chat_mode", False):
+            source = "chat"
+        elif config.get("hil", False):
+            source = "hil"
+        else:
+            source = "chat"  # Default fallback
+            
+        # Store the input
+        human_input_repo = HumanInputRepository()
+        human_input_repo.create(content=response, source=source)
+        
+        # Run garbage collection to ensure we don't exceed 100 inputs
+        human_input_repo.garbage_collect()
+    except Exception as e:
+        from ra_aid.logging_config import get_logger
+        logger = get_logger(__name__)
+        logger.error(f"Failed to record human input: {str(e)}")
+    
     return response

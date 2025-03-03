@@ -42,8 +42,8 @@ def initialize_database():
     # to avoid circular imports
     # Note: This import needs to be here, not at the top level
     try:
-        from ra_aid.database.models import KeyFact, KeySnippet
-        db.create_tables([KeyFact, KeySnippet], safe=True)
+        from ra_aid.database.models import KeyFact, KeySnippet, HumanInput
+        db.create_tables([KeyFact, KeySnippet, HumanInput], safe=True)
         logger.debug("Ensured database tables exist")
     except Exception as e:
         logger.error(f"Error creating tables: {str(e)}")
@@ -129,3 +129,19 @@ class KeySnippet(BaseModel):
     
     class Meta:
         table_name = "key_snippet"
+
+
+class HumanInput(BaseModel):
+    """
+    Model representing human input stored in the database.
+    
+    Human inputs are text inputs provided by users through various interfaces
+    such as CLI, chat, or HIL (human-in-the-loop). This model tracks these inputs
+    along with their source for analysis and reference.
+    """
+    content = peewee.TextField()
+    source = peewee.TextField()  # 'cli', 'chat', or 'hil'
+    # created_at and updated_at are inherited from BaseModel
+    
+    class Meta:
+        table_name = "human_input"

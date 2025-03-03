@@ -463,6 +463,16 @@ def main():
                 initial_request = ask_human.invoke(
                     {"question": "What would you like help with?"}
                 )
+                
+                # Record chat input in database (redundant as ask_human already records it,
+                # but needed in case the ask_human implementation changes)
+                try:
+                    from ra_aid.database.repositories.human_input_repository import HumanInputRepository
+                    human_input_repo = HumanInputRepository()
+                    human_input_repo.create(content=initial_request, source='chat')
+                    human_input_repo.garbage_collect()
+                except Exception as e:
+                    logger.error(f"Failed to record initial chat input: {str(e)}")
 
                 # Get working directory and current date
                 working_directory = os.getcwd()
@@ -525,6 +535,17 @@ def main():
                 sys.exit(1)
 
             base_task = args.message
+            
+            # Record CLI input in database
+            try:
+                from ra_aid.database.repositories.human_input_repository import HumanInputRepository
+                human_input_repo = HumanInputRepository()
+                human_input_repo.create(content=base_task, source='cli')
+                # Run garbage collection to ensure we don't exceed 100 inputs
+                human_input_repo.garbage_collect()
+                logger.debug(f"Recorded CLI input: {base_task}")
+            except Exception as e:
+                logger.error(f"Failed to record CLI input: {str(e)}")
             config = {
                 "configurable": {"thread_id": str(uuid.uuid4())},
                 "recursion_limit": args.recursion_limit,
