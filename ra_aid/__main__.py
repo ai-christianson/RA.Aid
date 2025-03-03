@@ -43,7 +43,9 @@ from ra_aid.config import (
     VALID_PROVIDERS,
 )
 from ra_aid.database.repositories.key_fact_repository import KeyFactRepositoryManager, get_key_fact_repository
-from ra_aid.database.repositories.key_snippet_repository import KeySnippetRepository
+from ra_aid.database.repositories.key_snippet_repository import (
+    KeySnippetRepositoryManager, get_key_snippet_repository
+)
 from ra_aid.model_formatters import format_key_facts_dict
 from ra_aid.model_formatters.key_snippets_formatter import format_key_snippets_dict
 from ra_aid.console.output import cpm
@@ -394,9 +396,10 @@ def main():
                 logger.error(f"Database migration error: {str(e)}")
 
             # Initialize repositories with database connection
-            with KeyFactRepositoryManager(db) as key_fact_repo:
-                # This initializes the repository and makes it available via get_key_fact_repository()
+            with KeyFactRepositoryManager(db) as key_fact_repo, KeySnippetRepositoryManager(db) as key_snippet_repo:
+                # This initializes both repositories and makes them available via their respective get methods
                 logger.debug("Initialized KeyFactRepository")
+                logger.debug("Initialized KeySnippetRepository")
 
                 # Check dependencies before proceeding
                 check_dependencies()
@@ -533,7 +536,7 @@ def main():
                             working_directory=working_directory,
                             current_date=current_date,
                             key_facts=format_key_facts_dict(get_key_fact_repository().get_facts_dict()),
-                            key_snippets=format_key_snippets_dict(KeySnippetRepository(db).get_snippets_dict()),
+                            key_snippets=format_key_snippets_dict(get_key_snippet_repository().get_snippets_dict()),
                             project_info=formatted_project_info,
                         ),
                         config,
