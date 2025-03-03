@@ -610,12 +610,27 @@ def main():
                     memory=planning_memory,
                     config=config,
                 )
+                
+            # Run cleanup tasks before exiting database context
+            run_cleanup()
 
     except (KeyboardInterrupt, AgentInterrupt):
         print()
         print(" 👋 Bye!")
         print()
         sys.exit(0)
+
+
+def run_cleanup():
+    """Run cleanup tasks after main execution."""
+    try:
+        # Import the key facts cleaner agent
+        from ra_aid.agents.key_facts_gc_agent import run_key_facts_gc_agent
+        
+        # Run the key facts garbage collection agent regardless of the number of facts
+        run_key_facts_gc_agent()
+    except Exception as e:
+        logger.error(f"Failed to run cleanup tasks: {str(e)}")
 
 
 if __name__ == "__main__":

@@ -15,6 +15,21 @@ from ra_aid.logging_config import get_logger
 T = TypeVar("T", bound="BaseModel")
 logger = get_logger(__name__)
 
+# Create a database proxy that will be initialized later
+database_proxy = peewee.DatabaseProxy()
+
+
+def initialize_database():
+    """
+    Initialize the database proxy with a real database connection.
+    
+    This function should be called before any database operations
+    to ensure the proxy points to a real database connection.
+    """
+    db = get_db()
+    database_proxy.initialize(db)
+    return db
+
 
 class BaseModel(peewee.Model):
     """
@@ -28,7 +43,7 @@ class BaseModel(peewee.Model):
     updated_at = peewee.DateTimeField(default=datetime.datetime.now)
 
     class Meta:
-        database = get_db()
+        database = database_proxy
 
     def save(self, *args: Any, **kwargs: Any) -> int:
         """
@@ -76,3 +91,21 @@ class KeyFact(BaseModel):
     
     class Meta:
         table_name = "key_fact"
+
+
+class KeySnippet(BaseModel):
+    """
+    Model representing a key code snippet stored in the database.
+    
+    Key snippets are important code fragments from the project that need to be 
+    referenced later. Each snippet includes its file location, line number,
+    the code content itself, and an optional description of its significance.
+    """
+    filepath = peewee.TextField()
+    line_number = peewee.IntegerField()
+    snippet = peewee.TextField()
+    description = peewee.TextField(null=True)
+    # created_at and updated_at are inherited from BaseModel
+    
+    class Meta:
+        table_name = "key_snippet"

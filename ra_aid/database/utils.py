@@ -10,7 +10,7 @@ from typing import List, Type
 import peewee
 
 from ra_aid.database.connection import get_db
-from ra_aid.database.models import BaseModel
+from ra_aid.database.models import BaseModel, initialize_database
 from ra_aid.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -26,7 +26,7 @@ def ensure_tables_created(models: List[Type[BaseModel]] = None) -> None:
     Args:
         models: Optional list of model classes to create tables for
     """
-    db = get_db()
+    db = initialize_database()
 
     if models is None:
         # If no models are specified, try to discover them
@@ -88,7 +88,7 @@ def truncate_table(model_class: Type[BaseModel]) -> None:
     Args:
         model_class: The model class to truncate
     """
-    db = get_db()
+    db = initialize_database()
     try:
         with db.atomic():
             model_class.delete().execute()

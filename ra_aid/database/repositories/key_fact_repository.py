@@ -10,7 +10,7 @@ from typing import Dict, List, Optional
 import peewee
 
 from ra_aid.database.connection import get_db
-from ra_aid.database.models import KeyFact
+from ra_aid.database.models import KeyFact, initialize_database
 from ra_aid.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -29,6 +29,15 @@ class KeyFactRepository:
         all_facts = repo.get_all()
     """
     
+    def __init__(self, db=None):
+        """
+        Initialize the repository with an optional database connection.
+        
+        Args:
+            db: Optional database connection to use. If None, will use initialize_database()
+        """
+        self.db = db
+    
     def create(self, content: str) -> KeyFact:
         """
         Create a new key fact in the database.
@@ -43,7 +52,7 @@ class KeyFactRepository:
             peewee.DatabaseError: If there's an error creating the fact
         """
         try:
-            db = get_db()
+            db = self.db if self.db is not None else initialize_database()
             fact = KeyFact.create(content=content)
             logger.debug(f"Created key fact ID {fact.id}: {content}")
             return fact
@@ -65,7 +74,7 @@ class KeyFactRepository:
             peewee.DatabaseError: If there's an error accessing the database
         """
         try:
-            db = get_db()
+            db = self.db if self.db is not None else initialize_database()
             return KeyFact.get_or_none(KeyFact.id == fact_id)
         except peewee.DatabaseError as e:
             logger.error(f"Failed to fetch key fact {fact_id}: {str(e)}")
@@ -86,7 +95,7 @@ class KeyFactRepository:
             peewee.DatabaseError: If there's an error updating the fact
         """
         try:
-            db = get_db()
+            db = self.db if self.db is not None else initialize_database()
             # First check if the fact exists
             fact = self.get(fact_id)
             if not fact:
@@ -116,7 +125,7 @@ class KeyFactRepository:
             peewee.DatabaseError: If there's an error deleting the fact
         """
         try:
-            db = get_db()
+            db = self.db if self.db is not None else initialize_database()
             # First check if the fact exists
             fact = self.get(fact_id)
             if not fact:
@@ -142,7 +151,7 @@ class KeyFactRepository:
             peewee.DatabaseError: If there's an error accessing the database
         """
         try:
-            db = get_db()
+            db = self.db if self.db is not None else initialize_database()
             return list(KeyFact.select().order_by(KeyFact.id))
         except peewee.DatabaseError as e:
             logger.error(f"Failed to fetch all key facts: {str(e)}")

@@ -18,6 +18,8 @@ from ra_aid.agent_context import (
     mark_task_completed,
 )
 from ra_aid.database.repositories.key_fact_repository import KeyFactRepository
+from ra_aid.database.repositories.key_snippet_repository import KeySnippetRepository
+from ra_aid.model_formatters import key_snippets_formatter
 from ra_aid.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -39,6 +41,9 @@ console = Console()
 
 # Initialize repository for key facts
 key_fact_repository = KeyFactRepository()
+
+# Initialize repository for key snippets
+key_snippet_repository = KeySnippetRepository()
 
 # Global memory store
 _global_memory: Dict[str, Any] = {
@@ -204,11 +209,19 @@ def emit_key_snippet(snippet_info: SnippetInfo) -> str:
     # Add filepath to related files
     emit_related_files.invoke({"files": [snippet_info["filepath"]]})
 
-    # Get and increment snippet ID
-    snippet_id = _global_memory["key_snippet_id_counter"]
-    _global_memory["key_snippet_id_counter"] += 1
-
-    # Store snippet info
+    # Create a new key snippet in the database
+    key_snippet = key_snippet_repository.create(
+        filepath=snippet_info["filepath"],
+        line_number=snippet_info["line_number"],
+        snippet=snippet_info["snippet"],
+        description=snippet_info["description"],
+    )
+    
+    # For backward compatibility, also store in global memory
+    if "key_snippets" not in _global_memory:
+        _global_memory["key_snippets"] = {}
+        
+    snippet_id = key_snippet.id
     _global_memory["key_snippets"][snippet_id] = snippet_info
 
     # Format display text as markdown
@@ -248,16 +261,27 @@ def delete_key_snippets(snippet_ids: List[int]) -> str:
     """
     results = []
     for snippet_id in snippet_ids:
+        # Try to delete from database first
+        success = key_snippet_repository.delete(snippet_id)
+        
+        # For backward compatibility, also delete from global memory
         if snippet_id in _global_memory["key_snippets"]:
-            # Delete the snippet
             deleted_snippet = _global_memory["key_snippets"].pop(snippet_id)
-            success_msg = f"Successfully deleted snippet #{snippet_id} from {deleted_snippet['filepath']}"
-            console.print(
-                Panel(
-                    Markdown(success_msg), title="Snippet Deleted", border_style="green"
-                )
+            filepath = deleted_snippet['filepath']
+        else:
+            # If not in memory but successful database delete, use generic message
+            if success:
+                filepath = "database"
+            else:
+                continue  # Skip if not found in either place
+        
+        success_msg = f"Successfully deleted snippet #{snippet_id} from {filepath}"
+        console.print(
+            Panel(
+                Markdown(success_msg), title="Snippet Deleted", border_style="green"
             )
-            results.append(success_msg)
+        )
+        results.append(success_msg)
 
     log_work_event(f"Deleted snippets {snippet_ids}.")
     return "Snippets deleted."
@@ -580,8 +604,8 @@ def get_memory_value(key: str) -> str:
     """
     Get a value from global memory.
     
-    Note: Key facts are now handled by KeyFactRepository and the key_facts_formatter module,
-    not through this function.
+    Note: Key facts and key snippets are now handled by their respective repositories 
+    and formatter modules, but this function maintains backward compatibility.
 
     Different memory types return different formats:
     - key_snippets: Returns formatted snippets with file path, line number and content
@@ -596,29 +620,62 @@ def get_memory_value(key: str) -> str:
         - For other types: One value per line
     """
     if key == "key_snippets":
-        values = _global_memory.get(key, {})
-        if not values:
-            return ""
-        # Format each snippet with file info and content using markdown
-        snippets = []
-        for k, v in sorted(values.items()):
-            snippet_text = [
-                f"## 📝 Code Snippet #{k}",
-                "",  # Empty line for better markdown spacing
-                "**Source Location**:",
-                f"- File: `{v['filepath']}`",
-                f"- Line: `{v['line_number']}`",
-                "",  # Empty line before code block
-                "**Code**:",
-                "```python",
-                v["snippet"].rstrip(),  # Remove trailing whitespace
-                "```",
-            ]
-            if v["description"]:
-                # Add empty line and description
-                snippet_text.extend(["", "**Description**:", v["description"]])
-            snippets.append("\n".join(snippet_text))
-        return "\n\n".join(snippets)
+        try:
+            # Try to get snippets from repository first
+            snippets_dict = key_snippet_repository.get_snippets_dict()
+            if snippets_dict:
+                return key_snippets_formatter.format_key_snippets_dict(snippets_dict)
+            
+            # Fallback to global memory for backward compatibility
+            values = _global_memory.get(key, {})
+            if not values:
+                return ""
+            # Format each snippet with file info and content using markdown
+            snippets = []
+            for k, v in sorted(values.items()):
+                snippet_text = [
+                    f"## 📝 Code Snippet #{k}",
+                    "",  # Empty line for better markdown spacing
+                    "**Source Location**:",
+                    f"- File: `{v['filepath']}`",
+                    f"- Line: `{v['line_number']}`",
+                    "",  # Empty line before code block
+                    "**Code**:",
+                    "```python",
+                    v["snippet"].rstrip(),  # Remove trailing whitespace
+                    "```",
+                ]
+                if v["description"]:
+                    # Add empty line and description
+                    snippet_text.extend(["", "**Description**:", v["description"]])
+                snippets.append("\n".join(snippet_text))
+            return "\n\n".join(snippets)
+        except Exception as e:
+            logger.error(f"Error retrieving key snippets: {str(e)}")
+            # If there's an error with the repository, fall back to global memory
+            values = _global_memory.get(key, {})
+            if not values:
+                return ""
+            # (Same formatting code as above)
+            snippets = []
+            for k, v in sorted(values.items()):
+                snippet_text = [
+                    f"## 📝 Code Snippet #{k}",
+                    "",  # Empty line for better markdown spacing
+                    "**Source Location**:",
+                    f"- File: `{v['filepath']}`",
+                    f"- Line: `{v['line_number']}`",
+                    "",  # Empty line before code block
+                    "**Code**:",
+                    "```python",
+                    v["snippet"].rstrip(),  # Remove trailing whitespace
+                    "```",
+                ]
+                if v["description"]:
+                    # Add empty line and description
+                    snippet_text.extend(["", "**Description**:", v["description"]])
+                snippets.append("\n".join(snippet_text))
+            return "\n\n".join(snippets)
 
     if key == "work_log":
         values = _global_memory.get(key, [])

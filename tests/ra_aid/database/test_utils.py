@@ -53,14 +53,15 @@ def setup_test_model(cleanup_db):
     """Set up a test model for database tests."""
     # Initialize the database in memory
     db = init_db(in_memory=True)
+    
+    # Initialize the database proxy
+    from ra_aid.database.models import initialize_database
+    initialize_database()
 
     # Define a test model class
     class TestModel(BaseModel):
         name = peewee.CharField(max_length=100)
         value = peewee.IntegerField(default=0)
-
-        class Meta:
-            database = db
 
     # Create the test table in a transaction
     with db.atomic():
@@ -78,14 +79,15 @@ def test_ensure_tables_created_with_models(cleanup_db, mock_logger):
     """Test ensure_tables_created with explicit models."""
     # Initialize the database in memory
     db = init_db(in_memory=True)
+    
+    # Initialize the database proxy
+    from ra_aid.database.models import initialize_database
+    initialize_database()
 
-    # Define a test model that uses this database
+    # Define a test model that uses the proxy database
     class TestModel(BaseModel):
         name = peewee.CharField(max_length=100)
         value = peewee.IntegerField(default=0)
-
-        class Meta:
-            database = db
 
     # Call ensure_tables_created with explicit models
     ensure_tables_created([TestModel])
@@ -99,9 +101,9 @@ def test_ensure_tables_created_with_models(cleanup_db, mock_logger):
     assert count == 1
 
 
-@patch("ra_aid.database.utils.get_db")
+@patch("ra_aid.database.utils.initialize_database")
 def test_ensure_tables_created_database_error(
-    mock_get_db, setup_test_model, cleanup_db, mock_logger
+    mock_initialize_database, setup_test_model, cleanup_db, mock_logger
 ):
     """Test ensure_tables_created handles database errors."""
     # Get the TestModel class from the fixture
@@ -113,8 +115,8 @@ def test_ensure_tables_created_database_error(
     mock_db.atomic.return_value.__exit__.return_value = None
     mock_db.create_tables.side_effect = peewee.DatabaseError("Test database error")
 
-    # Configure get_db to return our mock
-    mock_get_db.return_value = mock_db
+    # Configure initialize_database to return our mock
+    mock_initialize_database.return_value = mock_db
 
     # Call ensure_tables_created and expect an exception
     with pytest.raises(peewee.DatabaseError):

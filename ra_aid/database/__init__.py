@@ -13,7 +13,7 @@ from ra_aid.database.migrations import (
     get_migration_status,
     init_migrations,
 )
-from ra_aid.database.models import BaseModel
+from ra_aid.database.models import BaseModel, initialize_database
 from ra_aid.database.utils import ensure_tables_created, get_model_count, truncate_table
 
 __all__ = [
@@ -22,6 +22,7 @@ __all__ = [
     "close_db",
     "DatabaseManager",
     "BaseModel",
+    "initialize_database",
     "get_model_count",
     "truncate_table",
     "ensure_tables_created",

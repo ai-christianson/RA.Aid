@@ -14,6 +14,9 @@ import peewee
 
 from ra_aid.logging_config import get_logger
 
+# Import initialize_database after it's defined in models.py
+# We need to do the import inside functions to avoid circular imports
+
 # Create contextvar to hold the database connection
 db_var = contextvars.ContextVar("db", default=None)
 logger = get_logger(__name__)
@@ -34,16 +37,23 @@ class DatabaseManager:
         # Or with in-memory database:
         with DatabaseManager(in_memory=True) as db:
             # Use in-memory database
+            
+        # Or with custom base directory:
+        with DatabaseManager(base_dir="/custom/path") as db:
+            # Use database in custom directory
     """
 
-    def __init__(self, in_memory: bool = False):
+    def __init__(self, in_memory: bool = False, base_dir: Optional[str] = None):
         """
         Initialize the DatabaseManager.
 
         Args:
             in_memory: Whether to use an in-memory database (default: False)
+            base_dir: Optional base directory to use instead of current working directory.
+                     If None, uses os.getcwd() (default: None)
         """
         self.in_memory = in_memory
+        self.base_dir = base_dir
 
     def __enter__(self) -> peewee.SqliteDatabase:
         """
@@ -52,7 +62,19 @@ class DatabaseManager:
         Returns:
             peewee.SqliteDatabase: The initialized database connection
         """
-        return init_db(in_memory=self.in_memory)
+        db = init_db(in_memory=self.in_memory, base_dir=self.base_dir)
+        
+        # Initialize the database proxy in models.py
+        try:
+            # Import here to avoid circular imports
+            from ra_aid.database.models import initialize_database
+            initialize_database()
+        except ImportError as e:
+            logger.error(f"Failed to import initialize_database: {str(e)}")
+        except Exception as e:
+            logger.error(f"Error initializing database proxy: {str(e)}")
+            
+        return db
 
     def __exit__(
         self,
@@ -74,7 +96,7 @@ class DatabaseManager:
         return False
 
 
-def init_db(in_memory: bool = False) -> peewee.SqliteDatabase:
+def init_db(in_memory: bool = False, base_dir: Optional[str] = None) -> peewee.SqliteDatabase:
     """
     Initialize the database connection.
 
@@ -84,6 +106,8 @@ def init_db(in_memory: bool = False) -> peewee.SqliteDatabase:
 
     Args:
         in_memory: Whether to use an in-memory database (default: False)
+        base_dir: Optional base directory to use instead of current working directory.
+                  If None, uses os.getcwd() (default: None)
 
     Returns:
         peewee.SqliteDatabase: The initialized database connection
@@ -110,9 +134,9 @@ def init_db(in_memory: bool = False) -> peewee.SqliteDatabase:
         db_path = ":memory:"
         logger.debug("Using in-memory SQLite database")
     else:
-        # Get current working directory and create .ra-aid directory if it doesn't exist
-        cwd = os.getcwd()
-        logger.debug(f"Current working directory: {cwd}")
+        # Get base directory (use current working directory if not provided)
+        cwd = base_dir if base_dir is not None else os.getcwd()
+        logger.debug(f"Base directory for database: {cwd}")
 
         # Define the .ra-aid directory path
         ra_aid_dir_str = os.path.join(cwd, ".ra-aid")
@@ -300,12 +324,16 @@ def init_db(in_memory: bool = False) -> peewee.SqliteDatabase:
         raise
 
 
-def get_db() -> peewee.SqliteDatabase:
+def get_db(base_dir: Optional[str] = None) -> peewee.SqliteDatabase:
     """
     Get the current database connection.
 
     If no connection exists, initializes a new one.
     If connection exists but is closed, reopens it.
+
+    Args:
+        base_dir: Optional base directory to use instead of current working directory.
+                 If None, uses os.getcwd() (default: None)
 
     Returns:
         peewee.SqliteDatabase: The current database connection
@@ -315,7 +343,7 @@ def get_db() -> peewee.SqliteDatabase:
     if db is None:
         # No database connection exists, initialize one
         # Use the default in-memory mode (False)
-        return init_db(in_memory=False)
+        return init_db(in_memory=False, base_dir=base_dir)
 
     # Check if connection is closed and reopen if needed
     if db.is_closed():
@@ -332,7 +360,7 @@ def get_db() -> peewee.SqliteDatabase:
             in_memory = hasattr(db, "_is_in_memory") and db._is_in_memory
             logger.debug(f"Creating new database connection (in_memory={in_memory})")
             # Create a completely new database object, don't reuse the old one
-            return init_db(in_memory=in_memory)
+            return init_db(in_memory=in_memory, base_dir=base_dir)
 
     return db
 

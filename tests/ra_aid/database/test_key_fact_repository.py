@@ -3,9 +3,12 @@ Tests for the KeyFactRepository class.
 """
 
 import pytest
+from unittest.mock import patch
+
+import peewee
 
 from ra_aid.database.connection import DatabaseManager, db_var
-from ra_aid.database.models import KeyFact
+from ra_aid.database.models import KeyFact, BaseModel
 from ra_aid.database.repositories.key_fact_repository import KeyFactRepository
 
 
@@ -22,10 +25,10 @@ def cleanup_db():
             # Ignore errors when closing the database
             pass
     db_var.set(None)
-
+    
     # Run the test
     yield
-
+    
     # Reset after the test
     db = db_var.get()
     if db is not None:
@@ -40,24 +43,27 @@ def cleanup_db():
 
 @pytest.fixture
 def setup_db(cleanup_db):
-    """Set up an in-memory database with the KeyFact table."""
+    """Set up an in-memory database with the KeyFact table and patch the BaseModel.Meta.database."""
     # Initialize an in-memory database connection
     with DatabaseManager(in_memory=True) as db:
-        # Create the KeyFact table
-        with db.atomic():
-            db.create_tables([KeyFact], safe=True)
-        
-        yield db
-
-        # Clean up
-        with db.atomic():
-            KeyFact.drop_table(safe=True)
+        # Patch the BaseModel.Meta.database to use our in-memory database
+        # This ensures that model operations like KeyFact.create() use our test database
+        with patch.object(BaseModel._meta, 'database', db):
+            # Create the KeyFact table
+            with db.atomic():
+                db.create_tables([KeyFact], safe=True)
+            
+            yield db
+            
+            # Clean up
+            with db.atomic():
+                KeyFact.drop_table(safe=True)
 
 
 def test_create_key_fact(setup_db):
     """Test creating a key fact."""
     # Set up repository
-    repo = KeyFactRepository()
+    repo = KeyFactRepository(db=setup_db)
     
     # Create a key fact
     content = "Test key fact"
@@ -67,15 +73,15 @@ def test_create_key_fact(setup_db):
     assert fact.id is not None
     assert fact.content == content
     
-    # Verify we can retrieve it from the database
-    fact_from_db = KeyFact.get_by_id(fact.id)
+    # Verify we can retrieve it from the database using the repository
+    fact_from_db = repo.get(fact.id)
     assert fact_from_db.content == content
 
 
 def test_get_key_fact(setup_db):
     """Test retrieving a key fact by ID."""
     # Set up repository
-    repo = KeyFactRepository()
+    repo = KeyFactRepository(db=setup_db)
     
     # Create a key fact
     content = "Test key fact"
@@ -97,7 +103,7 @@ def test_get_key_fact(setup_db):
 def test_update_key_fact(setup_db):
     """Test updating a key fact."""
     # Set up repository
-    repo = KeyFactRepository()
+    repo = KeyFactRepository(db=setup_db)
     
     # Create a key fact
     original_content = "Original content"
@@ -112,8 +118,8 @@ def test_update_key_fact(setup_db):
     assert updated_fact.id == fact.id
     assert updated_fact.content == new_content
     
-    # Verify we can retrieve the updated content from the database
-    fact_from_db = KeyFact.get_by_id(fact.id)
+    # Verify we can retrieve the updated content from the database using the repository
+    fact_from_db = repo.get(fact.id)
     assert fact_from_db.content == new_content
     
     # Try to update a non-existent fact
@@ -124,14 +130,14 @@ def test_update_key_fact(setup_db):
 def test_delete_key_fact(setup_db):
     """Test deleting a key fact."""
     # Set up repository
-    repo = KeyFactRepository()
+    repo = KeyFactRepository(db=setup_db)
     
     # Create a key fact
     content = "Test key fact to delete"
     fact = repo.create(content)
     
-    # Verify the fact exists
-    assert KeyFact.get_or_none(KeyFact.id == fact.id) is not None
+    # Verify the fact exists using the repository
+    assert repo.get(fact.id) is not None
     
     # Delete the fact
     delete_result = repo.delete(fact.id)
@@ -139,8 +145,8 @@ def test_delete_key_fact(setup_db):
     # Verify the delete operation was successful
     assert delete_result is True
     
-    # Verify the fact no longer exists in the database
-    assert KeyFact.get_or_none(KeyFact.id == fact.id) is None
+    # Verify the fact no longer exists in the database using the repository
+    assert repo.get(fact.id) is None
     
     # Try to delete a non-existent fact
     non_existent_delete = repo.delete(999)
@@ -150,7 +156,7 @@ def test_delete_key_fact(setup_db):
 def test_get_all_key_facts(setup_db):
     """Test retrieving all key facts."""
     # Set up repository
-    repo = KeyFactRepository()
+    repo = KeyFactRepository(db=setup_db)
     
     # Create some key facts
     contents = ["Fact 1", "Fact 2", "Fact 3"]
@@ -172,7 +178,7 @@ def test_get_all_key_facts(setup_db):
 def test_get_facts_dict(setup_db):
     """Test retrieving key facts as a dictionary."""
     # Set up repository
-    repo = KeyFactRepository()
+    repo = KeyFactRepository(db=setup_db)
     
     # Create some key facts
     facts = []
