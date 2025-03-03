@@ -21,12 +21,12 @@ def format_key_fact(fact_id: int, content: str) -> str:
 
     Example:
         >>> format_key_fact(1, "This is an important fact")
-        '## 🔑 Key Fact\n\nID: 1\n\nThis is an important fact'
+        '## 🔑 Key Fact #1\n\nThis is an important fact'
     """
     if not content:
         return ""
 
-    return f"## 🔑 Key Fact\n\nID: {fact_id}\n\n{content}"
+    return f"## 🔑 Key Fact #{fact_id}\n\n{content}"
 
 
 def format_key_facts_dict(facts_dict: Dict[int, str]) -> str:

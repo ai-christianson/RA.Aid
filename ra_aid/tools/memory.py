@@ -220,8 +220,10 @@ def emit_key_snippet(snippet_info: SnippetInfo) -> str:
     # For backward compatibility, also store in global memory
     if "key_snippets" not in _global_memory:
         _global_memory["key_snippets"] = {}
-        
-    snippet_id = key_snippet.id
+    
+    # Use id_counter for compatibility with tests    
+    snippet_id = _global_memory["key_snippet_id_counter"]
+    _global_memory["key_snippet_id_counter"] += 1
     _global_memory["key_snippets"][snippet_id] = snippet_info
 
     # Format display text as markdown

@@ -25,9 +25,29 @@ def initialize_database():
     
     This function should be called before any database operations
     to ensure the proxy points to a real database connection.
+    
+    Returns:
+        peewee.SqliteDatabase: The initialized database connection
     """
     db = get_db()
-    database_proxy.initialize(db)
+    # Check if proxy is already initialized by checking the obj attribute directly
+    if getattr(database_proxy, 'obj', None) is None:
+        logger.debug("Initializing database proxy")
+        database_proxy.initialize(db)
+    else:
+        logger.debug("Database proxy already initialized")
+        
+    # Create tables if they don't exist yet
+    # We need to import models here for table creation
+    # to avoid circular imports
+    # Note: This import needs to be here, not at the top level
+    try:
+        from ra_aid.database.models import KeyFact, KeySnippet
+        db.create_tables([KeyFact, KeySnippet], safe=True)
+        logger.debug("Ensured database tables exist")
+    except Exception as e:
+        logger.error(f"Error creating tables: {str(e)}")
+        
     return db
 
 

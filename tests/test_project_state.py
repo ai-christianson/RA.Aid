@@ -22,7 +22,7 @@ def empty_dir(tmp_path):
 def git_only_dir(tmp_path):
     """Create a directory with only git files."""
     git_dir = tmp_path / ".git"
-    git_dir.mkdir()
+    git_dir.mkdir(exist_ok=True)
     gitignore = tmp_path / ".gitignore"
     gitignore.write_text("*.pyc\n")
     return tmp_path
@@ -32,7 +32,7 @@ def git_only_dir(tmp_path):
 def ra_aid_only_dir(tmp_path):
     """Create a directory with only a .ra-aid directory."""
     ra_aid_dir = tmp_path / ".ra-aid"
-    ra_aid_dir.mkdir()
+    ra_aid_dir.mkdir(exist_ok=True)
     return tmp_path
 
 
@@ -40,11 +40,11 @@ def ra_aid_only_dir(tmp_path):
 def mixed_allowed_dir(tmp_path):
     """Create a directory with all allowed items (.git, .gitignore, and .ra-aid)."""
     git_dir = tmp_path / ".git"
-    git_dir.mkdir()
+    git_dir.mkdir(exist_ok=True)
     gitignore = tmp_path / ".gitignore"
     gitignore.write_text("*.pyc\n")
     ra_aid_dir = tmp_path / ".ra-aid"
-    ra_aid_dir.mkdir()
+    ra_aid_dir.mkdir(exist_ok=True)
     return tmp_path
 
 
@@ -137,7 +137,7 @@ def test_verify_fix(tmp_path):
     """
     # Create a .ra-aid directory inside the temporary directory
     ra_aid_dir = tmp_path / ".ra-aid"
-    ra_aid_dir.mkdir()
+    ra_aid_dir.mkdir(exist_ok=True)
 
     # Check that is_new_project() returns True (only .ra-aid directory)
     assert is_new_project(str(tmp_path)) is True
