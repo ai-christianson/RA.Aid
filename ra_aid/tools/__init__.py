@@ -4,7 +4,6 @@ from .fuzzy_find import fuzzy_find_project_files
 from .human import ask_human
 from .list_directory import list_directory_tree
 from .memory import (
-    delete_key_snippets,
     delete_tasks,
     deregister_related_files,
     emit_key_facts,
@@ -29,7 +28,6 @@ from .write_file import put_complete_file_contents
 
 __all__ = [
     "ask_expert",
-    "delete_key_snippets",
     "web_search_tavily",
     "deregister_related_files",
     "emit_expert_context",

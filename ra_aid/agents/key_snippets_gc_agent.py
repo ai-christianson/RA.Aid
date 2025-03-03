@@ -17,11 +17,64 @@ from ra_aid.agent_utils import create_agent, run_agent_with_retry
 from ra_aid.database.repositories.key_snippet_repository import KeySnippetRepository
 from ra_aid.llm import initialize_llm
 from ra_aid.prompts.key_snippets_gc_prompts import KEY_SNIPPETS_GC_PROMPT
-from ra_aid.tools.memory import delete_key_snippets, log_work_event, _global_memory
+from ra_aid.tools.memory import log_work_event, _global_memory
 
 
 console = Console()
 key_snippet_repository = KeySnippetRepository()
+
+
+@tool
+def delete_key_snippets(snippet_ids: List[int]) -> str:
+    """Delete multiple key snippets from the database by their IDs.
+    Silently skips any IDs that don't exist.
+
+    Args:
+        snippet_ids: List of snippet IDs to delete
+        
+    Returns:
+        str: Success or failure message
+    """
+    results = []
+    not_found_snippets = []
+    failed_snippets = []
+    
+    for snippet_id in snippet_ids:
+        # Get the snippet first to capture filepath for the message
+        snippet = key_snippet_repository.get(snippet_id)
+        if snippet:
+            filepath = snippet.filepath
+            # Delete from database
+            success = key_snippet_repository.delete(snippet_id)
+            if success:
+                success_msg = f"Successfully deleted snippet #{snippet_id} from {filepath}"
+                console.print(
+                    Panel(
+                        Markdown(success_msg), title="Snippet Deleted", border_style="green"
+                    )
+                )
+                results.append((snippet_id, filepath))
+                log_work_event(f"Deleted snippet {snippet_id}.")
+            else:
+                failed_snippets.append(snippet_id)
+        else:
+            not_found_snippets.append(snippet_id)
+
+    # Prepare result message
+    result_parts = []
+    if results:
+        deleted_msg = "Successfully deleted snippets:\n" + "\n".join([f"- #{snippet_id}: {filepath}" for snippet_id, filepath in results])
+        result_parts.append(deleted_msg)
+    
+    if not_found_snippets:
+        not_found_msg = f"Snippets not found: {', '.join([f'#{snippet_id}' for snippet_id in not_found_snippets])}"
+        result_parts.append(not_found_msg)
+    
+    if failed_snippets:
+        failed_msg = f"Failed to delete snippets: {', '.join([f'#{snippet_id}' for snippet_id in failed_snippets])}"
+        result_parts.append(failed_msg)
+    
+    return "Snippets deleted."
 
 
 def run_key_snippets_gc_agent() -> None:

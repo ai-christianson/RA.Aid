@@ -256,33 +256,6 @@ def emit_key_snippet(snippet_info: SnippetInfo) -> str:
     return f"Snippet #{snippet_id} stored."
 
 
-@tool("delete_key_snippets")
-def delete_key_snippets(snippet_ids: List[int]) -> str:
-    """Delete multiple key snippets from the database by their IDs.
-    Silently skips any IDs that don't exist.
-
-    Args:
-        snippet_ids: List of snippet IDs to delete
-    """
-    results = []
-    for snippet_id in snippet_ids:
-        # Get the snippet first to capture filepath for the message
-        snippet = key_snippet_repository.get(snippet_id)
-        if snippet:
-            filepath = snippet.filepath
-            # Delete from database
-            success = key_snippet_repository.delete(snippet_id)
-            if success:
-                success_msg = f"Successfully deleted snippet #{snippet_id} from {filepath}"
-                console.print(
-                    Panel(
-                        Markdown(success_msg), title="Snippet Deleted", border_style="green"
-                    )
-                )
-                results.append(success_msg)
-
-    log_work_event(f"Deleted snippets {snippet_ids}.")
-    return "Snippets deleted."
 
 
 @tool("swap_task_order")
