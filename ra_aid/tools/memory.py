@@ -599,30 +599,19 @@ def get_memory_value(key: str) -> str:
     """
     Get a value from global memory.
     
-    Note: Key facts and key snippets are handled by their respective repositories 
-    and formatter modules.
+    Note: Key facts and key snippets are handled by their respective repository and formatter modules,
+    and should be accessed directly using those instead of through this function.
 
     Different memory types return different formats:
-    - key_snippets: Returns formatted snippets with file path, line number and content
-    - All other types: Returns newline-separated list of values
+    - For work_log: Returns formatted markdown with timestamps and events
+    - For other types: Returns newline-separated list of values
 
     Args:
         key: The key to get from memory
 
     Returns:
-        String representation of the memory values:
-        - For key_snippets: Formatted snippet blocks
-        - For other types: One value per line
+        String representation of the memory values
     """
-    if key == "key_snippets":
-        try:
-            # Get snippets from repository
-            snippets_dict = key_snippet_repository.get_snippets_dict()
-            return key_snippets_formatter.format_key_snippets_dict(snippets_dict)
-        except Exception as e:
-            logger.error(f"Error retrieving key snippets: {str(e)}")
-            return ""
-
     if key == "work_log":
         values = _global_memory.get(key, [])
         if not values:

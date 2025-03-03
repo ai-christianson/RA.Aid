@@ -42,8 +42,8 @@ def mock_functions():
     """Mock functions used in agent.py"""
     with patch('ra_aid.tools.agent.key_fact_repository') as mock_fact_repo, \
          patch('ra_aid.tools.agent.format_key_facts_dict') as mock_fact_formatter, \
-         patch('ra_aid.tools.memory.key_snippet_repository') as mock_snippet_repo, \
-         patch('ra_aid.tools.memory.key_snippets_formatter.format_key_snippets_dict') as mock_snippet_formatter, \
+         patch('ra_aid.tools.agent.key_snippet_repository') as mock_snippet_repo, \
+         patch('ra_aid.tools.agent.format_key_snippets_dict') as mock_snippet_formatter, \
          patch('ra_aid.tools.agent.initialize_llm') as mock_llm, \
          patch('ra_aid.tools.agent.get_related_files') as mock_get_files, \
          patch('ra_aid.tools.agent.get_memory_value') as mock_get_memory, \

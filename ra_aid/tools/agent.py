@@ -13,8 +13,10 @@ from ra_aid.agent_context import (
 )
 from ra_aid.console.formatting import print_error
 from ra_aid.database.repositories.key_fact_repository import KeyFactRepository
+from ra_aid.database.repositories.key_snippet_repository import KeySnippetRepository
 from ra_aid.exceptions import AgentInterrupt
 from ra_aid.model_formatters import format_key_facts_dict
+from ra_aid.model_formatters.key_snippets_formatter import format_key_snippets_dict
 from ra_aid.tools.memory import _global_memory
 
 from ..console import print_task_header
@@ -30,6 +32,7 @@ RESEARCH_AGENT_RECURSION_LIMIT = 3
 
 console = Console()
 key_fact_repository = KeyFactRepository()
+key_snippet_repository = KeySnippetRepository()
 
 
 @tool("request_research")
@@ -59,7 +62,7 @@ def request_research(query: str) -> ResearchResult:
             "key_facts": format_key_facts_dict(key_fact_repository.get_facts_dict()),
             "related_files": get_related_files(),
             "research_notes": get_memory_value("research_notes"),
-            "key_snippets": get_memory_value("key_snippets"),
+            "key_snippets": format_key_snippets_dict(key_snippet_repository.get_snippets_dict()),
             "success": False,
             "reason": "max_depth_exceeded",
         }
@@ -107,7 +110,7 @@ def request_research(query: str) -> ResearchResult:
         "key_facts": format_key_facts_dict(key_fact_repository.get_facts_dict()),
         "related_files": get_related_files(),
         "research_notes": get_memory_value("research_notes"),
-        "key_snippets": get_memory_value("key_snippets"),
+        "key_snippets": format_key_snippets_dict(key_snippet_repository.get_snippets_dict()),
         "success": success,
         "reason": reason,
     }
@@ -170,7 +173,7 @@ def request_web_research(query: str) -> ResearchResult:
 
     response_data = {
         "completion_message": completion_message,
-        "key_snippets": get_memory_value("key_snippets"),
+        "key_snippets": format_key_snippets_dict(key_snippet_repository.get_snippets_dict()),
         "research_notes": get_memory_value("research_notes"),
         "success": success,
         "reason": reason,
@@ -241,7 +244,7 @@ def request_research_and_implementation(query: str) -> Dict[str, Any]:
         "key_facts": format_key_facts_dict(key_fact_repository.get_facts_dict()),
         "related_files": get_related_files(),
         "research_notes": get_memory_value("research_notes"),
-        "key_snippets": get_memory_value("key_snippets"),
+        "key_snippets": format_key_snippets_dict(key_snippet_repository.get_snippets_dict()),
         "success": success,
         "reason": reason,
     }
@@ -324,7 +327,7 @@ def request_task_implementation(task_spec: str) -> str:
     response_data = {
         "key_facts": format_key_facts_dict(key_fact_repository.get_facts_dict()),
         "related_files": get_related_files(),
-        "key_snippets": get_memory_value("key_snippets"),
+        "key_snippets": format_key_snippets_dict(key_snippet_repository.get_snippets_dict()),
         "completion_message": completion_message,
         "success": success and not agent_crashed,
         "reason": reason,
@@ -445,7 +448,7 @@ def request_implementation(task_spec: str) -> str:
         "completion_message": completion_message,
         "key_facts": format_key_facts_dict(key_fact_repository.get_facts_dict()),
         "related_files": get_related_files(),
-        "key_snippets": get_memory_value("key_snippets"),
+        "key_snippets": format_key_snippets_dict(key_snippet_repository.get_snippets_dict()),
         "success": success and not agent_crashed,
         "reason": reason,
         "agent_crashed": agent_crashed,

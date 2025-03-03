@@ -85,8 +85,10 @@ from ra_aid.tool_configs import (
 )
 from ra_aid.tools.handle_user_defined_test_cmd_execution import execute_test_command
 from ra_aid.database.repositories.key_fact_repository import KeyFactRepository
+from ra_aid.database.repositories.key_snippet_repository import KeySnippetRepository
 from ra_aid.database.repositories.human_input_repository import HumanInputRepository
 from ra_aid.model_formatters import format_key_facts_dict
+from ra_aid.model_formatters.key_snippets_formatter import format_key_snippets_dict
 from ra_aid.tools.memory import (
     _global_memory,
     get_memory_value,
@@ -98,8 +100,9 @@ console = Console()
 
 logger = get_logger(__name__)
 
-# Initialize key fact repository
+# Initialize repositories
 key_fact_repository = KeyFactRepository()
+key_snippet_repository = KeySnippetRepository()
 human_input_repository = HumanInputRepository()
 
 
@@ -655,7 +658,7 @@ def run_planning_agent(
         research_notes=get_memory_value("research_notes"),
         related_files="\n".join(get_related_files()),
         key_facts=format_key_facts_dict(key_fact_repository.get_facts_dict()),
-        key_snippets=get_memory_value("key_snippets"),
+        key_snippets=format_key_snippets_dict(key_snippet_repository.get_snippets_dict()),
         work_log=get_memory_value("work_log"),
         research_only_note=(
             ""
@@ -757,7 +760,7 @@ def run_task_implementation_agent(
         plan=plan,
         related_files=related_files,
         key_facts=format_key_facts_dict(key_fact_repository.get_facts_dict()),
-        key_snippets=get_memory_value("key_snippets"),
+        key_snippets=format_key_snippets_dict(key_snippet_repository.get_snippets_dict()),
         research_notes=get_memory_value("research_notes"),
         work_log=get_memory_value("work_log"),
         expert_section=EXPERT_PROMPT_SECTION_IMPLEMENTATION if expert_enabled else "",
