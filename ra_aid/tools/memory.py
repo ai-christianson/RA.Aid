@@ -19,6 +19,7 @@ from ra_aid.agent_context import (
 )
 from ra_aid.database.repositories.key_fact_repository import KeyFactRepository
 from ra_aid.database.repositories.key_snippet_repository import KeySnippetRepository
+from ra_aid.database.repositories.human_input_repository import HumanInputRepository
 from ra_aid.model_formatters import key_snippets_formatter
 from ra_aid.logging_config import get_logger
 
@@ -44,6 +45,9 @@ key_fact_repository = KeyFactRepository()
 
 # Initialize repository for key snippets
 key_snippet_repository = KeySnippetRepository()
+
+# Initialize repository for human inputs
+human_input_repository = HumanInputRepository()
 
 # Global memory store
 _global_memory: Dict[str, Any] = {
@@ -115,9 +119,19 @@ def emit_key_facts(facts: List[str]) -> str:
         facts: List of key facts to store
     """
     results = []
+    
+    # Try to get the latest human input
+    human_input_id = None
+    try:
+        recent_inputs = human_input_repository.get_recent(1)
+        if recent_inputs and len(recent_inputs) > 0:
+            human_input_id = recent_inputs[0].id
+    except Exception as e:
+        logger.warning(f"Failed to get recent human input: {str(e)}")
+    
     for fact in facts:
         # Create fact in database using repository
-        created_fact = key_fact_repository.create(fact)
+        created_fact = key_fact_repository.create(fact, human_input_id=human_input_id)
         fact_id = created_fact.id
 
         # Display panel with ID
@@ -207,12 +221,22 @@ def emit_key_snippet(snippet_info: SnippetInfo) -> str:
     # Add filepath to related files
     emit_related_files.invoke({"files": [snippet_info["filepath"]]})
 
+    # Try to get the latest human input
+    human_input_id = None
+    try:
+        recent_inputs = human_input_repository.get_recent(1)
+        if recent_inputs and len(recent_inputs) > 0:
+            human_input_id = recent_inputs[0].id
+    except Exception as e:
+        logger.warning(f"Failed to get recent human input: {str(e)}")
+
     # Create a new key snippet in the database
     key_snippet = key_snippet_repository.create(
         filepath=snippet_info["filepath"],
         line_number=snippet_info["line_number"],
         snippet=snippet_info["snippet"],
         description=snippet_info["description"],
+        human_input_id=human_input_id,
     )
     
     # Get the snippet ID from the database record

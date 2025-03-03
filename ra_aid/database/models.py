@@ -99,6 +99,22 @@ class BaseModel(peewee.Model):
             raise
 
 
+class HumanInput(BaseModel):
+    """
+    Model representing human input stored in the database.
+    
+    Human inputs are text inputs provided by users through various interfaces
+    such as CLI, chat, or HIL (human-in-the-loop). This model tracks these inputs
+    along with their source for analysis and reference.
+    """
+    content = peewee.TextField()
+    source = peewee.TextField()  # 'cli', 'chat', or 'hil'
+    # created_at and updated_at are inherited from BaseModel
+    
+    class Meta:
+        table_name = "human_input"
+
+
 class KeyFact(BaseModel):
     """
     Model representing a key fact stored in the database.
@@ -107,6 +123,7 @@ class KeyFact(BaseModel):
     that need to be referenced later.
     """
     content = peewee.TextField()
+    human_input = peewee.ForeignKeyField(HumanInput, backref='key_facts', null=True)
     # created_at and updated_at are inherited from BaseModel
     
     class Meta:
@@ -125,23 +142,8 @@ class KeySnippet(BaseModel):
     line_number = peewee.IntegerField()
     snippet = peewee.TextField()
     description = peewee.TextField(null=True)
+    human_input = peewee.ForeignKeyField(HumanInput, backref='key_snippets', null=True)
     # created_at and updated_at are inherited from BaseModel
     
     class Meta:
         table_name = "key_snippet"
-
-
-class HumanInput(BaseModel):
-    """
-    Model representing human input stored in the database.
-    
-    Human inputs are text inputs provided by users through various interfaces
-    such as CLI, chat, or HIL (human-in-the-loop). This model tracks these inputs
-    along with their source for analysis and reference.
-    """
-    content = peewee.TextField()
-    source = peewee.TextField()  # 'cli', 'chat', or 'hil'
-    # created_at and updated_at are inherited from BaseModel
-    
-    class Meta:
-        table_name = "human_input"

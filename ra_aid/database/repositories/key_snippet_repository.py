@@ -44,7 +44,8 @@ class KeySnippetRepository:
         self.db = db
     
     def create(
-        self, filepath: str, line_number: int, snippet: str, description: Optional[str] = None
+        self, filepath: str, line_number: int, snippet: str, description: Optional[str] = None,
+        human_input_id: Optional[int] = None
     ) -> KeySnippet:
         """
         Create a new key snippet in the database.
@@ -54,6 +55,7 @@ class KeySnippetRepository:
             line_number: Line number where the snippet starts
             snippet: The source code snippet text
             description: Optional description of the significance
+            human_input_id: Optional ID of the associated human input
             
         Returns:
             KeySnippet: The newly created key snippet instance
@@ -67,7 +69,8 @@ class KeySnippetRepository:
                 filepath=filepath,
                 line_number=line_number,
                 snippet=snippet,
-                description=description
+                description=description,
+                human_input_id=human_input_id
             )
             logger.debug(f"Created key snippet ID {key_snippet.id}: {filepath}:{line_number}")
             return key_snippet

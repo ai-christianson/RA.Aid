@@ -38,12 +38,13 @@ class KeyFactRepository:
         """
         self.db = db
     
-    def create(self, content: str) -> KeyFact:
+    def create(self, content: str, human_input_id: Optional[int] = None) -> KeyFact:
         """
         Create a new key fact in the database.
         
         Args:
             content: The text content of the key fact
+            human_input_id: Optional ID of the associated human input
             
         Returns:
             KeyFact: The newly created key fact instance
@@ -53,7 +54,7 @@ class KeyFactRepository:
         """
         try:
             db = self.db if self.db is not None else initialize_database()
-            fact = KeyFact.create(content=content)
+            fact = KeyFact.create(content=content, human_input_id=human_input_id)
             logger.debug(f"Created key fact ID {fact.id}: {content}")
             return fact
         except peewee.DatabaseError as e:
