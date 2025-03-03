@@ -1,4 +1,5 @@
 import sys
+import os
 import types
 import importlib
 import pytest
@@ -19,6 +20,8 @@ from ra_aid.tools.memory import (
     log_work_event,
     reset_work_log,
     swap_task_order,
+    is_binary_file,
+    _is_binary_fallback,
 )
 from ra_aid.database.repositories.key_fact_repository import get_key_fact_repository
 from ra_aid.database.repositories.key_snippet_repository import get_key_snippet_repository
@@ -956,3 +959,52 @@ def test_is_binary_file_with_null_bytes(reset_memory, monkeypatch):
         # Clean up
         if os.path.exists(binary_file.name):
             os.unlink(binary_file.name)
+
+
+def test_python_file_detection():
+    """Test that Python files are correctly identified as text files.
+    
+    This test demonstrates an issue where certain Python files are
+    incorrectly identified as binary files when using the magic library.
+    The root cause is that the file doesn't have 'ASCII text' in its file type
+    description despite being a valid text file.
+    """
+    # Path to our mock Python file
+    mock_file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 
+                                               '..', 'mocks', 'agent_utils_mock.py'))
+    
+    # Verify the file exists
+    assert os.path.exists(mock_file_path), f"Test file not found: {mock_file_path}"
+    
+    # Verify using fallback method correctly identifies as text file
+    is_binary_fallback = _is_binary_fallback(mock_file_path)
+    assert not is_binary_fallback, "Fallback method should identify Python file as text"
+    
+    # The following test will fail with the current implementation when using magic
+    try:
+        import magic
+        if magic:
+            # Only run this part of the test if magic is available
+            with patch('ra_aid.tools.memory.magic') as mock_magic:
+                # Mock magic to simulate the behavior that causes the issue
+                mock_magic.from_file.side_effect = [
+                    "text/x-python",  # First call with mime=True
+                    "Python script text executable"  # Second call without mime=True
+                ]
+                
+                # This should return False (not binary) but currently returns True
+                is_binary = is_binary_file(mock_file_path)
+                
+                # Verify the magic library was called correctly
+                mock_magic.from_file.assert_any_call(mock_file_path, mime=True)
+                mock_magic.from_file.assert_any_call(mock_file_path)
+                
+                # This assertion is EXPECTED TO FAIL with the current implementation
+                # It demonstrates the bug we need to fix
+                assert not is_binary, (
+                    "Python file incorrectly identified as binary. "
+                    "The current implementation requires 'ASCII text' in file_type description, "
+                    "but Python files often have 'Python script text' instead."
+                )
+    except ImportError:
+        pytest.skip("magic library not available, skipping magic-specific test")

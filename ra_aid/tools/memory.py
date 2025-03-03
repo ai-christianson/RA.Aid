@@ -500,12 +500,20 @@ def is_binary_file(filepath):
             mime = magic.from_file(filepath, mime=True)
             file_type = magic.from_file(filepath)
 
-            if not mime.startswith("text/"):
-                return True
-
-            if "ASCII text" in file_type:
+            # If MIME type starts with 'text/', it's likely a text file
+            if mime.startswith("text/"):
                 return False
-
+                
+            # Also consider 'application/x-python' and similar script types as text
+            if any(mime.startswith(prefix) for prefix in ['application/x-python', 'application/javascript']):
+                return False
+                
+            # Check for common text file descriptors
+            text_indicators = ["text", "script", "xml", "json", "yaml", "markdown", "HTML"]
+            if any(indicator.lower() in file_type.lower() for indicator in text_indicators):
+                return False
+                
+            # If none of the text indicators are present, assume it's binary
             return True
         except Exception:
             return _is_binary_fallback(filepath)
