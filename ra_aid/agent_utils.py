@@ -86,7 +86,7 @@ from ra_aid.tool_configs import (
 from ra_aid.tools.handle_user_defined_test_cmd_execution import execute_test_command
 from ra_aid.database.repositories.key_fact_repository import get_key_fact_repository
 from ra_aid.database.repositories.key_snippet_repository import get_key_snippet_repository
-from ra_aid.database.repositories.human_input_repository import HumanInputRepository
+from ra_aid.database.repositories.human_input_repository import get_human_input_repository
 from ra_aid.model_formatters import format_key_facts_dict
 from ra_aid.model_formatters.key_snippets_formatter import format_key_snippets_dict
 from ra_aid.tools.memory import (
@@ -402,11 +402,15 @@ def run_research_agent(
 
     # Get the last human input, if it exists
     base_task = base_task_or_query
-    human_input_repository = HumanInputRepository()
-    recent_inputs = human_input_repository.get_recent(1)
-    if recent_inputs and len(recent_inputs) > 0:
-        last_human_input = recent_inputs[0].content
-        base_task = f"<last human input>{last_human_input}</last human input>\n{base_task}"
+    try:
+        human_input_repository = get_human_input_repository()
+        recent_inputs = human_input_repository.get_recent(1)
+        if recent_inputs and len(recent_inputs) > 0:
+            last_human_input = recent_inputs[0].content
+            base_task = f"<last human input>{last_human_input}</last human input>\n{base_task}"
+    except RuntimeError as e:
+        logger.error(f"Failed to access human input repository: {str(e)}")
+        # Continue without appending last human input
 
     try:
         project_info = get_project_info(".", file_limit=2000)

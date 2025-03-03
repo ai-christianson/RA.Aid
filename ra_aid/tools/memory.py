@@ -17,9 +17,9 @@ from ra_aid.agent_context import (
     mark_should_exit,
     mark_task_completed,
 )
-from ra_aid.database.repositories.key_fact_repository import KeyFactRepository, get_key_fact_repository
-from ra_aid.database.repositories.key_snippet_repository import KeySnippetRepository, get_key_snippet_repository
-from ra_aid.database.repositories.human_input_repository import HumanInputRepository
+from ra_aid.database.repositories.key_fact_repository import get_key_fact_repository
+from ra_aid.database.repositories.key_snippet_repository import get_key_snippet_repository
+from ra_aid.database.repositories.human_input_repository import get_human_input_repository
 from ra_aid.model_formatters import key_snippets_formatter
 from ra_aid.logging_config import get_logger
 
@@ -114,11 +114,13 @@ def emit_key_facts(facts: List[str]) -> str:
     
     # Try to get the latest human input
     human_input_id = None
-    human_input_repo = HumanInputRepository()
     try:
+        human_input_repo = get_human_input_repository()
         recent_inputs = human_input_repo.get_recent(1)
         if recent_inputs and len(recent_inputs) > 0:
             human_input_id = recent_inputs[0].id
+    except RuntimeError as e:
+        logger.warning(f"No HumanInputRepository available: {str(e)}")
     except Exception as e:
         logger.warning(f"Failed to get recent human input: {str(e)}")
     
@@ -225,10 +227,12 @@ def emit_key_snippet(snippet_info: SnippetInfo) -> str:
     # Try to get the latest human input
     human_input_id = None
     try:
-        human_input_repo = HumanInputRepository()
+        human_input_repo = get_human_input_repository()
         recent_inputs = human_input_repo.get_recent(1)
         if recent_inputs and len(recent_inputs) > 0:
             human_input_id = recent_inputs[0].id
+    except RuntimeError as e:
+        logger.warning(f"No HumanInputRepository available: {str(e)}")
     except Exception as e:
         logger.warning(f"Failed to get recent human input: {str(e)}")
 

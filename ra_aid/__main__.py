@@ -46,6 +46,9 @@ from ra_aid.database.repositories.key_fact_repository import KeyFactRepositoryMa
 from ra_aid.database.repositories.key_snippet_repository import (
     KeySnippetRepositoryManager, get_key_snippet_repository
 )
+from ra_aid.database.repositories.human_input_repository import (
+    HumanInputRepositoryManager, get_human_input_repository
+)
 from ra_aid.model_formatters import format_key_facts_dict
 from ra_aid.model_formatters.key_snippets_formatter import format_key_snippets_dict
 from ra_aid.console.output import cpm
@@ -396,10 +399,13 @@ def main():
                 logger.error(f"Database migration error: {str(e)}")
 
             # Initialize repositories with database connection
-            with KeyFactRepositoryManager(db) as key_fact_repo, KeySnippetRepositoryManager(db) as key_snippet_repo:
-                # This initializes both repositories and makes them available via their respective get methods
+            with KeyFactRepositoryManager(db) as key_fact_repo, \
+                 KeySnippetRepositoryManager(db) as key_snippet_repo, \
+                 HumanInputRepositoryManager(db) as human_input_repo:
+                # This initializes all repositories and makes them available via their respective get methods
                 logger.debug("Initialized KeyFactRepository")
                 logger.debug("Initialized KeySnippetRepository")
+                logger.debug("Initialized HumanInputRepository")
 
                 # Check dependencies before proceeding
                 check_dependencies()
@@ -479,10 +485,10 @@ def main():
                     # Record chat input in database (redundant as ask_human already records it,
                     # but needed in case the ask_human implementation changes)
                     try:
-                        from ra_aid.database.repositories.human_input_repository import HumanInputRepository
-                        human_input_repo = HumanInputRepository(db)
-                        human_input_repo.create(content=initial_request, source='chat')
-                        human_input_repo.garbage_collect()
+                        # Using get_human_input_repository() to access the repository from context
+                        human_input_repository = get_human_input_repository()
+                        human_input_repository.create(content=initial_request, source='chat')
+                        human_input_repository.garbage_collect()
                     except Exception as e:
                         logger.error(f"Failed to record initial chat input: {str(e)}")
 
@@ -552,11 +558,11 @@ def main():
                 
                 # Record CLI input in database
                 try:
-                    from ra_aid.database.repositories.human_input_repository import HumanInputRepository
-                    human_input_repo = HumanInputRepository(db)
-                    human_input_repo.create(content=base_task, source='cli')
+                    # Using get_human_input_repository() to access the repository from context
+                    human_input_repository = get_human_input_repository()
+                    human_input_repository.create(content=base_task, source='cli')
                     # Run garbage collection to ensure we don't exceed 100 inputs
-                    human_input_repo.garbage_collect()
+                    human_input_repository.garbage_collect()
                     logger.debug(f"Recorded CLI input: {base_task}")
                 except Exception as e:
                     logger.error(f"Failed to record CLI input: {str(e)}")

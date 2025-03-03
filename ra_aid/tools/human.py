@@ -57,7 +57,7 @@ def ask_human(question: str) -> str:
     
     # Record human response in database
     try:
-        from ra_aid.database.repositories.human_input_repository import HumanInputRepository
+        from ra_aid.database.repositories.human_input_repository import get_human_input_repository
         from ra_aid.tools.memory import _global_memory
         
         # Determine the source based on context
@@ -70,15 +70,15 @@ def ask_human(question: str) -> str:
         else:
             source = "chat"  # Default fallback
             
-        # Store the input
-        human_input_repo = HumanInputRepository()
+        # Get the repository from context and store the input
+        human_input_repo = get_human_input_repository()
         human_input_repo.create(content=response, source=source)
         
         # Run garbage collection to ensure we don't exceed 100 inputs
         human_input_repo.garbage_collect()
+    except RuntimeError as e:
+        logger.error(f"Failed to record human input: No HumanInputRepository available in context. {str(e)}")
     except Exception as e:
-        from ra_aid.logging_config import get_logger
-        logger = get_logger(__name__)
         logger.error(f"Failed to record human input: {str(e)}")
     
     return response

@@ -6,14 +6,92 @@ following the repository pattern for data access abstraction.
 """
 
 from typing import Dict, List, Optional
+import contextvars
 
 import peewee
 
-from ra_aid.database.connection import get_db
-from ra_aid.database.models import HumanInput, initialize_database
+from ra_aid.database.models import HumanInput
 from ra_aid.logging_config import get_logger
 
 logger = get_logger(__name__)
+
+# Create contextvar to hold the HumanInputRepository instance
+human_input_repo_var = contextvars.ContextVar("human_input_repo", default=None)
+
+
+class HumanInputRepositoryManager:
+    """
+    Context manager for HumanInputRepository.
+
+    This class provides a context manager interface for HumanInputRepository,
+    using the contextvars approach for thread safety.
+
+    Example:
+        with DatabaseManager() as db:
+            with HumanInputRepositoryManager(db) as repo:
+                # Use the repository
+                input_record = repo.create(content="User input", source="chat")
+                recent_inputs = repo.get_recent(5)
+    """
+
+    def __init__(self, db):
+        """
+        Initialize the HumanInputRepositoryManager.
+
+        Args:
+            db: Database connection to use (required)
+        """
+        self.db = db
+
+    def __enter__(self) -> 'HumanInputRepository':
+        """
+        Initialize the HumanInputRepository and return it.
+
+        Returns:
+            HumanInputRepository: The initialized repository
+        """
+        repo = HumanInputRepository(self.db)
+        human_input_repo_var.set(repo)
+        return repo
+
+    def __exit__(
+        self,
+        exc_type: Optional[type],
+        exc_val: Optional[Exception],
+        exc_tb: Optional[object],
+    ) -> None:
+        """
+        Reset the repository when exiting the context.
+
+        Args:
+            exc_type: The exception type if an exception was raised
+            exc_val: The exception value if an exception was raised
+            exc_tb: The traceback if an exception was raised
+        """
+        # Reset the contextvar to None
+        human_input_repo_var.set(None)
+
+        # Don't suppress exceptions
+        return False
+
+
+def get_human_input_repository() -> 'HumanInputRepository':
+    """
+    Get the current HumanInputRepository instance.
+
+    Returns:
+        HumanInputRepository: The current repository instance
+        
+    Raises:
+        RuntimeError: If no repository has been initialized with HumanInputRepositoryManager
+    """
+    repo = human_input_repo_var.get()
+    if repo is None:
+        raise RuntimeError(
+            "No HumanInputRepository available. "
+            "Make sure to initialize one with HumanInputRepositoryManager first."
+        )
+    return repo
 
 
 class HumanInputRepository:
@@ -24,18 +102,21 @@ class HumanInputRepository:
     abstracting the database access details from the business logic.
     
     Example:
-        repo = HumanInputRepository()
-        input = repo.create("User's message", "chat")
-        recent_inputs = repo.get_recent(5)
+        with DatabaseManager() as db:
+            with HumanInputRepositoryManager(db) as repo:
+                input_record = repo.create("User's message", "chat")
+                recent_inputs = repo.get_recent(5)
     """
     
-    def __init__(self, db=None):
+    def __init__(self, db):
         """
-        Initialize the repository with an optional database connection.
+        Initialize the repository with a database connection.
         
         Args:
-            db: Optional database connection to use. If None, will use initialize_database()
+            db: Database connection to use (required)
         """
+        if db is None:
+            raise ValueError("Database connection is required for HumanInputRepository")
         self.db = db
     
     def create(self, content: str, source: str) -> HumanInput:
@@ -53,7 +134,6 @@ class HumanInputRepository:
             peewee.DatabaseError: If there's an error creating the record
         """
         try:
-            db = self.db if self.db is not None else initialize_database()
             input_record = HumanInput.create(content=content, source=source)
             logger.debug(f"Created human input ID {input_record.id} from {source}")
             return input_record
@@ -75,7 +155,6 @@ class HumanInputRepository:
             peewee.DatabaseError: If there's an error accessing the database
         """
         try:
-            db = self.db if self.db is not None else initialize_database()
             return HumanInput.get_or_none(HumanInput.id == input_id)
         except peewee.DatabaseError as e:
             logger.error(f"Failed to fetch human input {input_id}: {str(e)}")
@@ -97,7 +176,6 @@ class HumanInputRepository:
             peewee.DatabaseError: If there's an error updating the record
         """
         try:
-            db = self.db if self.db is not None else initialize_database()
             # First check if the record exists
             input_record = self.get(input_id)
             if not input_record:
@@ -131,7 +209,6 @@ class HumanInputRepository:
             peewee.DatabaseError: If there's an error deleting the record
         """
         try:
-            db = self.db if self.db is not None else initialize_database()
             # First check if the record exists
             input_record = self.get(input_id)
             if not input_record:
@@ -157,7 +234,6 @@ class HumanInputRepository:
             peewee.DatabaseError: If there's an error accessing the database
         """
         try:
-            db = self.db if self.db is not None else initialize_database()
             return list(HumanInput.select().order_by(HumanInput.created_at.desc()))
         except peewee.DatabaseError as e:
             logger.error(f"Failed to fetch all human inputs: {str(e)}")
@@ -177,7 +253,6 @@ class HumanInputRepository:
             peewee.DatabaseError: If there's an error accessing the database
         """
         try:
-            db = self.db if self.db is not None else initialize_database()
             return list(HumanInput.select().order_by(HumanInput.created_at.desc()).limit(limit))
         except peewee.DatabaseError as e:
             logger.error(f"Failed to fetch recent human inputs: {str(e)}")
@@ -197,7 +272,6 @@ class HumanInputRepository:
             peewee.DatabaseError: If there's an error accessing the database
         """
         try:
-            db = self.db if self.db is not None else initialize_database()
             return list(HumanInput.select().where(HumanInput.source == source).order_by(HumanInput.created_at.desc()))
         except peewee.DatabaseError as e:
             logger.error(f"Failed to fetch human inputs by source {source}: {str(e)}")
@@ -216,7 +290,6 @@ class HumanInputRepository:
             peewee.DatabaseError: If there's an error accessing the database
         """
         try:
-            db = self.db if self.db is not None else initialize_database()
             # Get the count of records
             record_count = HumanInput.select().count()
             
