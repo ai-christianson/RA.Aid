@@ -149,7 +149,7 @@ def emit_key_facts(facts: List[str]) -> str:
     # Check if we need to clean up facts (more than 30)
     try:
         all_facts = get_key_fact_repository().get_all()
-        if len(all_facts) > 30:
+        if len(all_facts) > 50:
             # Trigger the key facts cleaner agent
             try:
                 from ra_aid.agents.key_facts_gc_agent import run_key_facts_gc_agent
@@ -271,7 +271,7 @@ def emit_key_snippet(snippet_info: SnippetInfo) -> str:
     
     # Check if we need to clean up snippets (more than 20)
     all_snippets = get_key_snippet_repository().get_all()
-    if len(all_snippets) > 20:
+    if len(all_snippets) > 35:
         # Trigger the key snippets cleaner agent
         try:
             from ra_aid.agents.key_snippets_gc_agent import run_key_snippets_gc_agent
