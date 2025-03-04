@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Union
 import logging
 
 from langchain_core.tools import tool
+from langchain_text_splitters import markdown
 from rich.console import Console
 
 from ra_aid.agent_context import (
@@ -455,7 +456,7 @@ def request_task_implementation(task_spec: str) -> str:
     if response_data.get("work_log"):
         markdown_parts.append(f"\n## Work Log\n\n{response_data['work_log']}")
         markdown_parts.append(
-            "\n\nTHE ABOVE WORK HAS ALREADY BEEN COMPLETED --**DO NOT REQUEST IMPLEMENTATION OF IT AGAIN**"
+            "\n\nTHE ABOVE WORK HAS BEEN COMPLETED"
         )
 
     # Join all parts into a single markdown string

@@ -640,24 +640,7 @@ def main():
                     config=config,
                 )
 
-                # Proceed with planning and implementation if not an informational query
-                if not is_informational_query():
-                    # Initialize planning model with potential overrides
-                    planner_provider = args.planner_provider or args.provider
-                    planner_model_name = args.planner_model or args.model
-                    planning_model = initialize_llm(
-                        planner_provider, planner_model_name, temperature=args.temperature
-                    )
-
-                    # Run planning agent
-                    run_planning_agent(
-                        base_task,
-                        planning_model,
-                        expert_enabled=expert_enabled,
-                        hil=args.hil,
-                        memory=planning_memory,
-                        config=config,
-                    )
+                # for how long have we had a second planning agent triggered here?
 
     except (KeyboardInterrupt, AgentInterrupt):
         print()
