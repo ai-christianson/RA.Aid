@@ -11,7 +11,7 @@ from ra_aid.exceptions import ToolExecutionError
 from ra_aid.fallback_handler import FallbackHandler
 from ra_aid.logging_config import get_logger
 from ra_aid.models_params import DEFAULT_TOKEN_LIMIT
-from ra_aid.prompts.ciayn_prompts import CIAYN_AGENT_BASE_PROMPT, EXTRACT_TOOL_CALL_PROMPT
+from ra_aid.prompts.ciayn_prompts import CIAYN_AGENT_SYSTEM_PROMPT, CIAYN_AGENT_HUMAN_PROMPT, EXTRACT_TOOL_CALL_PROMPT, NO_TOOL_CALL_PROMPT
 from ra_aid.tools.expert import get_model
 from ra_aid.tools.reflection import get_function_info
 
@@ -32,6 +32,7 @@ def validate_function_call_pattern(s: str) -> bool:
     - Opening/closing parentheses with balanced nesting
     - Arbitrary arguments inside parentheses
     - Optional whitespace
+    - Support for triple-quoted strings
 
     Args:
         s: String to validate
@@ -39,8 +40,43 @@ def validate_function_call_pattern(s: str) -> bool:
     Returns:
         bool: False if pattern matches (valid), True if invalid
     """
-    pattern = r"^\s*[\w_\-]+\s*\([^)(]*(?:\([^)(]*\)[^)(]*)*\)\s*$"
-    return not re.match(pattern, s, re.DOTALL)
+    # First check for the basic pattern of a function call
+    basic_pattern = r"^\s*[\w_\-]+\s*\("
+    if not re.match(basic_pattern, s, re.DOTALL):
+        return True
+    
+    # Handle triple-quoted strings to avoid parsing issues
+    # Temporarily replace triple-quoted content to avoid false positives
+    def replace_triple_quoted(match):
+        return '"""' + '_' * len(match.group(1)) + '"""'
+    
+    # Replace content in triple quotes with placeholders
+    s_clean = re.sub(r'"""(.*?)"""', replace_triple_quoted, s, flags=re.DOTALL)
+    
+    # Handle regular quotes
+    s_clean = re.sub(r'"[^"]*"', '""', s_clean)
+    s_clean = re.sub(r"'[^']*'", "''", s_clean)
+    
+    # Check for multiple function calls (not allowed)
+    if re.search(r"\)\s*[\w_\-]+\s*\(", s_clean):
+        return True
+    
+    # Count the number of opening and closing parentheses
+    open_count = s_clean.count('(')
+    close_count = s_clean.count(')')
+    
+    if open_count != close_count:
+        return True
+    
+    # Check for the presence of triple quotes and if they're properly closed
+    triple_quote_pairs = s.count('"""') // 2
+    triple_quote_count = s.count('"""')
+    
+    if triple_quote_count % 2 != 0:  # Odd number means unbalanced quotes
+        return True
+        
+    # If we've passed all checks, the pattern is valid
+    return False
 
 
 class CiaynAgent:
@@ -106,9 +142,13 @@ class CiaynAgent:
             self.available_functions.append(get_function_info(t.func))
 
         self.fallback_handler = FallbackHandler(config, tools)
+        
+        # Include the functions list in the system prompt
+        functions_list = "\n\n".join(self.available_functions)
         self.sys_message = SystemMessage(
-            "Execute efficiently yet completely as a fully autonomous agent."
+            CIAYN_AGENT_SYSTEM_PROMPT.format(functions_list=functions_list)
         )
+        
         self.error_message_template = "Your tool call caused an error: {e}\n\nPlease correct your tool call and try again."
         self.fallback_fixed_msg = HumanMessage(
             "Fallback tool handler has fixed the tool call see: <fallback tool call result> for the output."
@@ -116,20 +156,15 @@ class CiaynAgent:
 
     def _build_prompt(self, last_result: Optional[str] = None) -> str:
         """Build the prompt for the agent including available tools and context."""
-        base_prompt = ""
-
+        # Add last result section if provided
+        last_result_section = ""
         if last_result is not None:
-            base_prompt += f"\n<last result>{last_result}</last result>"
-
-        # Add available functions section
-        functions_list = "\n\n".join(self.available_functions)
-
-        # Build the complete prompt without f-strings for the static parts
-        base_prompt += CIAYN_AGENT_BASE_PROMPT.format(functions_list=functions_list)
-
-        # base_prompt += "\n\nYou must reply with ONLY ONE of the functions given in available functions."
-
-        return base_prompt
+            last_result_section = f"\n<last result>{last_result}</last result>"
+        
+        # Build the human prompt without the function list
+        return CIAYN_AGENT_HUMAN_PROMPT.format(
+            last_result_section=last_result_section
+        )
 
     def _execute_tool(self, msg: BaseMessage) -> str:
         """Execute a tool call and return its result."""
@@ -186,54 +221,16 @@ class CiaynAgent:
         """Create an agent chunk in the format expected by print_agent_output."""
         return {"agent": {"messages": [AIMessage(content=content)]}}
 
-    def _create_error_chunk(self, content: str) -> Dict[str, Any]:
-        """Create an error chunk in the format expected by print_agent_output."""
-        message = ChunkMessage(content=content, status="error")
-        return {"tools": {"messages": [message]}}
-
-    @staticmethod
-    def _estimate_tokens(content: Optional[Union[str, BaseMessage]]) -> int:
-        """Estimate number of tokens in content using simple byte length heuristic.
-        Estimates 1 token per 2.0 bytes of content. For messages, uses the content field.
-
-        Args:
-            content: String content or Message object to estimate tokens for
-
-        Returns:
-            int: Estimated number of tokens, 0 if content is None/empty
-        """
-        if content is None:
-            return 0
-
-        if isinstance(content, BaseMessage):
-            text = content.content
-        else:
-            text = content
-
-        # create-react-agent tool calls can be lists
-        if isinstance(text, List):
-            text = str(text)
-
-        if not text:
-            return 0
-
-        return len(text.encode("utf-8")) // 2.0
-
-    def _extract_tool_call(self, code: str, functions_list: str) -> str:
-        model = get_model()
-        prompt = EXTRACT_TOOL_CALL_PROMPT.format(
-            functions_list=functions_list, code=code
-        )
-        response = model.invoke(prompt)
-        response = response.content
-
-        pattern = r"([\w_\-]+)\((.*?)\)"
-        matches = re.findall(pattern, response, re.DOTALL)
-        if len(matches) == 0:
-            raise ToolExecutionError("Failed to extract tool call")
-        ma = matches[0][0].strip()
-        mb = matches[0][1].strip().replace("\n", " ")
-        return f"{ma}({mb})"
+    def _create_error_chunk(self, error_message: str) -> Dict[str, Any]:
+        """Create an error chunk for the agent output stream."""
+        return {
+            "type": "error",
+            "message": error_message,
+            "tool_call": {
+                "name": "report_error",
+                "args": {"error": error_message},
+            },
+        }
 
     def _trim_chat_history(
         self, initial_messages: List[Any], chat_history: List[Any]
@@ -272,6 +269,42 @@ class CiaynAgent:
 
         return initial_messages + chat_history
 
+    @staticmethod
+    def _estimate_tokens(content: Optional[Union[str, BaseMessage]]) -> int:
+        """Estimate token count for a message or string."""
+        if content is None:
+            return 0
+
+        if isinstance(content, BaseMessage):
+            text = content.content
+        else:
+            text = content
+
+        # create-react-agent tool calls can be lists
+        if isinstance(text, List):
+            text = str(text)
+
+        if not text:
+            return 0
+
+        return len(text.encode("utf-8")) // 2.0
+
+    def _extract_tool_call(self, code: str, functions_list: str) -> str:
+        model = get_model()
+        prompt = EXTRACT_TOOL_CALL_PROMPT.format(
+            functions_list=functions_list, code=code
+        )
+        response = model.invoke(prompt)
+        response = response.content
+
+        pattern = r"([\w_\-]+)\((.*?)\)"
+        matches = re.findall(pattern, response, re.DOTALL)
+        if len(matches) == 0:
+            raise ToolExecutionError("Failed to extract tool call")
+        ma = matches[0][0].strip()
+        mb = matches[0][1].strip().replace("\n", " ")
+        return f"{ma}({mb})"
+
     def stream(
         self, messages_dict: Dict[str, List[Any]], _config: Dict[str, Any] = None
     ) -> Generator[Dict[str, Any], None, None]:
@@ -279,12 +312,36 @@ class CiaynAgent:
         initial_messages = messages_dict.get("messages", [])
         self.chat_history = []
         last_result = None
+        empty_response_count = 0
+        max_empty_responses = 3  # Maximum number of consecutive empty responses before giving up
 
         while True:
             base_prompt = self._build_prompt(last_result)
             self.chat_history.append(HumanMessage(content=base_prompt))
             full_history = self._trim_chat_history(initial_messages, self.chat_history)
             response = self.model.invoke([self.sys_message] + full_history)
+
+            # Check if the response is empty or doesn't contain a valid tool call
+            if not response.content or not response.content.strip():
+                empty_response_count += 1
+                logger.warning(f"Model returned empty response (count: {empty_response_count})")
+                
+                if empty_response_count >= max_empty_responses:
+                    # If we've had too many empty responses, raise an error to break the loop
+                    from ra_aid.agent_context import mark_agent_crashed
+                    crash_message = "Agent failed to make any tool calls after multiple attempts"
+                    mark_agent_crashed(crash_message)
+                    logger.error(crash_message)
+                    yield self._create_error_chunk(crash_message)
+                    return
+                
+                # Send a message to the model explicitly telling it to make a tool call
+                self.chat_history.append(AIMessage(content=""))  # Add the empty response
+                self.chat_history.append(HumanMessage(content=NO_TOOL_CALL_PROMPT))
+                continue
+            
+            # Reset empty response counter on successful response
+            empty_response_count = 0
 
             try:
                 last_result = self._execute_tool(response)

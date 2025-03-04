@@ -1,0 +1,2 @@
+mixed_quotes_function("single quotes", """triple quoted
+multiline content""", 'another single quote')

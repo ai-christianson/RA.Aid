@@ -1,0 +1,5 @@
+put_complete_file_contents("main.cpp", """
+#include <GLFW/glfw3.h>
+#include <GL/gl.h>
+#include <iostream>
+""")

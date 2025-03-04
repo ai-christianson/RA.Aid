@@ -1,0 +1,9 @@
+put_complete_file_contents("complex.json", """
+{
+  "name": "test",
+  "values": [1, 2, 3],
+  "nested": {
+    "property": "value"
+  }
+}
+""")

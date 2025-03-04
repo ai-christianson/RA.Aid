@@ -1,0 +1,3 @@
+function_with_triple_quotes("""This is a test
+with multiple
+lines of text""")

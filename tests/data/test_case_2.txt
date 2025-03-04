@@ -1,0 +1,5 @@
+put_complete_file_contents("test.py", """
+def hello_world():
+    print("Hello, world!")
+    return 42
+""")

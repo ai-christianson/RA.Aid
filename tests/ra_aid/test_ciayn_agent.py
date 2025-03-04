@@ -263,6 +263,24 @@ class TestFunctionCallValidation:
         """Test function calls spanning multiple lines."""
         assert not validate_function_call_pattern(test_input)
 
+    def test_triple_quoted_string_function_calls(self):
+        """Test function calls with triple-quoted strings."""
+        import os
+        import glob
+        
+        # Valid test cases
+        test_files = sorted(glob.glob("/home/user/workspace/ra-aid/tests/data/test_case_*.txt"))
+        for test_file in test_files:
+            with open(test_file, "r") as f:
+                test_case = f.read().strip()
+                assert not validate_function_call_pattern(test_case), f"Failed on valid case: {os.path.basename(test_file)}"
+                
+        # Invalid test cases
+        invalid_files = sorted(glob.glob("/home/user/workspace/ra-aid/tests/data/invalid_case_*.txt"))
+        for invalid_file in invalid_files:
+            with open(invalid_file, "r") as f:
+                invalid_case = f.read().strip()
+                assert validate_function_call_pattern(invalid_case), f"Should fail on invalid case: {os.path.basename(invalid_file)}"
 
 class TestCiaynAgentNewMethods(unittest.TestCase):
     pass
