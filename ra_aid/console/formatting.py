@@ -53,6 +53,18 @@ def print_error(message: str) -> None:
     console.print(Panel(Markdown(message), title="Error", border_style="red bold"))
 
 
+def print_warning(message: str, title: str = "Warning") -> None:
+    """Print a warning message in an amber-bordered panel with warning emoji.
+    
+    Uses a text-only title to prevent console formatting issues.
+
+    Args:
+        message: The warning message to display (supports Markdown formatting)
+        title: The title for the panel, defaults to "Warning"
+    """
+    console.print(Panel(Markdown(message), title=title, border_style="yellow bold"))
+
+
 def print_interrupt(message: str) -> None:
     """Print an interrupt message in a yellow-bordered panel with stop emoji.
 

@@ -18,6 +18,7 @@ from ra_aid.prompts.ciayn_prompts import CIAYN_AGENT_SYSTEM_PROMPT, CIAYN_AGENT_
 from ra_aid.tools.expert import get_model
 from ra_aid.tools.reflection import get_function_info
 from ra_aid.console.output import cpm
+from ra_aid.console.formatting import print_warning, print_error
 
 logger = get_logger(__name__)
 
@@ -256,7 +257,7 @@ class CiaynAgent:
                 code = code[3:].strip()
             if code.endswith("```"):
                 code = code[:-3].strip()
-
+            
             # Check for multiple tool calls that can be bundled
             tool_calls = self._detect_multiple_tool_calls(code)
             
@@ -327,7 +328,7 @@ class CiaynAgent:
                                 
                                 # If this fingerprint matches the last tool call, reject it
                                 if current_call == self.last_tool_call:
-                                    logger.warning(f"Detected repeat call of {tool_name} with the same parameters.")
+                                    logger.info(f"Detected repeat call of {tool_name} with the same parameters.")
                                     result = f"Repeat calls of {tool_name} with the same parameters are not allowed. You must try something different!"
                                     results.append(result)
                                     
@@ -419,7 +420,7 @@ class CiaynAgent:
                         
                         # If this fingerprint matches the last tool call, reject it
                         if current_call == self.last_tool_call:
-                            logger.warning(f"Detected repeat call of {tool_name} with the same parameters.")
+                            logger.info(f"Detected repeat call of {tool_name} with the same parameters.")
                             return f"Repeat calls of {tool_name} with the same parameters are not allowed. You must try something different!"
                         
                         # Update last tool call fingerprint for next comparison
@@ -435,7 +436,8 @@ class CiaynAgent:
         except Exception as e:
             error_msg = f"Error: {str(e)} \n Could not execute code: {code}"
             tool_name = self.extract_tool_name(code)
-            logger.warning(f"Tool execution failed for `{tool_name}`: {str(e)}")
+            logger.info(f"Tool execution failed for `{tool_name}`: {str(e)}")
+            print_warning(f"Tool execution failed for `{tool_name}`:\nError: {str(e)}\n\nCode:\n\n````\n{code}\n````", title="Tool Error")
             raise ToolExecutionError(
                 error_msg, base_message=msg, tool_name=tool_name
             ) from e
@@ -467,7 +469,8 @@ class CiaynAgent:
 
         if not fallback_response:
             self.chat_history.append(err_msg)
-            logger.warning(f"Tool fallback was attempted but did not succeed. Original error: {str(e)}")
+            logger.info(f"Tool fallback was attempted but did not succeed. Original error: {str(e)}")
+            print_warning(f"Tool fallback was attempted but did not succeed. Original error: {str(e)}", title="Fallback Failed")
             return ""
 
         self.chat_history.append(self.fallback_fixed_msg)
@@ -566,7 +569,8 @@ class CiaynAgent:
         pattern = r"([\w_\-]+)\((.*?)\)"
         matches = re.findall(pattern, response, re.DOTALL)
         if len(matches) == 0:
-            logger.warning("Failed to extract a valid tool call from the model's response.")
+            logger.info("Failed to extract a valid tool call from the model's response.")
+            print_warning("Failed to extract a valid tool call from the model's response.", title="Extraction Failed")
             raise ToolExecutionError("Failed to extract tool call")
         ma = matches[0][0].strip()
         mb = matches[0][1].strip().replace("\n", " ")
@@ -593,9 +597,11 @@ class CiaynAgent:
             # Check if the response is empty or doesn't contain a valid tool call
             if not response.content or not response.content.strip():
                 empty_response_count += 1
-                logger.warning(f"Model returned empty response (count: {empty_response_count})")
+                logger.info(f"Model returned empty response (count: {empty_response_count})")
                 
-                logger.warning(f"The model returned an empty response (attempt {empty_response_count} of {max_empty_responses}). Requesting the model to make a valid tool call.")
+                warning_message = f"The model returned an empty response (attempt {empty_response_count} of {max_empty_responses}). Requesting the model to make a valid tool call."
+                logger.info(warning_message)
+                print_warning(warning_message, title="Empty Response")
                 
                 if empty_response_count >= max_empty_responses:
                     # If we've had too many empty responses, raise an error to break the loop
@@ -604,7 +610,9 @@ class CiaynAgent:
                     mark_agent_crashed(crash_message)
                     logger.error(crash_message)
                     
-                    logger.error("The agent has crashed after multiple failed attempts to generate a valid tool call.")
+                    error_message = "The agent has crashed after multiple failed attempts to generate a valid tool call."
+                    logger.error(error_message)
+                    print_error(error_message)
                     
                     yield self._create_error_chunk(crash_message)
                     return
@@ -624,7 +632,7 @@ class CiaynAgent:
                 yield {}
 
             except ToolExecutionError as e:
-                logger.warning(f"Tool execution error: {str(e)}. Attempting fallback...")
+                logger.info(f"Tool execution error: {str(e)}. Attempting fallback...")
                 fallback_response = self.fallback_handler.handle_failure(
                     e, self, self.chat_history
                 )

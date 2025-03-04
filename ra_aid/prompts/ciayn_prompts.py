@@ -70,11 +70,12 @@ You typically don't want to keep calling the same function over and over with th
   - For file content, the entire content must be inside ONE triple-quoted string
   - If you are calling a function with a dict argument, and one part of the dict is multiline, use \"\"\"
 
-- Example of correct put_complete_file_contents format:
-  put_complete_file_contents("/path/to/file.py", \"\"\"
+<example of correct put_complete_file_contents format>
+  put_complete_file_contents('/path/to/file.py', '''
 def example_function():
     print("Hello world")
-\"\"\")
+''')
+</example of correct put_complete_file_contents format>
 
 </function call guidelines>
 
@@ -88,28 +89,15 @@ PERFORMING WELL AS AN EFFICIENT YET COMPLETE AGENT WILL HELP MY CAREER.
 
 <critical rules>
 1. YOU MUST ALWAYS CALL A FUNCTION - NEVER RETURN EMPTY TEXT OR PLAIN TEXT
-2. ALWAYS OUTPUT EXACTLY ONE VALID FUNCTION CALL AS YOUR RESPONSE (except for bundleable tools which can have multiple calls)
+2. ALWAYS OUTPUT EXACTLY ONE VALID FUNCTION CALL AS YOUR RESPONSE
 3. NEVER TERMINATE YOUR RESPONSE WITHOUT CALLING A FUNCTION
 4. WHEN USING put_complete_file_contents, ALWAYS PUT THE ENTIRE FILE CONTENT INSIDE ONE TRIPLE-QUOTED STRING
+5. IF YOU EMIT CODE USING emit_key_snippet, WATCH OUT FOR PROPERLY ESCAPING QUOTES, E.G. TRIPLE QUOTES SHOULD HAVE ONE BACKSLASH IN FRONT OF EACH QUOTE.
 </critical rules>
 
-<bundled tools format>
-When you bundle multiple tool calls in one response, you'll receive results in the following format:
-
-```
-<result-abc123>
-First tool result content
-</result-abc123>
-
-<result-def456>
-Second tool result content
-</result-def456>
-```
-
-Each result will have a unique random ID tag, and the order of results will match the order of your tool calls.
-</bundled tools format>
-
 DO NOT CLAIM YOU ARE FINISHED UNTIL YOU ACTUALLY ARE!
+ALWAYS PREFER SINGLE QUOTES IN YOUR TOOL CALLING CODE!
+PROPERLY ESCAPE NESTED QUOTES!
 Output **ONLY THE CODE** and **NO MARKDOWN BACKTICKS**
 """
 
@@ -125,36 +113,30 @@ YOU MUST ALWAYS CALL A FUNCTION - NEVER RETURN EMPTY TEXT
 <multiline content reminder>
 When using put_complete_file_contents, ALWAYS place the entire file content within a SINGLE triple-quoted string:
 
-CORRECT:   put_complete_file_contents("/path/to/file.py", \"\"\"
+CORRECT:   put_complete_file_contents('/path/to/file.py', '''
 def main():
     print("Hello")
-\"\"\")
+''')
 </multiline content reminder>
 
 --- EXAMPLE GOOD OUTPUTS ---
 
 <example good output>
-request_research_and_implementation(\"\"\"Example query.\"\"\")
+request_research_and_implementation('''Example query.''')
 </example good output>
 
 <example good output>
-run_programming_task(\"\"\"# Example Programming Task\"\"\")
+run_programming_task('''# Example Programming Task''')
 </example good output>
 
 <example good output>
-put_complete_file_contents("/path/to/file.py", \"\"\"def example_function():
+put_complete_file_contents("/path/to/file.py", '''def example_function():
     print("This is a multi-line example")
     for i in range(10):
         print("Line " + str(i))
     return True
-\"\"\")
+''')
 </example good output>
-
-<example bundled output>
-emit_key_facts(["Fact 1", "Fact 2"])
-emit_expert_context("Important context")
-ask_expert("What does this mean?")
-</example bundled output>
 
 {last_result_section}
 """
@@ -168,17 +150,10 @@ Remember: ALWAYS respond with a single line of Python code that calls a function
 
 IMPORTANT: For put_complete_file_contents, make sure to include the entire file content inside a SINGLE triple-quoted string:
 
-CORRECT:   put_complete_file_contents("/path/to/file.py", \"\"\"def main():
+CORRECT:   put_complete_file_contents('/path/to/file.py', '''def main():
     print("Hello")
-\"\"\")
+''')
 
-NOTE: You can also bundle multiple calls to certain tools (emit_expert_context, ask_expert, emit_key_facts, emit_key_snippet, and others) in one response. When bundling tools, each result will be returned with a unique random ID tag in this format:
-
-<result-abc123>
-First tool result content
-</result-abc123>
-
-<result-def456>
-Second tool result content
-</result-def456>
+ALWAYS PREFER SINGLE QUOTES IN YOUR TOOL CALLING CODE!
+PROPERLY ESCAPE NESTED QUOTES!
 """

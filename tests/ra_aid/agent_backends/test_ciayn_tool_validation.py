@@ -61,3 +61,17 @@ void display() {
 """)'''
     
     assert validate_function_call_pattern(function_call) is False, "C++ code in a triple-quoted string should be a valid function call"
+
+def test_validate_function_call_with_nested_triple_quotes():
+    """Test that function calls containing triple-quoted strings with nested docstrings are correctly validated."""
+    # The exact function call from the error message
+    function_call = '''emit_key_snippet(snippet_info={
+    "filepath": "tests/ra_aid/test_llm.py",
+    "line_number": 56,
+    "snippet": """def test_initialize_expert_defaults(clean_env, mock_openai, monkeypatch):\n    """Test expert LLM initialization with explicit parameters."""\n           
+monkeypatch.setenv("EXPERT_OPENAI_API_KEY", "test-key")\n    _llm = initialize_expert_llm("openai", "o1")\n\n    mock_openai.assert_called_once_with(\n                     
+api_key="test-key",\n        model="o1",\n        reasoning_effort="high",\n        timeout=180,\n        max_retries=5,\n    )""",
+    "description": "Test case for initializing expert LLM with explicit parameters."
+})'''
+    
+    assert validate_function_call_pattern(function_call) is False, "Triple-quoted string with nested docstring should be a valid function call"
