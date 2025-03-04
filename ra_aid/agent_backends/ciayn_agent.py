@@ -107,7 +107,8 @@ class CiaynAgent:
         "emit_research_notes",
         "ripgrep_search",
         "plan_implementation_completed",
-        "request_research_and_implementation"
+        "request_research_and_implementation",
+        "run_shell_command",
     ]
 
     def __init__(
