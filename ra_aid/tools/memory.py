@@ -17,15 +17,12 @@ from ra_aid.database.repositories.key_fact_repository import get_key_fact_reposi
 from ra_aid.database.repositories.key_snippet_repository import get_key_snippet_repository
 from ra_aid.database.repositories.human_input_repository import get_human_input_repository
 from ra_aid.database.repositories.research_note_repository import get_research_note_repository
+from ra_aid.database.repositories.work_log_repository import get_work_log_repository
 from ra_aid.model_formatters import key_snippets_formatter
 from ra_aid.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-
-class WorkLogEntry(TypedDict):
-    timestamp: str
-    event: str
 
 
 class SnippetInfo(TypedDict):
@@ -46,7 +43,6 @@ from ra_aid.database.repositories.related_files_repository import get_related_fi
 # Global memory store
 _global_memory: Dict[str, Any] = {
     "agent_depth": 0,
-    "work_log": [],  # List[WorkLogEntry] - Timestamped work events
 }
 
 
@@ -405,11 +401,13 @@ def log_work_event(event: str) -> str:
     Note:
         Entries can be retrieved with get_work_log() as markdown formatted text.
     """
-    from datetime import datetime
-
-    entry = WorkLogEntry(timestamp=datetime.now().isoformat(), event=event)
-    _global_memory["work_log"].append(entry)
-    return f"Event logged: {event}"
+    try:
+        repo = get_work_log_repository()
+        repo.add_entry(event)
+        return f"Event logged: {event}"
+    except RuntimeError as e:
+        logger.error(f"Failed to access work log repository: {str(e)}")
+        return f"Failed to log event: {str(e)}"
 
 
 
@@ -427,21 +425,12 @@ def get_work_log() -> str:
 
         Task #1 added: Create login form
     """
-    if not _global_memory["work_log"]:
+    try:
+        repo = get_work_log_repository()
+        return repo.format_work_log()
+    except RuntimeError as e:
+        logger.error(f"Failed to access work log repository: {str(e)}")
         return "No work log entries"
-
-    entries = []
-    for entry in _global_memory["work_log"]:
-        entries.extend(
-            [
-                f"## {entry['timestamp']}",
-                "",
-                entry["event"],
-                "",  # Blank line between entries
-            ]
-        )
-
-    return "\n".join(entries).rstrip()  # Remove trailing newline
 
 
 def reset_work_log() -> str:
@@ -453,8 +442,13 @@ def reset_work_log() -> str:
     Note:
         This permanently removes all work log entries. The operation cannot be undone.
     """
-    _global_memory["work_log"].clear()
-    return "Work log cleared"
+    try:
+        repo = get_work_log_repository()
+        repo.clear()
+        return "Work log cleared"
+    except RuntimeError as e:
+        logger.error(f"Failed to access work log repository: {str(e)}")
+        return f"Failed to clear work log: {str(e)}"
 
 
 @tool("deregister_related_files")
@@ -505,11 +499,13 @@ def get_memory_value(key: str) -> str:
         String representation of the memory values
     """
     if key == "work_log":
-        values = _global_memory.get(key, [])
-        if not values:
+        # Use the repository to get the formatted work log
+        try:
+            repo = get_work_log_repository()
+            return repo.format_work_log()
+        except RuntimeError as e:
+            logger.error(f"Failed to access work log repository: {str(e)}")
             return ""
-        entries = [f"## {entry['timestamp']}\n{entry['event']}" for entry in values]
-        return "\n\n".join(entries)
     
     if key == "research_notes":
         # DEPRECATED: This method of accessing research notes is deprecated.

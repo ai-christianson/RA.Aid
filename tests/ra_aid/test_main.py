@@ -6,6 +6,7 @@ from unittest.mock import patch, MagicMock
 from ra_aid.__main__ import parse_arguments
 from ra_aid.config import DEFAULT_RECURSION_LIMIT
 from ra_aid.tools.memory import _global_memory
+from ra_aid.database.repositories.work_log_repository import WorkLogEntry
 
 
 @pytest.fixture
@@ -14,7 +15,6 @@ def mock_dependencies(monkeypatch):
     # Initialize global memory with necessary keys to prevent KeyError
     _global_memory.clear()
     _global_memory["agent_depth"] = 0
-    _global_memory["work_log"] = []
     _global_memory["config"] = {}
     
     # Mock dependencies that interact with external systems
@@ -51,6 +51,56 @@ def mock_related_files_repository():
         
         # Setup format_related_files method
         mock_repo.format_related_files.return_value = [f"ID#{file_id} {filepath}" for file_id, filepath in sorted(related_files.items())]
+        
+        # Make the mock context var return our mock repo
+        mock_repo_var.get.return_value = mock_repo
+        
+        yield mock_repo
+
+
+@pytest.fixture(autouse=True)
+def mock_work_log_repository():
+    """Mock the WorkLogRepository to avoid database operations during tests"""
+    with patch('ra_aid.database.repositories.work_log_repository.work_log_repo_var') as mock_repo_var:
+        # Setup a mock repository
+        mock_repo = MagicMock()
+        
+        # Setup local in-memory storage
+        entries = []
+        
+        # Mock add_entry method
+        def mock_add_entry(event):
+            from datetime import datetime
+            entry = {"timestamp": datetime.now().isoformat(), "event": event}
+            entries.append(entry)
+        mock_repo.add_entry.side_effect = mock_add_entry
+        
+        # Mock get_all method
+        def mock_get_all():
+            return entries.copy()
+        mock_repo.get_all.side_effect = mock_get_all
+        
+        # Mock clear method
+        def mock_clear():
+            entries.clear()
+        mock_repo.clear.side_effect = mock_clear
+        
+        # Mock format_work_log method
+        def mock_format_work_log():
+            if not entries:
+                return "No work log entries"
+                
+            formatted_entries = []
+            for entry in entries:
+                formatted_entries.extend([
+                    f"## {entry['timestamp']}",
+                    "",
+                    entry["event"],
+                    "",  # Blank line between entries
+                ])
+                
+            return "\n".join(formatted_entries).rstrip()  # Remove trailing newline
+        mock_repo.format_work_log.side_effect = mock_format_work_log
         
         # Make the mock context var return our mock repo
         mock_repo_var.get.return_value = mock_repo
@@ -144,7 +194,6 @@ def test_temperature_validation(mock_dependencies):
     # Reset global memory for clean test
     _global_memory.clear()
     _global_memory["agent_depth"] = 0
-    _global_memory["work_log"] = []
     _global_memory["config"] = {}
 
     # Test valid temperature (0.7)

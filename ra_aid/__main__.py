@@ -55,6 +55,9 @@ from ra_aid.database.repositories.research_note_repository import (
 from ra_aid.database.repositories.related_files_repository import (
     RelatedFilesRepositoryManager
 )
+from ra_aid.database.repositories.work_log_repository import (
+    WorkLogRepositoryManager
+)
 from ra_aid.model_formatters import format_key_facts_dict
 from ra_aid.model_formatters.key_snippets_formatter import format_key_snippets_dict
 from ra_aid.console.output import cpm
@@ -406,13 +409,15 @@ def main():
                  KeySnippetRepositoryManager(db) as key_snippet_repo, \
                  HumanInputRepositoryManager(db) as human_input_repo, \
                  ResearchNoteRepositoryManager(db) as research_note_repo, \
-                 RelatedFilesRepositoryManager() as related_files_repo:
+                 RelatedFilesRepositoryManager() as related_files_repo, \
+                 WorkLogRepositoryManager() as work_log_repo:
                 # This initializes all repositories and makes them available via their respective get methods
                 logger.debug("Initialized KeyFactRepository")
                 logger.debug("Initialized KeySnippetRepository")
                 logger.debug("Initialized HumanInputRepository")
                 logger.debug("Initialized ResearchNoteRepository")
                 logger.debug("Initialized RelatedFilesRepository")
+                logger.debug("Initialized WorkLogRepository")
 
                 # Check dependencies before proceeding
                 check_dependencies()

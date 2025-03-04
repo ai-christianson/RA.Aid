@@ -88,6 +88,7 @@ from ra_aid.database.repositories.key_fact_repository import get_key_fact_reposi
 from ra_aid.database.repositories.key_snippet_repository import get_key_snippet_repository
 from ra_aid.database.repositories.human_input_repository import get_human_input_repository
 from ra_aid.database.repositories.research_note_repository import get_research_note_repository
+from ra_aid.database.repositories.work_log_repository import get_work_log_repository
 from ra_aid.model_formatters import format_key_facts_dict
 from ra_aid.model_formatters.key_snippets_formatter import format_key_snippets_dict
 from ra_aid.model_formatters.research_notes_formatter import format_research_notes_dict
@@ -434,7 +435,7 @@ def run_research_agent(
         human_section=human_section,
         web_research_section=web_research_section,
         key_facts=key_facts,
-        work_log=get_memory_value("work_log"),
+        work_log=get_work_log_repository().format_work_log(),
         key_snippets=key_snippets,
         related_files=related_files,
         project_info=formatted_project_info,
@@ -568,7 +569,7 @@ def run_web_research_agent(
         expert_section=expert_section,
         human_section=human_section,
         key_facts=key_facts,
-        work_log=get_memory_value("work_log"),
+        work_log=get_work_log_repository().format_work_log(),
         key_snippets=key_snippets,
         related_files=related_files,
     )
@@ -699,7 +700,7 @@ def run_planning_agent(
         related_files="\n".join(get_related_files()),
         key_facts=key_facts,
         key_snippets=key_snippets,
-        work_log=get_memory_value("work_log"),
+        work_log=get_work_log_repository().format_work_log(),
         research_only_note=(
             ""
             if config.get("research_only")
@@ -818,7 +819,7 @@ def run_task_implementation_agent(
         key_facts=key_facts,
         key_snippets=format_key_snippets_dict(get_key_snippet_repository().get_snippets_dict()),
         research_notes=formatted_research_notes,
-        work_log=get_memory_value("work_log"),
+        work_log=get_work_log_repository().format_work_log(),
         expert_section=EXPERT_PROMPT_SECTION_IMPLEMENTATION if expert_enabled else "",
         human_section=(
             HUMAN_PROMPT_SECTION_IMPLEMENTATION
