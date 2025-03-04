@@ -68,12 +68,14 @@ You typically don't want to keep calling the same function over and over with th
   - Make sure to properly escape any quotes within the string if needed
   - Never break up a multi-line string with line breaks outside the quotes
   - For file content, the entire content must be inside ONE triple-quoted string
+  - If you are calling a function with a dict argument, and one part of the dict is multiline, use \"\"\"
 
 - Example of correct put_complete_file_contents format:
   put_complete_file_contents("/path/to/file.py", \"\"\"
 def example_function():
     print("Hello world")
 \"\"\")
+
 </function call guidelines>
 
 As an agent, you will carefully plan ahead, carefully analyze tool call responses, and adapt to circumstances in order to accomplish your goal.
@@ -86,7 +88,7 @@ PERFORMING WELL AS AN EFFICIENT YET COMPLETE AGENT WILL HELP MY CAREER.
 
 <critical rules>
 1. YOU MUST ALWAYS CALL A FUNCTION - NEVER RETURN EMPTY TEXT OR PLAIN TEXT
-2. ALWAYS OUTPUT EXACTLY ONE VALID FUNCTION CALL AS YOUR RESPONSE 
+2. ALWAYS OUTPUT EXACTLY ONE VALID FUNCTION CALL AS YOUR RESPONSE (except for bundleable tools which can have multiple calls)
 3. NEVER TERMINATE YOUR RESPONSE WITHOUT CALLING A FUNCTION
 4. WHEN USING put_complete_file_contents, ALWAYS PUT THE ENTIRE FILE CONTENT INSIDE ONE TRIPLE-QUOTED STRING
 </critical rules>
@@ -113,6 +115,19 @@ def main():
 \"\"\")
 </multiline content reminder>
 
+<bundleable tools reminder>
+You can bundle multiple calls to these tools in one response:
+- emit_expert_context
+- ask_expert
+- emit_key_facts
+- emit_key_snippet
+
+Example of bundled tools:
+emit_key_facts(["Important fact 1", "Important fact 2"])
+emit_expert_context("Additional context")
+ask_expert("Question about this context")
+</bundleable tools reminder>
+
 --- EXAMPLE GOOD OUTPUTS ---
 
 <example good output>
@@ -132,6 +147,12 @@ put_complete_file_contents("/path/to/file.py", \"\"\"def example_function():
 \"\"\")
 </example good output>
 
+<example bundled output>
+emit_key_facts(["Fact 1", "Fact 2"])
+emit_expert_context("Important context")
+ask_expert("What does this mean?")
+</example bundled output>
+
 {last_result_section}
 """
 
@@ -147,4 +168,6 @@ IMPORTANT: For put_complete_file_contents, make sure to include the entire file 
 CORRECT:   put_complete_file_contents("/path/to/file.py", \"\"\"def main():
     print("Hello")
 \"\"\")
+
+NOTE: You can also bundle multiple calls to certain tools (emit_expert_context, ask_expert, emit_key_facts, emit_key_snippet) in one response.
 """

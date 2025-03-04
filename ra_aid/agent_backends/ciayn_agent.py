@@ -1,6 +1,7 @@
 import re
+import ast
 from dataclasses import dataclass
-from typing import Any, Dict, Generator, List, Optional, Union
+from typing import Any, Dict, Generator, List, Optional, Union, Tuple
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
@@ -28,12 +29,8 @@ class ChunkMessage:
 def validate_function_call_pattern(s: str) -> bool:
     """Check if a string matches the expected function call pattern.
 
-    Validates that the string represents a valid function call with:
-    - Function name consisting of word characters, underscores or hyphens
-    - Opening/closing parentheses with balanced nesting
-    - Arbitrary arguments inside parentheses
-    - Optional whitespace
-    - Support for triple-quoted strings
+    Validates that the string represents a valid function call using AST parsing.
+    Valid function calls must be syntactically valid Python code.
 
     Args:
         s: String to validate
@@ -41,43 +38,35 @@ def validate_function_call_pattern(s: str) -> bool:
     Returns:
         bool: False if pattern matches (valid), True if invalid
     """
-    # First check for the basic pattern of a function call
-    basic_pattern = r"^\s*[\w_\-]+\s*\("
-    if not re.match(basic_pattern, s, re.DOTALL):
-        return True
+    # Clean up the code before parsing
+    s = s.strip()
+    if s.startswith("```") and s.endswith("```"):
+        s = s[3:-3].strip()
+    elif s.startswith("```"):
+        s = s[3:].strip()
+    elif s.endswith("```"):
+        s = s[:-3].strip()
     
-    # Handle triple-quoted strings to avoid parsing issues
-    # Temporarily replace triple-quoted content to avoid false positives
-    def replace_triple_quoted(match):
-        return '"""' + '_' * len(match.group(1)) + '"""'
+    # Check for multiple function calls - this can't be handled by AST parsing alone
+    if re.search(r'\)\s*[\w\-]+\s*\(', s):
+        return True  # Invalid - contains multiple function calls
     
-    # Replace content in triple quotes with placeholders
-    s_clean = re.sub(r'"""(.*?)"""', replace_triple_quoted, s, flags=re.DOTALL)
-    
-    # Handle regular quotes
-    s_clean = re.sub(r'"[^"]*"', '""', s_clean)
-    s_clean = re.sub(r"'[^']*'", "''", s_clean)
-    
-    # Check for multiple function calls (not allowed)
-    if re.search(r"\)\s*[\w_\-]+\s*\(", s_clean):
-        return True
-    
-    # Count the number of opening and closing parentheses
-    open_count = s_clean.count('(')
-    close_count = s_clean.count(')')
-    
-    if open_count != close_count:
-        return True
-    
-    # Check for the presence of triple quotes and if they're properly closed
-    triple_quote_pairs = s.count('"""') // 2
-    triple_quote_count = s.count('"""')
-    
-    if triple_quote_count % 2 != 0:  # Odd number means unbalanced quotes
-        return True
+    # Use AST parsing as the single validation method
+    try:
+        tree = ast.parse(s)
         
-    # If we've passed all checks, the pattern is valid
-    return False
+        # Valid pattern is a single expression that's a function call
+        if (len(tree.body) == 1 and 
+            isinstance(tree.body[0], ast.Expr) and 
+            isinstance(tree.body[0].value, ast.Call)):
+            
+            return False  # Valid function call
+        
+        return True  # Invalid pattern
+    
+    except Exception:
+        # Any exception during parsing means it's not valid
+        return True
 
 
 class CiaynAgent:
@@ -110,6 +99,18 @@ class CiaynAgent:
     - Streaming interface for real-time interaction
     - Memory management with configurable limits
     """
+
+    # List of tools that can be bundled (called multiple times in one response)
+    BUNDLEABLE_TOOLS = [
+        "emit_expert_context", 
+        "ask_expert", 
+        "emit_key_facts", 
+        "emit_key_snippet",
+        "request_implementation",
+        "read_file_tool",
+        "emit_research_notes",
+        "ripgrep_search"
+    ]
 
     def __init__(
         self,
@@ -167,6 +168,66 @@ class CiaynAgent:
             last_result_section=last_result_section
         )
 
+    def _detect_multiple_tool_calls(self, code: str) -> List[str]:
+        """Detect if there are multiple tool calls in the code using AST parsing.
+        
+        Args:
+            code: The code string to analyze
+            
+        Returns:
+            List of individual tool call strings if bundleable, or just the original code as a single element
+        """
+        try:
+            # Clean up the code for parsing
+            code = code.strip()
+            if code.startswith("```"):
+                code = code[3:].strip()
+            if code.endswith("```"):
+                code = code[:-3].strip()
+                
+            # Try to parse the code as a sequence of expressions
+            parsed = ast.parse(code)
+            
+            # Check if we have multiple expressions and they are all valid function calls
+            if isinstance(parsed.body, list) and len(parsed.body) > 1:
+                calls = []
+                for node in parsed.body:
+                    # Only process expressions that are function calls
+                    if (isinstance(node, ast.Expr) and 
+                        isinstance(node.value, ast.Call) and 
+                        isinstance(node.value.func, ast.Name)):
+                        
+                        func_name = node.value.func.id
+                        
+                        # Only consider this a bundleable call if the function is in our allowed list
+                        if func_name in self.BUNDLEABLE_TOOLS:
+                            # Extract the exact call text from the original code
+                            call_str = ast.unparse(node)
+                            calls.append(call_str)
+                        else:
+                            # If any function is not bundleable, return just the original code
+                            cpm(
+                                f"Found multiple tool calls, but {func_name} is not bundleable.",
+                                title="⚠ Non-bundleable Tools",
+                                border_style="yellow"
+                            )
+                            return [code]
+                
+                if calls:
+                    cpm(
+                        f"Detected {len(calls)} bundleable tool calls.",
+                        title="✓ Bundling Tools",
+                        border_style="green"
+                    )
+                    return calls
+            
+            # Default case: just return the original code as a single element
+            return [code]
+            
+        except SyntaxError:
+            # If we can't parse the code with AST, just return the original
+            return [code]
+
     def _execute_tool(self, msg: BaseMessage) -> str:
         """Execute a tool call and return its result."""
 
@@ -180,7 +241,26 @@ class CiaynAgent:
             if code.endswith("```"):
                 code = code[:-3].strip()
 
-            # if the eval fails, try to extract it via a model call
+            # Check for multiple tool calls that can be bundled
+            tool_calls = self._detect_multiple_tool_calls(code)
+            
+            # If we have multiple valid bundleable calls, execute them in sequence
+            if len(tool_calls) > 1:
+                results = []
+                for call in tool_calls:
+                    # Validate and fix each call if needed
+                    if validate_function_call_pattern(call):
+                        functions_list = "\n\n".join(self.available_functions)
+                        call = self._extract_tool_call(call, functions_list)
+                    
+                    # Execute the call and collect the result
+                    result = eval(call.strip(), globals_dict)
+                    results.append(result)
+                
+                # Return the result of the last tool call
+                return results[-1]
+            
+            # Regular single tool call case
             if validate_function_call_pattern(code):
                 cpm(
                     f"Tool call validation failed. Attempting to extract function call using LLM.",
@@ -206,6 +286,7 @@ class CiaynAgent:
             ) from e
 
     def extract_tool_name(self, code: str) -> str:
+        """Extract the tool name from the code."""
         match = re.match(r"\s*([\w_\-]+)\s*\(", code)
         if match:
             return match.group(1)
@@ -214,6 +295,7 @@ class CiaynAgent:
     def handle_fallback_response(
         self, fallback_response: list[Any], e: ToolExecutionError
     ) -> str:
+        """Handle a fallback response from the fallback handler."""
         err_msg = HumanMessage(content=self.error_message_template.format(e=e))
 
         if not fallback_response:
@@ -313,6 +395,7 @@ class CiaynAgent:
         return len(text.encode("utf-8")) // 2.0
 
     def _extract_tool_call(self, code: str, functions_list: str) -> str:
+        """Extract a tool call from the code using a language model."""
         model = get_model()
         cpm(
             f"Attempting to fix malformed tool call using LLM. Original code:\n```\n{code}\n```",

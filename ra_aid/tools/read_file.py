@@ -36,7 +36,7 @@ def read_file_tool(filepath: str, encoding: str = "utf-8") -> Dict[str, str]:
             console.print(
                 Panel(
                     f"Cannot read binary file: {filepath}",
-                    title="⚠️ Binary File Detected",
+                    title="⚠ Binary File Detected",
                     border_style="bright_red",
                 )
             )
