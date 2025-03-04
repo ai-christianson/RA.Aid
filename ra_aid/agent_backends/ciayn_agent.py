@@ -98,8 +98,25 @@ class CiaynAgent:
     - Memory management with configurable limits
     """
 
-    # List of tools that can be bundled (called multiple times in one response)
+    # List of tools that can be bundled together in a single response
     BUNDLEABLE_TOOLS = [
+        "emit_expert_context", 
+        "ask_expert", 
+        "emit_key_facts", 
+        "emit_key_snippet",
+        "request_implementation",
+        "read_file_tool",
+        "emit_research_notes",
+        "ripgrep_search",
+        "plan_implementation_completed",
+        "request_research_and_implementation",
+        "run_shell_command",
+    ]
+    
+    # List of tools that should not be called repeatedly with the same parameters
+    # This prevents the agent from getting stuck in a loop calling the same tool
+    # with the same arguments multiple times
+    NO_REPEAT_TOOLS = [
         "emit_expert_context", 
         "ask_expert", 
         "emit_key_facts", 
@@ -156,6 +173,12 @@ class CiaynAgent:
         self.fallback_fixed_msg = HumanMessage(
             "Fallback tool handler has fixed the tool call see: <fallback tool call result> for the output."
         )
+        
+        # Track the most recent tool call and parameters to prevent repeats
+        # This is used to detect and prevent identical tool calls with the same parameters
+        # to avoid redundant operations and encourage the agent to try different approaches
+        self.last_tool_call = None
+        self.last_tool_params = None
 
     def _build_prompt(self, last_result: Optional[str] = None) -> str:
         """Build the prompt for the agent including available tools and context."""
@@ -207,19 +230,11 @@ class CiaynAgent:
                             calls.append(call_str)
                         else:
                             # If any function is not bundleable, return just the original code
-                            cpm(
-                                f"Found multiple tool calls, but {func_name} is not bundleable.",
-                                title="⚠ Non-bundleable Tools",
-                                border_style="yellow"
-                            )
+                            logger.debug(f"Found multiple tool calls, but {func_name} is not bundleable.")
                             return [code]
                 
                 if calls:
-                    cpm(
-                        f"Detected {len(calls)} bundleable tool calls.",
-                        title="✓ Bundling Tools",
-                        border_style="green"
-                    )
+                    logger.debug(f"Detected {len(calls)} bundleable tool calls.")
                     return calls
             
             # Default case: just return the original code as a single element
@@ -255,6 +270,79 @@ class CiaynAgent:
                     if validate_function_call_pattern(call):
                         functions_list = "\n\n".join(self.available_functions)
                         call = self._extract_tool_call(call, functions_list)
+
+                    # Check for repeated tool calls with the same parameters
+                    tool_name = self.extract_tool_name(call)
+                    
+                    if tool_name in self.NO_REPEAT_TOOLS:
+                        # Use AST to extract parameters
+                        try:
+                            tree = ast.parse(call)
+                            if (isinstance(tree.body[0], ast.Expr) and 
+                                isinstance(tree.body[0].value, ast.Call)):
+                                
+                                # Debug - print full AST structure
+                                logger.debug(f"AST structure for bundled call: {ast.dump(tree.body[0].value)}")
+                                
+                                # Extract and normalize parameter values
+                                param_pairs = []
+                                
+                                # Handle positional arguments
+                                if tree.body[0].value.args:
+                                    logger.debug(f"Found positional args in bundled call: {[ast.unparse(arg) for arg in tree.body[0].value.args]}")
+                                    
+                                    for i, arg in enumerate(tree.body[0].value.args):
+                                        arg_value = ast.unparse(arg)
+                                        
+                                        # Normalize string literals by removing outer quotes
+                                        if ((arg_value.startswith("'") and arg_value.endswith("'")) or
+                                            (arg_value.startswith('"') and arg_value.endswith('"'))):
+                                            arg_value = arg_value[1:-1]
+                                            
+                                        param_pairs.append((f"arg{i}", arg_value))
+                                
+                                # Handle keyword arguments
+                                for k in tree.body[0].value.keywords:
+                                    param_name = k.arg
+                                    param_value = ast.unparse(k.value)
+                                    
+                                    # Debug - print each parameter
+                                    logger.debug(f"Processing parameter: {param_name} = {param_value}")
+                                    
+                                    # Normalize string literals by removing outer quotes
+                                    if ((param_value.startswith("'") and param_value.endswith("'")) or
+                                        (param_value.startswith('"') and param_value.endswith('"'))):
+                                        param_value = param_value[1:-1]
+                                        
+                                    param_pairs.append((param_name, param_value))
+                                
+                                # Debug - print extracted parameters
+                                logger.debug(f"Extracted parameters: {param_pairs}")
+                                
+                                # Create a fingerprint of the call
+                                current_call = (tool_name, str(sorted(param_pairs)))
+                                
+                                # Debug information to help diagnose false positives
+                                logger.debug(f"Tool call: {tool_name}\nCurrent call fingerprint: {current_call}\nLast call fingerprint: {self.last_tool_call}")
+                                
+                                # If this fingerprint matches the last tool call, reject it
+                                if current_call == self.last_tool_call:
+                                    logger.warning(f"Detected repeat call of {tool_name} with the same parameters.")
+                                    result = f"Repeat calls of {tool_name} with the same parameters are not allowed. You must try something different!"
+                                    results.append(result)
+                                    
+                                    # Generate a random ID for this result
+                                    result_id = self._generate_random_id()
+                                    result_strings.append(f"<result-{result_id}>\n{result}\n</result-{result_id}>")
+                                    continue
+                                
+                                # Update last tool call fingerprint for next comparison
+                                self.last_tool_call = current_call
+                        except Exception as e:
+                            # If we can't parse parameters, just continue
+                            # This ensures robustness when dealing with complex or malformed tool calls
+                            logger.debug(f"Failed to parse parameters for duplicate detection: {str(e)}")
+                            pass
                     
                     # Execute the call and collect the result
                     result = eval(call.strip(), globals_dict)
@@ -269,25 +357,85 @@ class CiaynAgent:
             
             # Regular single tool call case
             if validate_function_call_pattern(code):
-                cpm(
-                    f"Tool call validation failed. Attempting to extract function call using LLM.",
-                    title="⚠ Validation Warning",
-                    border_style="yellow"
-                )
+                logger.debug(f"Tool call validation failed. Attempting to extract function call using LLM.")
                 functions_list = "\n\n".join(self.available_functions)
                 code = self._extract_tool_call(code, functions_list)
-                pass
 
+            # Check for repeated tool call with the same parameters (single tool case)
+            tool_name = self.extract_tool_name(code)
+            
+            # If the tool is in the NO_REPEAT_TOOLS list, check for repeat calls
+            if tool_name in self.NO_REPEAT_TOOLS:
+                # Use AST to extract parameters
+                try:
+                    tree = ast.parse(code)
+                    if (isinstance(tree.body[0], ast.Expr) and 
+                        isinstance(tree.body[0].value, ast.Call)):
+                        
+                        # Debug - print full AST structure  
+                        logger.debug(f"AST structure for single call: {ast.dump(tree.body[0].value)}")
+                        
+                        # Extract and normalize parameter values
+                        param_pairs = []
+                        
+                        # Handle positional arguments
+                        if tree.body[0].value.args:
+                            logger.debug(f"Found positional args in single call: {[ast.unparse(arg) for arg in tree.body[0].value.args]}")
+                            
+                            for i, arg in enumerate(tree.body[0].value.args):
+                                arg_value = ast.unparse(arg)
+                                
+                                # Normalize string literals by removing outer quotes
+                                if ((arg_value.startswith("'") and arg_value.endswith("'")) or
+                                    (arg_value.startswith('"') and arg_value.endswith('"'))):
+                                    arg_value = arg_value[1:-1]
+                                    
+                                param_pairs.append((f"arg{i}", arg_value))
+                        
+                        # Handle keyword arguments
+                        for k in tree.body[0].value.keywords:
+                            param_name = k.arg
+                            param_value = ast.unparse(k.value)
+                            
+                            # Debug - print each parameter
+                            logger.debug(f"Processing parameter: {param_name} = {param_value}")
+                            
+                            # Normalize string literals by removing outer quotes
+                            if ((param_value.startswith("'") and param_value.endswith("'")) or
+                                (param_value.startswith('"') and param_value.endswith('"'))):
+                                param_value = param_value[1:-1]
+                                
+                            param_pairs.append((param_name, param_value))
+                        
+                        # Also check for positional arguments
+                        if tree.body[0].value.args:
+                            logger.debug(f"Found positional args: {[ast.unparse(arg) for arg in tree.body[0].value.args]}")
+                        
+                        # Create a fingerprint of the call
+                        current_call = (tool_name, str(sorted(param_pairs)))
+                        
+                        # Debug information to help diagnose false positives
+                        logger.debug(f"Tool call: {tool_name}\nCurrent call fingerprint: {current_call}\nLast call fingerprint: {self.last_tool_call}")
+                        
+                        # If this fingerprint matches the last tool call, reject it
+                        if current_call == self.last_tool_call:
+                            logger.warning(f"Detected repeat call of {tool_name} with the same parameters.")
+                            return f"Repeat calls of {tool_name} with the same parameters are not allowed. You must try something different!"
+                        
+                        # Update last tool call fingerprint for next comparison
+                        self.last_tool_call = current_call
+                except Exception as e:
+                    # If we can't parse parameters, just continue with the tool execution
+                    # This ensures robustness when dealing with complex or malformed tool calls
+                    logger.debug(f"Failed to parse parameters for duplicate detection: {str(e)}")
+                    pass
+            
             result = eval(code.strip(), globals_dict)
             return result
         except Exception as e:
             error_msg = f"Error: {str(e)} \n Could not execute code: {code}"
             tool_name = self.extract_tool_name(code)
-            cpm(
-                f"Tool execution failed for `{tool_name}`: {str(e)}",
-                title="❗ Tool Error",
-                border_style="red"
-            )
+            logger.warning(f"Tool execution failed for `{tool_name}`: {str(e)}")
             raise ToolExecutionError(
                 error_msg, base_message=msg, tool_name=tool_name
             ) from e
@@ -319,11 +467,7 @@ class CiaynAgent:
 
         if not fallback_response:
             self.chat_history.append(err_msg)
-            cpm(
-                f"Tool fallback was attempted but did not succeed. Original error: {str(e)}",
-                title="❗ Fallback Failed",
-                border_style="red bold"
-            )
+            logger.warning(f"Tool fallback was attempted but did not succeed. Original error: {str(e)}")
             return ""
 
         self.chat_history.append(self.fallback_fixed_msg)
@@ -333,11 +477,7 @@ class CiaynAgent:
         msg += f"<fallback tool name>{e.tool_name}</fallback tool name>\n"
         msg += f"<fallback tool call result>\n{fallback_response[1]}\n</fallback tool call result>\n"
         
-        cpm(
-            f"Fallback successful for tool `{e.tool_name}` after {DEFAULT_MAX_TOOL_FAILURES} consecutive failures.",
-            title="✓ Fallback Success",
-            border_style="green"
-        )
+        logger.info(f"Fallback successful for tool `{e.tool_name}` after {DEFAULT_MAX_TOOL_FAILURES} consecutive failures.")
         
         return msg
 
@@ -416,11 +556,7 @@ class CiaynAgent:
     def _extract_tool_call(self, code: str, functions_list: str) -> str:
         """Extract a tool call from the code using a language model."""
         model = get_model()
-        cpm(
-            f"Attempting to fix malformed tool call using LLM. Original code:\n```\n{code}\n```",
-            title="🔧 Tool Call Extraction",
-            border_style="blue"
-        )
+        logger.debug(f"Attempting to fix malformed tool call using LLM. Original code:\n```\n{code}\n```")
         prompt = EXTRACT_TOOL_CALL_PROMPT.format(
             functions_list=functions_list, code=code
         )
@@ -430,20 +566,12 @@ class CiaynAgent:
         pattern = r"([\w_\-]+)\((.*?)\)"
         matches = re.findall(pattern, response, re.DOTALL)
         if len(matches) == 0:
-            cpm(
-                "Failed to extract a valid tool call from the model's response.",
-                title="❗ Extraction Failed", 
-                border_style="red"
-            )
+            logger.warning("Failed to extract a valid tool call from the model's response.")
             raise ToolExecutionError("Failed to extract tool call")
         ma = matches[0][0].strip()
         mb = matches[0][1].strip().replace("\n", " ")
         fixed_code = f"{ma}({mb})"
-        cpm(
-            f"Successfully extracted tool call: `{fixed_code}`",
-            title="✓ Extraction Success",
-            border_style="green"
-        )
+        logger.debug(f"Successfully extracted tool call: `{fixed_code}`")
         return fixed_code
 
     def stream(
@@ -467,11 +595,7 @@ class CiaynAgent:
                 empty_response_count += 1
                 logger.warning(f"Model returned empty response (count: {empty_response_count})")
                 
-                cpm(
-                    f"The model returned an empty response (attempt {empty_response_count} of {max_empty_responses}). Requesting the model to make a valid tool call.",
-                    title="⚠ Empty Response",
-                    border_style="yellow bold"
-                )
+                logger.warning(f"The model returned an empty response (attempt {empty_response_count} of {max_empty_responses}). Requesting the model to make a valid tool call.")
                 
                 if empty_response_count >= max_empty_responses:
                     # If we've had too many empty responses, raise an error to break the loop
@@ -480,11 +604,7 @@ class CiaynAgent:
                     mark_agent_crashed(crash_message)
                     logger.error(crash_message)
                     
-                    cpm(
-                        "The agent has crashed after multiple failed attempts to generate a valid tool call.",
-                        title="❗ Agent Crashed",
-                        border_style="red bold"
-                    )
+                    logger.error("The agent has crashed after multiple failed attempts to generate a valid tool call.")
                     
                     yield self._create_error_chunk(crash_message)
                     return
@@ -504,11 +624,7 @@ class CiaynAgent:
                 yield {}
 
             except ToolExecutionError as e:
-                cpm(
-                    f"Tool execution error: {str(e)}. Attempting fallback...",
-                    title="↻ Fallback Attempt",
-                    border_style="yellow"
-                )
+                logger.warning(f"Tool execution error: {str(e)}. Attempting fallback...")
                 fallback_response = self.fallback_handler.handle_failure(
                     e, self, self.chat_history
                 )
