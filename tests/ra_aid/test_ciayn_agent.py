@@ -270,10 +270,6 @@ class TestFunctionCallValidation:
         # Valid test cases
         test_files = sorted(glob.glob("/home/user/workspace/ra-aid/tests/data/test_case_*.txt"))
         for test_file in test_files:
-            # Skip test_case_6.txt because it contains C++ code which is not valid Python syntax
-            if os.path.basename(test_file) == "test_case_6.txt":
-                continue
-                
             with open(test_file, "r") as f:
                 test_case = f.read().strip()
                 assert not validate_function_call_pattern(test_case), f"Failed on valid case: {os.path.basename(test_file)}"

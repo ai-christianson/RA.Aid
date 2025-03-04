@@ -47,10 +47,6 @@ def validate_function_call_pattern(s: str) -> bool:
     elif s.endswith("```"):
         s = s[:-3].strip()
     
-    # Check for multiple function calls - this can't be handled by AST parsing alone
-    if re.search(r'\)\s*[\w\-]+\s*\(', s):
-        return True  # Invalid - contains multiple function calls
-    
     # Use AST parsing as the single validation method
     try:
         tree = ast.parse(s)
@@ -109,7 +105,9 @@ class CiaynAgent:
         "request_implementation",
         "read_file_tool",
         "emit_research_notes",
-        "ripgrep_search"
+        "ripgrep_search",
+        "plan_implementation_completed",
+        "request_research_and_implementation"
     ]
 
     def __init__(

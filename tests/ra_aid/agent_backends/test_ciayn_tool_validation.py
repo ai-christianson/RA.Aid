@@ -32,3 +32,32 @@ def test_validate_function_call_pattern_invalid_syntax():
     
     for call in invalid_calls:
         assert validate_function_call_pattern(call) is True, f"Call should be invalid: {call}"
+
+def test_validate_function_call_with_cpp_code():
+    """Test that function calls containing C++ code in triple-quoted strings are correctly validated."""
+    # Test with C++ code in a triple-quoted string
+    function_call = '''put_complete_file_contents("main.cpp", """
+#include <GL/glut.h>
+
+GLfloat angle = 0.0f;
+
+void display() {
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glLoadIdentity();
+    glTranslatef(0.0f, 0.0f, -5.0f);
+    glRotatef(angle, 1.0f, 1.0f, 1.0f);
+
+    glBegin(GL_QUADS);
+        // Front face (red)
+        glColor3f(1.0f, 0.0f, 0.0f);
+        glVertex3f(-1.0f, -1.0f, 1.0f);
+        glVertex3f(1.0f, -1.0f, 1.0f);
+        glVertex3f(1.0f, 1.0f, 1.0f);
+        glVertex3f(-1.0f, 1.0f, 1.0f);
+    glEnd();
+
+    glutSwapBuffers();
+}
+""")'''
+    
+    assert validate_function_call_pattern(function_call) is False, "C++ code in a triple-quoted string should be a valid function call"
