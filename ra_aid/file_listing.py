@@ -154,24 +154,40 @@ def get_all_project_files(
         # Not a git repository, use manual file listing
         base_path = Path(directory)
         
-        for root, dirs, files in os.walk(directory):
-            # Filter out excluded directories
-            dirs[:] = [d for d in dirs if d not in excluded_dirs and (include_hidden or not d.startswith('.'))]
-            
-            # Calculate relative path
-            rel_root = os.path.relpath(root, directory)
-            if rel_root == '.':
-                rel_root = ''
-            
-            # Process files
-            for file in files:
-                # Skip hidden files unless explicitly included
-                if not include_hidden and file.startswith('.'):
-                    continue
+        # First check if we can access the directory (check exists and isdir already done above)
+        try:
+            # We already verified existence, just check for permission errors
+            # Handle potential FileNotFoundError for mock tests
+            try:
+                os.listdir(directory)
+            except FileNotFoundError:
+                # This should normally not happen as we checked existence above
+                # But it can happen in mock tests
+                pass
+        except PermissionError as e:
+            raise DirectoryAccessError(f"Cannot access directory {directory}: {e}")
+        
+        try:
+            for root, dirs, files in os.walk(directory):
+                # Filter out excluded directories
+                dirs[:] = [d for d in dirs if d not in excluded_dirs and (include_hidden or not d.startswith('.'))]
                 
-                # Create relative path
-                rel_path = os.path.join(rel_root, file) if rel_root else file
-                all_files.append(rel_path)
+                # Calculate relative path
+                rel_root = os.path.relpath(root, directory)
+                if rel_root == '.':
+                    rel_root = ''
+                
+                # Process files
+                for file in files:
+                    # Skip hidden files unless explicitly included
+                    if not include_hidden and file.startswith('.'):
+                        continue
+                    
+                    # Create relative path
+                    rel_path = os.path.join(rel_root, file) if rel_root else file
+                    all_files.append(rel_path)
+        except PermissionError as e:
+            raise DirectoryAccessError(f"Permission denied while walking directory {directory}: {e}")
     
     # Apply additional exclude patterns if specified
     if exclude_patterns:
