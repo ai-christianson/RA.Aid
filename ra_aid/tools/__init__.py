@@ -4,18 +4,14 @@ from .fuzzy_find import fuzzy_find_project_files
 from .human import ask_human
 from .list_directory import list_directory_tree
 from .memory import (
-    delete_tasks,
     deregister_related_files,
     emit_key_facts,
     emit_key_snippet,
-    emit_plan,
     emit_related_files,
     emit_research_notes,
-    emit_task,
     get_memory_value,
     plan_implementation_completed,
     request_implementation,
-    swap_task_order,
     task_completed,
 )
 from .programmer import run_programming_task
@@ -33,10 +29,8 @@ __all__ = [
     "emit_expert_context",
     "emit_key_facts",
     "emit_key_snippet",
-    "emit_plan",
     "emit_related_files",
     "emit_research_notes",
-    "emit_task",
     "fuzzy_find_project_files",
     "get_memory_value",
     "list_directory_tree",
@@ -47,8 +41,6 @@ __all__ = [
     "put_complete_file_contents",
     "ripgrep_search",
     "file_str_replace",
-    "delete_tasks",
-    "swap_task_order",
     "monorepo_detected",
     "existing_project_detected",
     "ui_detected",

@@ -340,10 +340,6 @@ def request_task_implementation(task_spec: str) -> str:
     )
 
     # Get required parameters
-    tasks = [
-        _global_memory["tasks"][task_id] for task_id in sorted(_global_memory["tasks"])
-    ]
-    plan = _global_memory.get("plan", "")
     related_files = list(_global_memory["related_files"].values())
 
     try:
@@ -355,9 +351,9 @@ def request_task_implementation(task_spec: str) -> str:
 
         _result = run_task_implementation_agent(
             base_task=_global_memory.get("base_task", ""),
-            tasks=tasks,
+            tasks=[],  # No more tasks from global memory
             task=task_spec,
-            plan=plan,
+            plan="",  # No more plan from global memory
             related_files=related_files,
             model=model,
             expert_enabled=True,

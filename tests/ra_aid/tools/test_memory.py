@@ -8,18 +8,15 @@ from unittest.mock import patch, MagicMock, ANY
 from ra_aid.agents.key_snippets_gc_agent import delete_key_snippets
 from ra_aid.tools.memory import (
     _global_memory,
-    delete_tasks,
     deregister_related_files,
     emit_key_facts,
     emit_key_snippet,
     emit_related_files,
-    emit_task,
     get_memory_value,
     get_related_files,
     get_work_log,
     log_work_event,
     reset_work_log,
-    swap_task_order,
     is_binary_file,
     _is_binary_fallback,
 )
@@ -32,17 +29,11 @@ from ra_aid.database.models import KeyFact
 @pytest.fixture
 def reset_memory():
     """Reset global memory before each test"""
-    _global_memory["plans"] = []
-    _global_memory["tasks"] = {}
-    _global_memory["task_id_counter"] = 0
     _global_memory["related_files"] = {}
     _global_memory["related_file_id_counter"] = 0
     _global_memory["work_log"] = []
     yield
     # Clean up after test
-    _global_memory["plans"] = []
-    _global_memory["tasks"] = {}
-    _global_memory["task_id_counter"] = 0
     _global_memory["related_files"] = {}
     _global_memory["related_file_id_counter"] = 0
     _global_memory["work_log"] = []
@@ -705,127 +696,6 @@ def test_key_snippets_integration(mock_log_work_event, reset_memory, mock_key_sn
         with patch('ra_aid.agents.key_snippets_gc_agent.get_key_snippet_repository', mock_key_snippet_repository):
             result = delete_key_snippets.invoke({"snippet_ids": [1, 3]})
             assert result == "Snippets deleted."
-
-
-def test_emit_task_with_id(reset_memory):
-    """Test emitting tasks with ID tracking"""
-    # Test adding a single task
-    task = "Implement new feature"
-    result = emit_task.invoke({"task": task})
-
-    # Verify return message includes task ID
-    assert result == "Task #0 stored."
-
-    # Verify task stored correctly with ID
-    assert _global_memory["tasks"][0] == task
-
-    # Verify counter incremented
-    assert _global_memory["task_id_counter"] == 1
-
-    # Add another task to verify counter continues correctly
-    task2 = "Fix bug"
-    result = emit_task.invoke({"task": task2})
-    assert result == "Task #1 stored."
-    assert _global_memory["tasks"][1] == task2
-    assert _global_memory["task_id_counter"] == 2
-
-
-def test_delete_tasks(reset_memory):
-    """Test deleting tasks"""
-    # Add some test tasks
-    tasks = ["Task 1", "Task 2", "Task 3"]
-    for task in tasks:
-        emit_task.invoke({"task": task})
-
-    # Test deleting single task
-    result = delete_tasks.invoke({"task_ids": [1]})
-    assert result == "Tasks deleted."
-    assert 1 not in _global_memory["tasks"]
-    assert len(_global_memory["tasks"]) == 2
-
-    # Test deleting multiple tasks including non-existent ID
-    result = delete_tasks.invoke({"task_ids": [0, 2, 999]})
-    assert result == "Tasks deleted."
-    assert len(_global_memory["tasks"]) == 0
-
-    # Test deleting from empty tasks dict
-    result = delete_tasks.invoke({"task_ids": [0]})
-    assert result == "Tasks deleted."
-
-    # Counter should remain unchanged after deletions
-    assert _global_memory["task_id_counter"] == 3
-
-
-def test_swap_task_order_valid_ids(reset_memory):
-    """Test basic task swapping functionality"""
-    # Add test tasks
-    tasks = ["Task 1", "Task 2", "Task 3"]
-    for task in tasks:
-        emit_task.invoke({"task": task})
-
-    # Swap tasks 0 and 2
-    result = swap_task_order.invoke({"id1": 0, "id2": 2})
-    assert result == "Tasks deleted."
-
-    # Verify tasks were swapped
-    assert _global_memory["tasks"][0] == "Task 3"
-    assert _global_memory["tasks"][2] == "Task 1"
-    assert _global_memory["tasks"][1] == "Task 2"  # Unchanged
-
-
-def test_swap_task_order_invalid_ids(reset_memory):
-    """Test error handling for invalid task IDs"""
-    # Add a test task
-    emit_task.invoke({"task": "Task 1"})
-
-    # Try to swap with non-existent ID
-    result = swap_task_order.invoke({"id1": 0, "id2": 999})
-    assert result == "Invalid task ID(s)"
-
-    # Verify original task unchanged
-    assert _global_memory["tasks"][0] == "Task 1"
-
-
-def test_swap_task_order_same_id(reset_memory):
-    """Test handling of attempt to swap a task with itself"""
-    # Add test task
-    emit_task.invoke({"task": "Task 1"})
-
-    # Try to swap task with itself
-    result = swap_task_order.invoke({"id1": 0, "id2": 0})
-    assert result == "Cannot swap task with itself"
-
-    # Verify task unchanged
-    assert _global_memory["tasks"][0] == "Task 1"
-
-
-def test_swap_task_order_empty_tasks(reset_memory):
-    """Test swapping behavior with empty tasks dictionary"""
-    result = swap_task_order.invoke({"id1": 0, "id2": 1})
-    assert result == "Invalid task ID(s)"
-
-
-def test_swap_task_order_after_delete(reset_memory):
-    """Test swapping after deleting a task"""
-    # Add test tasks
-    tasks = ["Task 1", "Task 2", "Task 3"]
-    for task in tasks:
-        emit_task.invoke({"task": task})
-
-    # Delete middle task
-    delete_tasks.invoke({"task_ids": [1]})
-
-    # Try to swap with deleted task
-    result = swap_task_order.invoke({"id1": 0, "id2": 1})
-    assert result == "Invalid task ID(s)"
-
-    # Try to swap remaining valid tasks
-    result = swap_task_order.invoke({"id1": 0, "id2": 2})
-    assert result == "Tasks deleted."
-
-    # Verify swap worked
-    assert _global_memory["tasks"][0] == "Task 3"
-    assert _global_memory["tasks"][2] == "Task 1"
 
 
 def test_emit_related_files_binary_filtering(reset_memory, monkeypatch):

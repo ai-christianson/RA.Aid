@@ -46,9 +46,6 @@ from ra_aid.database.repositories.key_fact_repository import get_key_fact_reposi
 
 # Global memory store
 _global_memory: Dict[str, Any] = {
-    "plans": [],
-    "tasks": {},  # Dict[int, str] - ID to task mapping
-    "task_id_counter": 1,  # Counter for generating unique task IDs
     "implementation_requested": False,
     "related_files": {},  # Dict[int, str] - ID to filepath mapping
     "related_file_id_counter": 1,  # Counter for generating unique file IDs
@@ -112,38 +109,6 @@ def emit_research_notes(notes: str) -> str:
         return "Failed to store research note."
 
 
-@tool("emit_plan")
-def emit_plan(plan: str) -> str:
-    """Store a plan step in global memory.
-
-    Args:
-        plan: The plan step to store (markdown format; be clear, complete, use newlines, and use as many tokens as you need)
-    """
-    _global_memory["plans"].append(plan)
-    console.print(Panel(Markdown(plan), title="📋 Plan"))
-    log_work_event(f"Added plan step:\n\n{plan}")
-    return "Plan stored."
-
-
-@tool("emit_task")
-def emit_task(task: str) -> str:
-    """Store a task in global memory.
-
-    Args:
-        task: The task to store
-    """
-    # Get and increment task ID
-    task_id = _global_memory["task_id_counter"]
-    _global_memory["task_id_counter"] += 1
-
-    # Store task with ID
-    _global_memory["tasks"][task_id] = task
-
-    console.print(Panel(Markdown(task), title=f"✅ Task #{task_id}"))
-    log_work_event(f"Task #{task_id} added:\n\n{task}")
-    return f"Task #{task_id} stored."
-
-
 @tool("emit_key_facts")
 def emit_key_facts(facts: List[str]) -> str:
     """Store multiple key facts about the project or current task in global memory.
@@ -203,29 +168,6 @@ def emit_key_facts(facts: List[str]) -> str:
         logger.error(f"Failed to access key fact repository: {str(e)}")
     
     return "Facts stored."
-
-
-@tool("delete_tasks")
-def delete_tasks(task_ids: List[int]) -> str:
-    """Delete multiple tasks from global memory by their IDs.
-    Silently skips any IDs that don't exist.
-
-    Args:
-        task_ids: List of task IDs to delete
-    """
-    results = []
-    for task_id in task_ids:
-        if task_id in _global_memory["tasks"]:
-            # Delete the task
-            deleted_task = _global_memory["tasks"].pop(task_id)
-            success_msg = f"Successfully deleted task #{task_id}: {deleted_task}"
-            console.print(
-                Panel(Markdown(success_msg), title="Task Deleted", border_style="green")
-            )
-            results.append(success_msg)
-
-    log_work_event(f"Deleted tasks {task_ids}.")
-    return "Tasks deleted."
 
 
 @tool("request_implementation")
@@ -327,41 +269,6 @@ def emit_key_snippet(snippet_info: SnippetInfo) -> str:
     return f"Snippet #{snippet_id} stored."
 
 
-
-@tool("swap_task_order")
-def swap_task_order(id1: int, id2: int) -> str:
-    """Swap the order of two tasks in global memory by their IDs.
-
-    Args:
-        id1: First task ID
-        id2: Second task ID
-    """
-    # Validate IDs are different
-    if id1 == id2:
-        return "Cannot swap task with itself"
-
-    # Validate both IDs exist
-    if id1 not in _global_memory["tasks"] or id2 not in _global_memory["tasks"]:
-        return "Invalid task ID(s)"
-
-    # Swap the tasks
-    _global_memory["tasks"][id1], _global_memory["tasks"][id2] = (
-        _global_memory["tasks"][id2],
-        _global_memory["tasks"][id1],
-    )
-
-    # Display what was swapped
-    console.print(
-        Panel(
-            Markdown(f"Swapped:\n- Task #{id1} ↔️ Task #{id2}"),
-            title="🔄 Tasks Reordered",
-            border_style="green",
-        )
-    )
-
-    return "Tasks deleted."
-
-
 @tool("one_shot_completed")
 def one_shot_completed(message: str) -> str:
     """Signal that a one-shot task has been completed and execution should stop.
@@ -402,11 +309,9 @@ def plan_implementation_completed(message: str) -> str:
     """
     mark_should_exit()
     mark_plan_completed(message)
-    _global_memory["tasks"].clear()  # Clear task list when plan is completed
-    _global_memory["task_id_counter"] = 1
     console.print(Panel(Markdown(message), title="✅ Plan Executed"))
     log_work_event(f"Completed implementation:\n\n{message}")
-    return "Plan completion noted and task list cleared."
+    return "Plan completion noted."
 
 
 def get_related_files() -> List[str]:

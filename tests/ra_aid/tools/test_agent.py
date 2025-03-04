@@ -15,17 +15,11 @@ from ra_aid.tools.memory import _global_memory
 @pytest.fixture
 def reset_memory():
     """Reset global memory before each test"""
-    _global_memory["plans"] = []
-    _global_memory["tasks"] = {}
-    _global_memory["task_id_counter"] = 0
     _global_memory["related_files"] = {}
     _global_memory["related_file_id_counter"] = 0
     _global_memory["work_log"] = []
     yield
     # Clean up after test
-    _global_memory["plans"] = []
-    _global_memory["tasks"] = {}
-    _global_memory["task_id_counter"] = 0
     _global_memory["related_files"] = {}
     _global_memory["related_file_id_counter"] = 0
     _global_memory["work_log"] = []
@@ -168,8 +162,7 @@ def test_request_implementation_uses_key_fact_repository(reset_memory, mock_func
 
 def test_request_task_implementation_uses_key_fact_repository(reset_memory, mock_functions):
     """Test that request_task_implementation uses KeyFactRepository correctly."""
-    # Set up _global_memory with required values
-    _global_memory["tasks"] = {0: "Task 1"}
+    # Set up _global_memory with required values (without tasks)
     _global_memory["base_task"] = "Base task"
     
     # Mock running the implementation agent
