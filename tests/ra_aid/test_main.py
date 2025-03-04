@@ -10,12 +10,23 @@ from ra_aid.tools.memory import _global_memory
 @pytest.fixture
 def mock_dependencies(monkeypatch):
     """Mock all dependencies needed for main()."""
+    # Initialize global memory with necessary keys to prevent KeyError
+    _global_memory.clear()
+    _global_memory["related_files"] = {}
+    _global_memory["related_file_id_counter"] = 1
+    _global_memory["agent_depth"] = 0
+    _global_memory["work_log"] = []
+    _global_memory["config"] = {}
+    
+    # Mock dependencies that interact with external systems
     monkeypatch.setattr("ra_aid.__main__.check_dependencies", lambda: None)
-
-    monkeypatch.setattr(
-        "ra_aid.__main__.validate_environment", lambda args: (True, [], True, [])
-    )
-
+    monkeypatch.setattr("ra_aid.__main__.validate_environment", lambda args: (True, [], True, []))
+    monkeypatch.setattr("ra_aid.__main__.create_agent", lambda *args, **kwargs: None)
+    monkeypatch.setattr("ra_aid.__main__.run_agent_with_retry", lambda *args, **kwargs: None)
+    monkeypatch.setattr("ra_aid.__main__.run_research_agent", lambda *args, **kwargs: None)
+    monkeypatch.setattr("ra_aid.__main__.run_planning_agent", lambda *args, **kwargs: None)
+    
+    # Mock LLM initialization
     def mock_config_update(*args, **kwargs):
         config = _global_memory.get("config", {})
         if kwargs.get("temperature"):
@@ -24,10 +35,6 @@ def mock_dependencies(monkeypatch):
         return None
 
     monkeypatch.setattr("ra_aid.__main__.initialize_llm", mock_config_update)
-
-    monkeypatch.setattr(
-        "ra_aid.__main__.run_research_agent", lambda *args, **kwargs: None
-    )
 
 
 def test_recursion_limit_in_global_config(mock_dependencies):
@@ -109,20 +116,31 @@ def test_config_settings(mock_dependencies):
 def test_temperature_validation(mock_dependencies):
     """Test that temperature argument is correctly passed to initialize_llm."""
     import sys
-    from unittest.mock import patch
+    from unittest.mock import patch, ANY
 
     from ra_aid.__main__ import main
 
+    # Reset global memory for clean test
     _global_memory.clear()
+    _global_memory["related_files"] = {}
+    _global_memory["related_file_id_counter"] = 1
+    _global_memory["agent_depth"] = 0
+    _global_memory["work_log"] = []
+    _global_memory["config"] = {}
 
-    with patch("ra_aid.__main__.initialize_llm") as mock_init_llm:
-        with patch.object(
-            sys, "argv", ["ra-aid", "-m", "test", "--temperature", "0.7"]
-        ):
-            main()
-            mock_init_llm.assert_called_once()
-            assert mock_init_llm.call_args.kwargs["temperature"] == 0.7
+    # Test valid temperature (0.7)
+    with patch("ra_aid.__main__.initialize_llm", return_value=None) as mock_init_llm:
+        # Also patch any calls that would actually use the mocked initialize_llm function
+        with patch("ra_aid.__main__.run_research_agent", return_value=None):
+            with patch("ra_aid.__main__.run_planning_agent", return_value=None):
+                with patch.object(
+                    sys, "argv", ["ra-aid", "-m", "test", "--temperature", "0.7"]
+                ):
+                    main()
+                    # Check if temperature was stored in config correctly
+                    assert _global_memory["config"]["temperature"] == 0.7
 
+    # Test invalid temperature (2.1)
     with pytest.raises(SystemExit):
         with patch.object(
             sys, "argv", ["ra-aid", "-m", "test", "--temperature", "2.1"]

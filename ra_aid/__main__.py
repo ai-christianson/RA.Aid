@@ -331,16 +331,13 @@ implementation_memory = MemorySaver()
 
 
 def is_informational_query() -> bool:
-    """Determine if the current query is informational based on implementation_requested state."""
-    return _global_memory.get("config", {}).get(
-        "research_only", False
-    ) or not is_stage_requested("implementation")
+    """Determine if the current query is informational based on config settings."""
+    return _global_memory.get("config", {}).get("research_only", False)
 
 
 def is_stage_requested(stage: str) -> bool:
     """Check if a stage has been requested to proceed."""
-    if stage == "implementation":
-        return _global_memory.get("implementation_requested", False)
+    # This is kept for backward compatibility but no longer does anything
     return False
 
 

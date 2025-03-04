@@ -46,7 +46,6 @@ from ra_aid.database.repositories.key_fact_repository import get_key_fact_reposi
 
 # Global memory store
 _global_memory: Dict[str, Any] = {
-    "implementation_requested": False,
     "related_files": {},  # Dict[int, str] - ID to filepath mapping
     "related_file_id_counter": 1,  # Counter for generating unique file IDs
     "agent_depth": 0,
@@ -170,20 +169,6 @@ def emit_key_facts(facts: List[str]) -> str:
     return "Facts stored."
 
 
-@tool("request_implementation")
-def request_implementation() -> str:
-    """Request that implementation proceed after research/planning.
-    Used to indicate the agent should move to implementation stage.
-
-    Think carefully before requesting implementation.
-      Do you need to request research subtasks first?
-      Have you run relevant unit tests, if they exist, to get a baseline (this can be a subtask)?
-      Do you need to crawl deeper to find all related files and symbols?
-    """
-    _global_memory["implementation_requested"] = True
-    console.print(Panel("🚀 Implementation Requested", style="yellow", padding=0))
-    log_work_event("Implementation requested.")
-    return "Implementation requested."
 
 
 @tool("emit_key_snippet")
@@ -278,9 +263,6 @@ def one_shot_completed(message: str) -> str:
     Args:
         message: Completion message to display
     """
-    if _global_memory.get("implementation_requested", False):
-        return "Cannot complete in one shot - implementation was requested"
-
     mark_task_completed(message)
     console.print(Panel(Markdown(message), title="✅ Task Completed"))
     log_work_event(f"Task completed:\n\n{message}")

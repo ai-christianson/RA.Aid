@@ -11,7 +11,6 @@ from .memory import (
     emit_research_notes,
     get_memory_value,
     plan_implementation_completed,
-    request_implementation,
     task_completed,
 )
 from .programmer import run_programming_task
@@ -35,7 +34,6 @@ __all__ = [
     "get_memory_value",
     "list_directory_tree",
     "read_file_tool",
-    "request_implementation",
     "run_programming_task",
     "run_shell_command",
     "put_complete_file_contents",

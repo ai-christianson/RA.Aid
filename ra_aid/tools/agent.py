@@ -350,7 +350,7 @@ def request_task_implementation(task_spec: str) -> str:
         reset_completion_flags()
 
         _result = run_task_implementation_agent(
-            base_task=_global_memory.get("base_task", ""),
+            base_task="",  # No more base_task from global memory
             tasks=[],  # No more tasks from global memory
             task=task_spec,
             plan="",  # No more plan from global memory
