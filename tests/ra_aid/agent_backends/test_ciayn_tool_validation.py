@@ -64,13 +64,14 @@ void display() {
 
 def test_validate_function_call_with_nested_triple_quotes():
     """Test that function calls containing triple-quoted strings with nested docstrings are correctly validated."""
-    # The exact function call from the error message
+    # Fix the triple quotes in the string by using proper Python string escaping
+    # The original test case had invalid Python syntax due to nested triple quotes
     function_call = '''emit_key_snippet(snippet_info={
     "filepath": "tests/ra_aid/test_llm.py",
     "line_number": 56,
-    "snippet": """def test_initialize_expert_defaults(clean_env, mock_openai, monkeypatch):\n    """Test expert LLM initialization with explicit parameters."""\n           
-monkeypatch.setenv("EXPERT_OPENAI_API_KEY", "test-key")\n    _llm = initialize_expert_llm("openai", "o1")\n\n    mock_openai.assert_called_once_with(\n                     
-api_key="test-key",\n        model="o1",\n        reasoning_effort="high",\n        timeout=180,\n        max_retries=5,\n    )""",
+    "snippet": """def test_initialize_expert_defaults(clean_env, mock_openai, monkeypatch):\\n    \\"\\"\\"Test expert LLM initialization with explicit parameters.\\"\\"\\"\\n           
+monkeypatch.setenv("EXPERT_OPENAI_API_KEY", "test-key")\\n    _llm = initialize_expert_llm("openai", "o1")\\n\\n    mock_openai.assert_called_once_with(\\n                     
+api_key="test-key",\\n        model="o1",\\n        reasoning_effort="high",\\n        timeout=180,\\n        max_retries=5,\\n    )""",
     "description": "Test case for initializing expert LLM with explicit parameters."
 })'''
     
