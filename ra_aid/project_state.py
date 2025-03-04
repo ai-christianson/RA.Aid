@@ -28,7 +28,7 @@ def is_new_project(directory: str) -> bool:
 
     A project is considered new if it either:
     - Is an empty directory
-    - Contains only .git directory, .gitignore file, and/or .ra-aid directory
+    - Contains only .git directory, .gitignore file, .venv directory, and/or .ra-aid directory
 
     Args:
         directory: String path to the directory to check

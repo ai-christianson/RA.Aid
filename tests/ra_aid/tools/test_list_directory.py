@@ -130,8 +130,5 @@ def test_invalid_path():
     """Test error handling for invalid paths"""
     with pytest.raises(ValueError, match="Path does not exist"):
         list_directory_tree.invoke({"path": "/nonexistent/path"})
-
-    with pytest.raises(ValueError, match="Path is not a directory"):
-        list_directory_tree.invoke(
-            {"path": __file__}
-        )  # Try to list the test file itself
+    
+    # We now allow files to be passed to list_directory_tree, so we don't test for this case anymore

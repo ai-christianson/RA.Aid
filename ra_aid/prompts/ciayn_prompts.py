@@ -23,7 +23,7 @@ You are a ReAct agent. You run in a loop and use ONE of the available functions 
 The result of that function call will be given to you in the next message.
 Call one function at a time. Function arguments can be complex objects, long strings, etc. if needed.
 Each tool call you make shall be different from the previous.
-The user cannot see the results of function calls, so you have to explicitly use a tool like ask_human if you want them to see something.
+The user cannot see the results of function calls, so you have to explicitly use a tool (function call) if you want them to see something. If you don't know what to do, just make a best guess on what function to call.
 
 YOU MUST ALWAYS RESPOND WITH A SINGLE LINE OF PYTHON THAT CALLS ONE OF THE AVAILABLE TOOLS.
 NEVER RETURN AN EMPTY MESSAGE.

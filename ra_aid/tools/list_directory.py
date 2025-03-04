@@ -185,9 +185,10 @@ def list_directory_tree(
     exclude_patterns: List[str] = None,
 ) -> str:
     """List directory contents in a tree format with optional metadata.
+    If a file path is provided, returns information about just that file.
 
     Args:
-        path: Directory path to list
+        path: Directory or file path to list
         max_depth: Maximum depth to traverse (default: 1 for no recursion)
         follow_links: Whether to follow symbolic links
         show_size: Show file sizes (default: False)
@@ -200,24 +201,38 @@ def list_directory_tree(
     root_path = Path(path).resolve()
     if not root_path.exists():
         raise ValueError(f"Path does not exist: {path}")
-    if not root_path.is_dir():
-        raise ValueError(f"Path is not a directory: {path}")
-
-    # Load .gitignore patterns if present
-    spec = load_gitignore_patterns(root_path)
-
-    # Create tree
-    tree = Tree(f"📁 {root_path}/")
-    config = DirScanConfig(
-        max_depth=max_depth,
-        follow_links=follow_links,
-        show_size=show_size,
-        show_modified=show_modified,
-        exclude_patterns=DEFAULT_EXCLUDE_PATTERNS + (exclude_patterns or []),
-    )
-
-    # Build tree
-    build_tree(root_path, tree, config, 0, spec)
+    
+    # Load .gitignore patterns if present (only needed for directories)
+    spec = None
+    if root_path.is_dir():
+        spec = load_gitignore_patterns(root_path)
+        # Create tree for directory
+        tree = Tree(f"📁 {root_path}/")
+        config = DirScanConfig(
+            max_depth=max_depth,
+            follow_links=follow_links,
+            show_size=show_size,
+            show_modified=show_modified,
+            exclude_patterns=DEFAULT_EXCLUDE_PATTERNS + (exclude_patterns or []),
+        )
+        # Build tree
+        build_tree(root_path, tree, config, 0, spec)
+    else:
+        # Create a simple tree for a single file
+        tree = Tree(f"🗋 {root_path.parent}/")
+        file_text = root_path.name
+        
+        # Add size information if requested
+        if show_size:
+            size_str = format_size(root_path.stat().st_size)
+            file_text = f"{file_text} ({size_str})"
+            
+        # Add modified time if requested
+        if show_modified:
+            mod_time = format_time(root_path.stat().st_mtime)
+            file_text = f"{file_text} [Modified: {mod_time}]"
+            
+        tree.add(file_text)
 
     # Capture tree output
     with console.capture() as capture:

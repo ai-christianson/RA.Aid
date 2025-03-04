@@ -74,14 +74,15 @@ def get_file_listing(
     directory: str, limit: Optional[int] = None, include_hidden: bool = False
 ) -> Tuple[List[str], int]:
     """
-    Get a list of tracked files in a git repository.
+    Get a list of files in a directory.
 
-    Uses `git ls-files` for efficient file listing that respects .gitignore rules.
+    For git repositories, uses `git ls-files` for efficient file listing that respects .gitignore rules.
+    For non-git directories, falls back to manual file listing using Python's standard library.
     Returns a tuple containing the list of files (truncated if limit is specified)
     and the total count of files.
 
     Args:
-        directory: Path to the git repository
+        directory: Path to the directory
         limit: Optional maximum number of files to return
         include_hidden: Whether to include hidden files (starting with .) in the results
 
@@ -104,50 +105,74 @@ def get_file_listing(
             raise DirectoryNotFoundError(f"Not a directory: {directory}")
 
         # Check if it's a git repository
-        if not is_git_repo(directory):
-            return [], 0
-
-        # Get list of files from git ls-files
-        try:
-            # Get both tracked and untracked files
-            tracked_files_process = subprocess.run(
-                ["git", "ls-files"],
-                cwd=directory,
-                capture_output=True,
-                text=True,
-                check=True,
-            )
-            untracked_files_process = subprocess.run(
-                ["git", "ls-files", "--others", "--exclude-standard"],
-                cwd=directory,
-                capture_output=True,
-                text=True,
-                check=True,
-            )
-        except subprocess.CalledProcessError as e:
-            raise GitCommandError(f"Git command failed: {e}")
-        except PermissionError as e:
-            raise DirectoryAccessError(f"Permission denied: {e}")
-
-        # Combine and process the files
+        is_git = is_git_repo(directory)
+        
         all_files = []
-        for file in (
-            tracked_files_process.stdout.splitlines()
-            + untracked_files_process.stdout.splitlines()
-        ):
-            file = file.strip()
-            if not file:
-                continue
-            # Skip hidden files unless explicitly included
-            if not include_hidden and (
-                file.startswith(".")
-                or any(part.startswith(".") for part in file.split("/"))
+        
+        if is_git:
+            # Get list of files from git ls-files
+            try:
+                # Get both tracked and untracked files
+                tracked_files_process = subprocess.run(
+                    ["git", "ls-files"],
+                    cwd=directory,
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
+                untracked_files_process = subprocess.run(
+                    ["git", "ls-files", "--others", "--exclude-standard"],
+                    cwd=directory,
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
+            except subprocess.CalledProcessError as e:
+                raise GitCommandError(f"Git command failed: {e}")
+            except PermissionError as e:
+                raise DirectoryAccessError(f"Permission denied: {e}")
+
+            # Combine and process the files
+            for file in (
+                tracked_files_process.stdout.splitlines()
+                + untracked_files_process.stdout.splitlines()
             ):
-                continue
-            # Skip .aider files
-            if ".aider" in file:
-                continue
-            all_files.append(file)
+                file = file.strip()
+                if not file:
+                    continue
+                # Skip hidden files unless explicitly included
+                if not include_hidden and (
+                    file.startswith(".")
+                    or any(part.startswith(".") for part in file.split("/"))
+                ):
+                    continue
+                # Skip .aider files
+                if ".aider" in file:
+                    continue
+                all_files.append(file)
+        else:
+            # Not a git repository, use manual file listing
+            base_path = Path(directory)
+            excluded_dirs = {'.ra-aid', '.venv', '.git', '.aider', '__pycache__'}
+            
+            for root, dirs, files in os.walk(directory):
+                # Filter out excluded directories
+                dirs[:] = [d for d in dirs if d not in excluded_dirs and (include_hidden or not d.startswith('.'))]
+                
+                # Calculate relative path
+                rel_root = os.path.relpath(root, directory)
+                if rel_root == '.':
+                    rel_root = ''
+                
+                # Process files
+                for file in files:
+                    # Skip hidden files unless explicitly included
+                    if not include_hidden and file.startswith('.'):
+                        continue
+                    
+                    # Create relative path
+                    rel_path = os.path.join(rel_root, file) if rel_root else file
+                    all_files.append(rel_path)
 
         # Remove duplicates and sort
         all_files = sorted(set(all_files))
