@@ -120,8 +120,12 @@ ask_expert("What does this mean?")'''
         # Execute
         result = agent._execute_tool(mock_message)
     
-    # Assert
-    assert result == "Expert answer"  # Should return the result of the last tool call
+    # Assert: We now verify that the result contains both tool call results with tagging
+    assert "<result-" in result  # Check for result tag start
+    assert "</result-" in result  # Check for result tag end
+    assert "Context emitted" in result  # Check first result content
+    assert "Expert answer" in result  # Check second result content
+    # Verify the correct function calls were made with the right parameters
     mock_emit_expert_context.assert_called_once_with("Important context")
     mock_ask_expert.assert_called_once_with("What does this mean?")
 
@@ -170,5 +174,8 @@ emit_key_snippet({"file": "example.py", "start_line": 10, "end_line": 20})'''
             # Execute
             result = agent._execute_tool(mock_message)
     
-    # Assert
-    assert result == "Snippet emitted"  # Should return the result of the last tool call
+    # Assert: Verify both tool results are included in the tagged output
+    assert "<result-" in result  # Check for result tag start
+    assert "</result-" in result  # Check for result tag end
+    assert "Facts emitted" in result  # Check first result content
+    assert "Snippet emitted" in result  # Check second result content

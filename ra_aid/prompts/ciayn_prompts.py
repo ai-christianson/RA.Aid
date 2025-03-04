@@ -93,6 +93,22 @@ PERFORMING WELL AS AN EFFICIENT YET COMPLETE AGENT WILL HELP MY CAREER.
 4. WHEN USING put_complete_file_contents, ALWAYS PUT THE ENTIRE FILE CONTENT INSIDE ONE TRIPLE-QUOTED STRING
 </critical rules>
 
+<bundled tools format>
+When you bundle multiple tool calls in one response, you'll receive results in the following format:
+
+```
+<result-abc123>
+First tool result content
+</result-abc123>
+
+<result-def456>
+Second tool result content
+</result-def456>
+```
+
+Each result will have a unique random ID tag, and the order of results will match the order of your tool calls.
+</bundled tools format>
+
 DO NOT CLAIM YOU ARE FINISHED UNTIL YOU ACTUALLY ARE!
 Output **ONLY THE CODE** and **NO MARKDOWN BACKTICKS**
 """
@@ -114,19 +130,6 @@ def main():
     print("Hello")
 \"\"\")
 </multiline content reminder>
-
-<bundleable tools reminder>
-You can bundle multiple calls to these tools in one response:
-- emit_expert_context
-- ask_expert
-- emit_key_facts
-- emit_key_snippet
-
-Example of bundled tools:
-emit_key_facts(["Important fact 1", "Important fact 2"])
-emit_expert_context("Additional context")
-ask_expert("Question about this context")
-</bundleable tools reminder>
 
 --- EXAMPLE GOOD OUTPUTS ---
 
@@ -169,5 +172,13 @@ CORRECT:   put_complete_file_contents("/path/to/file.py", \"\"\"def main():
     print("Hello")
 \"\"\")
 
-NOTE: You can also bundle multiple calls to certain tools (emit_expert_context, ask_expert, emit_key_facts, emit_key_snippet) in one response.
+NOTE: You can also bundle multiple calls to certain tools (emit_expert_context, ask_expert, emit_key_facts, emit_key_snippet, and others) in one response. When bundling tools, each result will be returned with a unique random ID tag in this format:
+
+<result-abc123>
+First tool result content
+</result-abc123>
+
+<result-def456>
+Second tool result content
+</result-def456>
 """

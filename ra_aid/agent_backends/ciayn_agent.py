@@ -1,5 +1,7 @@
 import re
 import ast
+import string
+import random
 from dataclasses import dataclass
 from typing import Any, Dict, Generator, List, Optional, Union, Tuple
 
@@ -246,6 +248,8 @@ class CiaynAgent:
             # If we have multiple valid bundleable calls, execute them in sequence
             if len(tool_calls) > 1:
                 results = []
+                result_strings = []
+                
                 for call in tool_calls:
                     # Validate and fix each call if needed
                     if validate_function_call_pattern(call):
@@ -255,9 +259,13 @@ class CiaynAgent:
                     # Execute the call and collect the result
                     result = eval(call.strip(), globals_dict)
                     results.append(result)
+                    
+                    # Generate a random ID for this result
+                    result_id = self._generate_random_id()
+                    result_strings.append(f"<result-{result_id}>\n{result}\n</result-{result_id}>")
                 
-                # Return the result of the last tool call
-                return results[-1]
+                # Return all results as one big string with tagged sections
+                return "\n\n".join(result_strings)
             
             # Regular single tool call case
             if validate_function_call_pattern(code):
@@ -283,6 +291,18 @@ class CiaynAgent:
             raise ToolExecutionError(
                 error_msg, base_message=msg, tool_name=tool_name
             ) from e
+
+    def _generate_random_id(self, length: int = 6) -> str:
+        """Generate a random ID string for result tagging.
+        
+        Args:
+            length: Length of the random ID to generate
+            
+        Returns:
+            String of random alphanumeric characters
+        """
+        chars = string.ascii_lowercase + string.digits
+        return ''.join(random.choice(chars) for _ in range(length))
 
     def extract_tool_name(self, code: str) -> str:
         """Extract the tool name from the code."""
