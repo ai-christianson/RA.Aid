@@ -14,6 +14,7 @@ from ra_aid.models_params import DEFAULT_TOKEN_LIMIT
 from ra_aid.prompts.ciayn_prompts import CIAYN_AGENT_SYSTEM_PROMPT, CIAYN_AGENT_HUMAN_PROMPT, EXTRACT_TOOL_CALL_PROMPT, NO_TOOL_CALL_PROMPT
 from ra_aid.tools.expert import get_model
 from ra_aid.tools.reflection import get_function_info
+from ra_aid.console.output import cpm
 
 logger = get_logger(__name__)
 
@@ -181,6 +182,11 @@ class CiaynAgent:
 
             # if the eval fails, try to extract it via a model call
             if validate_function_call_pattern(code):
+                cpm(
+                    f"Tool call validation failed. Attempting to extract function call using LLM.",
+                    title="⚠ Validation Warning",
+                    border_style="yellow"
+                )
                 functions_list = "\n\n".join(self.available_functions)
                 code = self._extract_tool_call(code, functions_list)
                 pass
@@ -190,6 +196,11 @@ class CiaynAgent:
         except Exception as e:
             error_msg = f"Error: {str(e)} \n Could not execute code: {code}"
             tool_name = self.extract_tool_name(code)
+            cpm(
+                f"Tool execution failed for `{tool_name}`: {str(e)}",
+                title="❗ Tool Error",
+                border_style="red"
+            )
             raise ToolExecutionError(
                 error_msg, base_message=msg, tool_name=tool_name
             ) from e
@@ -207,6 +218,11 @@ class CiaynAgent:
 
         if not fallback_response:
             self.chat_history.append(err_msg)
+            cpm(
+                f"Tool fallback was attempted but did not succeed. Original error: {str(e)}",
+                title="❗ Fallback Failed",
+                border_style="red bold"
+            )
             return ""
 
         self.chat_history.append(self.fallback_fixed_msg)
@@ -215,6 +231,13 @@ class CiaynAgent:
         # msg += f"<fallback llm raw invocation>{fallback_response[0]}</fallback llm raw invocation>\n"
         msg += f"<fallback tool name>{e.tool_name}</fallback tool name>\n"
         msg += f"<fallback tool call result>\n{fallback_response[1]}\n</fallback tool call result>\n"
+        
+        cpm(
+            f"Fallback successful for tool `{e.tool_name}` after {DEFAULT_MAX_TOOL_FAILURES} consecutive failures.",
+            title="✓ Fallback Success",
+            border_style="green"
+        )
+        
         return msg
 
     def _create_agent_chunk(self, content: str) -> Dict[str, Any]:
@@ -291,6 +314,11 @@ class CiaynAgent:
 
     def _extract_tool_call(self, code: str, functions_list: str) -> str:
         model = get_model()
+        cpm(
+            f"Attempting to fix malformed tool call using LLM. Original code:\n```\n{code}\n```",
+            title="🔧 Tool Call Extraction",
+            border_style="blue"
+        )
         prompt = EXTRACT_TOOL_CALL_PROMPT.format(
             functions_list=functions_list, code=code
         )
@@ -300,10 +328,21 @@ class CiaynAgent:
         pattern = r"([\w_\-]+)\((.*?)\)"
         matches = re.findall(pattern, response, re.DOTALL)
         if len(matches) == 0:
+            cpm(
+                "Failed to extract a valid tool call from the model's response.",
+                title="❗ Extraction Failed", 
+                border_style="red"
+            )
             raise ToolExecutionError("Failed to extract tool call")
         ma = matches[0][0].strip()
         mb = matches[0][1].strip().replace("\n", " ")
-        return f"{ma}({mb})"
+        fixed_code = f"{ma}({mb})"
+        cpm(
+            f"Successfully extracted tool call: `{fixed_code}`",
+            title="✓ Extraction Success",
+            border_style="green"
+        )
+        return fixed_code
 
     def stream(
         self, messages_dict: Dict[str, List[Any]], _config: Dict[str, Any] = None
@@ -326,12 +365,25 @@ class CiaynAgent:
                 empty_response_count += 1
                 logger.warning(f"Model returned empty response (count: {empty_response_count})")
                 
+                cpm(
+                    f"The model returned an empty response (attempt {empty_response_count} of {max_empty_responses}). Requesting the model to make a valid tool call.",
+                    title="⚠ Empty Response",
+                    border_style="yellow bold"
+                )
+                
                 if empty_response_count >= max_empty_responses:
                     # If we've had too many empty responses, raise an error to break the loop
                     from ra_aid.agent_context import mark_agent_crashed
                     crash_message = "Agent failed to make any tool calls after multiple attempts"
                     mark_agent_crashed(crash_message)
                     logger.error(crash_message)
+                    
+                    cpm(
+                        "The agent has crashed after multiple failed attempts to generate a valid tool call.",
+                        title="❗ Agent Crashed",
+                        border_style="red bold"
+                    )
+                    
                     yield self._create_error_chunk(crash_message)
                     return
                 
@@ -350,6 +402,11 @@ class CiaynAgent:
                 yield {}
 
             except ToolExecutionError as e:
+                cpm(
+                    f"Tool execution error: {str(e)}. Attempting fallback...",
+                    title="↻ Fallback Attempt",
+                    border_style="yellow"
+                )
                 fallback_response = self.fallback_handler.handle_failure(
                     e, self, self.chat_history
                 )
