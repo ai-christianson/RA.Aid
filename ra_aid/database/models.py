@@ -42,8 +42,8 @@ def initialize_database():
     # to avoid circular imports
     # Note: This import needs to be here, not at the top level
     try:
-        from ra_aid.database.models import KeyFact, KeySnippet, HumanInput
-        db.create_tables([KeyFact, KeySnippet, HumanInput], safe=True)
+        from ra_aid.database.models import KeyFact, KeySnippet, HumanInput, ResearchNote
+        db.create_tables([KeyFact, KeySnippet, HumanInput, ResearchNote], safe=True)
         logger.debug("Ensured database tables exist")
     except Exception as e:
         logger.error(f"Error creating tables: {str(e)}")
@@ -147,3 +147,19 @@ class KeySnippet(BaseModel):
     
     class Meta:
         table_name = "key_snippet"
+
+
+class ResearchNote(BaseModel):
+    """
+    Model representing a research note stored in the database.
+    
+    Research notes are detailed information compiled from research activities
+    that need to be preserved for future reference. These notes contain valuable
+    context and findings about topics relevant to the project.
+    """
+    content = peewee.TextField()
+    human_input = peewee.ForeignKeyField(HumanInput, backref='research_notes', null=True)
+    # created_at and updated_at are inherited from BaseModel
+    
+    class Meta:
+        table_name = "research_note"

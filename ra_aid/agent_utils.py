@@ -87,8 +87,10 @@ from ra_aid.tools.handle_user_defined_test_cmd_execution import execute_test_com
 from ra_aid.database.repositories.key_fact_repository import get_key_fact_repository
 from ra_aid.database.repositories.key_snippet_repository import get_key_snippet_repository
 from ra_aid.database.repositories.human_input_repository import get_human_input_repository
+from ra_aid.database.repositories.research_note_repository import get_research_note_repository
 from ra_aid.model_formatters import format_key_facts_dict
 from ra_aid.model_formatters.key_snippets_formatter import format_key_snippets_dict
+from ra_aid.model_formatters.research_notes_formatter import format_research_notes_dict
 from ra_aid.tools.memory import (
     _global_memory,
     get_memory_value,
@@ -672,6 +674,15 @@ def run_planning_agent(
         logger.error(f"Failed to access key snippet repository: {str(e)}")
         key_snippets = ""
     
+    # Get formatted research notes using repository
+    try:
+        repository = get_research_note_repository()
+        notes_dict = repository.get_notes_dict()
+        formatted_research_notes = format_research_notes_dict(notes_dict)
+    except RuntimeError as e:
+        logger.error(f"Failed to access research note repository: {str(e)}")
+        formatted_research_notes = ""
+    
     planning_prompt = PLANNING_PROMPT.format(
         current_date=current_date,
         working_directory=working_directory,
@@ -680,7 +691,7 @@ def run_planning_agent(
         web_research_section=web_research_section,
         base_task=base_task,
         project_info=formatted_project_info,
-        research_notes=get_memory_value("research_notes"),
+        research_notes=formatted_research_notes,
         related_files="\n".join(get_related_files()),
         key_facts=key_facts,
         key_snippets=key_snippets,
@@ -783,6 +794,15 @@ def run_task_implementation_agent(
         logger.error(f"Failed to access key fact repository: {str(e)}")
         key_facts = ""
         
+    # Get formatted research notes using repository
+    try:
+        repository = get_research_note_repository()
+        notes_dict = repository.get_notes_dict()
+        formatted_research_notes = format_research_notes_dict(notes_dict)
+    except RuntimeError as e:
+        logger.error(f"Failed to access research note repository: {str(e)}")
+        formatted_research_notes = ""
+        
     prompt = IMPLEMENTATION_PROMPT.format(
         current_date=current_date,
         working_directory=working_directory,
@@ -793,7 +813,7 @@ def run_task_implementation_agent(
         related_files=related_files,
         key_facts=key_facts,
         key_snippets=format_key_snippets_dict(get_key_snippet_repository().get_snippets_dict()),
-        research_notes=get_memory_value("research_notes"),
+        research_notes=formatted_research_notes,
         work_log=get_memory_value("work_log"),
         expert_section=EXPERT_PROMPT_SECTION_IMPLEMENTATION if expert_enabled else "",
         human_section=(

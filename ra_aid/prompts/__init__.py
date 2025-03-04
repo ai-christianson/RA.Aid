@@ -56,8 +56,10 @@ from ra_aid.prompts.chat_prompts import CHAT_PROMPT
 
 # CIAYN prompts
 from ra_aid.prompts.ciayn_prompts import (
-    CIAYN_AGENT_BASE_PROMPT,
+    CIAYN_AGENT_SYSTEM_PROMPT,
+    CIAYN_AGENT_HUMAN_PROMPT,
     EXTRACT_TOOL_CALL_PROMPT,
+    NO_TOOL_CALL_PROMPT,
 )
 
 # Add an __all__ list with all the exported names
@@ -98,6 +100,8 @@ __all__ = [
     "CHAT_PROMPT",
     
     # CIAYN prompts
-    "CIAYN_AGENT_BASE_PROMPT",
+    "CIAYN_AGENT_SYSTEM_PROMPT",
+    "CIAYN_AGENT_HUMAN_PROMPT",
     "EXTRACT_TOOL_CALL_PROMPT",
+    "NO_TOOL_CALL_PROMPT",
 ]

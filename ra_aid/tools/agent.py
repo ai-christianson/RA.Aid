@@ -16,9 +16,11 @@ from ra_aid.console.formatting import print_error
 from ra_aid.database.repositories.human_input_repository import HumanInputRepository
 from ra_aid.database.repositories.key_fact_repository import get_key_fact_repository
 from ra_aid.database.repositories.key_snippet_repository import get_key_snippet_repository
+from ra_aid.database.repositories.research_note_repository import get_research_note_repository
 from ra_aid.exceptions import AgentInterrupt
 from ra_aid.model_formatters import format_key_facts_dict
 from ra_aid.model_formatters.key_snippets_formatter import format_key_snippets_dict
+from ra_aid.model_formatters.research_notes_formatter import format_research_notes_dict
 from ra_aid.tools.memory import _global_memory
 
 from ..console import print_task_header
@@ -74,7 +76,7 @@ def request_research(query: str) -> ResearchResult:
             "completion_message": "Research stopped - maximum recursion depth reached",
             "key_facts": key_facts,
             "related_files": get_related_files(),
-            "research_notes": get_memory_value("research_notes"),
+            "research_notes": "",  # Empty for max depth exceeded case
             "key_snippets": key_snippets,
             "success": False,
             "reason": "max_depth_exceeded",
@@ -129,12 +131,20 @@ def request_research(query: str) -> ResearchResult:
     except RuntimeError as e:
         logger.error(f"Failed to access key snippet repository: {str(e)}")
         key_snippets = ""
+
+    try:
+        repository = get_research_note_repository()
+        notes_dict = repository.get_notes_dict()
+        formatted_research_notes = format_research_notes_dict(notes_dict)
+    except RuntimeError as e:
+        logger.error(f"Failed to access research note repository: {str(e)}")
+        formatted_research_notes = ""
         
     response_data = {
         "completion_message": completion_message,
         "key_facts": key_facts,
         "related_files": get_related_files(),
-        "research_notes": get_memory_value("research_notes"),
+        "research_notes": formatted_research_notes,
         "key_snippets": key_snippets,
         "success": success,
         "reason": reason,
@@ -201,11 +211,19 @@ def request_web_research(query: str) -> ResearchResult:
     except RuntimeError as e:
         logger.error(f"Failed to access key snippet repository: {str(e)}")
         key_snippets = ""
+
+    try:
+        repository = get_research_note_repository()
+        notes_dict = repository.get_notes_dict()
+        formatted_research_notes = format_research_notes_dict(notes_dict)
+    except RuntimeError as e:
+        logger.error(f"Failed to access research note repository: {str(e)}")
+        formatted_research_notes = ""
         
     response_data = {
         "completion_message": completion_message,
         "key_snippets": key_snippets,
-        "research_notes": get_memory_value("research_notes"),
+        "research_notes": formatted_research_notes,
         "success": success,
         "reason": reason,
     }
@@ -281,12 +299,20 @@ def request_research_and_implementation(query: str) -> Dict[str, Any]:
     except RuntimeError as e:
         logger.error(f"Failed to access key snippet repository: {str(e)}")
         key_snippets = ""
+
+    try:
+        repository = get_research_note_repository()
+        notes_dict = repository.get_notes_dict()
+        formatted_research_notes = format_research_notes_dict(notes_dict)
+    except RuntimeError as e:
+        logger.error(f"Failed to access research note repository: {str(e)}")
+        formatted_research_notes = ""
         
     response_data = {
         "completion_message": completion_message,
         "key_facts": key_facts,
         "related_files": get_related_files(),
-        "research_notes": get_memory_value("research_notes"),
+        "research_notes": formatted_research_notes,
         "key_snippets": key_snippets,
         "success": success,
         "reason": reason,

@@ -32,7 +32,6 @@ from ra_aid.database.models import KeyFact
 @pytest.fixture
 def reset_memory():
     """Reset global memory before each test"""
-    _global_memory["research_notes"] = []
     _global_memory["plans"] = []
     _global_memory["tasks"] = {}
     _global_memory["task_id_counter"] = 0
@@ -41,7 +40,6 @@ def reset_memory():
     _global_memory["work_log"] = []
     yield
     # Clean up after test
-    _global_memory["research_notes"] = []
     _global_memory["plans"] = []
     _global_memory["tasks"] = {}
     _global_memory["task_id_counter"] = 0
@@ -188,17 +186,14 @@ def test_emit_key_facts_single_fact(reset_memory, mock_repository):
 
 def test_get_memory_value_other_types(reset_memory):
     """Test get_memory_value remains compatible with other memory types"""
-    # Add some research notes
-    _global_memory["research_notes"].append("Note 1")
-    _global_memory["research_notes"].append("Note 2")
-
-    assert get_memory_value("research_notes") == "Note 1\nNote 2"
-
     # Test with empty list
     assert get_memory_value("plans") == ""
 
     # Test with non-existent key
     assert get_memory_value("nonexistent") == ""
+    
+    # Test research_notes returns empty string when no repository is available
+    assert get_memory_value("research_notes") == ""
 
 
 def test_log_work_event(reset_memory):

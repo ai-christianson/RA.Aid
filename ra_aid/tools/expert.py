@@ -11,9 +11,11 @@ logger = logging.getLogger(__name__)
 
 from ..database.repositories.key_fact_repository import get_key_fact_repository
 from ..database.repositories.key_snippet_repository import get_key_snippet_repository
+from ..database.repositories.research_note_repository import get_research_note_repository
 from ..llm import initialize_expert_llm
 from ..model_formatters import format_key_facts_dict
 from ..model_formatters.key_snippets_formatter import format_key_snippets_dict
+from ..model_formatters.research_notes_formatter import format_research_notes_dict
 from .memory import _global_memory, get_memory_value
 
 console = Console()
@@ -167,7 +169,14 @@ def ask_expert(question: str) -> str:
     except RuntimeError as e:
         logger.error(f"Failed to access key fact repository: {str(e)}")
         key_facts = ""
-    research_notes = get_memory_value("research_notes")
+    # Get research notes directly from repository and format using the formatter
+    try:
+        repository = get_research_note_repository()
+        notes_dict = repository.get_notes_dict()
+        formatted_research_notes = format_research_notes_dict(notes_dict)
+    except RuntimeError as e:
+        logger.error(f"Failed to access research note repository: {str(e)}")
+        formatted_research_notes = ""
 
     # Build display query (just question)
     display_query = "# Question\n" + question
@@ -187,8 +196,8 @@ def ask_expert(question: str) -> str:
     if related_contents:
         query_parts.extend(["# Related Files", related_contents])
 
-    if related_contents:
-        query_parts.extend(["# Research Notes", research_notes])
+    if formatted_research_notes:
+        query_parts.extend(["# Research Notes", formatted_research_notes])
 
     if key_snippets and len(key_snippets) > 0:
         query_parts.extend(["# Key Snippets", key_snippets])

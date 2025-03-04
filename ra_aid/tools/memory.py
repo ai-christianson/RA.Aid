@@ -20,6 +20,7 @@ from ra_aid.agent_context import (
 from ra_aid.database.repositories.key_fact_repository import get_key_fact_repository
 from ra_aid.database.repositories.key_snippet_repository import get_key_snippet_repository
 from ra_aid.database.repositories.human_input_repository import get_human_input_repository
+from ra_aid.database.repositories.research_note_repository import get_research_note_repository
 from ra_aid.model_formatters import key_snippets_formatter
 from ra_aid.logging_config import get_logger
 
@@ -45,7 +46,6 @@ from ra_aid.database.repositories.key_fact_repository import get_key_fact_reposi
 
 # Global memory store
 _global_memory: Dict[str, Any] = {
-    "research_notes": [],
     "plans": [],
     "tasks": {},  # Dict[int, str] - ID to task mapping
     "task_id_counter": 1,  # Counter for generating unique task IDs
@@ -66,9 +66,50 @@ def emit_research_notes(notes: str) -> str:
     Args:
         notes: REQUIRED The research notes to store
     """
-    _global_memory["research_notes"].append(notes)
-    console.print(Panel(Markdown(notes), title="🔍 Research Notes"))
-    return "Research notes stored."
+    # Try to get the latest human input
+    human_input_id = None
+    try:
+        human_input_repo = get_human_input_repository()
+        recent_inputs = human_input_repo.get_recent(1)
+        if recent_inputs and len(recent_inputs) > 0:
+            human_input_id = recent_inputs[0].id
+    except RuntimeError as e:
+        logger.warning(f"No HumanInputRepository available: {str(e)}")
+    except Exception as e:
+        logger.warning(f"Failed to get recent human input: {str(e)}")
+    
+    try:
+        # Create note in database using repository
+        created_note = get_research_note_repository().create(notes, human_input_id=human_input_id)
+        note_id = created_note.id
+        
+        # Format the note using the formatter
+        from ra_aid.model_formatters.research_notes_formatter import format_research_note
+        formatted_note = format_research_note(note_id, notes)
+        
+        # Display formatted note
+        console.print(Panel(Markdown(formatted_note), title="🔍 Research Notes"))
+        
+        log_work_event(f"Stored research note #{note_id}.")
+        
+        # Check if we need to clean up notes (more than 30)
+        try:
+            all_notes = get_research_note_repository().get_all()
+            if len(all_notes) > 30:
+                # Trigger the research notes cleaner agent
+                try:
+                    from ra_aid.agents.research_notes_gc_agent import run_research_notes_gc_agent
+                    run_research_notes_gc_agent()
+                except Exception as e:
+                    logger.error(f"Failed to run research notes cleaner: {str(e)}")
+        except RuntimeError as e:
+            logger.error(f"Failed to access research note repository: {str(e)}")
+            
+        return f"Research note #{note_id} stored."
+    except RuntimeError as e:
+        logger.error(f"Failed to access research note repository: {str(e)}")
+        console.print(f"Error storing research note: {str(e)}", style="red")
+        return "Failed to store research note."
 
 
 @tool("emit_plan")
@@ -617,6 +658,7 @@ def get_memory_value(key: str) -> str:
 
     Different memory types return different formats:
     - For work_log: Returns formatted markdown with timestamps and events
+    - For research_notes: Returns formatted markdown from repository
     - For other types: Returns newline-separated list of values
 
     Args:
@@ -631,6 +673,32 @@ def get_memory_value(key: str) -> str:
             return ""
         entries = [f"## {entry['timestamp']}\n{entry['event']}" for entry in values]
         return "\n\n".join(entries)
+    
+    if key == "research_notes":
+        # DEPRECATED: This method of accessing research notes is deprecated.
+        # Use direct repository access instead:
+        # from ra_aid.database.repositories.research_note_repository import get_research_note_repository
+        # from ra_aid.model_formatters.research_notes_formatter import format_research_notes_dict
+        # repository = get_research_note_repository()
+        # notes_dict = repository.get_notes_dict()
+        # formatted_notes = format_research_notes_dict(notes_dict)
+        logger.warning("DEPRECATED: Accessing research notes via get_memory_value() is deprecated. "
+                       "Use direct repository access with get_research_note_repository() instead.")
+        try:
+            # Import required modules for research notes
+            from ra_aid.database.repositories.research_note_repository import get_research_note_repository
+            from ra_aid.model_formatters.research_notes_formatter import format_research_notes_dict
+            
+            # Get notes from repository and format them
+            repository = get_research_note_repository()
+            notes_dict = repository.get_notes_dict()
+            return format_research_notes_dict(notes_dict)
+        except RuntimeError as e:
+            logger.error(f"Failed to access research note repository: {str(e)}")
+            return ""
+        except Exception as e:
+            logger.error(f"Error accessing research notes: {str(e)}")
+            return ""
 
     # For other types (lists), join with newlines
     values = _global_memory.get(key, [])
