@@ -24,6 +24,7 @@ DEFAULT_EXCLUDE_DIRS = [
     "venv",
     ".idea",
     ".vscode",
+    ".ra-aid",
 ]
 
 
