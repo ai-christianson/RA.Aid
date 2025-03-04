@@ -396,7 +396,7 @@ def run_research_agent(
     except RuntimeError as e:
         logger.error(f"Failed to access key fact repository: {str(e)}")
         key_facts = ""
-    code_snippets = _global_memory.get("code_snippets", "")
+    key_snippets = format_key_snippets_dict(get_key_snippet_repository().get_snippets_dict())
     related_files = get_related_files()
 
     current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -435,7 +435,7 @@ def run_research_agent(
         web_research_section=web_research_section,
         key_facts=key_facts,
         work_log=get_memory_value("work_log"),
-        code_snippets=code_snippets,
+        key_snippets=key_snippets,
         related_files=related_files,
         project_info=formatted_project_info,
         new_project_hints=NEW_PROJECT_HINTS if project_info.is_new else "",
@@ -551,7 +551,11 @@ def run_web_research_agent(
     except RuntimeError as e:
         logger.error(f"Failed to access key fact repository: {str(e)}")
         key_facts = ""
-    code_snippets = _global_memory.get("code_snippets", "")
+    try:
+        key_snippets = format_key_snippets_dict(get_key_snippet_repository().get_snippets_dict())
+    except RuntimeError as e:
+        logger.error(f"Failed to access key snippet repository: {str(e)}")
+        key_snippets = ""
     related_files = get_related_files()
 
     current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -565,7 +569,7 @@ def run_web_research_agent(
         human_section=human_section,
         key_facts=key_facts,
         work_log=get_memory_value("work_log"),
-        code_snippets=code_snippets,
+        key_snippets=key_snippets,
         related_files=related_files,
     )
 

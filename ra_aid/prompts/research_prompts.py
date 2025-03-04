@@ -27,7 +27,7 @@ Context from Previous Research (if available):
 </key facts>
 
 <relevant code snippets>
-{code_snippets}
+{key_snippets}
 </relevant code snippets>
 
 <related files>
