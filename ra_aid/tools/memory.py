@@ -536,6 +536,10 @@ def log_work_event(event: str) -> str:
 
 def is_binary_file(filepath):
     """Check if a file is binary using magic library if available."""
+    # First check if file is empty
+    if os.path.getsize(filepath) == 0:
+        return False  # Empty files are not binary
+        
     if magic:
         try:
             mime = magic.from_file(filepath, mime=True)
@@ -565,6 +569,10 @@ def is_binary_file(filepath):
 def _is_binary_fallback(filepath):
     """Fallback method to detect binary files without using magic."""
     try:
+        # First check if file is empty
+        if os.path.getsize(filepath) == 0:
+            return False  # Empty files are not binary
+            
         with open(filepath, "r", encoding="utf-8") as f:
             chunk = f.read(1024)
 

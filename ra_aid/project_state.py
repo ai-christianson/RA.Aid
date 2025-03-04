@@ -50,7 +50,7 @@ def is_new_project(directory: str) -> bool:
             raise DirectoryNotFoundError(f"Path is not a directory: {directory}")
 
         # Get all files/dirs in the directory, excluding allowed items
-        _allowed_items: Set[str] = {".git", ".gitignore", ".ra-aid"}
+        _allowed_items: Set[str] = {".git", ".gitignore", ".ra-aid", ".venv"}
         try:
             contents = set()
             for item in path.iterdir():

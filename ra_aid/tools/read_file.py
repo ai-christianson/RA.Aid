@@ -8,6 +8,7 @@ from rich.console import Console
 from rich.panel import Panel
 
 from ra_aid.text.processing import truncate_output
+from ra_aid.tools.memory import is_binary_file
 
 console = Console()
 
@@ -22,11 +23,24 @@ def read_file_tool(filepath: str, encoding: str = "utf-8") -> Dict[str, str]:
     Args:
         filepath: Path to the file to read
         encoding: File encoding to use (default: utf-8)
+    
+    DO NOT ATTEMPT TO READ BINARY FILES
     """
     start_time = time.time()
     try:
         if not os.path.exists(filepath):
             raise FileNotFoundError(f"File not found: {filepath}")
+
+        # Check if the file is binary
+        if is_binary_file(filepath):
+            console.print(
+                Panel(
+                    f"Cannot read binary file: {filepath}",
+                    title="⚠️ Binary File Detected",
+                    border_style="bright_red",
+                )
+            )
+            return {"error": "read_file failed because we cannot read binary files"}
 
         logging.debug(f"Starting to read file: {filepath}")
         content = []

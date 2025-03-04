@@ -74,3 +74,19 @@ def test_empty_file(tmp_path):
     assert isinstance(result, dict)
     assert "content" in result
     assert result["content"] == ""
+
+
+def test_binary_file_detection(tmp_path):
+    """Test that binary files are detected and not read"""
+    # Create a binary file with null bytes
+    test_file = tmp_path / "binary.bin"
+    with open(test_file, "wb") as f:
+        f.write(b"Some text with \x00 null bytes \x00 to make it binary")
+
+    # Try to read the binary file
+    result = read_file_tool.invoke({"filepath": str(test_file)})
+
+    # Verify that the tool detected it as a binary file
+    assert isinstance(result, dict)
+    assert "error" in result
+    assert "read_file failed because we cannot read binary files" == result["error"]

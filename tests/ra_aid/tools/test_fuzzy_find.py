@@ -29,6 +29,30 @@ def git_repo(tmp_path):
     return tmp_path
 
 
+@pytest.fixture
+def non_git_repo(tmp_path):
+    """Create a temporary directory with some test files but not a git repository"""
+    # Create some files
+    (tmp_path / "main.py").write_text("print('hello')")
+    (tmp_path / "test_main.py").write_text("def test_main(): pass")
+    (tmp_path / "lib").mkdir()
+    (tmp_path / "lib/utils.py").write_text("def util(): pass")
+    (tmp_path / "lib/__pycache__").mkdir()
+    (tmp_path / "lib/__pycache__/utils.cpython-39.pyc").write_text("cache")
+    
+    # Create some additional files
+    (tmp_path / "data.txt").write_text("some data")
+    (tmp_path / "config.py").write_text("CONFIG = {'key': 'value'}")
+    
+    # Create hidden files/directories that should be excluded by default
+    (tmp_path / ".venv").mkdir()
+    (tmp_path / ".venv/lib").mkdir()
+    (tmp_path / ".venv/lib/python3.9").mkdir()
+    (tmp_path / ".hidden_file.txt").write_text("hidden content")
+    
+    return tmp_path
+
+
 def test_basic_fuzzy_search(git_repo):
     """Test basic fuzzy matching functionality"""
     results = fuzzy_find_project_files.invoke(
@@ -91,12 +115,30 @@ def test_invalid_threshold():
         fuzzy_find_project_files.invoke({"search_term": "test", "threshold": 101})
 
 
-def test_non_git_repo(tmp_path):
-    """Test error handling outside git repo"""
-    with pytest.raises(InvalidGitRepositoryError):
-        fuzzy_find_project_files.invoke(
-            {"search_term": "test", "repo_path": str(tmp_path)}
-        )
+def test_non_git_repo(non_git_repo):
+    """Test fuzzy find works in non-git directories"""
+    # Now the function should work with non-git repositories
+    results = fuzzy_find_project_files.invoke(
+        {"search_term": "main", "repo_path": str(non_git_repo)}
+    )
+    assert len(results) >= 1
+    assert any("main.py" in match[0] for match in results)
+
+
+def test_hidden_files_inclusion(non_git_repo):
+    """Test include_hidden parameter works correctly"""
+    # Without include_hidden parameter (default False)
+    results_without_hidden = fuzzy_find_project_files.invoke(
+        {"search_term": "hidden", "repo_path": str(non_git_repo)}
+    )
+    assert len(results_without_hidden) == 0
+    
+    # With include_hidden=True
+    results_with_hidden = fuzzy_find_project_files.invoke(
+        {"search_term": "hidden", "repo_path": str(non_git_repo), "include_hidden": True}
+    )
+    assert len(results_with_hidden) >= 1
+    assert any(".hidden_file.txt" in match[0] for match in results_with_hidden)
 
 
 def test_exact_match(git_repo):
@@ -131,3 +173,27 @@ def test_no_matches(git_repo):
         {"search_term": "nonexistentfile", "threshold": 80, "repo_path": str(git_repo)}
     )
     assert len(results) == 0
+
+
+def test_excluding_system_dirs(non_git_repo):
+    """Test that system directories are excluded by default"""
+    # Create files in directories that should be excluded by default
+    (non_git_repo / "__pycache__").mkdir(exist_ok=True)
+    (non_git_repo / "__pycache__/module.cpython-39.pyc").write_text("cache data")
+    (non_git_repo / ".ra-aid").mkdir(exist_ok=True)
+    (non_git_repo / ".ra-aid/config.json").write_text('{"setting": "value"}')
+    
+    # Run search for files that should be excluded
+    results = fuzzy_find_project_files.invoke(
+        {"search_term": "config", "repo_path": str(non_git_repo)}
+    )
+    
+    # Should find config.py but not .ra-aid/config.json
+    assert any("config.py" in match[0] for match in results)
+    assert not any(".ra-aid/config.json" in match[0] for match in results)
+    
+    # Similarly for __pycache__
+    results_cache = fuzzy_find_project_files.invoke(
+        {"search_term": "module", "repo_path": str(non_git_repo)}
+    )
+    assert len(results_cache) == 0  # Should not find __pycache__ files
