@@ -14,6 +14,7 @@ from ra_aid.models_params import DEFAULT_BASE_LATENCY, models_params
 from ra_aid.proc.interactive import run_interactive_command
 from ra_aid.text.processing import truncate_output
 from ra_aid.tools.memory import _global_memory, log_work_event
+from ra_aid.database.repositories.related_files_repository import get_related_files_repository
 
 console = Console()
 logger = get_logger(__name__)
@@ -91,13 +92,18 @@ def run_programming_task(
 
     # Get combined list of files (explicit + related) with normalized paths
     # and deduplicated using set operations
+    related_files_paths = []
+    try:
+        repo = get_related_files_repository()
+        related_files_paths = list(repo.get_all().values())
+        logger.debug("Retrieved related files from repository")
+    except RuntimeError as e:
+        # Repository not initialized
+        logger.warning(f"Failed to get related files repository: {e}")
+    
     files_to_use = list(
         {os.path.abspath(f) for f in (files or [])}
-        | {
-            os.path.abspath(f)
-            for f in _global_memory["related_files"].values()
-            if "related_files" in _global_memory
-        }
+        | {os.path.abspath(f) for f in related_files_paths}
     )
 
     # Add config file if specified

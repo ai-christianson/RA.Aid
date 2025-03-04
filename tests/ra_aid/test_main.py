@@ -1,6 +1,7 @@
 """Unit tests for __main__.py argument parsing."""
 
 import pytest
+from unittest.mock import patch, MagicMock
 
 from ra_aid.__main__ import parse_arguments
 from ra_aid.config import DEFAULT_RECURSION_LIMIT
@@ -12,8 +13,6 @@ def mock_dependencies(monkeypatch):
     """Mock all dependencies needed for main()."""
     # Initialize global memory with necessary keys to prevent KeyError
     _global_memory.clear()
-    _global_memory["related_files"] = {}
-    _global_memory["related_file_id_counter"] = 1
     _global_memory["agent_depth"] = 0
     _global_memory["work_log"] = []
     _global_memory["config"] = {}
@@ -35,6 +34,28 @@ def mock_dependencies(monkeypatch):
         return None
 
     monkeypatch.setattr("ra_aid.__main__.initialize_llm", mock_config_update)
+
+
+@pytest.fixture(autouse=True)
+def mock_related_files_repository():
+    """Mock the RelatedFilesRepository to avoid database operations during tests"""
+    with patch('ra_aid.database.repositories.related_files_repository.related_files_repo_var') as mock_repo_var:
+        # Setup a mock repository
+        mock_repo = MagicMock()
+        
+        # Create a dictionary to simulate stored files
+        related_files = {}
+        
+        # Setup get_all method to return the files dict
+        mock_repo.get_all.return_value = related_files
+        
+        # Setup format_related_files method
+        mock_repo.format_related_files.return_value = [f"ID#{file_id} {filepath}" for file_id, filepath in sorted(related_files.items())]
+        
+        # Make the mock context var return our mock repo
+        mock_repo_var.get.return_value = mock_repo
+        
+        yield mock_repo
 
 
 def test_recursion_limit_in_global_config(mock_dependencies):
@@ -122,8 +143,6 @@ def test_temperature_validation(mock_dependencies):
 
     # Reset global memory for clean test
     _global_memory.clear()
-    _global_memory["related_files"] = {}
-    _global_memory["related_file_id_counter"] = 1
     _global_memory["agent_depth"] = 0
     _global_memory["work_log"] = []
     _global_memory["config"] = {}

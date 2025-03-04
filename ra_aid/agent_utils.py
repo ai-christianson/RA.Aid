@@ -397,7 +397,7 @@ def run_research_agent(
         logger.error(f"Failed to access key fact repository: {str(e)}")
         key_facts = ""
     code_snippets = _global_memory.get("code_snippets", "")
-    related_files = _global_memory.get("related_files", "")
+    related_files = get_related_files()
 
     current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     working_directory = os.getcwd()
@@ -552,7 +552,7 @@ def run_web_research_agent(
         logger.error(f"Failed to access key fact repository: {str(e)}")
         key_facts = ""
     code_snippets = _global_memory.get("code_snippets", "")
-    related_files = _global_memory.get("related_files", "")
+    related_files = get_related_files()
 
     current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     working_directory = os.getcwd()

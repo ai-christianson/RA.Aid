@@ -1,10 +1,57 @@
 import pytest
+from unittest.mock import patch, MagicMock
 
 from ra_aid.tools.programmer import (
     get_aider_executable,
     parse_aider_flags,
     run_programming_task,
 )
+from ra_aid.database.repositories.related_files_repository import get_related_files_repository
+
+@pytest.fixture(autouse=True)
+def mock_related_files_repository():
+    """Mock the RelatedFilesRepository to avoid database operations during tests"""
+    with patch('ra_aid.database.repositories.related_files_repository.related_files_repo_var') as mock_repo_var:
+        # Setup a mock repository
+        mock_repo = MagicMock()
+        
+        # Create a dictionary to simulate stored files
+        related_files = {}
+        
+        # Setup get_all method to return the files dict
+        mock_repo.get_all.return_value = related_files
+        
+        # Setup format_related_files method
+        mock_repo.format_related_files.return_value = [f"ID#{file_id} {filepath}" for file_id, filepath in sorted(related_files.items())]
+        
+        # Setup add_file method
+        def mock_add_file(filepath):
+            normalized_path = os.path.abspath(filepath)
+            # Check if path already exists
+            for file_id, path in related_files.items():
+                if path == normalized_path:
+                    return file_id
+            
+            # Add new file
+            file_id = len(related_files) + 1
+            related_files[file_id] = normalized_path
+            return file_id
+        mock_repo.add_file.side_effect = mock_add_file
+        
+        # Setup remove_file method
+        def mock_remove_file(file_id):
+            if file_id in related_files:
+                return related_files.pop(file_id)
+            return None
+        mock_repo.remove_file.side_effect = mock_remove_file
+        
+        # Make the mock context var return our mock repo
+        mock_repo_var.get.return_value = mock_repo
+        
+        # Also patch the get_related_files_repository function
+        with patch('ra_aid.tools.programmer.get_related_files_repository', return_value=mock_repo):
+            yield mock_repo
+
 
 # Test cases for parse_aider_flags function
 test_cases = [
@@ -78,11 +125,11 @@ def test_parse_aider_flags(input_flags, expected, description):
     assert result == expected, f"Failed test case: {description}"
 
 
-def test_aider_config_flag(mocker):
+def test_aider_config_flag(mocker, mock_related_files_repository):
     """Test that aider config flag is properly included in the command when specified."""
+    # Mock config in global memory but not related files (using repository now)
     mock_memory = {
         "config": {"aider_config": "/path/to/config.yml"},
-        "related_files": {},
     }
     mocker.patch("ra_aid.tools.programmer._global_memory", mock_memory)
 
@@ -99,15 +146,15 @@ def test_aider_config_flag(mocker):
     assert args[config_index + 1] == "/path/to/config.yml"
 
 
-def test_path_normalization_and_deduplication(mocker, tmp_path):
+def test_path_normalization_and_deduplication(mocker, tmp_path, mock_related_files_repository):
     """Test path normalization and deduplication in run_programming_task."""
     # Create a temporary test file
     test_file = tmp_path / "test.py"
     test_file.write_text("")
     new_file = tmp_path / "new.py"
 
-    # Mock dependencies
-    mocker.patch("ra_aid.tools.programmer._global_memory", {"related_files": {}})
+    # Mock dependencies - only need to mock config part of global memory now
+    mocker.patch("ra_aid.tools.programmer._global_memory", {"config": {}})
     mocker.patch(
         "ra_aid.tools.programmer.get_aider_executable", return_value="/path/to/aider"
     )

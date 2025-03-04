@@ -2,6 +2,7 @@
 
 import pytest
 from unittest.mock import patch, MagicMock
+import os
 
 from ra_aid.tools.agent import (
     request_research,
@@ -10,20 +11,38 @@ from ra_aid.tools.agent import (
     request_research_and_implementation,
 )
 from ra_aid.tools.memory import _global_memory
+from ra_aid.database.repositories.related_files_repository import get_related_files_repository
 
 
 @pytest.fixture
 def reset_memory():
     """Reset global memory before each test"""
-    _global_memory["related_files"] = {}
-    _global_memory["related_file_id_counter"] = 0
     _global_memory["work_log"] = []
     yield
     # Clean up after test
-    _global_memory["related_files"] = {}
-    _global_memory["related_file_id_counter"] = 0
     _global_memory["work_log"] = []
 
+
+@pytest.fixture(autouse=True)
+def mock_related_files_repository():
+    """Mock the RelatedFilesRepository to avoid database operations during tests"""
+    with patch('ra_aid.database.repositories.related_files_repository.related_files_repo_var') as mock_repo_var:
+        # Setup a mock repository
+        mock_repo = MagicMock()
+        
+        # Create a dictionary to simulate stored files
+        related_files = {}
+        
+        # Setup get_all method to return the files dict
+        mock_repo.get_all.return_value = related_files
+        
+        # Setup format_related_files method
+        mock_repo.format_related_files.return_value = [f"ID#{file_id} {filepath}" for file_id, filepath in sorted(related_files.items())]
+        
+        # Make the mock context var return our mock repo
+        mock_repo_var.get.return_value = mock_repo
+        
+        yield mock_repo
 
 @pytest.fixture
 def mock_functions():

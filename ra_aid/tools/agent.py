@@ -16,6 +16,7 @@ from ra_aid.console.formatting import print_error
 from ra_aid.database.repositories.human_input_repository import HumanInputRepository
 from ra_aid.database.repositories.key_fact_repository import get_key_fact_repository
 from ra_aid.database.repositories.key_snippet_repository import get_key_snippet_repository
+from ra_aid.database.repositories.related_files_repository import get_related_files_repository
 from ra_aid.database.repositories.research_note_repository import get_research_note_repository
 from ra_aid.exceptions import AgentInterrupt
 from ra_aid.model_formatters import format_key_facts_dict
@@ -340,7 +341,7 @@ def request_task_implementation(task_spec: str) -> str:
     )
 
     # Get required parameters
-    related_files = list(_global_memory["related_files"].values())
+    related_files = list(get_related_files_repository().get_all().values())
 
     try:
         print_task_header(task_spec)

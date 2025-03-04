@@ -20,6 +20,11 @@ from ra_aid.database.repositories.key_snippet_repository import (
     KeySnippetRepositoryManager, 
     get_key_snippet_repository
 )
+from ra_aid.database.repositories.related_files_repository import (
+    RelatedFilesRepository,
+    RelatedFilesRepositoryManager,
+    get_related_files_repository
+)
 from ra_aid.database.repositories.research_note_repository import (
     ResearchNoteRepository,
     ResearchNoteRepositoryManager,
@@ -36,6 +41,9 @@ __all__ = [
     'KeySnippetRepository', 
     'KeySnippetRepositoryManager', 
     'get_key_snippet_repository',
+    'RelatedFilesRepository',
+    'RelatedFilesRepositoryManager',
+    'get_related_files_repository',
     'ResearchNoteRepository',
     'ResearchNoteRepositoryManager',
     'get_research_note_repository',

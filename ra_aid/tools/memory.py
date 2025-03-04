@@ -1,12 +1,8 @@
 import os
 from typing import Any, Dict, List, Optional
 
-try:
-    import magic
-except ImportError:
-    magic = None
-
 from langchain_core.tools import tool
+from ra_aid.utils.file_utils import is_binary_file
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
@@ -44,10 +40,11 @@ console = Console()
 # Import repositories using the get_* functions
 from ra_aid.database.repositories.key_fact_repository import get_key_fact_repository
 
+# Import the related files repository
+from ra_aid.database.repositories.related_files_repository import get_related_files_repository
+
 # Global memory store
 _global_memory: Dict[str, Any] = {
-    "related_files": {},  # Dict[int, str] - ID to filepath mapping
-    "related_file_id_counter": 1,  # Counter for generating unique file IDs
     "agent_depth": 0,
     "work_log": [],  # List[WorkLogEntry] - Timestamped work events
 }
@@ -302,8 +299,8 @@ def get_related_files() -> List[str]:
     Returns:
         List of formatted strings in the format 'ID#X path/to/file.py'
     """
-    files = _global_memory["related_files"]
-    return [f"ID#{file_id} {filepath}" for file_id, filepath in sorted(files.items())]
+    repo = get_related_files_repository()
+    return repo.format_related_files()
 
 
 @tool("emit_related_files")
@@ -313,6 +310,7 @@ def emit_related_files(files: List[str]) -> str:
     Args:
         files: List of file paths to add
     """
+    repo = get_related_files_repository()
     results = []
     added_files = []
     invalid_paths = []
@@ -344,27 +342,20 @@ def emit_related_files(files: List[str]) -> str:
             results.append(f"Skipped binary file: '{file}'")
             continue
 
-        # Normalize the path
-        normalized_path = os.path.abspath(file)
-
-        # Check if normalized path already exists in values
-        existing_id = None
-        for fid, fpath in _global_memory["related_files"].items():
-            if fpath == normalized_path:
-                existing_id = fid
-                break
-
-        if existing_id is not None:
-            # File exists, use existing ID
-            results.append(f"File ID #{existing_id}: {file}")
-        else:
-            # New file, assign new ID
-            file_id = _global_memory["related_file_id_counter"]
-            _global_memory["related_file_id_counter"] += 1
-
-            # Store normalized path with ID
-            _global_memory["related_files"][file_id] = normalized_path
-            added_files.append((file_id, file))  # Keep original path for display
+        # Add file to repository
+        file_id = repo.add_file(file)
+        
+        if file_id is not None:
+            # Check if it's a new file by comparing with previous results
+            is_new_file = True
+            for r in results:
+                if r.startswith(f"File ID #{file_id}:"):
+                    is_new_file = False
+                    break
+                    
+            if is_new_file:
+                added_files.append((file_id, file))  # Keep original path for display
+                
             results.append(f"File ID #{file_id}: {file}")
 
     # Rich output - single consolidated panel for added files
@@ -421,57 +412,7 @@ def log_work_event(event: str) -> str:
     return f"Event logged: {event}"
 
 
-def is_binary_file(filepath):
-    """Check if a file is binary using magic library if available."""
-    # First check if file is empty
-    if os.path.getsize(filepath) == 0:
-        return False  # Empty files are not binary
-        
-    if magic:
-        try:
-            mime = magic.from_file(filepath, mime=True)
-            file_type = magic.from_file(filepath)
 
-            # If MIME type starts with 'text/', it's likely a text file
-            if mime.startswith("text/"):
-                return False
-                
-            # Also consider 'application/x-python' and similar script types as text
-            if any(mime.startswith(prefix) for prefix in ['application/x-python', 'application/javascript']):
-                return False
-                
-            # Check for common text file descriptors
-            text_indicators = ["text", "script", "xml", "json", "yaml", "markdown", "HTML"]
-            if any(indicator.lower() in file_type.lower() for indicator in text_indicators):
-                return False
-                
-            # If none of the text indicators are present, assume it's binary
-            return True
-        except Exception:
-            return _is_binary_fallback(filepath)
-    else:
-        return _is_binary_fallback(filepath)
-
-
-def _is_binary_fallback(filepath):
-    """Fallback method to detect binary files without using magic."""
-    try:
-        # First check if file is empty
-        if os.path.getsize(filepath) == 0:
-            return False  # Empty files are not binary
-            
-        with open(filepath, "r", encoding="utf-8") as f:
-            chunk = f.read(1024)
-
-            # Check for null bytes which indicate binary content
-            if "\0" in chunk:
-                return True
-
-            # If we can read it as text without errors, it's probably not binary
-            return False
-    except UnicodeDecodeError:
-        # If we can't decode as UTF-8, it's likely binary
-        return True
 
 
 def get_work_log() -> str:
@@ -518,17 +459,18 @@ def reset_work_log() -> str:
 
 @tool("deregister_related_files")
 def deregister_related_files(file_ids: List[int]) -> str:
-    """Delete multiple related files from global memory by their IDs.
+    """Delete multiple related files by their IDs.
     Silently skips any IDs that don't exist.
 
     Args:
         file_ids: List of file IDs to delete
     """
+    repo = get_related_files_repository()
     results = []
+    
     for file_id in file_ids:
-        if file_id in _global_memory["related_files"]:
-            # Delete the file reference
-            deleted_file = _global_memory["related_files"].pop(file_id)
+        deleted_file = repo.remove_file(file_id)
+        if deleted_file:
             success_msg = (
                 f"Successfully removed related file #{file_id}: {deleted_file}"
             )

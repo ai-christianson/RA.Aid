@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 from ..database.repositories.key_fact_repository import get_key_fact_repository
 from ..database.repositories.key_snippet_repository import get_key_snippet_repository
+from ..database.repositories.related_files_repository import get_related_files_repository
 from ..database.repositories.research_note_repository import get_research_note_repository
 from ..llm import initialize_expert_llm
 from ..model_formatters import format_key_facts_dict
@@ -154,7 +155,7 @@ def ask_expert(question: str) -> str:
     global expert_context
 
     # Get all content first
-    file_paths = list(_global_memory["related_files"].values())
+    file_paths = list(get_related_files_repository().get_all().values())
     related_contents = read_related_files(file_paths)
     # Get key snippets directly from repository and format using the formatter
     try:
