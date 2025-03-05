@@ -4,15 +4,17 @@
   "private": true,
   "scripts": {
     "docusaurus": "docusaurus",
-    "start": "docusaurus start",
-    "build": "docusaurus build",
+    "start": "node scripts/version.js && docusaurus start",
+    "generate-version": "node scripts/version.js",
+    "build": "npm run generate-version && docusaurus build",
     "swizzle": "docusaurus swizzle",
     "deploy": "docusaurus deploy",
     "clear": "docusaurus clear",
     "serve": "docusaurus serve",
     "write-translations": "docusaurus write-translations",
     "write-heading-ids": "docusaurus write-heading-ids",
-    "typecheck": "tsc"
+    "typecheck": "tsc",
+    "version-json": "node scripts/version.js"
   },
   "dependencies": {
     "@docusaurus/core": "3.7.0",
