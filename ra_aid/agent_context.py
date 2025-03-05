@@ -90,6 +90,17 @@ class AgentContext:
     def is_completed(self) -> bool:
         """Check if the current context is marked as completed."""
         return self.task_completed or self.plan_completed
+        
+    @property
+    def depth(self) -> int:
+        """Calculate the depth of this context based on parent chain.
+        
+        Returns:
+            int: 0 for a context with no parent, parent.depth + 1 otherwise
+        """
+        if self.parent is None:
+            return 0
+        return self.parent.depth + 1
 
 
 def get_current_context() -> Optional[AgentContext]:
@@ -99,6 +110,18 @@ def get_current_context() -> Optional[AgentContext]:
         The current AgentContext or None if no context is active
     """
     return getattr(_thread_local, "current_context", None)
+
+
+def get_depth() -> int:
+    """Get the depth of the current agent context.
+    
+    Returns:
+        int: Depth of the current context, or 0 if no context exists
+    """
+    ctx = get_current_context()
+    if ctx is None:
+        return 0
+    return ctx.depth
 
 
 @contextmanager

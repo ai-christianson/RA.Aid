@@ -154,8 +154,9 @@ def test_request_research_uses_key_fact_repository(reset_memory, mock_functions)
 
 def test_request_research_max_depth(reset_memory, mock_functions):
     """Test that max recursion depth handling uses KeyFactRepository."""
-    # Set recursion depth to max
-    _global_memory["agent_depth"] = 3
+    # Mock depth using context-based approach
+    with patch('ra_aid.tools.agent.get_depth') as mock_get_depth:
+        mock_get_depth.return_value = 3
     
     # Call the function (should hit max depth case)
     result = request_research("test query")

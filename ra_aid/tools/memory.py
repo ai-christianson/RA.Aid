@@ -41,9 +41,7 @@ from ra_aid.database.repositories.key_fact_repository import get_key_fact_reposi
 from ra_aid.database.repositories.related_files_repository import get_related_files_repository
 
 # Global memory store
-_global_memory: Dict[str, Any] = {
-    "agent_depth": 0,
-}
+_global_memory: Dict[str, Any] = {}
 
 
 @tool("emit_research_notes")

@@ -14,7 +14,6 @@ def mock_dependencies(monkeypatch):
     """Mock all dependencies needed for main()."""
     # Initialize global memory with necessary keys to prevent KeyError
     _global_memory.clear()
-    _global_memory["agent_depth"] = 0
     _global_memory["config"] = {}
     
     # Mock dependencies that interact with external systems
@@ -193,7 +192,6 @@ def test_temperature_validation(mock_dependencies):
 
     # Reset global memory for clean test
     _global_memory.clear()
-    _global_memory["agent_depth"] = 0
     _global_memory["config"] = {}
 
     # Test valid temperature (0.7)

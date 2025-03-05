@@ -316,18 +316,22 @@ def test_setup_and_restore_interrupt_handling():
     assert signal.getsignal(signal.SIGINT) == original_handler
 
 
-def test_increment_and_decrement_agent_depth():
-    from ra_aid.agent_utils import (
-        _decrement_agent_depth,
-        _global_memory,
-        _increment_agent_depth,
-    )
+def test_agent_context_depth():
+    from ra_aid.agent_context import agent_context, get_depth
 
-    _global_memory["agent_depth"] = 10
-    _increment_agent_depth()
-    assert _global_memory["agent_depth"] == 11
-    _decrement_agent_depth()
-    assert _global_memory["agent_depth"] == 10
+    # Test depth with nested contexts
+    assert get_depth() == 0  # No context
+    with agent_context() as ctx1:
+        assert get_depth() == 0  # Root context has depth 0
+        assert ctx1.depth == 0
+        
+        with agent_context() as ctx2:
+            assert get_depth() == 1  # Nested context has depth 1
+            assert ctx2.depth == 1
+            
+            with agent_context() as ctx3:
+                assert get_depth() == 2  # Doubly nested context has depth 2
+                assert ctx3.depth == 2
 
 
 def test_run_agent_stream(monkeypatch):
@@ -501,12 +505,6 @@ def test_run_agent_with_retry_checks_crash_status(monkeypatch):
     def mock_restore_interrupt_handling(handler):
         pass
 
-    def mock_increment_agent_depth():
-        pass
-
-    def mock_decrement_agent_depth():
-        pass
-
     def mock_is_crashed():
         return ctx.is_crashed() if ctx else False
 
@@ -521,12 +519,6 @@ def test_run_agent_with_retry_checks_crash_status(monkeypatch):
     monkeypatch.setattr(
         "ra_aid.agent_utils._restore_interrupt_handling",
         mock_restore_interrupt_handling,
-    )
-    monkeypatch.setattr(
-        "ra_aid.agent_utils._increment_agent_depth", mock_increment_agent_depth
-    )
-    monkeypatch.setattr(
-        "ra_aid.agent_utils._decrement_agent_depth", mock_decrement_agent_depth
     )
     monkeypatch.setattr("ra_aid.agent_utils.check_interrupt", lambda: None)
 
@@ -581,12 +573,6 @@ def test_run_agent_with_retry_handles_badrequest_error(monkeypatch):
     def mock_restore_interrupt_handling(handler):
         pass
 
-    def mock_increment_agent_depth():
-        pass
-
-    def mock_decrement_agent_depth():
-        pass
-
     def mock_mark_agent_crashed(message):
         ctx.agent_has_crashed = True
         ctx.agent_crashed_message = message
@@ -602,12 +588,6 @@ def test_run_agent_with_retry_handles_badrequest_error(monkeypatch):
     monkeypatch.setattr(
         "ra_aid.agent_utils._restore_interrupt_handling",
         mock_restore_interrupt_handling,
-    )
-    monkeypatch.setattr(
-        "ra_aid.agent_utils._increment_agent_depth", mock_increment_agent_depth
-    )
-    monkeypatch.setattr(
-        "ra_aid.agent_utils._decrement_agent_depth", mock_decrement_agent_depth
     )
     monkeypatch.setattr("ra_aid.agent_utils.check_interrupt", lambda: None)
 
@@ -660,12 +640,6 @@ def test_run_agent_with_retry_handles_api_badrequest_error(monkeypatch):
     def mock_restore_interrupt_handling(handler):
         pass
 
-    def mock_increment_agent_depth():
-        pass
-
-    def mock_decrement_agent_depth():
-        pass
-
     def mock_mark_agent_crashed(message):
         ctx.agent_has_crashed = True
         ctx.agent_crashed_message = message
@@ -681,12 +655,6 @@ def test_run_agent_with_retry_handles_api_badrequest_error(monkeypatch):
     monkeypatch.setattr(
         "ra_aid.agent_utils._restore_interrupt_handling",
         mock_restore_interrupt_handling,
-    )
-    monkeypatch.setattr(
-        "ra_aid.agent_utils._increment_agent_depth", mock_increment_agent_depth
-    )
-    monkeypatch.setattr(
-        "ra_aid.agent_utils._decrement_agent_depth", mock_decrement_agent_depth
     )
     monkeypatch.setattr("ra_aid.agent_utils.check_interrupt", lambda: None)
     monkeypatch.setattr("ra_aid.agent_utils._handle_api_error", lambda *args: None)
@@ -704,6 +672,7 @@ def test_run_agent_with_retry_handles_api_badrequest_error(monkeypatch):
         assert "Agent has crashed: Unretryable API error" in result
         # Verify the agent is marked as crashed
         assert is_crashed()
+
 
 def test_handle_api_error_resource_exhausted():
     from google.api_core.exceptions import ResourceExhausted

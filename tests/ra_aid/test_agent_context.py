@@ -9,6 +9,7 @@ from ra_aid.agent_context import (
     agent_context,
     get_completion_message,
     get_current_context,
+    get_depth,
     is_completed,
     mark_plan_completed,
     mark_should_exit,
@@ -285,6 +286,31 @@ class TestUtilityFunctions:
             mark_task_completed("Task done via utility")
             assert is_completed() is True
             assert get_completion_message() == "Task done via utility"
+            
+    def test_agent_context_depth_property(self):
+        """Test that the depth property correctly calculates context depth."""
+        # Create contexts with different nesting levels
+        ctx1 = AgentContext()  # Depth 0
+        ctx2 = AgentContext(ctx1)  # Depth 1
+        ctx3 = AgentContext(ctx2)  # Depth 2
+        
+        # Verify depths
+        assert ctx1.depth == 0
+        assert ctx2.depth == 1
+        assert ctx3.depth == 2
+        
+    def test_get_depth_function(self):
+        """Test that get_depth() returns the correct depth of the current context."""
+        # No context active
+        assert get_depth() == 0
+        
+        # With nested contexts
+        with agent_context() as ctx1:
+            assert get_depth() == 0
+            with agent_context() as ctx2:
+                assert get_depth() == 1
+                with agent_context() as ctx3:
+                    assert get_depth() == 2
 
     def test_mark_plan_completed_utility(self):
         """Test the mark_plan_completed utility function."""

@@ -32,6 +32,7 @@ from rich.panel import Panel
 
 from ra_aid.agent_context import (
     agent_context,
+    get_depth,
     is_completed,
     reset_completion_flags,
     should_exit,
@@ -904,15 +905,6 @@ def _restore_interrupt_handling(original_handler):
         signal.signal(signal.SIGINT, original_handler)
 
 
-def _increment_agent_depth():
-    current_depth = _global_memory.get("agent_depth", 0)
-    _global_memory["agent_depth"] = current_depth + 1
-
-
-def _decrement_agent_depth():
-    _global_memory["agent_depth"] = _global_memory.get("agent_depth", 1) - 1
-
-
 def reset_agent_completion_flags():
     """Reset completion flags in the current context."""
     reset_completion_flags()
@@ -1031,7 +1023,6 @@ def run_agent_with_retry(
     # Create a new agent context for this run
     with InterruptibleSection(), agent_context() as ctx:
         try:
-            _increment_agent_depth()
             for attempt in range(max_retries):
                 logger.debug("Attempt %d/%d", attempt + 1, max_retries)
                 check_interrupt()
@@ -1103,5 +1094,4 @@ def run_agent_with_retry(
 
                     _handle_api_error(e, attempt, max_retries, base_delay)
         finally:
-            _decrement_agent_depth()
             _restore_interrupt_handling(original_handler)

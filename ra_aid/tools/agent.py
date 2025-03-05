@@ -10,6 +10,7 @@ from rich.console import Console
 from ra_aid.agent_context import (
     get_completion_message,
     get_crash_message,
+    get_depth,
     is_crashed,
     reset_completion_flags,
 )
@@ -59,7 +60,7 @@ def request_research(query: str) -> ResearchResult:
     )
 
     # Check recursion depth
-    current_depth = _global_memory.get("agent_depth", 0)
+    current_depth = get_depth()
     if current_depth >= RESEARCH_AGENT_RECURSION_LIMIT:
         print_error("Maximum research recursion depth reached")
         try:
