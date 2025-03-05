@@ -27,6 +27,7 @@ from ra_aid.tools.agent import (
     request_web_research,
 )
 from ra_aid.tools.memory import plan_implementation_completed
+from ra_aid.database.repositories.config_repository import get_config_repository
 
 
 def set_modification_tools(use_aider=False):
@@ -98,13 +99,11 @@ def get_all_tools() -> list[BaseTool]:
 
 
 # Define constant tool groups
-# Get config from global memory for use_aider value
+# Get config from repository for use_aider value
 _config = {}
 try:
-    from ra_aid.tools.memory import _global_memory
-
-    _config = _global_memory.get("config", {})
-except ImportError:
+    _config = get_config_repository().get_all()
+except (ImportError, RuntimeError):
     pass
 
 READ_ONLY_TOOLS = get_read_only_tools(use_aider=_config.get("use_aider", False))
@@ -139,10 +138,8 @@ def get_research_tools(
     # Get config for use_aider value
     use_aider = False
     try:
-        from ra_aid.tools.memory import _global_memory
-
-        use_aider = _global_memory.get("config", {}).get("use_aider", False)
-    except ImportError:
+        use_aider = get_config_repository().get("use_aider", False)
+    except (ImportError, RuntimeError):
         pass
 
     # Start with read-only tools
@@ -180,10 +177,8 @@ def get_planning_tools(
     # Get config for use_aider value
     use_aider = False
     try:
-        from ra_aid.tools.memory import _global_memory
-
-        use_aider = _global_memory.get("config", {}).get("use_aider", False)
-    except ImportError:
+        use_aider = get_config_repository().get("use_aider", False)
+    except (ImportError, RuntimeError):
         pass
 
     # Start with read-only tools
@@ -219,10 +214,8 @@ def get_implementation_tools(
     # Get config for use_aider value
     use_aider = False
     try:
-        from ra_aid.tools.memory import _global_memory
-
-        use_aider = _global_memory.get("config", {}).get("use_aider", False)
-    except ImportError:
+        use_aider = get_config_repository().get("use_aider", False)
+    except (ImportError, RuntimeError):
         pass
 
     # Start with read-only tools

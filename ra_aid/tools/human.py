@@ -58,10 +58,10 @@ def ask_human(question: str) -> str:
     # Record human response in database
     try:
         from ra_aid.database.repositories.human_input_repository import get_human_input_repository
-        from ra_aid.tools.memory import _global_memory
+        from ra_aid.database.repositories.config_repository import get_config_repository
         
         # Determine the source based on context
-        config = _global_memory.get("config", {})
+        config = get_config_repository().get_all()
         # If chat_mode is enabled, use 'chat', otherwise determine if hil mode is active
         if config.get("chat_mode", False):
             source = "chat"

@@ -58,6 +58,10 @@ from ra_aid.database.repositories.related_files_repository import (
 from ra_aid.database.repositories.work_log_repository import (
     WorkLogRepositoryManager
 )
+from ra_aid.database.repositories.config_repository import (
+    ConfigRepositoryManager,
+    get_config_repository
+)
 from ra_aid.model_formatters import format_key_facts_dict
 from ra_aid.model_formatters.key_snippets_formatter import format_key_snippets_dict
 from ra_aid.console.output import cpm
@@ -77,7 +81,7 @@ from ra_aid.prompts.chat_prompts import CHAT_PROMPT
 from ra_aid.prompts.web_research_prompts import WEB_RESEARCH_PROMPT_SECTION_CHAT
 from ra_aid.tool_configs import get_chat_tools, set_modification_tools
 from ra_aid.tools.human import ask_human
-from ra_aid.tools.memory import _global_memory, get_memory_value
+from ra_aid.tools.memory import get_memory_value
 
 logger = get_logger(__name__)
 
@@ -338,7 +342,7 @@ implementation_memory = MemorySaver()
 
 def is_informational_query() -> bool:
     """Determine if the current query is informational based on config settings."""
-    return _global_memory.get("config", {}).get("research_only", False)
+    return get_config_repository().get("research_only", False)
 
 
 def is_stage_requested(stage: str) -> bool:
@@ -404,13 +408,17 @@ def main():
             except Exception as e:
                 logger.error(f"Database migration error: {str(e)}")
 
+            # Initialize empty config dictionary to be populated later
+            config = {}
+            
             # Initialize repositories with database connection
             with KeyFactRepositoryManager(db) as key_fact_repo, \
                  KeySnippetRepositoryManager(db) as key_snippet_repo, \
                  HumanInputRepositoryManager(db) as human_input_repo, \
                  ResearchNoteRepositoryManager(db) as research_note_repo, \
                  RelatedFilesRepositoryManager() as related_files_repo, \
-                 WorkLogRepositoryManager() as work_log_repo:
+                 WorkLogRepositoryManager() as work_log_repo, \
+                 ConfigRepositoryManager(config) as config_repo:
                 # This initializes all repositories and makes them available via their respective get methods
                 logger.debug("Initialized KeyFactRepository")
                 logger.debug("Initialized KeySnippetRepository")
@@ -418,6 +426,7 @@ def main():
                 logger.debug("Initialized ResearchNoteRepository")
                 logger.debug("Initialized RelatedFilesRepository")
                 logger.debug("Initialized WorkLogRepository")
+                logger.debug("Initialized ConfigRepository")
 
                 # Check dependencies before proceeding
                 check_dependencies()
@@ -520,13 +529,13 @@ def main():
                         "limit_tokens": args.disable_limit_tokens,
                     }
 
-                    # Store config in global memory
-                    _global_memory["config"] = config
-                    _global_memory["config"]["provider"] = args.provider
-                    _global_memory["config"]["model"] = args.model
-                    _global_memory["config"]["expert_provider"] = args.expert_provider
-                    _global_memory["config"]["expert_model"] = args.expert_model
-                    _global_memory["config"]["temperature"] = args.temperature
+                    # Store config in repository
+                    config_repo.update(config)
+                    config_repo.set("provider", args.provider)
+                    config_repo.set("model", args.model)
+                    config_repo.set("expert_provider", args.expert_provider)
+                    config_repo.set("expert_model", args.expert_model)
+                    config_repo.set("temperature", args.temperature)
 
                     # Set modification tools based on use_aider flag
                     set_modification_tools(args.use_aider)
@@ -594,33 +603,27 @@ def main():
                     "test_cmd_timeout": args.test_cmd_timeout,
                 }
 
-                # Store config in global memory for access by is_informational_query
-                _global_memory["config"] = config
+                # Store config in repository
+                config_repo.update(config)
 
                 # Store base provider/model configuration
-                _global_memory["config"]["provider"] = args.provider
-                _global_memory["config"]["model"] = args.model
+                config_repo.set("provider", args.provider)
+                config_repo.set("model", args.model)
 
                 # Store expert provider/model (no fallback)
-                _global_memory["config"]["expert_provider"] = args.expert_provider
-                _global_memory["config"]["expert_model"] = args.expert_model
+                config_repo.set("expert_provider", args.expert_provider)
+                config_repo.set("expert_model", args.expert_model)
 
                 # Store planner config with fallback to base values
-                _global_memory["config"]["planner_provider"] = (
-                    args.planner_provider or args.provider
-                )
-                _global_memory["config"]["planner_model"] = args.planner_model or args.model
+                config_repo.set("planner_provider", args.planner_provider or args.provider)
+                config_repo.set("planner_model", args.planner_model or args.model)
 
                 # Store research config with fallback to base values
-                _global_memory["config"]["research_provider"] = (
-                    args.research_provider or args.provider
-                )
-                _global_memory["config"]["research_model"] = (
-                    args.research_model or args.model
-                )
+                config_repo.set("research_provider", args.research_provider or args.provider)
+                config_repo.set("research_model", args.research_model or args.model)
 
-                # Store temperature in global config
-                _global_memory["config"]["temperature"] = args.temperature
+                # Store temperature in config
+                config_repo.set("temperature", args.temperature)
 
                 # Set modification tools based on use_aider flag
                 set_modification_tools(args.use_aider)

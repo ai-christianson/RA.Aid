@@ -13,7 +13,8 @@ from ra_aid.logging_config import get_logger
 from ra_aid.models_params import DEFAULT_BASE_LATENCY, models_params
 from ra_aid.proc.interactive import run_interactive_command
 from ra_aid.text.processing import truncate_output
-from ra_aid.tools.memory import _global_memory, log_work_event
+from ra_aid.tools.memory import log_work_event
+from ra_aid.database.repositories.config_repository import get_config_repository
 from ra_aid.database.repositories.related_files_repository import get_related_files_repository
 
 console = Console()
@@ -107,8 +108,9 @@ def run_programming_task(
     )
 
     # Add config file if specified
-    if "config" in _global_memory and _global_memory["config"].get("aider_config"):
-        command.extend(["--config", _global_memory["config"]["aider_config"]])
+    config = get_config_repository().get_all()
+    if config.get("aider_config"):
+        command.extend(["--config", config["aider_config"]])
 
     # if environment variable AIDER_FLAGS exists then parse
     if "AIDER_FLAGS" in os.environ:
@@ -147,8 +149,9 @@ def run_programming_task(
         # Run the command interactively
         print()
         # Get provider/model specific latency coefficient
-        provider = _global_memory.get("config", {}).get("provider", "")
-        model = _global_memory.get("config", {}).get("model", "")
+        config = get_config_repository().get_all()
+        provider = config.get("provider", "")
+        model = config.get("model", "")
         latency = (
             models_params.get(provider, {})
             .get(model, {})

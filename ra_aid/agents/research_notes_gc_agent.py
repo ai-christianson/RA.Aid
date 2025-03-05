@@ -19,9 +19,10 @@ logger = logging.getLogger(__name__)
 from ra_aid.agent_utils import create_agent, run_agent_with_retry
 from ra_aid.database.repositories.research_note_repository import get_research_note_repository
 from ra_aid.database.repositories.human_input_repository import get_human_input_repository
+from ra_aid.database.repositories.config_repository import get_config_repository
 from ra_aid.llm import initialize_llm
 from ra_aid.model_formatters.research_notes_formatter import format_research_note
-from ra_aid.tools.memory import log_work_event, _global_memory
+from ra_aid.tools.memory import log_work_event
 
 
 console = Console()
@@ -154,7 +155,7 @@ def run_research_notes_gc_agent(threshold: int = 30) -> None:
             formatted_notes = "\n".join([f"Note #{k}: {v}" for k, v in notes_dict.items()])
             
             # Retrieve configuration
-            llm_config = _global_memory.get("config", {})
+            llm_config = get_config_repository().get_all()
 
             # Initialize the LLM model
             model = initialize_llm(

@@ -18,13 +18,13 @@ from ra_aid.console.formatting import print_error
 from ra_aid.database.repositories.human_input_repository import HumanInputRepository
 from ra_aid.database.repositories.key_fact_repository import get_key_fact_repository
 from ra_aid.database.repositories.key_snippet_repository import get_key_snippet_repository
+from ra_aid.database.repositories.config_repository import get_config_repository
 from ra_aid.database.repositories.related_files_repository import get_related_files_repository
 from ra_aid.database.repositories.research_note_repository import get_research_note_repository
 from ra_aid.exceptions import AgentInterrupt
 from ra_aid.model_formatters import format_key_facts_dict
 from ra_aid.model_formatters.key_snippets_formatter import format_key_snippets_dict
 from ra_aid.model_formatters.research_notes_formatter import format_research_notes_dict
-from ra_aid.tools.memory import _global_memory
 
 from ..console import print_task_header
 from ..llm import initialize_llm
@@ -52,7 +52,7 @@ def request_research(query: str) -> ResearchResult:
         query: The research question or project description
     """
     # Initialize model from config
-    config = _global_memory.get("config", {})
+    config = get_config_repository().get_all()
     model = initialize_llm(
         config.get("provider", "anthropic"),
         config.get("model", "claude-3-7-sonnet-20250219"),
@@ -165,7 +165,7 @@ def request_web_research(query: str) -> ResearchResult:
         query: The research question or project description
     """
     # Initialize model from config
-    config = _global_memory.get("config", {})
+    config = get_config_repository().get_all()
     model = initialize_llm(
         config.get("provider", "anthropic"),
         config.get("model", "claude-3-7-sonnet-20250219"),
@@ -246,7 +246,7 @@ def request_research_and_implementation(query: str) -> Dict[str, Any]:
         query: The research question or project description
     """
     # Initialize model from config
-    config = _global_memory.get("config", {})
+    config = get_config_repository().get_all()
     model = initialize_llm(
         config.get("provider", "anthropic"),
         config.get("model", "claude-3-7-sonnet-20250219"),
@@ -335,7 +335,7 @@ def request_task_implementation(task_spec: str) -> str:
         task_spec: REQUIRED The full task specification (markdown format, typically one part of the overall plan)
     """
     # Initialize model from config
-    config = _global_memory.get("config", {})
+    config = get_config_repository().get_all()
     model = initialize_llm(
         config.get("provider", "anthropic"),
         config.get("model", "claude-3-5-sonnet-20241022"),
@@ -474,7 +474,7 @@ def request_implementation(task_spec: str) -> str:
         task_spec: The task specification to plan implementation for
     """
     # Initialize model from config
-    config = _global_memory.get("config", {})
+    config = get_config_repository().get_all()
     model = initialize_llm(
         config.get("provider", "anthropic"),
         config.get("model", "claude-3-5-sonnet-20241022"),

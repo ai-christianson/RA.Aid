@@ -13,11 +13,12 @@ from ..database.repositories.key_fact_repository import get_key_fact_repository
 from ..database.repositories.key_snippet_repository import get_key_snippet_repository
 from ..database.repositories.related_files_repository import get_related_files_repository
 from ..database.repositories.research_note_repository import get_research_note_repository
+from ..database.repositories.config_repository import get_config_repository
 from ..llm import initialize_expert_llm
 from ..model_formatters import format_key_facts_dict
 from ..model_formatters.key_snippets_formatter import format_key_snippets_dict
 from ..model_formatters.research_notes_formatter import format_research_notes_dict
-from .memory import _global_memory, get_memory_value
+from .memory import get_memory_value
 
 console = Console()
 _model = None
@@ -27,9 +28,9 @@ def get_model():
     global _model
     try:
         if _model is None:
-            config = _global_memory["config"]
-            provider = config.get("expert_provider") or config.get("provider")
-            model = config.get("expert_model") or config.get("model")
+            config_repo = get_config_repository()
+            provider = config_repo.get("expert_provider") or config_repo.get("provider")
+            model = config_repo.get("expert_model") or config_repo.get("model")
             _model = initialize_expert_llm(provider, model)
     except Exception as e:
         _model = None

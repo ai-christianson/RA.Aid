@@ -94,11 +94,11 @@ from ra_aid.model_formatters import format_key_facts_dict
 from ra_aid.model_formatters.key_snippets_formatter import format_key_snippets_dict
 from ra_aid.model_formatters.research_notes_formatter import format_research_notes_dict
 from ra_aid.tools.memory import (
-    _global_memory,
     get_memory_value,
     get_related_files,
     log_work_event,
 )
+from ra_aid.database.repositories.config_repository import get_config_repository
 
 console = Console()
 
@@ -302,7 +302,7 @@ def create_agent(
     config['limit_tokens'] = False.
     """
     try:
-        config = _global_memory.get("config", {})
+        config = get_config_repository().get_all()
         max_input_tokens = (
             get_model_token_limit(config, agent_type) or DEFAULT_TOKEN_LIMIT
         )
@@ -319,7 +319,7 @@ def create_agent(
     except Exception as e:
         # Default to REACT agent if provider/model detection fails
         logger.warning(f"Failed to detect model type: {e}. Defaulting to REACT agent.")
-        config = _global_memory.get("config", {})
+        config = get_config_repository().get_all()
         max_input_tokens = get_model_token_limit(config, agent_type)
         agent_kwargs = build_agent_kwargs(checkpointer, config, max_input_tokens)
         return create_react_agent(model, tools, **agent_kwargs)
@@ -443,7 +443,7 @@ def run_research_agent(
         new_project_hints=NEW_PROJECT_HINTS if project_info.is_new else "",
     )
 
-    config = _global_memory.get("config", {}) if not config else config
+    config = get_config_repository().get_all() if not config else config
     recursion_limit = config.get("recursion_limit", DEFAULT_RECURSION_LIMIT)
     run_config = {
         "configurable": {"thread_id": thread_id},
@@ -575,7 +575,7 @@ def run_web_research_agent(
         related_files=related_files,
     )
 
-    config = _global_memory.get("config", {}) if not config else config
+    config = get_config_repository().get_all() if not config else config
 
     recursion_limit = config.get("recursion_limit", DEFAULT_RECURSION_LIMIT)
     run_config = {
@@ -709,7 +709,7 @@ def run_planning_agent(
         ),
     )
 
-    config = _global_memory.get("config", {}) if not config else config
+    config = get_config_repository().get_all() if not config else config
     recursion_limit = config.get("recursion_limit", DEFAULT_RECURSION_LIMIT)
     run_config = {
         "configurable": {"thread_id": thread_id},
@@ -824,7 +824,7 @@ def run_task_implementation_agent(
         expert_section=EXPERT_PROMPT_SECTION_IMPLEMENTATION if expert_enabled else "",
         human_section=(
             HUMAN_PROMPT_SECTION_IMPLEMENTATION
-            if _global_memory.get("config", {}).get("hil", False)
+            if get_config_repository().get("hil", False)
             else ""
         ),
         web_research_section=(
@@ -834,7 +834,7 @@ def run_task_implementation_agent(
         ),
     )
 
-    config = _global_memory.get("config", {}) if not config else config
+    config = get_config_repository().get_all() if not config else config
     recursion_limit = config.get("recursion_limit", DEFAULT_RECURSION_LIMIT)
     run_config = {
         "configurable": {"thread_id": thread_id},

@@ -1,8 +1,8 @@
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 import pytest
 
-from ra_aid.tools.memory import _global_memory
+from ra_aid.database.repositories.config_repository import ConfigRepositoryManager
 from ra_aid.tools.shell import run_shell_command
 
 
@@ -25,9 +25,38 @@ def mock_run_interactive():
         yield mock
 
 
-def test_shell_command_cowboy_mode(mock_console, mock_prompt, mock_run_interactive):
+@pytest.fixture(autouse=True)
+def mock_config_repository():
+    """Mock the ConfigRepository to avoid database operations during tests"""
+    with patch('ra_aid.database.repositories.config_repository.config_repo_var') as mock_repo_var:
+        # Setup a mock repository
+        mock_repo = MagicMock()
+        
+        # Create a dictionary to simulate config
+        config = {
+            "cowboy_mode": False
+        }
+        
+        # Setup get method to return config values
+        def get_config(key, default=None):
+            return config.get(key, default)
+        mock_repo.get.side_effect = get_config
+        
+        # Setup set method to update config values
+        def set_config(key, value):
+            config[key] = value
+        mock_repo.set.side_effect = set_config
+        
+        # Make the mock context var return our mock repo
+        mock_repo_var.get.return_value = mock_repo
+        
+        yield mock_repo
+
+
+def test_shell_command_cowboy_mode(mock_console, mock_prompt, mock_run_interactive, mock_config_repository):
     """Test shell command execution in cowboy mode (no approval)"""
-    _global_memory["config"] = {"cowboy_mode": True}
+    # Set cowboy mode to True using the repository
+    mock_config_repository.set("cowboy_mode", True)
 
     result = run_shell_command.invoke({"command": "echo test"})
 
@@ -37,9 +66,10 @@ def test_shell_command_cowboy_mode(mock_console, mock_prompt, mock_run_interacti
     mock_prompt.ask.assert_not_called()
 
 
-def test_shell_command_cowboy_message(mock_console, mock_prompt, mock_run_interactive):
+def test_shell_command_cowboy_message(mock_console, mock_prompt, mock_run_interactive, mock_config_repository):
     """Test that cowboy mode displays a properly formatted cowboy message with correct spacing"""
-    _global_memory["config"] = {"cowboy_mode": True}
+    # Set cowboy mode to True using the repository
+    mock_config_repository.set("cowboy_mode", True)
 
     with patch("ra_aid.tools.shell.get_cowboy_message") as mock_get_message:
         mock_get_message.return_value = "🤠 Test cowboy message!"
@@ -53,10 +83,11 @@ def test_shell_command_cowboy_message(mock_console, mock_prompt, mock_run_intera
 
 
 def test_shell_command_interactive_approved(
-    mock_console, mock_prompt, mock_run_interactive
+    mock_console, mock_prompt, mock_run_interactive, mock_config_repository
 ):
     """Test shell command execution with interactive approval"""
-    _global_memory["config"] = {"cowboy_mode": False}
+    # Set cowboy mode to False using the repository
+    mock_config_repository.set("cowboy_mode", False)
     mock_prompt.ask.return_value = "y"
 
     result = run_shell_command.invoke({"command": "echo test"})
@@ -74,10 +105,11 @@ def test_shell_command_interactive_approved(
 
 
 def test_shell_command_interactive_rejected(
-    mock_console, mock_prompt, mock_run_interactive
+    mock_console, mock_prompt, mock_run_interactive, mock_config_repository
 ):
     """Test shell command rejection in interactive mode"""
-    _global_memory["config"] = {"cowboy_mode": False}
+    # Set cowboy mode to False using the repository
+    mock_config_repository.set("cowboy_mode", False)
     mock_prompt.ask.return_value = "n"
 
     result = run_shell_command.invoke({"command": "echo test"})
@@ -95,9 +127,10 @@ def test_shell_command_interactive_rejected(
     mock_run_interactive.assert_not_called()
 
 
-def test_shell_command_execution_error(mock_console, mock_prompt, mock_run_interactive):
+def test_shell_command_execution_error(mock_console, mock_prompt, mock_run_interactive, mock_config_repository):
     """Test handling of shell command execution errors"""
-    _global_memory["config"] = {"cowboy_mode": True}
+    # Set cowboy mode to True using the repository
+    mock_config_repository.set("cowboy_mode", True)
     mock_run_interactive.side_effect = Exception("Command failed")
 
     result = run_shell_command.invoke({"command": "invalid command"})

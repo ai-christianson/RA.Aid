@@ -16,9 +16,10 @@ from rich.panel import Panel
 from ra_aid.agent_utils import create_agent, run_agent_with_retry
 from ra_aid.database.repositories.key_snippet_repository import get_key_snippet_repository
 from ra_aid.database.repositories.human_input_repository import get_human_input_repository
+from ra_aid.database.repositories.config_repository import get_config_repository
 from ra_aid.llm import initialize_llm
 from ra_aid.prompts.key_snippets_gc_prompts import KEY_SNIPPETS_GC_PROMPT
-from ra_aid.tools.memory import log_work_event, _global_memory
+from ra_aid.tools.memory import log_work_event
 
 
 console = Console()
@@ -153,7 +154,7 @@ def run_key_snippets_gc_agent() -> None:
             ])
             
             # Retrieve configuration
-            llm_config = _global_memory.get("config", {})
+            llm_config = get_config_repository().get_all()
 
             # Initialize the LLM model
             model = initialize_llm(

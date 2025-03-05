@@ -1,7 +1,7 @@
 """Unit tests for agent_utils.py."""
 
 from typing import Any, Dict, Literal
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, MagicMock
 
 import litellm
 import pytest
@@ -19,6 +19,7 @@ from ra_aid.agent_utils import (
     state_modifier,
 )
 from ra_aid.models_params import DEFAULT_TOKEN_LIMIT, models_params
+from ra_aid.database.repositories.config_repository import ConfigRepositoryManager, get_config_repository, config_repo_var
 
 
 @pytest.fixture
@@ -29,40 +30,70 @@ def mock_model():
 
 
 @pytest.fixture
-def mock_memory():
-    """Fixture providing a mock global memory store."""
-    with patch("ra_aid.agent_utils._global_memory") as mock_mem:
-        mock_mem.get.return_value = {}
-        yield mock_mem
+def mock_config_repository():
+    """Mock the ConfigRepository to avoid database operations during tests"""
+    with patch('ra_aid.database.repositories.config_repository.config_repo_var') as mock_repo_var:
+        # Setup a mock repository
+        mock_repo = MagicMock()
+        
+        # Create a dictionary to simulate config
+        config = {}
+        
+        # Setup get method to return config values
+        def get_config(key, default=None):
+            return config.get(key, default)
+        mock_repo.get.side_effect = get_config
+        
+        # Setup get_all method to return all config values
+        mock_repo.get_all.return_value = config
+        
+        # Setup set method to update config values
+        def set_config(key, value):
+            config[key] = value
+        mock_repo.set.side_effect = set_config
+        
+        # Setup update method to update multiple config values
+        def update_config(update_dict):
+            config.update(update_dict)
+        mock_repo.update.side_effect = update_config
+        
+        # Make the mock context var return our mock repo
+        mock_repo_var.get.return_value = mock_repo
+        
+        yield mock_repo
 
 
-def test_get_model_token_limit_anthropic(mock_memory):
+def test_get_model_token_limit_anthropic(mock_config_repository):
     """Test get_model_token_limit with Anthropic model."""
     config = {"provider": "anthropic", "model": "claude2"}
+    mock_config_repository.update(config)
 
     token_limit = get_model_token_limit(config, "default")
     assert token_limit == models_params["anthropic"]["claude2"]["token_limit"]
 
 
-def test_get_model_token_limit_openai(mock_memory):
+def test_get_model_token_limit_openai(mock_config_repository):
     """Test get_model_token_limit with OpenAI model."""
     config = {"provider": "openai", "model": "gpt-4"}
+    mock_config_repository.update(config)
 
     token_limit = get_model_token_limit(config, "default")
     assert token_limit == models_params["openai"]["gpt-4"]["token_limit"]
 
 
-def test_get_model_token_limit_unknown(mock_memory):
+def test_get_model_token_limit_unknown(mock_config_repository):
     """Test get_model_token_limit with unknown provider/model."""
     config = {"provider": "unknown", "model": "unknown-model"}
+    mock_config_repository.update(config)
 
     token_limit = get_model_token_limit(config, "default")
     assert token_limit is None
 
 
-def test_get_model_token_limit_missing_config(mock_memory):
+def test_get_model_token_limit_missing_config(mock_config_repository):
     """Test get_model_token_limit with missing configuration."""
     config = {}
+    mock_config_repository.update(config)
 
     token_limit = get_model_token_limit(config, "default")
     assert token_limit is None
@@ -108,9 +139,9 @@ def test_get_model_token_limit_unexpected_error():
     assert token_limit is None
 
 
-def test_create_agent_anthropic(mock_model, mock_memory):
+def test_create_agent_anthropic(mock_model, mock_config_repository):
     """Test create_agent with Anthropic Claude model."""
-    mock_memory.get.return_value = {"provider": "anthropic", "model": "claude-2"}
+    mock_config_repository.update({"provider": "anthropic", "model": "claude-2"})
 
     with patch("ra_aid.agent_utils.create_react_agent") as mock_react:
         mock_react.return_value = "react_agent"
@@ -125,9 +156,9 @@ def test_create_agent_anthropic(mock_model, mock_memory):
         )
 
 
-def test_create_agent_openai(mock_model, mock_memory):
+def test_create_agent_openai(mock_model, mock_config_repository):
     """Test create_agent with OpenAI model."""
-    mock_memory.get.return_value = {"provider": "openai", "model": "gpt-4"}
+    mock_config_repository.update({"provider": "openai", "model": "gpt-4"})
 
     with patch("ra_aid.agent_utils.CiaynAgent") as mock_ciayn:
         mock_ciayn.return_value = "ciayn_agent"
@@ -142,9 +173,9 @@ def test_create_agent_openai(mock_model, mock_memory):
         )
 
 
-def test_create_agent_no_token_limit(mock_model, mock_memory):
+def test_create_agent_no_token_limit(mock_model, mock_config_repository):
     """Test create_agent when no token limit is found."""
-    mock_memory.get.return_value = {"provider": "unknown", "model": "unknown-model"}
+    mock_config_repository.update({"provider": "unknown", "model": "unknown-model"})
 
     with patch("ra_aid.agent_utils.CiaynAgent") as mock_ciayn:
         mock_ciayn.return_value = "ciayn_agent"
@@ -159,9 +190,9 @@ def test_create_agent_no_token_limit(mock_model, mock_memory):
         )
 
 
-def test_create_agent_missing_config(mock_model, mock_memory):
+def test_create_agent_missing_config(mock_model, mock_config_repository):
     """Test create_agent with missing configuration."""
-    mock_memory.get.return_value = {"provider": "openai"}
+    mock_config_repository.update({"provider": "openai"})
 
     with patch("ra_aid.agent_utils.CiaynAgent") as mock_ciayn:
         mock_ciayn.return_value = "ciayn_agent"
@@ -205,9 +236,9 @@ def test_state_modifier(mock_messages):
         assert result[-1] == mock_messages[-1]
 
 
-def test_create_agent_with_checkpointer(mock_model, mock_memory):
+def test_create_agent_with_checkpointer(mock_model, mock_config_repository):
     """Test create_agent with checkpointer argument."""
-    mock_memory.get.return_value = {"provider": "openai", "model": "gpt-4"}
+    mock_config_repository.update({"provider": "openai", "model": "gpt-4"})
     mock_checkpointer = Mock()
 
     with patch("ra_aid.agent_utils.CiaynAgent") as mock_ciayn:
@@ -223,13 +254,13 @@ def test_create_agent_with_checkpointer(mock_model, mock_memory):
         )
 
 
-def test_create_agent_anthropic_token_limiting_enabled(mock_model, mock_memory):
+def test_create_agent_anthropic_token_limiting_enabled(mock_model, mock_config_repository):
     """Test create_agent sets up token limiting for Claude models when enabled."""
-    mock_memory.get.return_value = {
+    mock_config_repository.update({
         "provider": "anthropic",
         "model": "claude-2",
         "limit_tokens": True,
-    }
+    })
 
     with (
         patch("ra_aid.agent_utils.create_react_agent") as mock_react,
@@ -246,13 +277,13 @@ def test_create_agent_anthropic_token_limiting_enabled(mock_model, mock_memory):
         assert callable(args[1]["state_modifier"])
 
 
-def test_create_agent_anthropic_token_limiting_disabled(mock_model, mock_memory):
+def test_create_agent_anthropic_token_limiting_disabled(mock_model, mock_config_repository):
     """Test create_agent doesn't set up token limiting for Claude models when disabled."""
-    mock_memory.get.return_value = {
+    mock_config_repository.update({
         "provider": "anthropic",
         "model": "claude-2",
         "limit_tokens": False,
-    }
+    })
 
     with (
         patch("ra_aid.agent_utils.create_react_agent") as mock_react,
@@ -267,7 +298,7 @@ def test_create_agent_anthropic_token_limiting_disabled(mock_model, mock_memory)
         mock_react.assert_called_once_with(mock_model, [], version="v2")
 
 
-def test_get_model_token_limit_research(mock_memory):
+def test_get_model_token_limit_research(mock_config_repository):
     """Test get_model_token_limit with research provider and model."""
     config = {
         "provider": "openai",
@@ -275,13 +306,15 @@ def test_get_model_token_limit_research(mock_memory):
         "research_provider": "anthropic",
         "research_model": "claude-2",
     }
+    mock_config_repository.update(config)
+    
     with patch("ra_aid.agent_utils.get_model_info") as mock_get_info:
         mock_get_info.return_value = {"max_input_tokens": 150000}
         token_limit = get_model_token_limit(config, "research")
         assert token_limit == 150000
 
 
-def test_get_model_token_limit_planner(mock_memory):
+def test_get_model_token_limit_planner(mock_config_repository):
     """Test get_model_token_limit with planner provider and model."""
     config = {
         "provider": "openai",
@@ -289,6 +322,8 @@ def test_get_model_token_limit_planner(mock_memory):
         "planner_provider": "deepseek",
         "planner_model": "dsm-1",
     }
+    mock_config_repository.update(config)
+    
     with patch("ra_aid.agent_utils.get_model_info") as mock_get_info:
         mock_get_info.return_value = {"max_input_tokens": 120000}
         token_limit = get_model_token_limit(config, "planner")

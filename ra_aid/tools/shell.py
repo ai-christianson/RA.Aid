@@ -9,6 +9,7 @@ from ra_aid.console.cowboy_messages import get_cowboy_message
 from ra_aid.proc.interactive import run_interactive_command
 from ra_aid.text.processing import truncate_output
 from ra_aid.tools.memory import _global_memory, log_work_event
+from ra_aid.database.repositories.config_repository import get_config_repository
 
 console = Console()
 
@@ -46,7 +47,7 @@ def run_shell_command(
     4. Add flags e.g. git --no-pager in order to reduce interaction required by the human.
     """
     # Check if we need approval
-    cowboy_mode = _global_memory.get("config", {}).get("cowboy_mode", False)
+    cowboy_mode = get_config_repository().get("cowboy_mode", False)
 
     if cowboy_mode:
         console.print("")
@@ -74,7 +75,7 @@ def run_shell_command(
                 "success": False,
             }
         elif response == "c":
-            _global_memory["config"]["cowboy_mode"] = True
+            get_config_repository().set("cowboy_mode", True)
             console.print("")
             console.print(" " + get_cowboy_message())
             console.print("")

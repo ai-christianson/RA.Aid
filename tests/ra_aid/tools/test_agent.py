@@ -13,6 +13,7 @@ from ra_aid.tools.agent import (
 from ra_aid.tools.memory import _global_memory
 from ra_aid.database.repositories.related_files_repository import get_related_files_repository
 from ra_aid.database.repositories.work_log_repository import get_work_log_repository, WorkLogEntry
+from ra_aid.database.repositories.config_repository import get_config_repository
 
 
 @pytest.fixture
@@ -37,6 +38,34 @@ def mock_related_files_repository():
         
         # Setup format_related_files method
         mock_repo.format_related_files.return_value = [f"ID#{file_id} {filepath}" for file_id, filepath in sorted(related_files.items())]
+        
+        # Make the mock context var return our mock repo
+        mock_repo_var.get.return_value = mock_repo
+        
+        yield mock_repo
+
+@pytest.fixture(autouse=True)
+def mock_config_repository():
+    """Mock the ConfigRepository to avoid database operations during tests"""
+    with patch('ra_aid.database.repositories.config_repository.config_repo_var') as mock_repo_var:
+        # Setup a mock repository
+        mock_repo = MagicMock()
+        
+        # Create a dictionary to simulate config
+        config = {
+            "recursion_limit": 2,
+            "provider": "anthropic",
+            "model": "claude-3-5-sonnet-20241022",
+            "temperature": 0.01
+        }
+        
+        # Setup get_all method to return the config dict
+        mock_repo.get_all.return_value = config
+        
+        # Setup get method to return config values
+        def get_config(key, default=None):
+            return config.get(key, default)
+        mock_repo.get.side_effect = get_config
         
         # Make the mock context var return our mock repo
         mock_repo_var.get.return_value = mock_repo

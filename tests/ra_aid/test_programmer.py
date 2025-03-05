@@ -1,3 +1,4 @@
+import os
 import pytest
 from unittest.mock import patch, MagicMock
 
@@ -7,6 +8,36 @@ from ra_aid.tools.programmer import (
     run_programming_task,
 )
 from ra_aid.database.repositories.related_files_repository import get_related_files_repository
+from ra_aid.database.repositories.config_repository import get_config_repository
+
+@pytest.fixture(autouse=True)
+def mock_config_repository():
+    """Mock the ConfigRepository to avoid database operations during tests"""
+    with patch('ra_aid.database.repositories.config_repository.config_repo_var') as mock_repo_var:
+        # Setup a mock repository
+        mock_repo = MagicMock()
+        
+        # Create a dictionary to simulate config
+        config = {
+            "recursion_limit": 2,
+            "provider": "anthropic",
+            "model": "claude-3-5-sonnet-20241022",
+            "temperature": 0.01,
+            "aider_config": "/path/to/config.yml"
+        }
+        
+        # Setup get_all method to return the config dict
+        mock_repo.get_all.return_value = config
+        
+        # Setup get method to return config values
+        def get_config(key, default=None):
+            return config.get(key, default)
+        mock_repo.get.side_effect = get_config
+        
+        # Make the mock context var return our mock repo
+        mock_repo_var.get.return_value = mock_repo
+        
+        yield mock_repo
 
 @pytest.fixture(autouse=True)
 def mock_related_files_repository():
@@ -125,13 +156,9 @@ def test_parse_aider_flags(input_flags, expected, description):
     assert result == expected, f"Failed test case: {description}"
 
 
-def test_aider_config_flag(mocker, mock_related_files_repository):
+def test_aider_config_flag(mocker, mock_config_repository, mock_related_files_repository):
     """Test that aider config flag is properly included in the command when specified."""
-    # Mock config in global memory but not related files (using repository now)
-    mock_memory = {
-        "config": {"aider_config": "/path/to/config.yml"},
-    }
-    mocker.patch("ra_aid.tools.programmer._global_memory", mock_memory)
+    # Config is mocked by mock_config_repository fixture
 
     # Mock the run_interactive_command to capture the command that would be run
     mock_run = mocker.patch(
@@ -146,15 +173,14 @@ def test_aider_config_flag(mocker, mock_related_files_repository):
     assert args[config_index + 1] == "/path/to/config.yml"
 
 
-def test_path_normalization_and_deduplication(mocker, tmp_path, mock_related_files_repository):
+def test_path_normalization_and_deduplication(mocker, tmp_path, mock_config_repository, mock_related_files_repository):
     """Test path normalization and deduplication in run_programming_task."""
     # Create a temporary test file
     test_file = tmp_path / "test.py"
     test_file.write_text("")
     new_file = tmp_path / "new.py"
 
-    # Mock dependencies - only need to mock config part of global memory now
-    mocker.patch("ra_aid.tools.programmer._global_memory", {"config": {}})
+    # Config is mocked by mock_config_repository fixture
     mocker.patch(
         "ra_aid.tools.programmer.get_aider_executable", return_value="/path/to/aider"
     )
