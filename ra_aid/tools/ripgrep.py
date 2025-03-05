@@ -79,6 +79,7 @@ def ripgrep_search(
     include_hidden: bool = False,
     follow_links: bool = False,
     exclude_dirs: List[str] = None,
+    fixed_string: bool = False,
 ) -> Dict[str, Union[str, int, bool]]:
     """Execute a ripgrep (rg) search with formatting and common options.
 
@@ -93,6 +94,7 @@ def ripgrep_search(
         include_hidden: Whether to search hidden files and directories (default: False)
         follow_links: Whether to follow symbolic links (default: False)
         exclude_dirs: Additional directories to exclude (combines with defaults)
+        fixed_string: Whether to treat pattern as a literal string instead of regex (default: False)
     """
     # Build rg command with options
     cmd = ["rg", "--color", "always"]
@@ -122,6 +124,10 @@ def ripgrep_search(
     for dir in exclusions:
         cmd.extend(["--glob", f"!{dir}"])
 
+    # Add fixed string flag if specified
+    if fixed_string:
+        cmd.append("-F")
+
     # Add the search pattern
     cmd.append(pattern)
 
@@ -134,6 +140,7 @@ def ripgrep_search(
         f"**Pattern**: `{pattern}`",
         f"**Case Sensitive**: {case_sensitive}",
         f"**File Type**: {file_type or 'all'}",
+        f"**Fixed String**: {fixed_string}",
     ]
     if before_context_lines is not None:
         params.append(f"**Before Context Lines**: {before_context_lines}")
