@@ -48,6 +48,8 @@ dependencies = [
     "peewee>=3.17.9",
     "peewee-migrate>=1.13.0",
     "platformdirs>=3.17.9",
+    "requests",
+    "packaging",
 ]
 
 [project.optional-dependencies]

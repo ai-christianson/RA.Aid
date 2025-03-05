@@ -30,6 +30,7 @@ from rich.text import Text
 
 from ra_aid import print_error, print_stage_header
 from ra_aid.__version__ import __version__
+from ra_aid.version_check import check_for_newer_version
 from ra_aid.agent_utils import (
     create_agent,
     run_agent_with_retry,
@@ -466,6 +467,12 @@ def main():
                     )
 
                 status = build_status(args, expert_enabled, web_research_enabled)
+
+                # Check for newer version
+                version_message = check_for_newer_version()
+                if version_message:
+                    status.append("\n\n")
+                    status.append(version_message, style="yellow")
 
                 console.print(
                     Panel(
