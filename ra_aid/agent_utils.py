@@ -94,7 +94,6 @@ from ra_aid.model_formatters import format_key_facts_dict
 from ra_aid.model_formatters.key_snippets_formatter import format_key_snippets_dict
 from ra_aid.model_formatters.research_notes_formatter import format_research_notes_dict
 from ra_aid.tools.memory import (
-    get_memory_value,
     get_related_files,
     log_work_event,
 )

@@ -7,12 +7,10 @@ from unittest.mock import patch, MagicMock, ANY
 
 from ra_aid.agents.key_snippets_gc_agent import delete_key_snippets
 from ra_aid.tools.memory import (
-    _global_memory,
     deregister_related_files,
     emit_key_facts,
     emit_key_snippet,
     emit_related_files,
-    get_memory_value,
     get_related_files,
     get_work_log,
     log_work_event,
@@ -29,8 +27,7 @@ from ra_aid.database.models import KeyFact
 
 @pytest.fixture
 def reset_memory():
-    """Reset global memory before each test"""
-    # No longer need to reset work_log in global memory
+    """Fixture for test initialization (kept for backward compatibility)"""
     yield
 
 
@@ -274,15 +271,6 @@ def test_emit_key_facts_single_fact(reset_memory, mock_repository):
     mock_repository.return_value.create.assert_called_once_with("First fact", human_input_id=ANY)
 
 
-def test_get_memory_value_other_types(reset_memory):
-    """Test get_memory_value remains compatible with other memory types"""
-    # Test with non-existent key
-    assert get_memory_value("nonexistent") == ""
-    
-    # Test research_notes returns empty string when no repository is available
-    assert get_memory_value("research_notes") == ""
-
-
 def test_log_work_event(reset_memory, mock_work_log_repository):
     """Test logging work events with timestamps"""
     # Log some events
@@ -338,7 +326,7 @@ def test_reset_work_log(reset_memory, mock_work_log_repository):
     # Verify clear was called
     mock_work_log_repository.return_value.clear.assert_called_once()
     
-    # Setup mock for get_memory_value test
+    # Setup mock for empty log
     mock_work_log_repository.return_value.format_work_log.return_value = "No work log entries"
     
     # Verify empty log directly via repository

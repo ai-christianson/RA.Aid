@@ -9,7 +9,6 @@ from .memory import (
     emit_key_snippet,
     emit_related_files,
     emit_research_notes,
-    get_memory_value,
     plan_implementation_completed,
     task_completed,
 )
@@ -31,7 +30,6 @@ __all__ = [
     "emit_related_files",
     "emit_research_notes",
     "fuzzy_find_project_files",
-    "get_memory_value",
     "list_directory_tree",
     "read_file_tool",
     "run_programming_task",

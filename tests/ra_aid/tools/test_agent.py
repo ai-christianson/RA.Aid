@@ -10,7 +10,6 @@ from ra_aid.tools.agent import (
     request_implementation,
     request_research_and_implementation,
 )
-from ra_aid.tools.memory import _global_memory
 from ra_aid.database.repositories.related_files_repository import get_related_files_repository
 from ra_aid.database.repositories.work_log_repository import get_work_log_repository, WorkLogEntry
 from ra_aid.database.repositories.config_repository import get_config_repository
@@ -18,8 +17,7 @@ from ra_aid.database.repositories.config_repository import get_config_repository
 
 @pytest.fixture
 def reset_memory():
-    """Reset global memory before each test"""
-    # No longer need to reset work_log in global memory
+    """Fixture for test initialization (kept for backward compatibility)"""
     yield
 
 
@@ -126,7 +124,6 @@ def mock_functions():
          patch('ra_aid.tools.agent.format_key_snippets_dict') as mock_snippet_formatter, \
          patch('ra_aid.tools.agent.initialize_llm') as mock_llm, \
          patch('ra_aid.tools.agent.get_related_files') as mock_get_files, \
-         patch('ra_aid.tools.agent.get_memory_value') as mock_get_memory, \
          patch('ra_aid.tools.agent.get_work_log') as mock_get_work_log, \
          patch('ra_aid.tools.agent.reset_completion_flags') as mock_reset, \
          patch('ra_aid.tools.agent.get_completion_message') as mock_get_completion:
@@ -138,7 +135,6 @@ def mock_functions():
         mock_snippet_formatter.return_value = "Formatted snippets"
         mock_llm.return_value = MagicMock()
         mock_get_files.return_value = ["file1.py", "file2.py"]
-        mock_get_memory.return_value = "Test memory value"
         mock_get_work_log.return_value = "Test work log"
         mock_get_completion.return_value = "Task completed"
         
@@ -150,7 +146,6 @@ def mock_functions():
             'format_key_snippets_dict': mock_snippet_formatter,
             'initialize_llm': mock_llm,
             'get_related_files': mock_get_files,
-            'get_memory_value': mock_get_memory,
             'get_work_log': mock_get_work_log,
             'reset_completion_flags': mock_reset,
             'get_completion_message': mock_get_completion
@@ -175,10 +170,6 @@ def test_request_research_uses_key_fact_repository(reset_memory, mock_functions)
         
         # Verify formatted facts are used in response
         assert result["key_facts"] == "Formatted facts"
-        
-        # Verify get_memory_value is not called with "key_facts"
-        for call in mock_functions['get_memory_value'].call_args_list:
-            assert call[0][0] != "key_facts"
 
 
 def test_request_research_max_depth(reset_memory, mock_functions):
@@ -201,10 +192,6 @@ def test_request_research_max_depth(reset_memory, mock_functions):
     
     # Verify formatted facts are used in response
     assert result["key_facts"] == "Formatted facts"
-    
-    # Verify get_memory_value is not called with "key_facts"
-    for call in mock_functions['get_memory_value'].call_args_list:
-            assert call[0][0] != "key_facts"
 
 
 def test_request_research_and_implementation_uses_key_fact_repository(reset_memory, mock_functions):
@@ -225,10 +212,6 @@ def test_request_research_and_implementation_uses_key_fact_repository(reset_memo
         
         # Verify formatted facts are used in response
         assert result["key_facts"] == "Formatted facts"
-        
-        # Verify get_memory_value is not called with "key_facts"
-        for call in mock_functions['get_memory_value'].call_args_list:
-            assert call[0][0] != "key_facts"
 
 
 def test_request_implementation_uses_key_fact_repository(reset_memory, mock_functions):
@@ -253,9 +236,6 @@ def test_request_implementation_uses_key_fact_repository(reset_memory, mock_func
 
 def test_request_task_implementation_uses_key_fact_repository(reset_memory, mock_functions):
     """Test that request_task_implementation uses KeyFactRepository correctly."""
-    # Set up _global_memory with required values (without tasks)
-    _global_memory["base_task"] = "Base task"
-    
     # Mock running the implementation agent
     with patch('ra_aid.agent_utils.run_task_implementation_agent'):
         # Call the function

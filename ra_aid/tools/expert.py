@@ -18,7 +18,6 @@ from ..llm import initialize_expert_llm
 from ..model_formatters import format_key_facts_dict
 from ..model_formatters.key_snippets_formatter import format_key_snippets_dict
 from ..model_formatters.research_notes_formatter import format_research_notes_dict
-from .memory import get_memory_value
 
 console = Console()
 _model = None

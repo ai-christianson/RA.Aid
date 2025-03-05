@@ -8,7 +8,7 @@ from rich.prompt import Prompt
 from ra_aid.console.cowboy_messages import get_cowboy_message
 from ra_aid.proc.interactive import run_interactive_command
 from ra_aid.text.processing import truncate_output
-from ra_aid.tools.memory import _global_memory, log_work_event
+from ra_aid.tools.memory import log_work_event
 from ra_aid.database.repositories.config_repository import get_config_repository
 
 console = Console()

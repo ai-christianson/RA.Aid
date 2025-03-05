@@ -5,7 +5,6 @@ from unittest.mock import patch, MagicMock
 
 from ra_aid.__main__ import parse_arguments
 from ra_aid.config import DEFAULT_RECURSION_LIMIT
-from ra_aid.tools.memory import _global_memory
 from ra_aid.database.repositories.work_log_repository import WorkLogEntry
 from ra_aid.database.repositories.config_repository import ConfigRepositoryManager, get_config_repository
 
@@ -49,9 +48,6 @@ def mock_config_repository():
 @pytest.fixture
 def mock_dependencies(monkeypatch):
     """Mock all dependencies needed for main()."""
-    # Initialize global memory 
-    _global_memory.clear()
-    
     # Mock dependencies that interact with external systems
     monkeypatch.setattr("ra_aid.__main__.check_dependencies", lambda: None)
     monkeypatch.setattr("ra_aid.__main__.validate_environment", lambda args: (True, [], True, []))

@@ -40,9 +40,6 @@ from ra_aid.database.repositories.key_fact_repository import get_key_fact_reposi
 # Import the related files repository
 from ra_aid.database.repositories.related_files_repository import get_related_files_repository
 
-# Global memory store
-_global_memory: Dict[str, Any] = {}
-
 
 @tool("emit_research_notes")
 def emit_research_notes(notes: str) -> str:
@@ -476,61 +473,3 @@ def deregister_related_files(file_ids: List[int]) -> str:
             results.append(success_msg)
 
     return "Files noted."
-
-
-def get_memory_value(key: str) -> str:
-    """
-    Get a value from global memory.
-    
-    Note: Key facts and key snippets are handled by their respective repository and formatter modules,
-    and should be accessed directly using those instead of through this function.
-
-    Different memory types return different formats:
-    - For work_log: Returns formatted markdown with timestamps and events
-    - For research_notes: Returns formatted markdown from repository
-    - For other types: Returns newline-separated list of values
-
-    Args:
-        key: The key to get from memory
-
-    Returns:
-        String representation of the memory values
-    """
-    if key == "work_log":
-        # Use the repository to get the formatted work log
-        try:
-            repo = get_work_log_repository()
-            return repo.format_work_log()
-        except RuntimeError as e:
-            logger.error(f"Failed to access work log repository: {str(e)}")
-            return ""
-    
-    if key == "research_notes":
-        # DEPRECATED: This method of accessing research notes is deprecated.
-        # Use direct repository access instead:
-        # from ra_aid.database.repositories.research_note_repository import get_research_note_repository
-        # from ra_aid.model_formatters.research_notes_formatter import format_research_notes_dict
-        # repository = get_research_note_repository()
-        # notes_dict = repository.get_notes_dict()
-        # formatted_notes = format_research_notes_dict(notes_dict)
-        logger.warning("DEPRECATED: Accessing research notes via get_memory_value() is deprecated. "
-                       "Use direct repository access with get_research_note_repository() instead.")
-        try:
-            # Import required modules for research notes
-            from ra_aid.database.repositories.research_note_repository import get_research_note_repository
-            from ra_aid.model_formatters.research_notes_formatter import format_research_notes_dict
-            
-            # Get notes from repository and format them
-            repository = get_research_note_repository()
-            notes_dict = repository.get_notes_dict()
-            return format_research_notes_dict(notes_dict)
-        except RuntimeError as e:
-            logger.error(f"Failed to access research note repository: {str(e)}")
-            return ""
-        except Exception as e:
-            logger.error(f"Error accessing research notes: {str(e)}")
-            return ""
-
-    # For other types (lists), join with newlines
-    values = _global_memory.get(key, [])
-    return "\n".join(str(v) for v in values)

@@ -29,7 +29,7 @@ from ra_aid.model_formatters.research_notes_formatter import format_research_not
 from ..console import print_task_header
 from ..llm import initialize_llm
 from .human import ask_human
-from .memory import get_memory_value, get_related_files, get_work_log
+from .memory import get_related_files, get_work_log
 
 ResearchResult = Dict[str, Union[str, bool, Dict[int, Any], List[Any], None]]
 
