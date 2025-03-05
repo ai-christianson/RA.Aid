@@ -53,17 +53,32 @@ def test_string_not_found(temp_test_dir):
 
 
 def test_multiple_occurrences(temp_test_dir):
-    """Test handling of multiple string occurrences."""
+    """Test handling of multiple string occurrences with replace_all=False."""
     test_file = temp_test_dir / "test.txt"
     test_file.write_text("test test test")
 
     result = file_str_replace.invoke(
-        {"filepath": str(test_file), "old_str": "test", "new_str": "replacement"}
+        {"filepath": str(test_file), "old_str": "test", "new_str": "replacement", "replace_all": False}
     )
 
     assert result["success"] is False
     assert "appears" in result["message"]
     assert "must be unique" in result["message"]
+    assert "use replace_all=True" in result["message"]
+
+
+def test_multiple_occurrences_replace_all(temp_test_dir):
+    """Test replacing all occurrences when replace_all is True."""
+    test_file = temp_test_dir / "test.txt"
+    test_file.write_text("test test test")
+
+    result = file_str_replace.invoke(
+        {"filepath": str(test_file), "old_str": "test", "new_str": "replacement", "replace_all": True}
+    )
+
+    assert result["success"] is True
+    assert "Successfully replaced 3 occurrences" in result["message"]
+    assert test_file.read_text() == "replacement replacement replacement"
 
 
 def test_empty_strings(temp_test_dir):
