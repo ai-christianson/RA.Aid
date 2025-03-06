@@ -220,15 +220,55 @@ def ask_expert(question: str) -> str:
         ]
     )
 
+    # Ensure all elements in query_parts are strings before joining
+    query_parts = [str(part) for part in query_parts]
+    
     # Join all parts
     full_query = "\n".join(query_parts)
 
     # Get response using full query
     response = get_model().invoke(full_query)
-
+    
+    # Get the content from the response
+    content = response.content
+    
+    # Handle thinking mode responses (content is a list) or regular responses (content is a string)
+    try:
+        if isinstance(content, list):
+            # Extract thinking content and response text from structured response
+            thinking_content = None
+            response_text = None
+            
+            # Process each item in the list
+            for item in content:
+                if isinstance(item, dict):
+                    # Extract thinking content
+                    if item.get('type') == 'thinking' and 'thinking' in item:
+                        thinking_content = item['thinking']
+                    # Extract response text
+                    elif item.get('type') == 'text' and 'text' in item:
+                        response_text = item['text']
+            
+            # Display thinking content in a separate panel if available
+            if thinking_content:
+                console.print(
+                    Panel(Markdown(thinking_content), title="Expert Thinking", border_style="yellow")
+                )
+            
+            # Use response_text if available, otherwise fall back to joining
+            if response_text:
+                content = response_text
+            else:
+                # Fallback: join list items if structured extraction failed
+                content = "\n".join(str(item) for item in content)
+        
+    except Exception as e:
+        logger.error(f"Exception during content processing: {str(e)}")
+        raise
+    
     # Format and display response
     console.print(
-        Panel(Markdown(response.content), title="Expert Response", border_style="blue")
+        Panel(Markdown(content), title="Expert Response", border_style="blue")
     )
 
-    return response.content
+    return content
