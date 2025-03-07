@@ -351,37 +351,88 @@ def is_stage_requested(stage: str) -> bool:
     return False
 
 
-def build_status(
-    args: argparse.Namespace, expert_enabled: bool, web_research_enabled: bool
-):
+def build_status():
+    """Build status panel with model and feature information.
+    
+    Includes memory statistics at the bottom with counts of key facts, snippets, and research notes.
+    """
     status = Text()
+    
+    # Get the config repository to get model/provider information
+    config_repo = get_config_repository()
+    provider = config_repo.get("provider", "")
+    model = config_repo.get("model", "")
+    temperature = config_repo.get("temperature")
+    expert_provider = config_repo.get("expert_provider", "")
+    expert_model = config_repo.get("expert_model", "")
+    experimental_fallback_handler = config_repo.get("experimental_fallback_handler", False)
+    web_research_enabled = config_repo.get("web_research_enabled", False)
+    
+    # Get the expert enabled status
+    expert_enabled = bool(expert_provider and expert_model)
+    
+    # Basic model information
     status.append("🤖 ")
-    status.append(f"{args.provider}/{args.model}")
-    if args.temperature is not None:
-        status.append(f" @ T{args.temperature}")
+    status.append(f"{provider}/{model}")
+    if temperature is not None:
+        status.append(f" @ T{temperature}")
     status.append("\n")
 
+    # Expert model information
     status.append("🤔 ")
     if expert_enabled:
-        status.append(f"{args.expert_provider}/{args.expert_model}")
+        status.append(f"{expert_provider}/{expert_model}")
     else:
         status.append("Expert: ")
         status.append("Disabled", style="italic")
     status.append("\n")
 
+    # Web research status
     status.append("🔍 Search: ")
     status.append(
         "Enabled" if web_research_enabled else "Disabled",
         style=None if web_research_enabled else "italic",
     )
 
-    if args.experimental_fallback_handler:
+    # Fallback handler status
+    if experimental_fallback_handler:
         fb_handler = FallbackHandler({}, [])
         status.append("\n🔧 FallbackHandler Enabled: ")
         msg = ", ".join(
             [fb_handler._format_model(m) for m in fb_handler.fallback_tool_models]
         )
         status.append(msg)
+    
+    # Add memory statistics
+    # Get counts of key facts, snippets, and research notes with error handling
+    fact_count = 0
+    snippet_count = 0
+    note_count = 0
+    
+    try:
+        fact_count = len(get_key_fact_repository().get_all())
+    except RuntimeError as e:
+        logger.debug(f"Failed to get key facts count: {e}")
+    
+    try:
+        snippet_count = len(get_key_snippet_repository().get_all())
+    except RuntimeError as e:
+        logger.debug(f"Failed to get key snippets count: {e}")
+    
+    try:
+        note_count = len(get_research_note_repository().get_all())
+    except RuntimeError as e:
+        logger.debug(f"Failed to get research notes count: {e}")
+    
+    # Add memory statistics line
+    status.append(f"\n💾 Memory: {fact_count} facts, {snippet_count} snippets, {note_count} notes")
+    
+    # Check for newer version
+    version_message = check_for_newer_version()
+    if version_message:
+        status.append("\n\n")
+        status.append(version_message, style="yellow")
+    
     return status
 
 
@@ -466,13 +517,17 @@ def main():
                         f"Using default temperature {args.temperature} for model {args.model}"
                     )
 
-                status = build_status(args, expert_enabled, web_research_enabled)
+                # Store all the configuration in the config repository
+                config_repo.set("provider", args.provider)
+                config_repo.set("model", args.model)
+                config_repo.set("expert_provider", args.expert_provider)
+                config_repo.set("expert_model", args.expert_model)
+                config_repo.set("temperature", args.temperature)
+                config_repo.set("experimental_fallback_handler", args.experimental_fallback_handler)
+                config_repo.set("web_research_enabled", web_research_enabled)
 
-                # Check for newer version
-                version_message = check_for_newer_version()
-                if version_message:
-                    status.append("\n\n")
-                    status.append(version_message, style="yellow")
+                # Build status panel with memory statistics
+                status = build_status()
 
                 console.print(
                     Panel(
