@@ -151,6 +151,7 @@ def test_create_agent_anthropic(mock_model, mock_config_repository):
         mock_react.assert_called_once_with(
             mock_model,
             [],
+            interrupt_after=['tools'],
             version="v2",
             state_modifier=mock_react.call_args[1]["state_modifier"],
         )
@@ -295,7 +296,7 @@ def test_create_agent_anthropic_token_limiting_disabled(mock_model, mock_config_
         agent = create_agent(mock_model, [])
 
         assert agent == "react_agent"
-        mock_react.assert_called_once_with(mock_model, [], version="v2")
+        mock_react.assert_called_once_with(mock_model, [], interrupt_after=['tools'], version="v2")
 
 
 def test_get_model_token_limit_research(mock_config_repository):
@@ -372,10 +373,19 @@ def test_agent_context_depth():
 def test_run_agent_stream(monkeypatch):
     from ra_aid.agent_utils import _run_agent_stream
 
-    # Create a dummy agent that yields one chunk
+    # Create a simple state class with a next property
+    class State:
+        def __init__(self):
+            self.next = None
+
+    # Create a dummy agent that yields one chunk and has a get_state method
     class DummyAgent:
         def stream(self, input_data, cfg: dict):
             yield {"content": "chunk1"}
+            
+        def get_state(self, state_config=None):
+            # Return an object with a next property set to None
+            return State()
 
     dummy_agent = DummyAgent()
     # Set flags so that _run_agent_stream will reset them
