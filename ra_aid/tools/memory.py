@@ -277,7 +277,7 @@ def plan_implementation_completed(message: str) -> str:
     Args:
         message: Message explaining how the implementation plan was completed
     """
-    mark_should_exit()
+    mark_should_exit(propagation_depth=1)
     mark_plan_completed(message)
     console.print(Panel(Markdown(message), title="✅ Plan Executed"))
     log_work_event(f"Completed implementation:\n\n{message}")

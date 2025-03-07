@@ -56,16 +56,28 @@ class AgentContext:
         self.plan_completed = False
         self.completion_message = ""
 
-    def mark_should_exit(self) -> None:
+    def mark_should_exit(self, propagation_depth: Optional[int] = 0) -> None:
         """Mark that the agent should exit execution.
 
-        This propagates the exit state to all parent contexts.
+        Args:
+            propagation_depth: How far up the context hierarchy to propagate the flag.
+                None: Propagate to all parent contexts
+                0 (default): Only mark the current context
+                1: Mark the current context and its immediate parent
+                2+: Propagate up the specified number of levels
         """
         self.agent_should_exit = True
 
-        # Propagate to parent context if it exists
-        if self.parent:
-            self.parent.mark_should_exit()
+        # Propagate to parent context based on propagation_depth
+        if propagation_depth is None:
+            # Maintain current behavior of unlimited propagation
+            if self.parent:
+                self.parent.mark_should_exit(propagation_depth)
+        elif propagation_depth > 0:
+            # Propagate to parent with decremented depth
+            if self.parent:
+                self.parent.mark_should_exit(propagation_depth - 1)
+        # If propagation_depth is 0, don't propagate to parent
 
     def mark_agent_crashed(self, message: str) -> None:
         """Mark the agent as crashed with the given message.
@@ -216,11 +228,19 @@ def should_exit() -> bool:
     return context.agent_should_exit if context else False
 
 
-def mark_should_exit() -> None:
-    """Mark that the agent should exit execution."""
+def mark_should_exit(propagation_depth: Optional[int] = 0) -> None:
+    """Mark that the agent should exit execution.
+    
+    Args:
+        propagation_depth: How far up the context hierarchy to propagate the flag.
+            None: Propagate to all parent contexts
+            0 (default): Only mark the current context
+            1: Mark the current context and its immediate parent
+            2+: Propagate up the specified number of levels
+    """
     context = get_current_context()
     if context:
-        context.mark_should_exit()
+        context.mark_should_exit(propagation_depth)
 
 
 def is_crashed() -> bool:

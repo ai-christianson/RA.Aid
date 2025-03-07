@@ -14,12 +14,6 @@ from ra_aid.prompts.web_research_prompts import WEB_RESEARCH_PROMPT_SECTION_RESE
 
 RESEARCH_COMMON_PROMPT_HEADER = """Current Date: {current_date}
 
-<user query>
-{base_task}
-</user query>
-
-KEEP IT SIMPLE
-
 <previous research>
 <key facts>
 {key_facts}
@@ -171,6 +165,11 @@ Decision on Implementation
 If this is a top-level README.md or docs folder, start there.
 
 If the user explicitly requested implementation, that means you should first perform all the background research for that task, then call request_implementation where the implementation will be carried out.
+<user query>
+{base_task}
+</user query>
+
+KEEP IT SIMPLE
 
 NEVER ANNOUNCE WHAT YOU ARE DOING, JUST DO IT!
 
@@ -188,6 +187,12 @@ RESEARCH_ONLY_PROMPT = (
 You have been spawned by a higher level research agent, so only spawn more research tasks sparingly if absolutely necessary. Keep your research *very* scoped and efficient.
 
 When you emit research notes, keep it extremely concise and relevant only to the specific research subquery you've been assigned.
+
+<user query>
+{base_task}
+</user query>
+
+KEEP IT SIMPLE
 
 NEVER ANNOUNCE WHAT YOU ARE DOING, JUST DO IT!
 """

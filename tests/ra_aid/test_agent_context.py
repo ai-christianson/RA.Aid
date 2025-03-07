@@ -120,7 +120,7 @@ class TestExitPropagation:
     """Test cases for the agent_should_exit flag propagation."""
 
     def test_mark_should_exit_propagation(self):
-        """Test that mark_should_exit propagates to parent contexts."""
+        """Test that mark_should_exit propagates to parent contexts when requested."""
         parent = AgentContext()
         child = AgentContext(parent_context=parent)
 
@@ -128,15 +128,26 @@ class TestExitPropagation:
         assert parent.agent_should_exit is False
         assert child.agent_should_exit is False
 
-        # Mark the child context as should exit
-        child.mark_should_exit()
+        # Test with explicit propagation to all parents
+        child.mark_should_exit(propagation_depth=None)
 
         # Both child and parent should now have agent_should_exit as True
         assert child.agent_should_exit is True
         assert parent.agent_should_exit is True
+        
+        # Reset for next test
+        parent.agent_should_exit = False
+        child.agent_should_exit = False
+        
+        # Test default behavior (no propagation)
+        child.mark_should_exit()
+        
+        # Only child should have agent_should_exit as True
+        assert child.agent_should_exit is True
+        assert parent.agent_should_exit is False
 
     def test_nested_should_exit_propagation(self):
-        """Test that mark_should_exit propagates through multiple levels of parent contexts."""
+        """Test that mark_should_exit propagates through multiple levels of parent contexts when requested."""
         grandparent = AgentContext()
         parent = AgentContext(parent_context=grandparent)
         child = AgentContext(parent_context=parent)
@@ -146,28 +157,55 @@ class TestExitPropagation:
         assert parent.agent_should_exit is False
         assert child.agent_should_exit is False
 
-        # Mark the child context as should exit
-        child.mark_should_exit()
+        # Test with explicit propagation to all parents
+        child.mark_should_exit(propagation_depth=None)
 
         # All contexts should now have agent_should_exit as True
         assert child.agent_should_exit is True
         assert parent.agent_should_exit is True
         assert grandparent.agent_should_exit is True
+        
+        # Reset for next test
+        grandparent.agent_should_exit = False
+        parent.agent_should_exit = False
+        child.agent_should_exit = False
+        
+        # Test default behavior (no propagation)
+        child.mark_should_exit()
+        
+        # Only child should have agent_should_exit as True
+        assert child.agent_should_exit is True
+        assert parent.agent_should_exit is False
+        assert grandparent.agent_should_exit is False
 
     def test_context_manager_should_exit_propagation(self):
-        """Test that mark_should_exit propagates when using context managers."""
+        """Test that mark_should_exit propagates when using context managers when requested."""
         with agent_context() as outer:
             with agent_context() as inner:
                 # Initially both contexts should have agent_should_exit as False
                 assert outer.agent_should_exit is False
                 assert inner.agent_should_exit is False
 
-                # Mark the inner context as should exit
-                inner.mark_should_exit()
+                # Test with explicit propagation to all parents
+                inner.mark_should_exit(propagation_depth=None)
 
                 # Both inner and outer should now have agent_should_exit as True
                 assert inner.agent_should_exit is True
                 assert outer.agent_should_exit is True
+                
+        # Test default behavior (no propagation)
+        with agent_context() as outer:
+            with agent_context() as inner:
+                # Initially both contexts should have agent_should_exit as False
+                assert outer.agent_should_exit is False
+                assert inner.agent_should_exit is False
+
+                # Mark the inner context as should exit with default propagation
+                inner.mark_should_exit()
+
+                # Only inner should have agent_should_exit as True
+                assert inner.agent_should_exit is True
+                assert outer.agent_should_exit is False
 
 
 class TestCrashPropagation:
@@ -344,10 +382,24 @@ class TestUtilityFunctions:
                 # Initially both contexts should have agent_should_exit as False
                 assert should_exit() is False
 
-                # Mark the current context (inner) as should exit
-                mark_should_exit()
+                # Test with explicit propagation to all parents
+                mark_should_exit(propagation_depth=None)
 
                 # Both inner and outer should now have agent_should_exit as True
                 assert should_exit() is True
                 assert inner.agent_should_exit is True
                 assert outer.agent_should_exit is True
+                
+        # Test default behavior (no propagation)
+        with agent_context() as outer:
+            with agent_context() as inner:
+                # Initially both contexts should have agent_should_exit as False
+                assert should_exit() is False
+
+                # Mark the current context (inner) as should exit with default propagation
+                mark_should_exit()
+
+                # Only inner should have agent_should_exit as True
+                assert should_exit() is True
+                assert inner.agent_should_exit is True
+                assert outer.agent_should_exit is False

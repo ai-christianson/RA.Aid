@@ -27,8 +27,8 @@ def test_ciayn_agent_stream_respects_should_exit():
     
     # Test stream exits when should_exit is set
     with agent_context() as ctx:
-        # Set should_exit
-        mark_should_exit()
+        # Set should_exit with propagation to all parents
+        mark_should_exit(propagation_depth=None)
         
         # Verify should_exit is set
         assert should_exit()
@@ -80,8 +80,8 @@ def test_ciayn_agent_bundled_tools_respects_should_exit():
         # Set up test messages
         messages = {"messages": [HumanMessage(content="test")]}
         
-        # Set should_exit before calling stream
-        mark_should_exit()
+        # Set should_exit with propagation to all parents
+        mark_should_exit(propagation_depth=None)
         
         # Call stream
         generator = agent.stream(messages)
@@ -128,7 +128,7 @@ def test_ciayn_agent_single_tool_respects_should_exit():
     def execute_and_exit(*args, **kwargs):
         # Set should_exit flag
         with agent_context() as ctx:
-            mark_should_exit()
+            mark_should_exit(propagation_depth=None)
         return "Tool executed"
     
     # Override the mock tool to set should_exit
@@ -176,8 +176,8 @@ def test_ciayn_agent_execute_tool_respects_should_exit():
     
     # Test _execute_tool exits when should_exit is set
     with agent_context() as ctx:
-        # Set should_exit
-        mark_should_exit()
+        # Set should_exit with propagation to all parents
+        mark_should_exit(propagation_depth=None)
         
         # Call _execute_tool
         message = HumanMessage(content="test_tool()")
