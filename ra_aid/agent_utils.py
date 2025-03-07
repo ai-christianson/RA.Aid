@@ -1077,16 +1077,13 @@ def _run_agent_stream(agent: RAgents, msg_list: list[BaseMessage], config: dict)
     human-in-the-loop interruptions using interrupt_after=["tools"].
     """
     while True:
-        print("HERE")
         # Process each chunk from the agent stream.
         for chunk in agent.stream({"messages": msg_list}, config):
-            print("HERE IN FOR CHUNK")
             logger.debug("Agent output: %s", chunk)
             check_interrupt()
             agent_type = get_agent_type(agent)
             print_agent_output(chunk, agent_type)
             if is_completed() or should_exit():
-                print("IS COMPLETED OR SHOULD EXIT TRIGGERED")
                 reset_completion_flags()
                 return True  # Exit immediately when finished or signaled to exit.
         logger.debug("Stream iteration ended; checking agent state for continuation.")
@@ -1108,19 +1105,14 @@ def _run_agent_stream(agent: RAgents, msg_list: list[BaseMessage], config: dict)
         # If the state indicates that further steps remain (i.e. state.next is non-empty),
         # then resume execution by invoking the agent with no new input.
         if state.next:
-            print("HAS NEXT STATE")
             logger.debug("State indicates continuation (state.next: %s); resuming execution.", state.next)
             agent.invoke(None, config)
             continue
         else:
-            print("NO NEXT STATE")
             logger.debug("No continuation indicated in state; exiting stream loop.")
             break
 
-    print("WHILE EXITED")
     return True
-
-
 
 def run_agent_with_retry(
     agent: RAgents,

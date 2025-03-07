@@ -1,11 +1,12 @@
 """Context manager for tracking agent state and completion status."""
 
-import threading
+import threading  # Keep for backward compatibility
+import contextvars
 from contextlib import contextmanager
 from typing import Optional
 
-# Thread-local storage for context variables
-_thread_local = threading.local()
+# Create contextvar to hold the agent context
+agent_context_var = contextvars.ContextVar("agent_context", default=None)
 
 
 class AgentContext:
@@ -121,7 +122,7 @@ def get_current_context() -> Optional[AgentContext]:
     Returns:
         The current AgentContext or None if no context is active
     """
-    return getattr(_thread_local, "current_context", None)
+    return agent_context_var.get()
 
 
 def get_depth() -> int:
@@ -150,7 +151,7 @@ def agent_context(parent_context=None):
         The newly created AgentContext
     """
     # Save the previous context
-    previous_context = getattr(_thread_local, "current_context", None)
+    previous_context = agent_context_var.get()
 
     # Create a new context, inheriting from parent if provided
     # If parent_context is None but previous_context exists, use previous_context as parent
@@ -159,14 +160,14 @@ def agent_context(parent_context=None):
     else:
         context = AgentContext(parent_context)
 
-    # Set as current context
-    _thread_local.current_context = context
+    # Set as current context and get token for resetting later
+    token = agent_context_var.set(context)
 
     try:
         yield context
     finally:
         # Restore previous context
-        _thread_local.current_context = previous_context
+        agent_context_var.reset(token)
 
 
 def mark_task_completed(message: str) -> None:
