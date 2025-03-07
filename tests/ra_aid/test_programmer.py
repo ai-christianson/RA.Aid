@@ -156,14 +156,13 @@ def test_parse_aider_flags(input_flags, expected, description):
     assert result == expected, f"Failed test case: {description}"
 
 
-def test_aider_config_flag(mocker, mock_config_repository, mock_related_files_repository):
+def test_aider_config_flag(monkeypatch, mock_config_repository, mock_related_files_repository):
     """Test that aider config flag is properly included in the command when specified."""
     # Config is mocked by mock_config_repository fixture
 
     # Mock the run_interactive_command to capture the command that would be run
-    mock_run = mocker.patch(
-        "ra_aid.tools.programmer.run_interactive_command", return_value=(b"", 0)
-    )
+    mock_run = MagicMock(return_value=(b"", 0))
+    monkeypatch.setattr("ra_aid.tools.programmer.run_interactive_command", mock_run)
 
     run_programming_task.invoke({"instructions": "test instruction"})
 
@@ -173,7 +172,7 @@ def test_aider_config_flag(mocker, mock_config_repository, mock_related_files_re
     assert args[config_index + 1] == "/path/to/config.yml"
 
 
-def test_path_normalization_and_deduplication(mocker, tmp_path, mock_config_repository, mock_related_files_repository):
+def test_path_normalization_and_deduplication(monkeypatch, tmp_path, mock_config_repository, mock_related_files_repository):
     """Test path normalization and deduplication in run_programming_task."""
     # Create a temporary test file
     test_file = tmp_path / "test.py"
@@ -181,12 +180,13 @@ def test_path_normalization_and_deduplication(mocker, tmp_path, mock_config_repo
     new_file = tmp_path / "new.py"
 
     # Config is mocked by mock_config_repository fixture
-    mocker.patch(
-        "ra_aid.tools.programmer.get_aider_executable", return_value="/path/to/aider"
+    monkeypatch.setattr(
+        "ra_aid.tools.programmer.get_aider_executable", 
+        lambda: "/path/to/aider"
     )
-    mock_run = mocker.patch(
-        "ra_aid.tools.programmer.run_interactive_command", return_value=(b"", 0)
-    )
+    
+    mock_run = MagicMock(return_value=(b"", 0))
+    monkeypatch.setattr("ra_aid.tools.programmer.run_interactive_command", mock_run)
 
     # Test duplicate paths
     run_programming_task.invoke(
@@ -221,28 +221,31 @@ def test_path_normalization_and_deduplication(mocker, tmp_path, mock_config_repo
     ), "Expected one instance of new_file"
 
 
-def test_get_aider_executable(mocker):
+def test_get_aider_executable(monkeypatch):
     """Test the get_aider_executable function."""
-    mock_sys = mocker.patch("ra_aid.tools.programmer.sys")
-    mock_path = mocker.patch("ra_aid.tools.programmer.Path")
-    mock_os = mocker.patch("ra_aid.tools.programmer.os")
-
-    # Mock sys.executable and platform
-    mock_sys.executable = "/path/to/venv/bin/python"
-    mock_sys.platform = "linux"
-
-    # Mock Path().parent and exists()
-    mock_path_instance = mocker.MagicMock()
-    mock_path.return_value = mock_path_instance
-    mock_parent = mocker.MagicMock()
+    # Create mock objects using standard unittest.mock.MagicMock
+    mock_path_instance = MagicMock()
+    mock_parent = MagicMock()
+    mock_aider = MagicMock()
+    
+    # Setup sys mock
+    mock_sys_attrs = {
+        "executable": "/path/to/venv/bin/python",
+        "platform": "linux"
+    }
+    monkeypatch.setattr("ra_aid.tools.programmer.sys", MagicMock(**mock_sys_attrs))
+    
+    # Setup Path mock
+    monkeypatch.setattr("ra_aid.tools.programmer.Path", lambda x: mock_path_instance)
     mock_path_instance.parent = mock_parent
-    mock_aider = mocker.MagicMock()
     mock_parent.__truediv__.return_value = mock_aider
     mock_aider.exists.return_value = True
-
-    # Mock os.access to return True
+    
+    # Setup os mock
+    mock_os = MagicMock()
     mock_os.access.return_value = True
-    mock_os.X_OK = 1  # Mock the execute permission constant
+    mock_os.X_OK = 1
+    monkeypatch.setattr("ra_aid.tools.programmer.os", mock_os)
 
     # Test happy path on Linux
     aider_path = get_aider_executable()
@@ -250,7 +253,7 @@ def test_get_aider_executable(mocker):
     mock_parent.__truediv__.assert_called_with("aider")
 
     # Test Windows path
-    mock_sys.platform = "win32"
+    monkeypatch.setattr("ra_aid.tools.programmer.sys.platform", "win32")
     aider_path = get_aider_executable()
     mock_parent.__truediv__.assert_called_with("aider.exe")
 
