@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.0] 2025-03-07
+
+### Added
+- Database-backed memory system with SQLite (.ra-aid/pk.db)
+- Repository pattern for memory access (KeyFactRepository, KeySnippetRepository, ResearchNoteRepository)
+- Memory garbage collection with configurable thresholds
+- "--wipe-project-memory" flag to reset memory
+- Memory statistics in status panel
+- Propagation depth control for agent_should_exit
+- Fixed string parameter for ripgrep tool
+- Support for Claude 3.7 Sonnet thinking tokens in expert tool
+
+### Changed
+- Enhanced file logging with support for .ra-aid/logs/
+- Improved CiaynAgent with better tool validation and execution
+- Memory-related prompt improvements
+
+### Fixed
+- Various bug fixes in tool execution
+- Test improvements for memory system
+
 ## [0.15.2] - 2025-02-27
 
 ### Added
