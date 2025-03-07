@@ -20,6 +20,7 @@ from ra_aid.database.repositories.config_repository import get_config_repository
 from ra_aid.llm import initialize_llm
 from ra_aid.prompts.key_snippets_gc_prompts import KEY_SNIPPETS_GC_PROMPT
 from ra_aid.tools.memory import log_work_event
+from ra_aid.agent_context import mark_should_exit
 
 
 console = Console()
@@ -97,6 +98,9 @@ def delete_key_snippets(snippet_ids: List[int]) -> str:
     if failed_snippets:
         failed_msg = f"Failed to delete snippets: {', '.join([f'#{snippet_id}' for snippet_id in failed_snippets])}"
         result_parts.append(failed_msg)
+    
+    # Mark that the agent should exit
+    mark_should_exit()
     
     return "Snippets deleted."
 

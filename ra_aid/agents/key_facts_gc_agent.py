@@ -16,6 +16,7 @@ from rich.panel import Panel
 
 logger = logging.getLogger(__name__)
 
+from ra_aid.agent_context import mark_should_exit
 from ra_aid.agent_utils import create_agent, run_agent_with_retry
 from ra_aid.database.repositories.key_fact_repository import get_key_fact_repository
 from ra_aid.database.repositories.human_input_repository import get_human_input_repository
@@ -100,6 +101,9 @@ def delete_key_facts(fact_ids: List[int]) -> str:
     if failed_facts:
         failed_msg = f"Failed to delete facts: {', '.join([f'#{fact_id}' for fact_id in failed_facts])}"
         result_parts.append(failed_msg)
+    
+    # Mark that the agent should exit after completing this operation
+    mark_should_exit()
     
     return "\n".join(result_parts)
 

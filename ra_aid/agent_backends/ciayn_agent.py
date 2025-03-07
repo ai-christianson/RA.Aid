@@ -19,6 +19,7 @@ from ra_aid.tools.expert import get_model
 from ra_aid.tools.reflection import get_function_info
 from ra_aid.console.output import cpm
 from ra_aid.console.formatting import print_warning, print_error
+from ra_aid.agent_context import should_exit
 
 logger = get_logger(__name__)
 
@@ -247,6 +248,11 @@ class CiaynAgent:
 
     def _execute_tool(self, msg: BaseMessage) -> str:
         """Execute a tool call and return its result."""
+        
+        # Check for should_exit before executing tool calls
+        if should_exit():
+            logger.debug("Agent should exit flag detected in _execute_tool")
+            return "Tool execution aborted - agent should exit flag is set"
 
         code = msg.content
         globals_dict = {tool.func.__name__: tool.func for tool in self.tools}
@@ -263,10 +269,20 @@ class CiaynAgent:
             
             # If we have multiple valid bundleable calls, execute them in sequence
             if len(tool_calls) > 1:
+                # Check for should_exit before executing bundled tool calls
+                if should_exit():
+                    logger.debug("Agent should exit flag detected before executing bundled tool calls")
+                    return "Bundled tool execution aborted - agent should exit flag is set"
+                    
                 results = []
                 result_strings = []
                 
                 for call in tool_calls:
+                    # Check if agent should exit
+                    if should_exit():
+                        logger.debug("Agent should exit flag detected during bundled tool execution")
+                        return "Tool execution interrupted: agent_should_exit flag is set."
+                    
                     # Validate and fix each call if needed
                     if validate_function_call_pattern(call):
                         functions_list = "\n\n".join(self.available_functions)
@@ -431,6 +447,12 @@ class CiaynAgent:
                     logger.debug(f"Failed to parse parameters for duplicate detection: {str(e)}")
                     pass
             
+            # Before executing the call
+            if should_exit():
+                logger.debug("Agent should exit flag detected before tool execution")
+                return "Tool execution interrupted: agent_should_exit flag is set."
+
+            # Execute the tool
             result = eval(code.strip(), globals_dict)
             return result
         except Exception as e:
@@ -589,6 +611,11 @@ class CiaynAgent:
         max_empty_responses = 3  # Maximum number of consecutive empty responses before giving up
 
         while True:
+            # Check for should_exit
+            if should_exit():
+                logger.debug("Agent should exit flag detected in stream loop")
+                break
+                
             base_prompt = self._build_prompt(last_result)
             self.chat_history.append(HumanMessage(content=base_prompt))
             full_history = self._trim_chat_history(initial_messages, self.chat_history)

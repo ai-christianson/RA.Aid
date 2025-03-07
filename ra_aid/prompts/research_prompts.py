@@ -20,8 +20,7 @@ RESEARCH_COMMON_PROMPT_HEADER = """Current Date: {current_date}
 
 KEEP IT SIMPLE
 
-Context from Previous Research (if available):
-
+<previous research>
 <key facts>
 {key_facts}
 </key facts>
@@ -43,6 +42,8 @@ Work already done:
 <project info>
 {project_info}
 </project info>
+<caveat>You should make the most efficient use of this previous research possible, with the caveat that not all of it will be relevant to the current task you are assigned with. Use this previous research to save redudant research, and to inform what you are currently tasked with. Be as efficient as possible.</caveat>
+</previous research>
 
 Role
 

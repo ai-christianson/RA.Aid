@@ -16,6 +16,8 @@ from rich.panel import Panel
 
 logger = logging.getLogger(__name__)
 
+from ra_aid.agent_context import mark_should_exit
+
 from ra_aid.agent_utils import create_agent, run_agent_with_retry
 from ra_aid.database.repositories.research_note_repository import get_research_note_repository
 from ra_aid.database.repositories.human_input_repository import get_human_input_repository
@@ -102,6 +104,9 @@ def delete_research_notes(note_ids: List[int]) -> str:
     if failed_notes:
         failed_msg = f"Failed to delete research notes: {', '.join([f'#{note_id}' for note_id in failed_notes])}"
         result_parts.append(failed_msg)
+    
+    # Mark the agent to exit after performing the cleanup operation
+    mark_should_exit()
     
     return "\n".join(result_parts)
 
