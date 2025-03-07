@@ -275,6 +275,11 @@ Examples:
         default=8080,
         help="Port to listen on for web interface (default: 8080)",
     )
+    parser.add_argument(
+        "--wipe-project-memory",
+        action="store_true",
+        help="Delete the project database file (.ra-aid/pk.db) before starting, effectively wiping all stored memory",
+    )
     if args is None:
         args = sys.argv[1:]
     parsed_args = parser.parse_args(args)
@@ -351,6 +356,31 @@ def is_stage_requested(stage: str) -> bool:
     return False
 
 
+def wipe_project_memory():
+    """Delete the project database file to wipe all stored memory.
+    
+    Returns:
+        str: A message indicating the result of the operation
+    """
+    import os
+    from pathlib import Path
+    
+    cwd = os.getcwd()
+    ra_aid_dir = Path(os.path.join(cwd, ".ra-aid"))
+    db_path = os.path.join(ra_aid_dir, "pk.db")
+    
+    if not os.path.exists(db_path):
+        return "No project memory found to wipe."
+    
+    try:
+        os.remove(db_path)
+        return "Project memory wiped successfully."
+    except PermissionError:
+        return "Error: Could not wipe project memory due to permission issues."
+    except Exception as e:
+        return f"Error: Failed to wipe project memory: {str(e)}"
+
+
 def build_status():
     """Build status panel with model and feature information.
     
@@ -424,8 +454,10 @@ def build_status():
     except RuntimeError as e:
         logger.debug(f"Failed to get research notes count: {e}")
     
-    # Add memory statistics line
+    # Add memory statistics line with reset option note
     status.append(f"\n💾 Memory: {fact_count} facts, {snippet_count} snippets, {note_count} notes")
+    if fact_count > 0 or snippet_count > 0 or note_count > 0:
+        status.append(" (use --wipe-project-memory to reset)")
     
     # Check for newer version
     version_message = check_for_newer_version()
@@ -441,6 +473,12 @@ def main():
     args = parse_arguments()
     setup_logging(args.log_mode, args.pretty_logger, args.log_level)
     logger.debug("Starting RA.Aid with arguments: %s", args)
+    
+    # Check if we need to wipe project memory before starting
+    if args.wipe_project_memory:
+        result = wipe_project_memory()
+        logger.info(result)
+        print(f"📋 {result}")
 
     # Launch web interface if requested
     if args.webui:
