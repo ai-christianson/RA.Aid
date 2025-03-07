@@ -71,4 +71,4 @@ ra-aid -m "Your task" --log-mode file --log-level debug
 ra-aid -m "Your task" --log-mode console --log-level info
 ```
 
-For more detailed logging configuration, see the [Logging documentation](../usage/logging.md).
+For more detailed logging configuration, see the [Logging documentation](../configuration/logging.md).

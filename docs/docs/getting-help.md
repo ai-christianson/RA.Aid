@@ -10,7 +10,7 @@ RA.Aid maintains detailed logs that can help diagnose many common issues. By def
 
 1. Check the most recent log file in `.ra-aid/logs/` directory
 2. Look for ERROR or WARNING level messages that might indicate what went wrong
-3. For more detailed logging options, see the [Logging documentation](/usage/logging)
+3. For more detailed logging options, see the [Logging documentation](/configuration/logging)
 
 ### Common Problems
 
