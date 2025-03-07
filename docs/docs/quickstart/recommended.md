@@ -72,3 +72,5 @@ ra-aid -m "Your task" --log-mode console --log-level info
 ```
 
 For more detailed logging configuration, see the [Logging documentation](../configuration/logging.md).
+
+For information on RA.Aid's memory management and how to reset memory when needed, see the [Memory Management documentation](../configuration/memory-management.md).

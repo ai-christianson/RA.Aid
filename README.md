@@ -29,7 +29,8 @@ Key sections:
 - [Recommended Configuration](https://docs.ra-aid.ai/quickstart/recommended)
 - [Open Models Setup](https://docs.ra-aid.ai/quickstart/open-models)
 - [Usage Examples](https://docs.ra-aid.ai/category/usage)
-- [Logging System](https://docs.ra-aid.ai/usage/logging)
+- [Logging System](https://docs.ra-aid.ai/configuration/logging)
+- [Memory Management](https://docs.ra-aid.ai/configuration/memory-management)
 - [Contributing Guide](https://docs.ra-aid.ai/contributing)
 - [Getting Help](https://docs.ra-aid.ai/getting-help)
 
@@ -190,7 +191,7 @@ ra-aid -m "Add new feature" --log-mode file
 ra-aid -m "Add new feature" --log-mode console --log-level debug
 ```
 
-More information is available in our [Usage Examples](https://docs.ra-aid.ai/category/usage) and [Logging System](https://docs.ra-aid.ai/usage/logging) documentation.
+More information is available in our [Usage Examples](https://docs.ra-aid.ai/category/usage), [Logging System](https://docs.ra-aid.ai/configuration/logging), and [Memory Management](https://docs.ra-aid.ai/configuration/memory-management) documentation.
 
 ### Command Line Options
 
