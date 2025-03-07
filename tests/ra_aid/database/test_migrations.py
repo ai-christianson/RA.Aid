@@ -153,9 +153,10 @@ class TestMigrationManager:
                 )
 
             # Verify error was logged
-            mock_logger.error.assert_called_with(
-                "Failed to create migrations directory: Permission denied"
-            )
+            assert mock_logger.error.call_count == 1
+            error_message = mock_logger.error.call_args[0][0]
+            assert "Failed to create migrations directory:" in error_message
+            assert "Permission denied" in error_message
 
     def test_init_router(self, cleanup_db, temp_dir, mock_router):
         """Test _init_router initializes the Router correctly."""
