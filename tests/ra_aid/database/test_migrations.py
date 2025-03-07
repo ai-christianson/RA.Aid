@@ -154,7 +154,7 @@ class TestMigrationManager:
 
             # Verify error was logged
             mock_logger.error.assert_called_with(
-                "Failed to create migrations directory: [Errno 13] Permission denied: '/root/migrations'"
+                "Failed to create migrations directory: Permission denied"
             )
 
     def test_init_router(self, cleanup_db, temp_dir, mock_router):
