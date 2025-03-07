@@ -151,7 +151,8 @@ def test_create_agent_anthropic(mock_model, mock_config_repository):
         mock_react.assert_called_once_with(
             mock_model,
             [],
-            interrupt_after=['tools'],
+            interrupt_before=['agent', 'tools'],
+            interrupt_after=['agent', 'tools'],
             version="v2",
             state_modifier=mock_react.call_args[1]["state_modifier"],
         )

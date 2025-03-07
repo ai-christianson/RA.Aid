@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.1] 2025-03-07
+
+### Changed
+- Replaced thread-local storage with contextvars in agent_context.py for better context isolation
+- Improved React agent execution with LangGraph's interrupt mechanism
+- Enhanced _run_agent_stream function to properly handle agent state and continuation
+
+### Fixed
+- Fixed tests to work with the new implementation
+
 ## [0.16.0] 2025-03-07
 
 ### Added
