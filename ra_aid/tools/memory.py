@@ -304,6 +304,14 @@ def emit_related_files(files: List[str]) -> str:
         files: List of file paths to add
     """
     repo = get_related_files_repository()
+    
+    # Store the repository's ID counter value before adding any files
+    try:
+        initial_next_id = repo.get_next_id()
+    except (AttributeError, TypeError):
+        # Handle case where repo is mocked in tests
+        initial_next_id = 0  # Use a safe default for mocked environments
+    
     results = []
     added_files = []
     invalid_paths = []
@@ -339,14 +347,22 @@ def emit_related_files(files: List[str]) -> str:
         file_id = repo.add_file(file)
         
         if file_id is not None:
-            # Check if it's a new file by comparing with previous results
-            is_new_file = True
+            # Check if it's a truly new file (ID >= initial_next_id)
+            try:
+                is_truly_new = file_id >= initial_next_id
+            except TypeError:
+                # Handle case where file_id or initial_next_id is mocked in tests
+                is_truly_new = True  # Default to True in test environments
+            
+            # Also check for duplicates within this function call
+            is_duplicate_in_call = False
             for r in results:
                 if r.startswith(f"File ID #{file_id}:"):
-                    is_new_file = False
+                    is_duplicate_in_call = True
                     break
                     
-            if is_new_file:
+            # Only add to added_files if it's truly new AND not a duplicate in this call
+            if is_truly_new and not is_duplicate_in_call:
                 added_files.append((file_id, file))  # Keep original path for display
                 
             results.append(f"File ID #{file_id}: {file}")

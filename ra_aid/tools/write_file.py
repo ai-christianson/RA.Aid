@@ -6,6 +6,7 @@ from typing import Dict
 from langchain_core.tools import tool
 from rich.console import Console
 from rich.panel import Panel
+from ra_aid.tools.memory import emit_related_files
 
 console = Console()
 
@@ -70,6 +71,9 @@ def put_complete_file_contents(
                 border_style="bright_green",
             )
         )
+        
+        # Add file to related files
+        emit_related_files.invoke({"files": [filepath]})
 
     except Exception as e:
         elapsed = time.time() - start_time

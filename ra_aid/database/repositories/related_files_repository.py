@@ -96,6 +96,15 @@ class RelatedFilesRepository:
             List[str]: Formatted strings for each related file
         """
         return [f"ID#{file_id} {filepath}" for file_id, filepath in sorted(self._related_files.items())]
+        
+    def get_next_id(self) -> int:
+        """
+        Get the next ID that would be assigned to a new file.
+        
+        Returns:
+            int: The next ID value
+        """
+        return self._id_counter
 
 
 class RelatedFilesRepositoryManager:

@@ -6,6 +6,66 @@ import pytest
 from ra_aid.tools.write_file import put_complete_file_contents
 
 
+@pytest.fixture(autouse=True)
+def mock_related_files_repository():
+    """Mock the RelatedFilesRepository to avoid database operations during tests"""
+    with patch('ra_aid.tools.memory.get_related_files_repository') as mock_repo:
+        # Setup the mock repository to behave like the original, but using memory
+        related_files = {}  # Local in-memory storage
+        id_counter = 0
+        
+        # Mock add_file method
+        def mock_add_file(filepath):
+            nonlocal id_counter
+            # Check if normalized path already exists in values
+            normalized_path = os.path.abspath(filepath)
+            for file_id, path in related_files.items():
+                if path == normalized_path:
+                    return file_id
+                    
+            # First check if path exists
+            if not os.path.exists(filepath):
+                return None
+                
+            # Then check if it's a directory
+            if os.path.isdir(filepath):
+                return None
+                
+            # Validate it's a regular file
+            if not os.path.isfile(filepath):
+                return None
+                
+            # Check if it's a binary file (don't actually check in tests)
+            # We'll mock is_binary_file separately when needed
+            
+            # Add new file
+            file_id = id_counter
+            id_counter += 1
+            related_files[file_id] = normalized_path
+            
+            return file_id
+        mock_repo.return_value.add_file.side_effect = mock_add_file
+        
+        # Mock get_all method
+        def mock_get_all():
+            return related_files.copy()
+        mock_repo.return_value.get_all.side_effect = mock_get_all
+        
+        # Mock remove_file method
+        def mock_remove_file(file_id):
+            if file_id in related_files:
+                return related_files.pop(file_id)
+            return None
+        mock_repo.return_value.remove_file.side_effect = mock_remove_file
+        
+        # Mock format_related_files method
+        def mock_format_related_files():
+            return [f"ID#{file_id} {filepath}" for file_id, filepath in sorted(related_files.items())]
+        mock_repo.return_value.format_related_files.side_effect = mock_format_related_files
+        
+        yield mock_repo
+
+
 @pytest.fixture
 def temp_test_dir(tmp_path):
     """Create a temporary test directory."""

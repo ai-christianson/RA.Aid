@@ -6,6 +6,7 @@ from rich.panel import Panel
 
 from ra_aid.console import console
 from ra_aid.console.formatting import print_error
+from ra_aid.tools.memory import emit_related_files
 
 
 def truncate_display_str(s: str, max_length: int = 30) -> str:
@@ -86,6 +87,13 @@ def file_str_replace(filepath: str, old_str: str, new_str: str, *, replace_all: 
         success_msg = f"Successfully replaced '{old_str}' with '{new_str}' in {filepath}"
         if count > 1 and replace_all:
             success_msg = f"Successfully replaced {count} occurrences of '{old_str}' with '{new_str}' in {filepath}"
+        
+        # Add file to related files
+        try:
+            emit_related_files.invoke({"files": [filepath]})
+        except Exception as e:
+            # Don't let related files error affect main function success
+            print_error(f"Note: Could not add to related files: {str(e)}")
             
         return {
             "success": True,
