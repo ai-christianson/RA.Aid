@@ -45,10 +45,12 @@ Focus on strategic thinking rather than implementation details. Your guidance wi
 
 Please be concise, practical, and specific to this task. Avoid generic advice.
 
-Include beautiful, human-readable pseudo-code of tools you would call and branches in that flowchart to show contingency/conditional paths.
-Use an outline/pseudo code format to communicate the approach. Remember I am an agent and will use this logic to guide my actions.
+Your sole output is a beautiful outline/pseudo code format to communicate the approach. Remember I am an agent and will use this logic to guide my actions.
 
 It should be the most beautiful, elegant, simple logic ever.
+
+YOUR OUTPUT MUST BE MARKDOWN.
+
 
 WE ARE IN THE **PLANNING** STAGE RIGHT NOW. NO CODE SHOULD BE WRITTEN. WE SHOULD BE THINKING LOGICALLY ABOUT HOW TO APPROACH THE PROBLEM, PLANNING OUT WHICH TASKS TO REQUEST IMPLEMENTATION OF, ETC.
 """

@@ -13,4 +13,4 @@ __pycache__/
 /htmlcov
 .envrc
 appmap.log
-
+*.swp

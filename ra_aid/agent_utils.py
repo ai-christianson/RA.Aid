@@ -842,8 +842,6 @@ def run_planning_agent(
     expert_guidance_section = ""
     if expert_guidance:
         expert_guidance_section = f"""<expert guidance>
-Expert model has analyzed this task and provided the following guidance:
-
 {expert_guidance}
 </expert guidance>"""
 
@@ -969,6 +967,14 @@ def run_task_implementation_agent(
         logger.error(f"Failed to access research note repository: {str(e)}")
         formatted_research_notes = ""
         
+    # Get latest project info
+    try:
+        project_info = get_project_info(".")
+        formatted_project_info = format_project_info(project_info)
+    except Exception as e:
+        logger.warning("Failed to get project info: %s", str(e))
+        formatted_project_info = "Project info unavailable"
+        
     # Get environment inventory information
     
     prompt = IMPLEMENTATION_PROMPT.format(
@@ -995,6 +1001,7 @@ def run_task_implementation_agent(
             else ""
         ),
         env_inv=get_env_inv(),
+        project_info=formatted_project_info,
     )
 
     config = get_config_repository().get_all() if not config else config
