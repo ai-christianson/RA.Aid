@@ -21,10 +21,11 @@ def test_stream_supports_think_tag(mock_get_model):
     mock_response = AIMessage(content="<think>These are my thoughts</think>Actual response")
     mock_model.invoke.return_value = mock_response
     
-    # Setup agent with config that supports think tags
+    # Setup agent with config that supports think tags and show_thoughts
     config = {
         "provider": "openai-compatible",
-        "model": "qwen-qwq-32b"
+        "model": "qwen-qwq-32b",
+        "show_thoughts": True
     }
     agent = CiaynAgent(mock_model, [], config=config)
     
@@ -98,10 +99,11 @@ def test_stream_with_no_think_tags(mock_get_model):
     mock_response = AIMessage(content="Actual response without tags")
     mock_model.invoke.return_value = mock_response
     
-    # Setup agent with config that supports think tags
+    # Setup agent with config that supports think tags and show_thoughts
     config = {
         "provider": "openai-compatible",
-        "model": "qwen-qwq-32b"
+        "model": "qwen-qwq-32b",
+        "show_thoughts": True
     }
     agent = CiaynAgent(mock_model, [], config=config)
     

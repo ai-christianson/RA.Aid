@@ -255,9 +255,10 @@ def ask_expert(question: str) -> str:
             think_content, remaining_text = extract_think_tag(content)
             if think_content:
                 logger.debug(f"Found think tag content ({len(think_content)} chars)")
-                console.print(
-                    Panel(Markdown(think_content), title="💭 Thoughts", border_style="yellow")
-                )
+                if get_config_repository().get("show_thoughts", False):
+                    console.print(
+                        Panel(Markdown(think_content), title="💭 Thoughts", border_style="yellow")
+                    )
                 content = remaining_text
             else:
                 logger.debug("No think tag content found in expert response")
@@ -282,7 +283,7 @@ def ask_expert(question: str) -> str:
                         logger.debug("Found structured response text")
             
             # Display thinking content in a separate panel if available
-            if thinking_content:
+            if thinking_content and get_config_repository().get("show_thoughts", False):
                 logger.debug(f"Displaying structured thinking content ({len(thinking_content)} chars)")
                 console.print(
                     Panel(Markdown(thinking_content), title="Expert Thinking", border_style="yellow")

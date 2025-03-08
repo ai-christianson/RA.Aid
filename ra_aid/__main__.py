@@ -280,6 +280,11 @@ Examples:
         action="store_true",
         help="Delete the project database file (.ra-aid/pk.db) before starting, effectively wiping all stored memory",
     )
+    parser.add_argument(
+        "--show-thoughts",
+        action="store_true",
+        help="Display model thinking content extracted from think tags when supported by the model",
+    )
     if args is None:
         args = sys.argv[1:]
     parsed_args = parser.parse_args(args)
@@ -563,6 +568,7 @@ def main():
                 config_repo.set("temperature", args.temperature)
                 config_repo.set("experimental_fallback_handler", args.experimental_fallback_handler)
                 config_repo.set("web_research_enabled", web_research_enabled)
+                config_repo.set("show_thoughts", args.show_thoughts)
 
                 # Build status panel with memory statistics
                 status = build_status()
@@ -635,6 +641,7 @@ def main():
                     config_repo.set("expert_provider", args.expert_provider)
                     config_repo.set("expert_model", args.expert_model)
                     config_repo.set("temperature", args.temperature)
+                    config_repo.set("show_thoughts", args.show_thoughts)
 
                     # Set modification tools based on use_aider flag
                     set_modification_tools(args.use_aider)
