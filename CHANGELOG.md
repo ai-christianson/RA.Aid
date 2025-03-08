@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Added support for think tags in models with the new extract_think_tag function
+- Enhanced CiaynAgent and expert tool to extract and display thinking content from <think>...</think> tags
+- Added model parameters for think tag support
+- Added comprehensive testing for think tag functionality
+
+### Changed
+- Updated langchain/langgraph deps
+
 ## [0.16.1] 2025-03-07
 
 ### Changed
