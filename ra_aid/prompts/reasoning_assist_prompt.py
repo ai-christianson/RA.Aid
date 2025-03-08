@@ -45,6 +45,6 @@ Focus on strategic thinking rather than implementation details. Your guidance wi
 
 Please be concise, practical, and specific to this task. Avoid generic advice.
 
-Include a flowchart of tools you would call and branches in that flowchart to show contingency/conditional paths.
-Use ASCII to visualize the approach + contingencies.
+Include pseudo-code of tools you would call and branches in that flowchart to show contingency/conditional paths.
+Use an outline/pseudo code format to communicate the approach. Remember I am an agent and will use this logic to guide my actions.
 """
