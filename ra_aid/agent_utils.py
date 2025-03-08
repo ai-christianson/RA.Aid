@@ -1,5 +1,6 @@
 """Utility functions for working with agents."""
 
+import inspect
 import os
 import signal
 import sys
@@ -49,6 +50,7 @@ from ra_aid.exceptions import (
 )
 from ra_aid.fallback_handler import FallbackHandler
 from ra_aid.logging_config import get_logger
+from ra_aid.llm import initialize_expert_llm
 from ra_aid.models_params import DEFAULT_TOKEN_LIMIT, models_params
 from ra_aid.project_info import (
     display_project_status,
@@ -68,6 +70,7 @@ from ra_aid.prompts.human_prompts import (
 from ra_aid.prompts.implementation_prompts import IMPLEMENTATION_PROMPT
 from ra_aid.prompts.common_prompts import NEW_PROJECT_HINTS
 from ra_aid.prompts.planning_prompts import PLANNING_PROMPT
+from ra_aid.prompts.reasoning_assist_prompt import REASONING_ASSIST_PROMPT_PLANNING
 from ra_aid.prompts.research_prompts import (
     RESEARCH_ONLY_PROMPT,
     RESEARCH_PROMPT,
@@ -659,19 +662,25 @@ def run_planning_agent(
         web_research_enabled=config.get("web_research_enabled", False),
     )
 
-    agent = create_agent(model, tools, checkpointer=memory, agent_type="planner")
-
-    expert_section = EXPERT_PROMPT_SECTION_PLANNING if expert_enabled else ""
-    human_section = HUMAN_PROMPT_SECTION_PLANNING if hil else ""
-    web_research_section = (
-        WEB_RESEARCH_PROMPT_SECTION_PLANNING
-        if config.get("web_research_enabled")
-        else ""
-    )
-
+    # Get model configuration
+    provider = config.get("provider") if config else get_config_repository().get("provider", "")
+    model_name = config.get("model") if config else get_config_repository().get("model", "")
+    logger.debug("Checking for reasoning_assist_default on %s/%s", provider, model_name)
+    
+    # Get model configuration to check for reasoning_assist_default
+    model_config = {}
+    provider_models = models_params.get(provider, {})
+    if provider_models and model_name in provider_models:
+        model_config = provider_models[model_name]
+    
+    # Check if reasoning assist is enabled
+    reasoning_assist_enabled = model_config.get("reasoning_assist_default", False)
+    logger.debug("Reasoning assist enabled: %s", reasoning_assist_enabled)
+    
+    # Get all the context information (used both for normal planning and reasoning assist)
     current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     working_directory = os.getcwd()
-
+    
     # Make sure key_facts is defined before using it
     try:
         key_facts = format_key_facts_dict(get_key_fact_repository().get_facts_dict())
@@ -695,8 +704,149 @@ def run_planning_agent(
         logger.error(f"Failed to access research note repository: {str(e)}")
         formatted_research_notes = ""
     
-    # Get environment inventory information
+    # Get related files
+    related_files = "\n".join(get_related_files())
     
+    # Get environment inventory information
+    env_inv = get_env_inv()
+    
+    # Initialize expert guidance section
+    expert_guidance = ""
+    
+    # If reasoning assist is enabled, make a one-off call to the expert model
+    if reasoning_assist_enabled:
+        try:
+            logger.info("Reasoning assist enabled for model %s, getting expert guidance", model_name)
+            
+            # Collect tool descriptions
+            tool_metadata = []
+            from ra_aid.tools.reflection import get_function_info as get_tool_info
+            
+            for tool in tools:
+                try:
+                    tool_info = get_tool_info(tool.func)
+                    name = tool.func.__name__
+                    description = inspect.getdoc(tool.func)
+                    tool_metadata.append(f"Tool: {name}\nDescription: {description}\n")
+                except Exception as e:
+                    logger.warning(f"Error getting tool info for {tool}: {e}")
+            
+            # Format tool metadata
+            formatted_tool_metadata = "\n".join(tool_metadata)
+            
+            # Initialize expert model
+            expert_model = initialize_expert_llm(provider, model_name)
+            
+            # Format the reasoning assist prompt
+            reasoning_assist_prompt = REASONING_ASSIST_PROMPT_PLANNING.format(
+                current_date=current_date,
+                working_directory=working_directory,
+                base_task=base_task,
+                key_facts=key_facts,
+                key_snippets=key_snippets,
+                research_notes=formatted_research_notes,
+                related_files=related_files,
+                env_inv=env_inv,
+                tool_metadata=formatted_tool_metadata,
+            )
+            
+            # Show the reasoning assist query in a panel
+            console.print(
+                Panel(Markdown("Consulting with the reasoning model on the best way to do this."), title="📝 Thinking about the plan...", border_style="yellow")
+            )
+            
+            logger.debug("Invoking expert model for reasoning assist")
+            # Make the call to the expert model
+            response = expert_model.invoke(reasoning_assist_prompt)
+            
+            # Check if the model supports think tags
+            supports_think_tag = model_config.get("supports_think_tag", False)
+            supports_thinking = model_config.get("supports_thinking", False)
+            
+            # Get response content, handling if it's a list (for Claude thinking mode)
+            content = None
+            
+            if hasattr(response, 'content'):
+                content = response.content
+            else:
+                # Fallback if content attribute is missing
+                content = str(response)
+            
+            # Process content based on its type
+            if isinstance(content, list):
+                # Handle structured thinking mode (e.g., Claude 3.7)
+                thinking_content = None
+                response_text = None
+                
+                # Process each item in the list
+                for item in content:
+                    if isinstance(item, dict):
+                        # Extract thinking content
+                        if item.get('type') == 'thinking' and 'thinking' in item:
+                            thinking_content = item['thinking']
+                            logger.debug("Found structured thinking content")
+                        # Extract response text
+                        elif item.get('type') == 'text' and 'text' in item:
+                            response_text = item['text']
+                            logger.debug("Found structured response text")
+                
+                # Display thinking content in a separate panel if available
+                if thinking_content and get_config_repository().get("show_thoughts", False):
+                    logger.debug(f"Displaying structured thinking content ({len(thinking_content)} chars)")
+                    console.print(
+                        Panel(Markdown(thinking_content), title="💭 Expert Thinking", border_style="yellow")
+                    )
+                
+                # Use response_text if available, otherwise fall back to joining
+                if response_text:
+                    content = response_text
+                else:
+                    # Fallback: join list items if structured extraction failed
+                    logger.debug("No structured response text found, joining list items")
+                    content = "\n".join(str(item) for item in content)
+            elif (supports_think_tag or supports_thinking) and isinstance(content, str):
+                # Extract think tags if model supports them
+                think_content, remaining_text = extract_think_tag(content)
+                if think_content:
+                    logger.debug(f"Found think tag content ({len(think_content)} chars)")
+                    if get_config_repository().get("show_thoughts", False):
+                        console.print(
+                            Panel(Markdown(think_content), title="💭 Expert Thinking", border_style="yellow")
+                        )
+                    content = remaining_text
+            
+            # Display the expert guidance in a panel
+            console.print(
+                Panel(Markdown(content), title="Reasoning Guidance", border_style="blue")
+            )
+            
+            # Use the content as expert guidance
+            expert_guidance = content + "\n\nCONSULT WITH THE EXPERT FREQUENTLY ON THIS TASK"
+            
+            logger.info("Received expert guidance for planning")
+        except Exception as e:
+            logger.error("Error getting expert guidance for planning: %s", e)
+            expert_guidance = ""
+    
+    agent = create_agent(model, tools, checkpointer=memory, agent_type="planner")
+    
+    expert_section = EXPERT_PROMPT_SECTION_PLANNING if expert_enabled else ""
+    human_section = HUMAN_PROMPT_SECTION_PLANNING if hil else ""
+    web_research_section = (
+        WEB_RESEARCH_PROMPT_SECTION_PLANNING
+        if config.get("web_research_enabled")
+        else ""
+    )
+    
+    # Prepare expert guidance section if expert guidance is available
+    expert_guidance_section = ""
+    if expert_guidance:
+        expert_guidance_section = f"""<expert guidance>
+Expert model has analyzed this task and provided the following guidance:
+
+{expert_guidance}
+</expert guidance>"""
+
     planning_prompt = PLANNING_PROMPT.format(
         current_date=current_date,
         working_directory=working_directory,
@@ -706,7 +856,7 @@ def run_planning_agent(
         base_task=base_task,
         project_info=formatted_project_info,
         research_notes=formatted_research_notes,
-        related_files="\n".join(get_related_files()),
+        related_files=related_files,
         key_facts=key_facts,
         key_snippets=key_snippets,
         work_log=get_work_log_repository().format_work_log(),
@@ -715,7 +865,8 @@ def run_planning_agent(
             if config.get("research_only")
             else " Only request implementation if the user explicitly asked for changes to be made."
         ),
-        env_inv=get_env_inv(),
+        env_inv=env_inv,
+        expert_guidance_section=expert_guidance_section,
     )
 
     config = get_config_repository().get_all() if not config else config

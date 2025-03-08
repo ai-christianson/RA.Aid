@@ -40,11 +40,15 @@ ETC.
 
 YOU MUST **EXPLICITLY** INCLUDE ANY PATHS FROM THE ABOVE INFO IF NEEDED. IT IS NOT AUTOMATIC.
 
+READ AND STUDY ACTUAL LIBRARY HEADERS/CODE FROM THE ENVIRONMENT, IF AVAILABLE AND RELEVANT.
+
 Work done so far:
 
 <work log>
 {work_log}
 </work log>
+
+{expert_guidance_section}
 
 Guidelines:
 

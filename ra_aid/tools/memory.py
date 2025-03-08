@@ -170,6 +170,8 @@ def emit_key_snippet(snippet_info: SnippetInfo) -> str:
 
     Focus on external interfaces and things that are very specific and relevant to UPCOMING work.
 
+    SNIPPETS SHOULD TYPICALLY BE MULTIPLE LINES, NOT SINGLE LINES, NOT ENTIRE FILES.
+
     Args:
         snippet_info: Dict with keys:
                  - filepath: Path to the source file

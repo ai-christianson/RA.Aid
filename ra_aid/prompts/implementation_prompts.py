@@ -39,6 +39,8 @@ E.G. IF WE ARE USING A LIBRARY AND IT IS FOUND IN ENV INVENTORY, ADD THE INCLUDE
 
 YOU MUST **EXPLICITLY** INCLUDE ANY PATHS FROM THE ABOVE INFO IF NEEDED. IT IS NOT AUTOMATIC.
 
+READ AND STUDY ACTUAL LIBRARY HEADERS/CODE FROM THE ENVIRONMENT, IF AVAILABLE AND RELEVANT.
+
 Important Notes:
 - Focus solely on the given task and implement it as described.
 - Scale the complexity of your solution to the complexity of the request. For simple requests, keep it straightforward and minimal. For complex requests, maintain the previously planned depth.

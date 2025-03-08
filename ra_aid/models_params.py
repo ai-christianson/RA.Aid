@@ -165,6 +165,16 @@ models_params = {
             "latency_coefficient": DEFAULT_BASE_LATENCY,
         },
     },
+    "openrouter": {
+        "qwen/qwen-2.5-coder-32b-instruct": {
+            "token_limit": 131072,
+            "default_temperature": 0.4,
+            "supports_temperature": True,
+            "latency_coefficient": DEFAULT_BASE_LATENCY,
+            "max_tokens": 32000,
+            "reasoning_assist_default": True,
+        }
+    },
     "openai-compatible": {
         "qwen-qwq-32b": {
             "token_limit": 131072,
