@@ -63,6 +63,8 @@ from ra_aid.database.repositories.config_repository import (
     ConfigRepositoryManager,
     get_config_repository
 )
+from ra_aid.env_inv import EnvDiscovery
+from ra_aid.env_inv_context import EnvInvManager, get_env_inv
 from ra_aid.model_formatters import format_key_facts_dict
 from ra_aid.model_formatters.key_snippets_formatter import format_key_snippets_dict
 from ra_aid.console.output import cpm
@@ -506,13 +508,19 @@ def main():
             config = {}
             
             # Initialize repositories with database connection
+            # Create environment inventory data
+            env_discovery = EnvDiscovery()
+            env_discovery.discover()
+            env_data = env_discovery.format_markdown()
+            
             with KeyFactRepositoryManager(db) as key_fact_repo, \
                  KeySnippetRepositoryManager(db) as key_snippet_repo, \
                  HumanInputRepositoryManager(db) as human_input_repo, \
                  ResearchNoteRepositoryManager(db) as research_note_repo, \
                  RelatedFilesRepositoryManager() as related_files_repo, \
                  WorkLogRepositoryManager() as work_log_repo, \
-                 ConfigRepositoryManager(config) as config_repo:
+                 ConfigRepositoryManager(config) as config_repo, \
+                 EnvInvManager(env_data) as env_inv:
                 # This initializes all repositories and makes them available via their respective get methods
                 logger.debug("Initialized KeyFactRepository")
                 logger.debug("Initialized KeySnippetRepository")
@@ -521,6 +529,7 @@ def main():
                 logger.debug("Initialized RelatedFilesRepository")
                 logger.debug("Initialized WorkLogRepository")
                 logger.debug("Initialized ConfigRepository")
+                logger.debug("Initialized Environment Inventory")
 
                 # Check dependencies before proceeding
                 check_dependencies()
@@ -671,6 +680,7 @@ def main():
                             key_facts=format_key_facts_dict(get_key_fact_repository().get_facts_dict()),
                             key_snippets=format_key_snippets_dict(get_key_snippet_repository().get_snippets_dict()),
                             project_info=formatted_project_info,
+                            env_inv=get_env_inv(),
                         ),
                         config,
                     )

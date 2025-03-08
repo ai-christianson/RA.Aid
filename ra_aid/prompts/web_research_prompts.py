@@ -100,5 +100,9 @@ Present well-structured responses that:
 <related_files>
 {related_files}
 </related_files>
+
+<environment inventory>
+{env_inv}
+</environment inventory>
 </context>
 """

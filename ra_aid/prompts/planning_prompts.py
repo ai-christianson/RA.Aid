@@ -11,30 +11,37 @@ from ra_aid.prompts.web_research_prompts import WEB_RESEARCH_PROMPT_SECTION_PLAN
 PLANNING_PROMPT = """Current Date: {current_date}
 Working Directory: {working_directory}
 
-<base task>
-{base_task}
-<base task>
-
 KEEP IT SIMPLE
 
-Project Info:
+<project info>
 {project_info}
+</project info>
 
-Research Notes:
-<notes>
+<research notes>
 {research_notes}
-</notes>
+</research notes>
 
-Relevant Files:
-{related_files}
-
-Key Facts:
+<key facts>
 {key_facts}
+</key facts>
 
-Key Snippets:
+<key snippets>
 {key_snippets}
+</key snippets>
+
+<environment inventory>
+{env_inv}
+</environment inventory>
+
+MAKE USE OF THE ENVIRONMENT INVENTRY TO GET YOUR WORK DONE AS EFFICIENTLY AND ACCURATELY AS POSSIBLE
+
+E.G. IF WE ARE USING A LIBRARY AND IT IS FOUND IN ENV INVENTORY, ADD THE INCLUDE/LINKER FLAGS TO YOUR MAKEFILE/CMAKELISTS/COMPILATION COMMAND/
+ETC.
+
+YOU MUST **EXPLICITLY** INCLUDE ANY PATHS FROM THE ABOVE INFO IF NEEDED. IT IS NOT AUTOMATIC.
 
 Work done so far:
+
 <work log>
 {work_log}
 </work log>
@@ -77,6 +84,12 @@ You have often been criticized for:
   - Doing redundant work.
   - Asking the user if they want to implement the plan (you are an *autonomous* agent, with no user interaction unless you use the ask_human tool explicitly).
   - Not calling tools/functions properly, e.g. leaving off required arguments, calling a tool in a loop, calling tools inappropriately.
+
+<base task>
+{base_task}
+<base task>
+
+YOU MUST FOCUS ON THIS BASE TASK. IT TAKES PRECEDENT OVER EVERYTHING ELSE.
 
 DO NOT WRITE ANY FILES YET. CODE WILL BE WRITTEN AS YOU CALL request_task_implementation.
 

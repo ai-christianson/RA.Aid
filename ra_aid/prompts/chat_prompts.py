@@ -23,6 +23,9 @@ Current Date: {current_date}
 Project Info:
 {project_info}
 
+Environment Info:
+{env_inv}
+
 Agentic Chat Mode Instructions:
 
 Overview:

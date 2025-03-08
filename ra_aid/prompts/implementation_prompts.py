@@ -29,6 +29,16 @@ Working Directory: {working_directory}
 {research_notes}
 </research notes>
 
+<environment inventory>
+{env_inv}
+</environment inventory>
+
+MAKE USE OF THE ENVIRONMENT INVENTRY TO GET YOUR WORK DONE AS EFFICIENTLY AND ACCURATELY AS POSSIBLE
+
+E.G. IF WE ARE USING A LIBRARY AND IT IS FOUND IN ENV INVENTORY, ADD THE INCLUDE/LINKER FLAGS TO YOUR MAKEFILE/CMAKELISTS/COMPILATION COMMAND/ETC.
+
+YOU MUST **EXPLICITLY** INCLUDE ANY PATHS FROM THE ABOVE INFO IF NEEDED. IT IS NOT AUTOMATIC.
+
 Important Notes:
 - Focus solely on the given task and implement it as described.
 - Scale the complexity of your solution to the complexity of the request. For simple requests, keep it straightforward and minimal. For complex requests, maintain the previously planned depth.

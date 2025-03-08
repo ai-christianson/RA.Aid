@@ -98,6 +98,7 @@ from ra_aid.tools.memory import (
     log_work_event,
 )
 from ra_aid.database.repositories.config_repository import get_config_repository
+from ra_aid.env_inv_context import get_env_inv
 
 console = Console()
 
@@ -422,6 +423,8 @@ def run_research_agent(
         logger.warning(f"Failed to get project info: {e}")
         formatted_project_info = ""
 
+    # Get environment inventory information
+    
     prompt = (RESEARCH_ONLY_PROMPT if research_only else RESEARCH_PROMPT).format(
         current_date=current_date,
         working_directory=working_directory,
@@ -440,6 +443,7 @@ def run_research_agent(
         related_files=related_files,
         project_info=formatted_project_info,
         new_project_hints=NEW_PROJECT_HINTS if project_info.is_new else "",
+        env_inv=get_env_inv(),
     )
 
     config = get_config_repository().get_all() if not config else config
@@ -562,6 +566,8 @@ def run_web_research_agent(
     current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     working_directory = os.getcwd()
 
+    # Get environment inventory information
+    
     prompt = WEB_RESEARCH_PROMPT.format(
         current_date=current_date,
         working_directory=working_directory,
@@ -572,6 +578,7 @@ def run_web_research_agent(
         work_log=get_work_log_repository().format_work_log(),
         key_snippets=key_snippets,
         related_files=related_files,
+        env_inv=get_env_inv(),
     )
 
     config = get_config_repository().get_all() if not config else config
@@ -688,6 +695,8 @@ def run_planning_agent(
         logger.error(f"Failed to access research note repository: {str(e)}")
         formatted_research_notes = ""
     
+    # Get environment inventory information
+    
     planning_prompt = PLANNING_PROMPT.format(
         current_date=current_date,
         working_directory=working_directory,
@@ -706,6 +715,7 @@ def run_planning_agent(
             if config.get("research_only")
             else " Only request implementation if the user explicitly asked for changes to be made."
         ),
+        env_inv=get_env_inv(),
     )
 
     config = get_config_repository().get_all() if not config else config
@@ -808,6 +818,8 @@ def run_task_implementation_agent(
         logger.error(f"Failed to access research note repository: {str(e)}")
         formatted_research_notes = ""
         
+    # Get environment inventory information
+    
     prompt = IMPLEMENTATION_PROMPT.format(
         current_date=current_date,
         working_directory=working_directory,
@@ -831,6 +843,7 @@ def run_task_implementation_agent(
             if config.get("web_research_enabled")
             else ""
         ),
+        env_inv=get_env_inv(),
     )
 
     config = get_config_repository().get_all() if not config else config
@@ -989,78 +1002,6 @@ def _handle_fallback_response(
     if fallback_response and agent_type == "React":
         msg_list_response = [HumanMessage(str(msg)) for msg in fallback_response]
         msg_list.extend(msg_list_response)
-
-
-# def _run_agent_stream(agent: RAgents, msg_list: list[BaseMessage], config: dict):
-#     for chunk in agent.stream({"messages": msg_list}, config):
-#         logger.debug("Agent output: %s", chunk)
-#         check_interrupt()
-#         agent_type = get_agent_type(agent)
-#         print_agent_output(chunk, agent_type)
-#         if is_completed() or should_exit():
-#             reset_completion_flags()
-#             break
-# def _run_agent_stream(agent: RAgents, msg_list: list[BaseMessage], config: dict):
-#     while True: ##  WE NEED TO ONLY KEEP ITERATING IF IT IS AN INTERRUPT, NOT UNCONDITIONALLY 
-#         stream = agent.stream({"messages": msg_list}, config)
-#         for chunk in stream:
-#             logger.debug("Agent output: %s", chunk)
-#             check_interrupt()
-#             agent_type = get_agent_type(agent)
-#             print_agent_output(chunk, agent_type)
-#             if is_completed() or should_exit():
-#                 reset_completion_flags()
-#                 return True
-#         print("HERE!")
-
-# def _run_agent_stream(agent: RAgents, msg_list: list[BaseMessage], config: dict):
-#     while True:
-#         for chunk in agent.stream({"messages": msg_list}, config):
-#             print("Chunk received:", chunk)
-#             check_interrupt()
-#             agent_type = get_agent_type(agent)
-#             print_agent_output(chunk, agent_type)
-#             if is_completed() or should_exit():
-#                 reset_completion_flags()
-#                 return True
-#         print("HERE!")
-#         print("Config passed to _run_agent_stream:", config)
-#         print("Config keys:", list(config.keys()))
-        
-#         # Ensure the configuration for state retrieval contains a 'configurable' key.
-#         state_config = config.copy()
-#         if "configurable" not in state_config:
-#             print("Key 'configurable' not found in config. Adding it as an empty dict.")
-#             state_config["configurable"] = {}
-#         print("Using state_config for agent.get_state():", state_config)
-        
-#         try:
-#             state = agent.get_state(state_config)
-#             print("Agent state retrieved:", state)
-#             print("State type:", type(state))
-#             print("State attributes:", dir(state))
-#         except Exception as e:
-#             print("Error retrieving agent state with state_config", state_config, ":", e)
-#             raise
-        
-#         # Since state.current is not available, we rely solely on state.next.
-#         try:
-#             next_node = state.next
-#             print("State next value:", next_node)
-#         except Exception as e:
-#             print("Error accessing state.next:", e)
-#             next_node = None
-        
-#         # Resume execution if state.next is truthy (indicating further steps remain).
-#         if next_node:
-#             print("Resuming execution because state.next is nonempty:", next_node)
-#             agent.invoke(None, config)
-#             continue
-#         else:
-#             print("No further steps indicated; breaking out of loop.")
-#             break
-
-#     return True
 
 
 def _run_agent_stream(agent: RAgents, msg_list: list[BaseMessage], config: dict):
