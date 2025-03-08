@@ -674,8 +674,18 @@ def run_planning_agent(
     if provider_models and model_name in provider_models:
         model_config = provider_models[model_name]
     
-    # Check if reasoning assist is enabled
-    reasoning_assist_enabled = model_config.get("reasoning_assist_default", False)
+    # Check if reasoning assist is explicitly enabled/disabled
+    force_assistance = config.get("force_reasoning_assistance", False) if config else get_config_repository().get("force_reasoning_assistance", False)
+    disable_assistance = config.get("disable_reasoning_assistance", False) if config else get_config_repository().get("disable_reasoning_assistance", False)
+    
+    if force_assistance:
+        reasoning_assist_enabled = True
+    elif disable_assistance:
+        reasoning_assist_enabled = False
+    else:
+        # Fall back to model default
+        reasoning_assist_enabled = model_config.get("reasoning_assist_default", False)
+        
     logger.debug("Reasoning assist enabled: %s", reasoning_assist_enabled)
     
     # Get all the context information (used both for normal planning and reasoning assist)
@@ -989,8 +999,18 @@ def run_task_implementation_agent(
     if provider_models and model_name in provider_models:
         model_config = provider_models[model_name]
     
-    # Check if reasoning assist is enabled
-    reasoning_assist_enabled = model_config.get("reasoning_assist_default", False)
+    # Check if reasoning assist is explicitly enabled/disabled
+    force_assistance = config.get("force_reasoning_assistance", False) if config else get_config_repository().get("force_reasoning_assistance", False)
+    disable_assistance = config.get("disable_reasoning_assistance", False) if config else get_config_repository().get("disable_reasoning_assistance", False)
+    
+    if force_assistance:
+        reasoning_assist_enabled = True
+    elif disable_assistance:
+        reasoning_assist_enabled = False
+    else:
+        # Fall back to model default
+        reasoning_assist_enabled = model_config.get("reasoning_assist_default", False)
+        
     logger.debug("Reasoning assist enabled: %s", reasoning_assist_enabled)
     
     # Initialize implementation guidance section

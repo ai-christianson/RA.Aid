@@ -287,6 +287,16 @@ Examples:
         action="store_true",
         help="Display model thinking content extracted from think tags when supported by the model",
     )
+    parser.add_argument(
+        "--reasoning-assistance",
+        action="store_true",
+        help="Force enable reasoning assistance regardless of model defaults",
+    )
+    parser.add_argument(
+        "--no-reasoning-assistance",
+        action="store_true",
+        help="Force disable reasoning assistance regardless of model defaults",
+    )
     if args is None:
         args = sys.argv[1:]
     parsed_args = parser.parse_args(args)
@@ -578,6 +588,8 @@ def main():
                 config_repo.set("experimental_fallback_handler", args.experimental_fallback_handler)
                 config_repo.set("web_research_enabled", web_research_enabled)
                 config_repo.set("show_thoughts", args.show_thoughts)
+                config_repo.set("force_reasoning_assistance", args.reasoning_assistance)
+                config_repo.set("disable_reasoning_assistance", args.no_reasoning_assistance)
 
                 # Build status panel with memory statistics
                 status = build_status()
@@ -651,6 +663,8 @@ def main():
                     config_repo.set("expert_model", args.expert_model)
                     config_repo.set("temperature", args.temperature)
                     config_repo.set("show_thoughts", args.show_thoughts)
+                    config_repo.set("force_reasoning_assistance", args.reasoning_assistance)
+                    config_repo.set("disable_reasoning_assistance", args.no_reasoning_assistance)
 
                     # Set modification tools based on use_aider flag
                     set_modification_tools(args.use_aider)
@@ -740,6 +754,10 @@ def main():
 
                 # Store temperature in config
                 config_repo.set("temperature", args.temperature)
+                
+                # Store reasoning assistance flags
+                config_repo.set("force_reasoning_assistance", args.reasoning_assistance)
+                config_repo.set("disable_reasoning_assistance", args.no_reasoning_assistance)
 
                 # Set modification tools based on use_aider flag
                 set_modification_tools(args.use_aider)
