@@ -172,7 +172,7 @@ models_params = {
             "supports_temperature": True,
             "latency_coefficient": DEFAULT_BASE_LATENCY,
             "max_tokens": 32000,
-            "reasoning_assist_default": True,
+            "reasoning_assist_default": False,
         }
     },
     "openai-compatible": {
