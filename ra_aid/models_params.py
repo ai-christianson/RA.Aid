@@ -168,7 +168,7 @@ models_params = {
     "openai-compatible": {
         "qwen-qwq-32b": {
             "token_limit": 130000,
-            "think_tag": True,
+            "supports_think_tag": True,
             "supports_temperature": True,
             "latency_coefficient": DEFAULT_BASE_LATENCY,
             "max_tokens": 64000,

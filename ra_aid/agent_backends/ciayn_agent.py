@@ -13,13 +13,16 @@ from ra_aid.config import DEFAULT_MAX_TOOL_FAILURES
 from ra_aid.exceptions import ToolExecutionError
 from ra_aid.fallback_handler import FallbackHandler
 from ra_aid.logging_config import get_logger
-from ra_aid.models_params import DEFAULT_TOKEN_LIMIT
+from ra_aid.models_params import DEFAULT_TOKEN_LIMIT, models_params
 from ra_aid.prompts.ciayn_prompts import CIAYN_AGENT_SYSTEM_PROMPT, CIAYN_AGENT_HUMAN_PROMPT, EXTRACT_TOOL_CALL_PROMPT, NO_TOOL_CALL_PROMPT
 from ra_aid.tools.expert import get_model
 from ra_aid.tools.reflection import get_function_info
 from ra_aid.console.output import cpm
-from ra_aid.console.formatting import print_warning, print_error
+from ra_aid.console.formatting import print_warning, print_error, console
 from ra_aid.agent_context import should_exit
+from ra_aid.text import extract_think_tag
+from rich.panel import Panel
+from rich.markdown import Markdown
 
 logger = get_logger(__name__)
 
@@ -620,8 +623,20 @@ class CiaynAgent:
             self.chat_history.append(HumanMessage(content=base_prompt))
             full_history = self._trim_chat_history(initial_messages, self.chat_history)
             response = self.model.invoke([self.sys_message] + full_history)
-            print("RESPONSE")
-            print(response.content)
+            
+            # Check if model supports think tags
+            provider = self.config.get("provider", "")
+            model_name = self.config.get("model", "")
+            model_config = models_params.get(provider, {}).get(model_name, {})
+            supports_think_tag = model_config.get("supports_think_tag", False)
+            supports_thinking = model_config.get("supports_thinking", False)
+            
+            # Extract think tags if supported
+            if supports_think_tag or supports_thinking:
+                think_content, remaining_text = extract_think_tag(response.content)
+                if think_content:
+                    # console.print(Panel(Markdown(think_content), title="💭 Thoughts"))
+                    response.content = remaining_text
 
             # Check if the response is empty or doesn't contain a valid tool call
             if not response.content or not response.content.strip():
