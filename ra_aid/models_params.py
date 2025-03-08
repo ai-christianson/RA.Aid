@@ -165,6 +165,15 @@ models_params = {
             "latency_coefficient": DEFAULT_BASE_LATENCY,
         },
     },
+    "openai-compatible": {
+        "qwen-qwq-32b": {
+            "token_limit": 130000,
+            "think_tag": True,
+            "supports_temperature": True,
+            "latency_coefficient": DEFAULT_BASE_LATENCY,
+            "max_tokens": 64000,
+        }
+    },
     "azure_openai": {
         "gpt-3.5-turbo-0125": {
             "token_limit": 16385,

@@ -1,0 +1,63 @@
+<think>
+Okay, the user wants me to write a "hello world" program in C++. Let me think about the steps needed.
+
+First, since it's a new project, there are no existing files. So I need to create a main C++ file. The standard entry point for C++ is a main.cpp or something similar. Let's name it main.cpp.
+
+The code for "Hello World" in C++ typically includes the iostream header and uses std::cout. So the code would be:
+
+#include <iostream>
+using namespace std;
+
+int main() {
+    cout << "Hello, world!" << endl;
+    return 0;
+}
+
+Wait, but maybe I should check if there's a standard way. Alternatively, sometimes people use std::cout directly instead of the using directive. Maybe the better practice is to avoid the using namespace std; for clarity, so perhaps rewrite it as:
+
+#include <iostream>
+int main() {
+    std::cout << "Hello, world!" << std::endl;
+    return 0;
+}
+
+Hmm, but the user said to keep it simple. The first version is simpler for a beginner example. But maybe the second is better for standards. Let me think. Since the user said "keep it simple", the first version is okay, but I should make sure that the code compiles.
+
+Next, the user is in a new project directory, so I need to create the main.cpp file. The function to use is request_task_implementation, which takes a task spec. The task spec should be a markdown detailing the steps. Wait, looking back at the available functions, the request_task_implementation function requires a task specification in markdown. So I need to structure that.
+
+The task spec should describe creating the main.cpp file with the code. So the task_spec would be something like "Create a C++ file named main.cpp with the Hello World program. The program should include iostream, use std::cout to output 'Hello, world!' and end with a return 0; statement in main()".
+
+Wait, but the user might prefer the using namespace std; to simplify. Let me check again. Since it's a simple example, using the using namespace is acceptable for brevity. So the code would be:
+
+#include <iostream>
+using namespace std;
+
+int main() {
+    cout << "Hello, world!" << endl;
+    return 0;
+}
+
+Yes, that's standard. Now, to implement this, the correct function to use is request_task_implementation with that code. So the tool call would be to request_task_implementation with the task spec as a markdown string.
+
+Alternatively, maybe I should first check if there's any existing files, but since it's a new project with 0 files, listing directories might be redundant. The efficiency guidelines say to avoid listing empty directories. So instead, proceed directly to creating the file.
+
+Therefore, the correct tool call here is to call request_task_implementation with the task specification to create main.cpp with the code.
+</think>
+
+request_task_implementation('''Create a C++ source file named main.cpp containing a standard "Hello World" program.
+
+Steps:
+1. Create file main.cpp
+2. Add the following content:
+#include <iostream>
+using namespace std;
+
+int main() {
+    cout << "Hello, world!" << endl;
+    return 0;
+}
+
+Acceptance Criteria:
+- The program compiles without errors using g++ main.cpp -o hello
+- Running ./hello outputs exactly "Hello, world!" followed by a newline
+''')

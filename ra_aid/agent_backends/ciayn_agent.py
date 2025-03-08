@@ -620,6 +620,8 @@ class CiaynAgent:
             self.chat_history.append(HumanMessage(content=base_prompt))
             full_history = self._trim_chat_history(initial_messages, self.chat_history)
             response = self.model.invoke([self.sys_message] + full_history)
+            print("RESPONSE")
+            print(response.content)
 
             # Check if the response is empty or doesn't contain a valid tool call
             if not response.content or not response.content.strip():

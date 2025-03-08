@@ -1,4 +1,5 @@
-from typing import Optional
+from typing import Optional, Tuple
+import re
 
 
 def truncate_output(output: str, max_lines: Optional[int] = 5000) -> str:
@@ -41,3 +42,29 @@ def truncate_output(output: str, max_lines: Optional[int] = 5000) -> str:
 
     # Combine message with remaining lines
     return truncation_msg + "".join(truncated_lines)
+
+
+def extract_think_tag(text: str) -> Tuple[Optional[str], str]:
+    """Extract content from the first <think>...</think> tag at the start of a string.
+    
+    Args:
+        text: Input string that may contain think tags
+        
+    Returns:
+        A tuple containing:
+            - The extracted content from the first think tag (None if no tag found)
+            - The remaining string after the first think tag (or the original string if no tag found)
+    """
+    # Pattern to match think tags at the start of the string
+    pattern = r'^\s*<think>(.*?)</think>'
+    match = re.search(pattern, text, re.DOTALL)
+    
+    if match:
+        think_content = match.group(1)
+        # Get the index where the think tag ends
+        end_index = match.end()
+        # Extract the remaining text
+        remaining_text = text[end_index:]
+        return think_content, remaining_text
+    else:
+        return None, text
