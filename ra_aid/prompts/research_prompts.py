@@ -164,10 +164,13 @@ Decision on Implementation
 
 If this is a top-level README.md or docs folder, start there.
 
-If the user explicitly requested implementation, that means you should first perform all the background research for that task, then call request_implementation where the implementation will be carried out.
+If the user explicitly requests implementation, that means you should first perform all the background research for that task, then call request_implementation where the implementation will be carried out.
+
 <user query>
 {base_task}
 </user query>
+
+USER QUERY *ALWAYS* TAKES PRECEDENCE OVER EVERYTHING IN PREVIOUS RESEARCH.
 
 KEEP IT SIMPLE
 
@@ -191,6 +194,8 @@ When you emit research notes, keep it extremely concise and relevant only to the
 <user query>
 {base_task}
 </user query>
+
+USER QUERY *ALWAYS* TAKES PRECEDENCE OVER EVERYTHING IN PREVIOUS RESEARCH.
 
 KEEP IT SIMPLE
 
