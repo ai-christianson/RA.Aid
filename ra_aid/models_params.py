@@ -171,7 +171,7 @@ models_params = {
             "supports_think_tag": True,
             "supports_temperature": True,
             "latency_coefficient": DEFAULT_BASE_LATENCY,
-            "max_tokens": 64000,
+            "max_tokens": 130000,
         }
     },
     "azure_openai": {

@@ -18,6 +18,8 @@ from ..llm import initialize_expert_llm
 from ..model_formatters import format_key_facts_dict
 from ..model_formatters.key_snippets_formatter import format_key_snippets_dict
 from ..model_formatters.research_notes_formatter import format_research_notes_dict
+from ..models_params import models_params
+from ..text import extract_think_tag
 
 console = Console()
 _model = None
@@ -231,10 +233,38 @@ def ask_expert(question: str) -> str:
     
     # Get the content from the response
     content = response.content
+    logger.debug(f"Expert response content type: {type(content).__name__}")
+    
+    # Check if model supports think tags
+    config_repo = get_config_repository()
+    provider = config_repo.get("expert_provider") or config_repo.get("provider")
+    model_name = config_repo.get("expert_model") or config_repo.get("model")
+    model_config = models_params.get(provider, {}).get(model_name, {})
+    supports_think_tag = model_config.get("supports_think_tag", False)
+    supports_thinking = model_config.get("supports_thinking", False)
+    
+    logger.debug(f"Expert model: {provider}/{model_name}")
+    logger.debug(f"Model supports think tag: {supports_think_tag}")
+    logger.debug(f"Model supports thinking: {supports_thinking}")
     
     # Handle thinking mode responses (content is a list) or regular responses (content is a string)
     try:
-        if isinstance(content, list):
+        # Case 1: Check for think tags if the model supports them
+        if (supports_think_tag or supports_thinking) and isinstance(content, str):
+            logger.debug("Checking for think tags in expert response")
+            think_content, remaining_text = extract_think_tag(content)
+            if think_content:
+                logger.debug(f"Found think tag content ({len(think_content)} chars)")
+                console.print(
+                    Panel(Markdown(think_content), title="💭 Thoughts", border_style="yellow")
+                )
+                content = remaining_text
+            else:
+                logger.debug("No think tag content found in expert response")
+        
+        # Case 2: Handle structured thinking (content is a list of dictionaries)
+        elif isinstance(content, list):
+            logger.debug("Expert response content is a list, processing structured thinking")
             # Extract thinking content and response text from structured response
             thinking_content = None
             response_text = None
@@ -245,12 +275,15 @@ def ask_expert(question: str) -> str:
                     # Extract thinking content
                     if item.get('type') == 'thinking' and 'thinking' in item:
                         thinking_content = item['thinking']
+                        logger.debug("Found structured thinking content")
                     # Extract response text
                     elif item.get('type') == 'text' and 'text' in item:
                         response_text = item['text']
+                        logger.debug("Found structured response text")
             
             # Display thinking content in a separate panel if available
             if thinking_content:
+                logger.debug(f"Displaying structured thinking content ({len(thinking_content)} chars)")
                 console.print(
                     Panel(Markdown(thinking_content), title="Expert Thinking", border_style="yellow")
                 )
@@ -260,6 +293,7 @@ def ask_expert(question: str) -> str:
                 content = response_text
             else:
                 # Fallback: join list items if structured extraction failed
+                logger.debug("No structured response text found, joining list items")
                 content = "\n".join(str(item) for item in content)
         
     except Exception as e:
