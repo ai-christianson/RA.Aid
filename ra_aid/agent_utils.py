@@ -71,7 +71,7 @@ from ra_aid.prompts.human_prompts import (
 from ra_aid.prompts.implementation_prompts import IMPLEMENTATION_PROMPT
 from ra_aid.prompts.common_prompts import NEW_PROJECT_HINTS
 from ra_aid.prompts.planning_prompts import PLANNING_PROMPT
-from ra_aid.prompts.reasoning_assist_prompt import REASONING_ASSIST_PROMPT_PLANNING
+from ra_aid.prompts.reasoning_assist_prompt import REASONING_ASSIST_PROMPT_PLANNING, REASONING_ASSIST_PROMPT_IMPLEMENTATION
 from ra_aid.prompts.research_prompts import (
     RESEARCH_ONLY_PROMPT,
     RESEARCH_PROMPT,
@@ -977,6 +977,108 @@ def run_task_implementation_agent(
         formatted_project_info = "Project info unavailable"
         
     # Get environment inventory information
+    env_inv = get_env_inv()
+    
+    # Get model configuration to check for reasoning_assist_default
+    provider = config.get("provider") if config else get_config_repository().get("provider", "")
+    model_name = config.get("model") if config else get_config_repository().get("model", "")
+    logger.debug("Checking for reasoning_assist_default on %s/%s", provider, model_name)
+    
+    model_config = {}
+    provider_models = models_params.get(provider, {})
+    if provider_models and model_name in provider_models:
+        model_config = provider_models[model_name]
+    
+    # Check if reasoning assist is enabled
+    reasoning_assist_enabled = model_config.get("reasoning_assist_default", False)
+    logger.debug("Reasoning assist enabled: %s", reasoning_assist_enabled)
+    
+    # Initialize implementation guidance section
+    implementation_guidance_section = ""
+    
+    # If reasoning assist is enabled, make a one-off call to the expert model
+    if reasoning_assist_enabled:
+        try:
+            logger.info("Reasoning assist enabled for model %s, getting implementation guidance", model_name)
+            
+            # Collect tool descriptions
+            tool_metadata = []
+            from ra_aid.tools.reflection import get_function_info as get_tool_info
+            
+            for tool in tools:
+                try:
+                    tool_info = get_tool_info(tool.func)
+                    name = tool.func.__name__
+                    description = inspect.getdoc(tool.func)
+                    tool_metadata.append(f"Tool: {name}\\nDescription: {description}\\n")
+                except Exception as e:
+                    logger.warning(f"Error getting tool info for {tool}: {e}")
+            
+            # Format tool metadata
+            formatted_tool_metadata = "\\n".join(tool_metadata)
+            
+            # Initialize expert model
+            expert_model = initialize_expert_llm(provider, model_name)
+            
+            # Format the reasoning assist prompt for implementation
+            reasoning_assist_prompt = REASONING_ASSIST_PROMPT_IMPLEMENTATION.format(
+                current_date=current_date,
+                working_directory=working_directory,
+                task=task,
+                key_facts=key_facts,
+                key_snippets=format_key_snippets_dict(get_key_snippet_repository().get_snippets_dict()),
+                research_notes=formatted_research_notes,
+                related_files="\\n".join(related_files),
+                env_inv=env_inv,
+                tool_metadata=formatted_tool_metadata,
+            )
+            
+            # Show the reasoning assist query in a panel
+            console.print(
+                Panel(Markdown("Consulting with the reasoning model on the best implementation approach."), title="📝 Thinking about implementation...", border_style="yellow")
+            )
+            
+            logger.debug("Invoking expert model for implementation reasoning assist")
+            # Make the call to the expert model
+            response = expert_model.invoke(reasoning_assist_prompt)
+            
+            # Check if the model supports think tags
+            supports_think_tag = model_config.get("supports_think_tag", False)
+            supports_thinking = model_config.get("supports_thinking", False)
+            
+            # Process response content
+            content = None
+            
+            if hasattr(response, 'content'):
+                content = response.content
+            else:
+                # Fallback if content attribute is missing
+                content = str(response)
+            
+            # Process the response content using the centralized function
+            content, extracted_thinking = process_thinking_content(
+                content=content,
+                supports_think_tag=supports_think_tag,
+                supports_thinking=supports_thinking,
+                panel_title="💭 Implementation Thinking",
+                panel_style="yellow",
+                logger=logger
+            )
+            
+            # Display the implementation guidance in a panel
+            console.print(
+                Panel(Markdown(content), title="Implementation Guidance", border_style="blue")
+            )
+            
+            # Format the implementation guidance section for the prompt
+            implementation_guidance_section = f"""<implementation guidance>
+{content}
+</implementation guidance>"""
+            
+            logger.info("Received implementation guidance")
+        except Exception as e:
+            logger.error("Error getting implementation guidance: %s", e)
+            implementation_guidance_section = ""
     
     prompt = IMPLEMENTATION_PROMPT.format(
         current_date=current_date,
@@ -1001,8 +1103,9 @@ def run_task_implementation_agent(
             if config.get("web_research_enabled")
             else ""
         ),
-        env_inv=get_env_inv(),
+        env_inv=env_inv,
         project_info=formatted_project_info,
+        implementation_guidance_section=implementation_guidance_section,
     )
 
     config = get_config_repository().get_all() if not config else config

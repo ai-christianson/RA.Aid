@@ -45,6 +45,8 @@ YOU MUST **EXPLICITLY** INCLUDE ANY PATHS FROM THE ABOVE INFO IF NEEDED. IT IS N
 
 READ AND STUDY ACTUAL LIBRARY HEADERS/CODE FROM THE ENVIRONMENT, IF AVAILABLE AND RELEVANT.
 
+{implementation_guidance_section}
+
 Important Notes:
 - Focus solely on the given task and implement it as described.
 - Scale the complexity of your solution to the complexity of the request. For simple requests, keep it straightforward and minimal. For complex requests, maintain the previously planned depth.
