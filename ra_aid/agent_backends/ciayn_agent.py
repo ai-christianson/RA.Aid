@@ -635,7 +635,7 @@ class CiaynAgent:
             if supports_think_tag or supports_thinking:
                 think_content, remaining_text = extract_think_tag(response.content)
                 if think_content:
-                    # console.print(Panel(Markdown(think_content), title="💭 Thoughts"))
+                    console.print(Panel(Markdown(think_content), title="💭 Thoughts"))
                     response.content = remaining_text
 
             # Check if the response is empty or doesn't contain a valid tool call
