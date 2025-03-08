@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhanced CiaynAgent and expert tool to extract and display thinking content from <think>...</think> tags
 - Added model parameters for think tag support
 - Added comprehensive testing for think tag functionality
+- Added `--show-thoughts` flag to show thoughts of thinking models
 
 ### Changed
 - Updated langchain/langgraph deps
