@@ -19,7 +19,7 @@ from ..model_formatters import format_key_facts_dict
 from ..model_formatters.key_snippets_formatter import format_key_snippets_dict
 from ..model_formatters.research_notes_formatter import format_research_notes_dict
 from ..models_params import models_params
-from ..text import extract_think_tag
+from ..text.processing import process_thinking_content
 
 console = Console()
 _model = None
@@ -247,55 +247,17 @@ def ask_expert(question: str) -> str:
     logger.debug(f"Model supports think tag: {supports_think_tag}")
     logger.debug(f"Model supports thinking: {supports_thinking}")
     
-    # Handle thinking mode responses (content is a list) or regular responses (content is a string)
+    # Process thinking content using the common processing function
     try:
-        # Case 1: Check for think tags if the model supports them
-        if (supports_think_tag or supports_thinking) and isinstance(content, str):
-            logger.debug("Checking for think tags in expert response")
-            think_content, remaining_text = extract_think_tag(content)
-            if think_content:
-                logger.debug(f"Found think tag content ({len(think_content)} chars)")
-                if get_config_repository().get("show_thoughts", False):
-                    console.print(
-                        Panel(Markdown(think_content), title="💭 Thoughts", border_style="yellow")
-                    )
-                content = remaining_text
-            else:
-                logger.debug("No think tag content found in expert response")
-        
-        # Case 2: Handle structured thinking (content is a list of dictionaries)
-        elif isinstance(content, list):
-            logger.debug("Expert response content is a list, processing structured thinking")
-            # Extract thinking content and response text from structured response
-            thinking_content = None
-            response_text = None
-            
-            # Process each item in the list
-            for item in content:
-                if isinstance(item, dict):
-                    # Extract thinking content
-                    if item.get('type') == 'thinking' and 'thinking' in item:
-                        thinking_content = item['thinking']
-                        logger.debug("Found structured thinking content")
-                    # Extract response text
-                    elif item.get('type') == 'text' and 'text' in item:
-                        response_text = item['text']
-                        logger.debug("Found structured response text")
-            
-            # Display thinking content in a separate panel if available
-            if thinking_content and get_config_repository().get("show_thoughts", False):
-                logger.debug(f"Displaying structured thinking content ({len(thinking_content)} chars)")
-                console.print(
-                    Panel(Markdown(thinking_content), title="Expert Thinking", border_style="yellow")
-                )
-            
-            # Use response_text if available, otherwise fall back to joining
-            if response_text:
-                content = response_text
-            else:
-                # Fallback: join list items if structured extraction failed
-                logger.debug("No structured response text found, joining list items")
-                content = "\n".join(str(item) for item in content)
+        # Use the process_thinking_content function to handle both string and list responses
+        content, thinking = process_thinking_content(
+            content=content,
+            supports_think_tag=supports_think_tag,
+            supports_thinking=supports_thinking,
+            panel_title="💭 Thoughts",
+            panel_style="yellow",
+            logger=logger
+        )
         
     except Exception as e:
         logger.error(f"Exception during content processing: {str(e)}")

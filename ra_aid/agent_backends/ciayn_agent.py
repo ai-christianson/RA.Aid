@@ -20,7 +20,7 @@ from ra_aid.tools.reflection import get_function_info
 from ra_aid.console.output import cpm
 from ra_aid.console.formatting import print_warning, print_error, console
 from ra_aid.agent_context import should_exit
-from ra_aid.text import extract_think_tag
+from ra_aid.text.processing import extract_think_tag, process_thinking_content
 from rich.panel import Panel
 from rich.markdown import Markdown
 
@@ -631,13 +631,14 @@ class CiaynAgent:
             supports_think_tag = model_config.get("supports_think_tag", False)
             supports_thinking = model_config.get("supports_thinking", False)
             
-            # Extract think tags if supported
-            if supports_think_tag or supports_thinking:
-                think_content, remaining_text = extract_think_tag(response.content)
-                if think_content:
-                    if self.config.get("show_thoughts", False):
-                        console.print(Panel(Markdown(think_content), title="💭 Thoughts"))
-                    response.content = remaining_text
+            # Process thinking content if supported
+            response.content, _ = process_thinking_content(
+                content=response.content,
+                supports_think_tag=supports_think_tag,
+                supports_thinking=supports_thinking,
+                panel_title="💭 Thoughts",
+                show_thoughts=self.config.get("show_thoughts", False)
+            )
 
             # Check if the response is empty or doesn't contain a valid tool call
             if not response.content or not response.content.strip():

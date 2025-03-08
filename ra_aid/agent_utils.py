@@ -52,6 +52,7 @@ from ra_aid.fallback_handler import FallbackHandler
 from ra_aid.logging_config import get_logger
 from ra_aid.llm import initialize_expert_llm
 from ra_aid.models_params import DEFAULT_TOKEN_LIMIT, models_params
+from ra_aid.text.processing import process_thinking_content
 from ra_aid.project_info import (
     display_project_status,
     format_project_info,
@@ -804,16 +805,16 @@ def run_planning_agent(
                     # Fallback: join list items if structured extraction failed
                     logger.debug("No structured response text found, joining list items")
                     content = "\n".join(str(item) for item in content)
-            elif (supports_think_tag or supports_thinking) and isinstance(content, str):
-                # Extract think tags if model supports them
-                think_content, remaining_text = extract_think_tag(content)
-                if think_content:
-                    logger.debug(f"Found think tag content ({len(think_content)} chars)")
-                    if get_config_repository().get("show_thoughts", False):
-                        console.print(
-                            Panel(Markdown(think_content), title="💭 Expert Thinking", border_style="yellow")
-                        )
-                    content = remaining_text
+            elif (supports_think_tag or supports_thinking):
+                # Process thinking content using the centralized function
+                content, _ = process_thinking_content(
+                    content=content,
+                    supports_think_tag=supports_think_tag,
+                    supports_thinking=supports_thinking,
+                    panel_title="💭 Expert Thinking",
+                    panel_style="yellow",
+                    logger=logger
+                )
             
             # Display the expert guidance in a panel
             console.print(
