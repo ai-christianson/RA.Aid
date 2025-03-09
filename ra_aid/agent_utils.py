@@ -772,7 +772,7 @@ def run_web_research_agent(
         logger.debug("Web research agent completed successfully")
         none_or_fallback_handler = init_fallback_handler(agent, tools)
         _result = run_agent_with_retry(
-            agent, prompt, run_config, none_or_fallback_handler
+            agent, prompt, none_or_fallback_handler
         )
         if _result:
             # Log web research completion

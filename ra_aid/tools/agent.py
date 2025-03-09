@@ -185,7 +185,6 @@ def request_web_research(query: str) -> ResearchResult:
             expert_enabled=True,
             hil=config.get("hil", False),
             console_message=query,
-            config=config,
         )
     except AgentInterrupt:
         print()

@@ -755,26 +755,45 @@ def test_python_file_detection():
         import magic
         if magic:
             # Only run this part of the test if magic is available
-            with patch('ra_aid.utils.file_utils.magic') as mock_magic:
-                # Mock magic to simulate the behavior that causes the issue
-                mock_magic.from_file.side_effect = [
-                    "text/x-python",  # First call with mime=True
-                    "Python script text executable"  # Second call without mime=True
-                ]
-                
-                # This should return False (not binary) but currently returns True
-                is_binary = is_binary_file(mock_file_path)
-                
-                # Verify the magic library was called correctly
-                mock_magic.from_file.assert_any_call(mock_file_path, mime=True)
-                mock_magic.from_file.assert_any_call(mock_file_path)
-                
-                # This assertion is EXPECTED TO FAIL with the current implementation
-                # It demonstrates the bug we need to fix
-                assert not is_binary, (
-                    "Python file incorrectly identified as binary. "
-                    "The current implementation requires 'ASCII text' in file_type description, "
-                    "but Python files often have 'Python script text' instead."
-                )
+            
+            # Mock os.path.splitext to return an unknown extension for the mock file
+            # This forces the is_binary_file function to bypass the extension check
+            def mock_splitext(path):
+                if path == mock_file_path:
+                    return ('agent_utils_mock', '.unknown')
+                return os.path.splitext(path)
+            
+            # First we need to patch other functions that might short-circuit the magic call
+            with patch('ra_aid.utils.file_utils.os.path.splitext', side_effect=mock_splitext):
+                # Also patch _is_binary_content to return True to force magic check
+                with patch('ra_aid.utils.file_utils._is_binary_content', return_value=True):
+                    # And patch open to prevent content-based checks
+                    with patch('builtins.open') as mock_open:
+                        # Set up mock open to return an empty file when reading for content checks
+                        mock_file = MagicMock()
+                        mock_file.__enter__.return_value.read.return_value = b''
+                        mock_open.return_value = mock_file
+                        
+                        # Inner patch for magic
+                        with patch('ra_aid.utils.file_utils.magic') as mock_magic:
+                            # Mock magic to simulate the behavior that causes the issue
+                            mock_magic.from_file.side_effect = [
+                                "text/x-python",  # First call with mime=True
+                                "Python script text executable"  # Second call without mime=True
+                            ]
+                            
+                            # This should return False (not binary) but currently returns True
+                            is_binary = is_binary_file(mock_file_path)
+                            
+                            # Verify the magic library was called correctly
+                            mock_magic.from_file.assert_any_call(mock_file_path, mime=True)
+                            mock_magic.from_file.assert_any_call(mock_file_path)
+                            
+                            # This assertion should now pass with the updated implementation
+                            assert not is_binary, (
+                                "Python file incorrectly identified as binary. "
+                                "The current implementation requires 'ASCII text' in file_type description, "
+                                "but Python files often have 'Python script text' instead."
+                            )
     except ImportError:
         pytest.skip("magic library not available, skipping magic-specific test")
