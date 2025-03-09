@@ -319,7 +319,8 @@ class EnvDiscovery:
                     seen_paths.add(path)
                     ver = self._get_python_version(path)
                     installations.append({"version": ver, "path": path})
-        installations = sorted(installations, key=lambda x: x.get("version", ""))
+
+        installations = sorted(installations, key=lambda x: x.get("version", "") or "")
         self.results["python"]["installations"] = installations
 
     def _get_python_version(self, python_path):
