@@ -71,7 +71,7 @@ from ra_aid.prompts.human_prompts import (
 from ra_aid.prompts.implementation_prompts import IMPLEMENTATION_PROMPT
 from ra_aid.prompts.common_prompts import NEW_PROJECT_HINTS
 from ra_aid.prompts.planning_prompts import PLANNING_PROMPT
-from ra_aid.prompts.reasoning_assist_prompt import REASONING_ASSIST_PROMPT_PLANNING, REASONING_ASSIST_PROMPT_IMPLEMENTATION
+from ra_aid.prompts.reasoning_assist_prompt import REASONING_ASSIST_PROMPT_PLANNING, REASONING_ASSIST_PROMPT_IMPLEMENTATION, REASONING_ASSIST_PROMPT_RESEARCH
 from ra_aid.prompts.research_prompts import (
     RESEARCH_ONLY_PROMPT,
     RESEARCH_PROMPT,
@@ -177,6 +177,15 @@ def get_model_token_limit(
         Optional[int]: The token limit if found, None otherwise
     """
     try:
+        # Try to get config from repository for production use
+        try:
+            config_from_repo = get_config_repository().get_all()
+            # If we succeeded, use the repository config instead of passed config
+            config = config_from_repo
+        except RuntimeError:
+            # In tests, this may fail because the repository isn't set up
+            # So we'll use the passed config directly
+            pass
         if agent_type == "research":
             provider = config.get("research_provider", "") or config.get("provider", "")
             model_name = config.get("research_model", "") or config.get("model", "")
@@ -227,7 +236,6 @@ def get_model_token_limit(
 
 def build_agent_kwargs(
     checkpointer: Optional[Any] = None,
-    config: Dict[str, Any] = None,
     max_input_tokens: Optional[int] = None,
 ) -> Dict[str, Any]:
     """Build kwargs dictionary for agent creation.
@@ -247,6 +255,7 @@ def build_agent_kwargs(
     if checkpointer is not None:
         agent_kwargs["checkpointer"] = checkpointer
 
+    config = get_config_repository().get_all()
     if config.get("limit_tokens", True) and is_anthropic_claude(config):
 
         def wrapped_state_modifier(state: AgentState) -> list[BaseMessage]:
@@ -261,12 +270,12 @@ def is_anthropic_claude(config: Dict[str, Any]) -> bool:
     """Check if the provider and model name indicate an Anthropic Claude model.
 
     Args:
-        provider: The provider name
-        model_name: The model name
+        config: Configuration dictionary containing provider and model information
 
     Returns:
         bool: True if this is an Anthropic Claude model
     """
+    # For backwards compatibility, allow passing of config directly
     provider = config.get("provider", "")
     model_name = config.get("model", "")
     result = (
@@ -306,7 +315,15 @@ def create_agent(
     config['limit_tokens'] = False.
     """
     try:
-        config = get_config_repository().get_all()
+        # Try to get config from repository for production use
+        try:
+            config_from_repo = get_config_repository().get_all()
+            # If we succeeded, use the repository config instead of passed config
+            config = config_from_repo
+        except RuntimeError:
+            # In tests, this may fail because the repository isn't set up
+            # So we'll use the passed config directly
+            pass
         max_input_tokens = (
             get_model_token_limit(config, agent_type) or DEFAULT_TOKEN_LIMIT
         )
@@ -314,7 +331,7 @@ def create_agent(
         # Use REACT agent for Anthropic Claude models, otherwise use CIAYN
         if is_anthropic_claude(config):
             logger.debug("Using create_react_agent to instantiate agent.")
-            agent_kwargs = build_agent_kwargs(checkpointer, config, max_input_tokens)
+            agent_kwargs = build_agent_kwargs(checkpointer, max_input_tokens)
             return create_react_agent(model, tools, interrupt_after=['tools'], **agent_kwargs)
         else:
             logger.debug("Using CiaynAgent agent instance")
@@ -325,7 +342,7 @@ def create_agent(
         logger.warning(f"Failed to detect model type: {e}. Defaulting to REACT agent.")
         config = get_config_repository().get_all()
         max_input_tokens = get_model_token_limit(config, agent_type)
-        agent_kwargs = build_agent_kwargs(checkpointer, config, max_input_tokens)
+        agent_kwargs = build_agent_kwargs(checkpointer, max_input_tokens)
         return create_react_agent(model, tools, interrupt_after=['tools'], **agent_kwargs)
 
 
@@ -338,7 +355,6 @@ def run_research_agent(
     hil: bool = False,
     web_research_enabled: bool = False,
     memory: Optional[Any] = None,
-    config: Optional[dict] = None,
     thread_id: Optional[str] = None,
     console_message: Optional[str] = None,
 ) -> Optional[str]:
@@ -380,31 +396,6 @@ def run_research_agent(
     if memory is None:
         memory = MemorySaver()
 
-    tools = get_research_tools(
-        research_only=research_only,
-        expert_enabled=expert_enabled,
-        human_interaction=hil,
-        web_research_enabled=config.get("web_research_enabled", False),
-    )
-
-    agent = create_agent(model, tools, checkpointer=memory, agent_type="research")
-
-    expert_section = EXPERT_PROMPT_SECTION_RESEARCH if expert_enabled else ""
-    human_section = HUMAN_PROMPT_SECTION_RESEARCH if hil else ""
-    web_research_section = (
-        WEB_RESEARCH_PROMPT_SECTION_RESEARCH
-        if config.get("web_research_enabled")
-        else ""
-    )
-
-    try:
-        key_facts = format_key_facts_dict(get_key_fact_repository().get_facts_dict())
-    except RuntimeError as e:
-        logger.error(f"Failed to access key fact repository: {str(e)}")
-        key_facts = ""
-    key_snippets = format_key_snippets_dict(get_key_snippet_repository().get_snippets_dict())
-    related_files = get_related_files()
-
     current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     working_directory = os.getcwd()
 
@@ -421,11 +412,192 @@ def run_research_agent(
         # Continue without appending last human input
 
     try:
+        key_facts = format_key_facts_dict(get_key_fact_repository().get_facts_dict())
+    except RuntimeError as e:
+        logger.error(f"Failed to access key fact repository: {str(e)}")
+        key_facts = ""
+    key_snippets = format_key_snippets_dict(get_key_snippet_repository().get_snippets_dict())
+    related_files = get_related_files()
+
+    try:
         project_info = get_project_info(".", file_limit=2000)
         formatted_project_info = format_project_info(project_info)
     except Exception as e:
         logger.warning(f"Failed to get project info: {e}")
         formatted_project_info = ""
+
+    tools = get_research_tools(
+        research_only=research_only,
+        expert_enabled=expert_enabled,
+        human_interaction=hil,
+        web_research_enabled=get_config_repository().get("web_research_enabled", False),
+    )
+    
+    # Get model info for reasoning assistance configuration
+    provider = get_config_repository().get("provider", "")
+    model_name = get_config_repository().get("model", "")
+    
+    # Get model configuration to check for reasoning_assist_default
+    model_config = {}
+    provider_models = models_params.get(provider, {})
+    if provider_models and model_name in provider_models:
+        model_config = provider_models[model_name]
+    
+    # Check if reasoning assist is explicitly enabled/disabled
+    force_assistance = get_config_repository().get("force_reasoning_assistance", False)
+    disable_assistance = get_config_repository().get("disable_reasoning_assistance", False)
+    if force_assistance:
+        reasoning_assist_enabled = True
+    elif disable_assistance:
+        reasoning_assist_enabled = False
+    else:
+        # Fall back to model default
+        reasoning_assist_enabled = model_config.get("reasoning_assist_default", False)
+        
+    logger.debug("Reasoning assist enabled: %s", reasoning_assist_enabled)
+    expert_guidance = ""
+    
+    # Get research note information for reasoning assistance
+    try:
+        research_notes = format_research_notes_dict(get_research_note_repository().get_notes_dict())
+    except Exception as e:
+        logger.warning(f"Failed to get research notes: {e}")
+        research_notes = ""
+    
+    # If reasoning assist is enabled, make a one-off call to the expert model
+    if reasoning_assist_enabled:
+        try:
+            logger.info("Reasoning assist enabled for model %s, getting expert guidance", model_name)
+            
+            # Collect tool descriptions
+            tool_metadata = []
+            from ra_aid.tools.reflection import get_function_info as get_tool_info
+            
+            for tool in tools:
+                try:
+                    tool_info = get_tool_info(tool.func)
+                    name = tool.func.__name__
+                    description = inspect.getdoc(tool.func)
+                    tool_metadata.append(f"Tool: {name}\nDescription: {description}\n")
+                except Exception as e:
+                    logger.warning(f"Error getting tool info for {tool}: {e}")
+            
+            # Format tool metadata
+            formatted_tool_metadata = "\n".join(tool_metadata)
+            
+            # Initialize expert model
+            expert_model = initialize_expert_llm(provider, model_name)
+            
+            # Format the reasoning assist prompt
+            reasoning_assist_prompt = REASONING_ASSIST_PROMPT_RESEARCH.format(
+                current_date=current_date,
+                working_directory=working_directory,
+                base_task=base_task,
+                key_facts=key_facts,
+                key_snippets=key_snippets,
+                research_notes=research_notes,
+                related_files=related_files,
+                env_inv=get_env_inv(),
+                tool_metadata=formatted_tool_metadata,
+            )
+            
+            # Show the reasoning assist query in a panel
+            console.print(
+                Panel(Markdown("Consulting with the reasoning model on the best research approach."), title="📝 Thinking about research strategy...", border_style="yellow")
+            )
+            
+            logger.debug("Invoking expert model for reasoning assist")
+            # Make the call to the expert model
+            response = expert_model.invoke(reasoning_assist_prompt)
+            
+            # Check if the model supports think tags
+            supports_think_tag = model_config.get("supports_think_tag", False)
+            supports_thinking = model_config.get("supports_thinking", False)
+            
+            # Get response content, handling if it's a list (for Claude thinking mode)
+            content = None
+            
+            if hasattr(response, 'content'):
+                content = response.content
+            else:
+                # Fallback if content attribute is missing
+                content = str(response)
+            
+            # Process content based on its type
+            if isinstance(content, list):
+                # Handle structured thinking mode (e.g., Claude 3.7)
+                thinking_content = None
+                response_text = None
+                
+                # Process each item in the list
+                for item in content:
+                    if isinstance(item, dict):
+                        # Extract thinking content
+                        if item.get('type') == 'thinking' and 'thinking' in item:
+                            thinking_content = item['thinking']
+                            logger.debug("Found structured thinking content")
+                        # Extract response text
+                        elif item.get('type') == 'text' and 'text' in item:
+                            response_text = item['text']
+                            logger.debug("Found structured response text")
+                
+                # Display thinking content in a separate panel if available
+                if thinking_content and get_config_repository().get("show_thoughts", False):
+                    logger.debug(f"Displaying structured thinking content ({len(thinking_content)} chars)")
+                    console.print(
+                        Panel(Markdown(thinking_content), title="💭 Expert Thinking", border_style="yellow")
+                    )
+                
+                # Use response_text if available, otherwise fall back to joining
+                if response_text:
+                    content = response_text
+                else:
+                    # Fallback: join list items if structured extraction failed
+                    logger.debug("No structured response text found, joining list items")
+                    content = "\n".join(str(item) for item in content)
+            elif (supports_think_tag or supports_thinking):
+                # Process thinking content using the centralized function
+                content, _ = process_thinking_content(
+                    content=content,
+                    supports_think_tag=supports_think_tag,
+                    supports_thinking=supports_thinking,
+                    panel_title="💭 Expert Thinking",
+                    panel_style="yellow",
+                    logger=logger
+                )
+            
+            # Display the expert guidance in a panel
+            console.print(
+                Panel(Markdown(content), title="Research Strategy Guidance", border_style="blue")
+            )
+            
+            # Use the content as expert guidance
+            expert_guidance = content + "\n\nCONSULT WITH THE EXPERT FREQUENTLY DURING RESEARCH"
+            
+            logger.info("Received expert guidance for research")
+        except Exception as e:
+            logger.error("Error getting expert guidance for research: %s", e)
+            expert_guidance = ""
+    
+    agent = create_agent(model, tools, checkpointer=memory, agent_type="research")
+
+    expert_section = EXPERT_PROMPT_SECTION_RESEARCH if expert_enabled else ""
+    human_section = HUMAN_PROMPT_SECTION_RESEARCH if hil else ""
+    web_research_section = (
+        WEB_RESEARCH_PROMPT_SECTION_RESEARCH
+        if get_config_repository().get("web_research_enabled")
+        else ""
+    )
+    
+    # Prepare expert guidance section if expert guidance is available
+    expert_guidance_section = ""
+    if expert_guidance:
+        expert_guidance_section = f"""<expert guidance>
+{expert_guidance}
+</expert guidance>"""
+
+    # Format research notes if available
+    # We get research notes earlier for reasoning assistance
 
     # Get environment inventory information
     
@@ -448,16 +620,16 @@ def run_research_agent(
         project_info=formatted_project_info,
         new_project_hints=NEW_PROJECT_HINTS if project_info.is_new else "",
         env_inv=get_env_inv(),
+        expert_guidance_section=expert_guidance_section,
     )
 
-    config = get_config_repository().get_all() if not config else config
+    config = get_config_repository().get_all()
     recursion_limit = config.get("recursion_limit", DEFAULT_RECURSION_LIMIT)
     run_config = {
         "configurable": {"thread_id": thread_id},
         "recursion_limit": recursion_limit,
     }
-    if config:
-        run_config.update(config)
+    run_config.update(config)
 
     try:
         if console_message:
@@ -470,9 +642,9 @@ def run_research_agent(
 
         if agent is not None:
             logger.debug("Research agent created successfully")
-            none_or_fallback_handler = init_fallback_handler(agent, config, tools)
+            none_or_fallback_handler = init_fallback_handler(agent, tools)
             _result = run_agent_with_retry(
-                agent, prompt, run_config, none_or_fallback_handler
+                agent, prompt, none_or_fallback_handler
             )
             if _result:
                 # Log research completion
@@ -487,7 +659,6 @@ def run_research_agent(
                 hil=hil,
                 web_research_enabled=web_research_enabled,
                 memory=memory,
-                config=config,
                 thread_id=thread_id,
                 console_message=console_message,
             )
@@ -506,7 +677,6 @@ def run_web_research_agent(
     hil: bool = False,
     web_research_enabled: bool = False,
     memory: Optional[Any] = None,
-    config: Optional[dict] = None,
     thread_id: Optional[str] = None,
     console_message: Optional[str] = None,
 ) -> Optional[str]:
@@ -585,7 +755,7 @@ def run_web_research_agent(
         env_inv=get_env_inv(),
     )
 
-    config = get_config_repository().get_all() if not config else config
+    config = get_config_repository().get_all()
 
     recursion_limit = config.get("recursion_limit", DEFAULT_RECURSION_LIMIT)
     run_config = {
@@ -600,7 +770,7 @@ def run_web_research_agent(
             console.print(Panel(Markdown(console_message), title="🔬 Researching..."))
 
         logger.debug("Web research agent completed successfully")
-        none_or_fallback_handler = init_fallback_handler(agent, config, tools)
+        none_or_fallback_handler = init_fallback_handler(agent, tools)
         _result = run_agent_with_retry(
             agent, prompt, run_config, none_or_fallback_handler
         )
@@ -623,7 +793,6 @@ def run_planning_agent(
     expert_enabled: bool = False,
     hil: bool = False,
     memory: Optional[Any] = None,
-    config: Optional[dict] = None,
     thread_id: Optional[str] = None,
 ) -> Optional[str]:
     """Run a planning agent to create implementation plans.
@@ -634,7 +803,6 @@ def run_planning_agent(
         expert_enabled: Whether expert mode is enabled
         hil: Whether human-in-the-loop mode is enabled
         memory: Optional memory instance to use
-        config: Optional configuration dictionary
         thread_id: Optional thread ID (defaults to new UUID)
 
     Returns:
@@ -660,12 +828,12 @@ def run_planning_agent(
 
     tools = get_planning_tools(
         expert_enabled=expert_enabled,
-        web_research_enabled=config.get("web_research_enabled", False),
+        web_research_enabled=get_config_repository().get("web_research_enabled", False),
     )
 
     # Get model configuration
-    provider = config.get("provider") if config else get_config_repository().get("provider", "")
-    model_name = config.get("model") if config else get_config_repository().get("model", "")
+    provider = get_config_repository().get("provider", "")
+    model_name = get_config_repository().get("model", "")
     logger.debug("Checking for reasoning_assist_default on %s/%s", provider, model_name)
     
     # Get model configuration to check for reasoning_assist_default
@@ -675,8 +843,8 @@ def run_planning_agent(
         model_config = provider_models[model_name]
     
     # Check if reasoning assist is explicitly enabled/disabled
-    force_assistance = config.get("force_reasoning_assistance", False) if config else get_config_repository().get("force_reasoning_assistance", False)
-    disable_assistance = config.get("disable_reasoning_assistance", False) if config else get_config_repository().get("disable_reasoning_assistance", False)
+    force_assistance = get_config_repository().get("force_reasoning_assistance", False)
+    disable_assistance = get_config_repository().get("disable_reasoning_assistance", False)
     
     if force_assistance:
         reasoning_assist_enabled = True
@@ -720,6 +888,9 @@ def run_planning_agent(
     
     # Get environment inventory information
     env_inv = get_env_inv()
+    
+    # Display the planning stage header before any reasoning assistance
+    print_stage_header("Planning Stage")
     
     # Initialize expert guidance section
     expert_guidance = ""
@@ -845,7 +1016,7 @@ def run_planning_agent(
     human_section = HUMAN_PROMPT_SECTION_PLANNING if hil else ""
     web_research_section = (
         WEB_RESEARCH_PROMPT_SECTION_PLANNING
-        if config.get("web_research_enabled")
+        if get_config_repository().get("web_research_enabled", False)
         else ""
     )
     
@@ -871,28 +1042,26 @@ def run_planning_agent(
         work_log=get_work_log_repository().format_work_log(),
         research_only_note=(
             ""
-            if config.get("research_only")
+            if get_config_repository().get("research_only", False)
             else " Only request implementation if the user explicitly asked for changes to be made."
         ),
         env_inv=env_inv,
         expert_guidance_section=expert_guidance_section,
     )
 
-    config = get_config_repository().get_all() if not config else config
-    recursion_limit = config.get("recursion_limit", DEFAULT_RECURSION_LIMIT)
+    config_values = get_config_repository().get_all()
+    recursion_limit = get_config_repository().get("recursion_limit", DEFAULT_RECURSION_LIMIT)
     run_config = {
         "configurable": {"thread_id": thread_id},
         "recursion_limit": recursion_limit,
     }
-    if config:
-        run_config.update(config)
+    run_config.update(config_values)
 
     try:
-        print_stage_header("Planning Stage")
         logger.debug("Planning agent completed successfully")
-        none_or_fallback_handler = init_fallback_handler(agent, config, tools)
+        none_or_fallback_handler = init_fallback_handler(agent, tools)
         _result = run_agent_with_retry(
-            agent, planning_prompt, run_config, none_or_fallback_handler
+            agent, planning_prompt, none_or_fallback_handler
         )
         if _result:
             # Log planning completion
@@ -916,7 +1085,6 @@ def run_task_implementation_agent(
     expert_enabled: bool = False,
     web_research_enabled: bool = False,
     memory: Optional[Any] = None,
-    config: Optional[dict] = None,
     thread_id: Optional[str] = None,
 ) -> Optional[str]:
     """Run an implementation agent for a specific task.
@@ -930,7 +1098,6 @@ def run_task_implementation_agent(
         expert_enabled: Whether expert mode is enabled
         web_research_enabled: Whether web research is enabled
         memory: Optional memory instance to use
-        config: Optional configuration dictionary
         thread_id: Optional thread ID (defaults to new UUID)
 
     Returns:
@@ -954,7 +1121,7 @@ def run_task_implementation_agent(
 
     tools = get_implementation_tools(
         expert_enabled=expert_enabled,
-        web_research_enabled=config.get("web_research_enabled", False),
+        web_research_enabled=get_config_repository().get("web_research_enabled", False),
     )
 
     agent = create_agent(model, tools, checkpointer=memory, agent_type="planner")
@@ -990,8 +1157,8 @@ def run_task_implementation_agent(
     env_inv = get_env_inv()
     
     # Get model configuration to check for reasoning_assist_default
-    provider = config.get("provider") if config else get_config_repository().get("provider", "")
-    model_name = config.get("model") if config else get_config_repository().get("model", "")
+    provider = get_config_repository().get("provider", "")
+    model_name = get_config_repository().get("model", "")
     logger.debug("Checking for reasoning_assist_default on %s/%s", provider, model_name)
     
     model_config = {}
@@ -1000,8 +1167,8 @@ def run_task_implementation_agent(
         model_config = provider_models[model_name]
     
     # Check if reasoning assist is explicitly enabled/disabled
-    force_assistance = config.get("force_reasoning_assistance", False) if config else get_config_repository().get("force_reasoning_assistance", False)
-    disable_assistance = config.get("disable_reasoning_assistance", False) if config else get_config_repository().get("disable_reasoning_assistance", False)
+    force_assistance = get_config_repository().get("force_reasoning_assistance", False)
+    disable_assistance = get_config_repository().get("disable_reasoning_assistance", False)
     
     if force_assistance:
         reasoning_assist_enabled = True
@@ -1120,7 +1287,7 @@ def run_task_implementation_agent(
         ),
         web_research_section=(
             WEB_RESEARCH_PROMPT_SECTION_CHAT
-            if config.get("web_research_enabled")
+            if get_config_repository().get("web_research_enabled", False)
             else ""
         ),
         env_inv=env_inv,
@@ -1128,20 +1295,19 @@ def run_task_implementation_agent(
         implementation_guidance_section=implementation_guidance_section,
     )
 
-    config = get_config_repository().get_all() if not config else config
-    recursion_limit = config.get("recursion_limit", DEFAULT_RECURSION_LIMIT)
+    config_values = get_config_repository().get_all()
+    recursion_limit = get_config_repository().get("recursion_limit", DEFAULT_RECURSION_LIMIT)
     run_config = {
         "configurable": {"thread_id": thread_id},
         "recursion_limit": recursion_limit,
     }
-    if config:
-        run_config.update(config)
+    run_config.update(config_values)
 
     try:
         logger.debug("Implementation agent completed successfully")
-        none_or_fallback_handler = init_fallback_handler(agent, config, tools)
+        none_or_fallback_handler = init_fallback_handler(agent, tools)
         _result = run_agent_with_retry(
-            agent, prompt, run_config, none_or_fallback_handler
+            agent, prompt, none_or_fallback_handler
         )
         if _result:
             # Log task implementation completion
@@ -1205,6 +1371,8 @@ def reset_agent_completion_flags():
 
 
 def _execute_test_command_wrapper(original_prompt, config, test_attempts, auto_test):
+    # For backwards compatibility, allow passing of config directly
+    # No need to get config from repository as it's passed in
     return execute_test_command(config, original_prompt, test_attempts, auto_test)
 
 
@@ -1256,15 +1424,15 @@ def get_agent_type(agent: RAgents) -> Literal["CiaynAgent", "React"]:
         return "React"
 
 
-def init_fallback_handler(agent: RAgents, config: Dict[str, Any], tools: List[Any]):
+def init_fallback_handler(agent: RAgents, tools: List[Any]):
     """
     Initialize fallback handler if agent is of type "React" and experimental_fallback_handler is enabled; otherwise return None.
     """
-    if not config.get("experimental_fallback_handler", False):
+    if not get_config_repository().get("experimental_fallback_handler", False):
         return None
     agent_type = get_agent_type(agent)
     if agent_type == "React":
-        return FallbackHandler(config, tools)
+        return FallbackHandler(get_config_repository().get_all(), tools)
     return None
 
 
@@ -1286,7 +1454,7 @@ def _handle_fallback_response(
         msg_list.extend(msg_list_response)
 
 
-def _run_agent_stream(agent: RAgents, msg_list: list[BaseMessage], config: dict):
+def _run_agent_stream(agent: RAgents, msg_list: list[BaseMessage]):
     """
     Streams agent output while handling completion and interruption.
     
@@ -1299,6 +1467,7 @@ def _run_agent_stream(agent: RAgents, msg_list: list[BaseMessage], config: dict)
     This function adheres to the latest LangGraph best practices (as of March 2025) for handling
     human-in-the-loop interruptions using interrupt_after=["tools"].
     """
+    config = get_config_repository().get_all()
     while True:
         # Process each chunk from the agent stream.
         for chunk in agent.stream({"messages": msg_list}, config):
@@ -1312,7 +1481,7 @@ def _run_agent_stream(agent: RAgents, msg_list: list[BaseMessage], config: dict)
         logger.debug("Stream iteration ended; checking agent state for continuation.")
         
         # Prepare state configuration, ensuring 'configurable' is present.
-        state_config = config.copy()
+        state_config = get_config_repository().get_all().copy()
         if "configurable" not in state_config:
             logger.debug("Key 'configurable' not found in config; adding it as an empty dict.")
             state_config["configurable"] = {}
@@ -1340,7 +1509,6 @@ def _run_agent_stream(agent: RAgents, msg_list: list[BaseMessage], config: dict)
 def run_agent_with_retry(
     agent: RAgents,
     prompt: str,
-    config: dict,
     fallback_handler: Optional[FallbackHandler] = None,
 ) -> Optional[str]:
     """Run an agent with retry logic for API errors."""
@@ -1349,10 +1517,11 @@ def run_agent_with_retry(
     max_retries = 20
     base_delay = 1
     test_attempts = 0
-    _max_test_retries = config.get("max_test_cmd_retries", DEFAULT_MAX_TEST_CMD_RETRIES)
-    auto_test = config.get("auto_test", False)
+    _max_test_retries = get_config_repository().get("max_test_cmd_retries", DEFAULT_MAX_TEST_CMD_RETRIES)
+    auto_test = get_config_repository().get("auto_test", False)
     original_prompt = prompt
     msg_list = [HumanMessage(content=prompt)]
+    run_config = get_config_repository().get_all()
 
     # Create a new agent context for this run
     with InterruptibleSection(), agent_context() as ctx:
@@ -1370,12 +1539,12 @@ def run_agent_with_retry(
                     return f"Agent has crashed: {crash_message}"
 
                 try:
-                    _run_agent_stream(agent, msg_list, config)
+                    _run_agent_stream(agent, msg_list)
                     if fallback_handler:
                         fallback_handler.reset_fallback_handler()
                     should_break, prompt, auto_test, test_attempts = (
                         _execute_test_command_wrapper(
-                            original_prompt, config, test_attempts, auto_test
+                            original_prompt, run_config, test_attempts, auto_test
                         )
                     )
                     if should_break:

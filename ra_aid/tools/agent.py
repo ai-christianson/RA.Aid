@@ -360,7 +360,6 @@ def request_task_implementation(task_spec: str) -> str:
             related_files=related_files,
             model=model,
             expert_enabled=True,
-            config=config,
         )
 
         success = True
@@ -490,7 +489,6 @@ def request_implementation(task_spec: str) -> str:
         _result = run_planning_agent(
             task_spec,
             model,
-            config=config,
             expert_enabled=True,
             hil=config.get("hil", False),
         )

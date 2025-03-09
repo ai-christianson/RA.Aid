@@ -1,4 +1,4 @@
-"""Reasoning assist prompts for planning and implementation stages."""
+"""Reasoning assist prompts for planning, implementation, and research stages."""
 
 REASONING_ASSIST_PROMPT_PLANNING = """Current Date: {current_date}
 Working Directory: {working_directory}
@@ -45,6 +45,8 @@ WE DO NOT WANT TO EXCESSIVELY EMIT TINY KEY SNIPPETS --THEY SHOULD BE "paragraph
 
 Given the available information, tools, and base task, write a couple paragraphs about how an agentic system might use the available tools to plan the base task, break it down into tasks, and request implementation of those tasks. The agent will not be writing any code at this point, so we should keep it to high level tasks and keep the focus on project planning.
 
+The agent has a tendency to do the same work/functin calls over and over again.
+
 Answer quickly and confidently with five sentences at most.
 """
 
@@ -90,4 +92,47 @@ IF THERE IS COMPLEX LOGIC, COMPILATION ERRORS, DEBUGGING, THE AGENT SHOULD USE a
 Given the available information, tools, and base task, write a couple paragraphs about how an agentic system might use the available tools to implement the given task definition. The agent will be writing code and making changes at this point.
 
 Answer quickly and confidently with a few sentences at most.
+"""
+
+REASONING_ASSIST_PROMPT_RESEARCH = """Current Date: {current_date}
+Working Directory: {working_directory}
+
+<base task or query>
+{base_task}
+</base task or query>
+
+<key facts>
+{key_facts}
+</key facts>
+
+<key snippets>
+{key_snippets}
+</key snippets>
+
+<research notes>
+{research_notes}
+</research notes>
+
+<related files>
+{related_files}
+</related files>
+
+<environment information>
+{env_inv}
+</environment information>
+
+<available tools>
+{tool_metadata}
+</available tools>
+
+FOCUS ON DISCOVERING KEY INFORMATION ABOUT THE CODEBASE, SYSTEM DESIGN, AND ARCHITECTURE.
+THE AGENT SHOULD EMIT KEY FACTS ABOUT IMPORTANT CONCEPTS, WORKFLOWS, OR PATTERNS DISCOVERED.
+IMPORTANT CODE SNIPPETS THAT ILLUMINATE CORE FUNCTIONALITY SHOULD BE EMITTED AS KEY SNIPPETS.
+DO NOT EMIT REDUNDANT KEY FACTS OR SNIPPETS THAT ALREADY EXIST.
+KEY SNIPPETS SHOULD BE SUBSTANTIAL "PARAGRAPHS" OF CODE, NOT SINGLE LINES OR ENTIRE FILES.
+IF INFORMATION IS TOO COMPLEX TO UNDERSTAND, THE AGENT SHOULD USE ask_expert.
+
+Given the available information, tools, and base task or query, write a couple paragraphs about how an agentic system might use the available tools to research the codebase, identify important components, gather key information, and emit key facts and snippets. The focus is on thorough investigation and understanding before any implementation. Remember, the research agent generally should emit research notes at the end of its execution, right before it calls request_implementation if a change or new work is required.
+
+Answer quickly and confidently with five sentences at most.
 """

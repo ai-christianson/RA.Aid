@@ -49,7 +49,7 @@ from ra_aid.prompts.research_prompts import (
 from ra_aid.prompts.planning_prompts import PLANNING_PROMPT
 
 # Reasoning assist prompts
-from ra_aid.prompts.reasoning_assist_prompt import REASONING_ASSIST_PROMPT_PLANNING
+from ra_aid.prompts.reasoning_assist_prompt import REASONING_ASSIST_PROMPT_PLANNING, REASONING_ASSIST_PROMPT_IMPLEMENTATION, REASONING_ASSIST_PROMPT_RESEARCH
 
 # Implementation prompts
 from ra_aid.prompts.implementation_prompts import IMPLEMENTATION_PROMPT
@@ -98,6 +98,8 @@ __all__ = [
     
     # Reasoning assist prompts
     "REASONING_ASSIST_PROMPT_PLANNING",
+    "REASONING_ASSIST_PROMPT_IMPLEMENTATION",
+    "REASONING_ASSIST_PROMPT_RESEARCH",
     
     # Implementation prompts
     "IMPLEMENTATION_PROMPT",

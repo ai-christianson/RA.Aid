@@ -779,7 +779,6 @@ def main():
                     research_only=args.research_only,
                     hil=args.hil,
                     memory=research_memory,
-                    config=config,
                 )
 
                 # for how long have we had a second planning agent triggered here?
