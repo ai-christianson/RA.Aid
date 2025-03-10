@@ -216,6 +216,7 @@ def run_research_agent(
                 related_files=related_files,
                 env_inv=get_env_inv(),
                 tool_metadata=formatted_tool_metadata,
+                project_info=formatted_project_info,
             )
 
             # Show the reasoning assist query in a panel
@@ -511,8 +512,8 @@ def run_web_research_agent(
             console.print(Panel(Markdown(console_message), title="🔬 Researching..."))
 
         logger.debug("Web research agent completed successfully")
-        none_or_fallback_handler = init_fallback_handler(agent, tools)
-        _result = run_agent_with_retry(agent, prompt, none_or_fallback_handler)
+        none_or_fallback_handler = agent_utils.init_fallback_handler(agent, tools)
+        _result = agent_utils.run_agent_with_retry(agent, prompt, none_or_fallback_handler)
         if _result:
             # Log web research completion
             log_work_event(f"Completed web research phase for: {query}")

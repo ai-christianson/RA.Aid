@@ -23,6 +23,10 @@ Working Directory: {working_directory}
 {related_files}
 </related files>
 
+<project info>
+{project_info}
+</project info>
+
 <environment information>
 {env_inv}
 </environment information>
@@ -84,6 +88,10 @@ Working Directory: {working_directory}
 <related files>
 {related_files}
 </related files>
+
+<project info>
+{project_info}
+</project info>
 
 <environment information>
 {env_inv}
@@ -147,6 +155,10 @@ Working Directory: {working_directory}
 {related_files}
 </related files>
 
+<project info>
+{project_info}
+</project info>
+
 <environment information>
 {env_inv}
 </environment information>
@@ -165,6 +177,8 @@ IF INFORMATION IS TOO COMPLEX TO UNDERSTAND, THE AGENT SHOULD USE ask_expert.
 Given the available information, tools, and base task or query, write a couple paragraphs about how an agentic system might use the available tools to research the codebase, identify important components, gather key information, and emit key facts and snippets. The focus is on thorough investigation and understanding before any implementation. Remember, the research agent generally should emit research notes at the end of its execution, right before it calls request_implementation if a change or new work is required.
 
 The agent is so dumb it needs you to explicitly say how to use the parameters to the tools as well.
+
+ONLY FOR NEW PROJECTS: If this is a new project, most of the focus needs to be on asking the expert, reading/research available library files, emitting key snippets/facts, and most importantly research notes to lay out that we have a new project and what we are building. DO NOT INSTRUCT THE AGENT TO LIST PROJECT DIRECTORIES/READ FILES IF WE ALREADY KNOW THERE ARE NO PROJECT FILES.
 
 Answer quickly and confidently with five sentences at most.
 

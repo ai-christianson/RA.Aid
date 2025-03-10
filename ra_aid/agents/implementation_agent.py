@@ -202,6 +202,7 @@ def run_task_implementation_agent(
                 related_files="\n".join(related_files),
                 env_inv=env_inv,
                 tool_metadata=formatted_tool_metadata,
+                project_info=formatted_project_info,
             )
 
             # Show the reasoning assist query in a panel
