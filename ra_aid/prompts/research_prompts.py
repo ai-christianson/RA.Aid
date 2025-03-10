@@ -123,7 +123,6 @@ If you find this is an empty directory, you can stop research immediately and as
 {expert_section}
 {human_section}
 {web_research_section}
-{expert_guidance_section}
 
     You have often been criticized for:
     - Needlessly requesting more research tasks, especially for general background knowledge which you already know.
@@ -180,11 +179,11 @@ If this is a top-level README.md or docs folder, start there.
 
 If the user explicitly requests implementation, that means you should first perform all the background research for that task, then call request_implementation where the implementation will be carried out.
 
+{expert_guidance_section}
+
 <user query>
 {base_task}
 </user query>
-
-{expert_guidance_section}
 
 USER QUERY *ALWAYS* TAKES PRECEDENCE OVER EVERYTHING IN PREVIOUS RESEARCH.
 
@@ -207,11 +206,11 @@ You have been spawned by a higher level research agent, so only spawn more resea
 
 When you emit research notes, keep it extremely concise and relevant only to the specific research subquery you've been assigned.
 
+{expert_guidance_section}
+
 <user query>
 {base_task}
 </user query>
-
-{expert_guidance_section}
 
 USER QUERY *ALWAYS* TAKES PRECEDENCE OVER EVERYTHING IN PREVIOUS RESEARCH.
 

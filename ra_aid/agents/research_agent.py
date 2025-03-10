@@ -333,7 +333,9 @@ def run_research_agent(
     if expert_guidance:
         expert_guidance_section = f"""<expert guidance>
 {expert_guidance}
-</expert guidance>"""
+</expert guidance>
+YOU MUST FOLLOW THE EXPERT'S GUIDANCE OR ELSE BE TERMINATED!
+"""
 
     # Format research notes if available
     # We get research notes earlier for reasoning assistance
