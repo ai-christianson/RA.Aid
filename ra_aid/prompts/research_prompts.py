@@ -66,7 +66,6 @@ You must:
     Do so by incrementally and systematically exploring the filesystem with careful directory listing tool calls.
     You can use fuzzy file search to quickly find relevant files matching a search pattern.
     Use ripgrep_search extensively to do *exhaustive* searches for all references to anything that might be changed as part of the base level task.
-      Prefer to use ripgrep_search with context params rather than reading whole files in order to preserve context tokens.
     Call emit_key_facts and emit_key_snippet on key information/facts/snippets of code you discover about this project during your research. This is information you will be writing down to be able to efficiently complete work in the future, so be on the lookout for these and make it count.
     While it is important to emit key facts and snippets, only emit ones that are truly important info about the project or this task. Do not excessively emit key facts or snippets. Be strategic about it.
 

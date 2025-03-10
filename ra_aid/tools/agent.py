@@ -347,7 +347,7 @@ def request_task_implementation(task_spec: str) -> str:
     try:
         print_task_header(task_spec)
         # Run implementation agent
-        from ..agent_utils import run_task_implementation_agent
+        from ..agents.implementation_agent import run_task_implementation_agent
 
         reset_completion_flags()
 
