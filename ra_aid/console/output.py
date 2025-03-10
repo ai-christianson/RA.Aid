@@ -11,6 +11,13 @@ from ra_aid.callbacks.anthropic_callback_handler import AnthropicCallbackHandler
 from .formatting import console
 
 
+def get_cost_subtitle(cost_cb: Optional[AnthropicCallbackHandler]) -> Optional[str]:
+    """Generate a subtitle with cost information if a callback is provided."""
+    if cost_cb:
+        return f"Total Cost: ${cost_cb.total_cost:.6f} | Tokens: {cost_cb.total_tokens}"
+    return None
+
+
 def print_agent_output(
     chunk: Dict[str, Any],
     agent_type: Literal["CiaynAgent", "React"],
@@ -30,9 +37,7 @@ def print_agent_output(
                 if isinstance(msg.content, list):
                     for content in msg.content:
                         if content["type"] == "text" and content["text"].strip():
-                            subtitle = None
-                            if cost_cb:
-                                subtitle = f"Cost: ${cost_cb.total_cost:.6f} | Tokens: {cost_cb.total_tokens}"
+                            subtitle = get_cost_subtitle(cost_cb)
 
                             console.print(
                                 Panel(
@@ -44,9 +49,7 @@ def print_agent_output(
                             )
                 else:
                     if msg.content.strip():
-                        subtitle = None
-                        if cost_cb:
-                            subtitle = f"Total Cost: ${cost_cb.total_cost:.6f} | Tokens: {cost_cb.total_tokens}"
+                        subtitle = get_cost_subtitle(cost_cb)
 
                         console.print(
                             Panel(
@@ -60,10 +63,14 @@ def print_agent_output(
         for msg in chunk["tools"]["messages"]:
             if msg.status == "error" and msg.content:
                 err_msg = msg.content.strip()
+                subtitle = get_cost_subtitle(cost_cb)
+
                 console.print(
                     Panel(
                         Markdown(err_msg),
                         title="❌ Tool Error",
+                        subtitle=subtitle,
+                        subtitle_align="right",
                         border_style="red bold",
                     )
                 )
