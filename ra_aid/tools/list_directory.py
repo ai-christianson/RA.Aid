@@ -200,7 +200,7 @@ def list_directory_tree(
     """
     root_path = Path(path).resolve()
     if not root_path.exists():
-        raise ValueError(f"Path does not exist: {path}")
+        return f"Error: Path does not exist: {path}"
     
     # Load .gitignore patterns if present (only needed for directories)
     spec = None

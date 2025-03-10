@@ -46,6 +46,7 @@ WE DO NOT WANT TO EXCESSIVELY EMIT TINY KEY SNIPPETS --THEY SHOULD BE "paragraph
 Given the available information, tools, and base task, write a couple paragraphs about how an agentic system might use the available tools to plan the base task, break it down into tasks, and request implementation of those tasks. The agent will not be writing any code at this point, so we should keep it to high level tasks and keep the focus on project planning.
 
 The agent has a tendency to do the same work/functin calls over and over again.
+The agent is so dumb it needs you to explicitly say how to use the parameters to the tools as well.
 
 Answer quickly and confidently with five sentences at most.
 
@@ -61,6 +62,7 @@ PROPOSE THE TASK BREAKDOWN TO THE AGENT. INCLUDE THIS AS A BULLETED LIST IN YOUR
 WE ARE NOT WRITING ANY CODE AT THIS STAGE.
 THE AGENT IS VERY FORGETFUL AND YOUR WRITING MUST INCLUDE REMARKS ABOUT HOW IT SHOULD USE *ALL* AVAILABLE TOOLS, INCLUDING AND ESPECIALLY ask_expert.
 THE AGENT IS DUMB AND NEEDS REALLY DETAILED GUIDANCE LIKE LITERALLY REMINDING IT TO CALL request_task_implementation FOR EACH TASK IN YOUR BULLETED LIST.
+YOU MUST MENTION request_task_implementation AT LEAST ONCE.
 """
 
 REASONING_ASSIST_PROMPT_IMPLEMENTATION = """Current Date: {current_date}
@@ -104,6 +106,8 @@ IF THERE IS COMPLEX LOGIC, COMPILATION ERRORS, DEBUGGING, THE AGENT SHOULD USE a
 IF ANYTHING AT ALL GOES WRONG, CALL ask_expert.
 
 Given the available information, tools, and base task, write a couple paragraphs about how an agentic system might use the available tools to implement the given task definition. The agent will be writing code and making changes at this point.
+
+The agent is so dumb it needs you to explicitly say how to use the parameters to the tools as well.
 
 Answer quickly and confidently with a few sentences at most.
 
@@ -156,9 +160,7 @@ IF INFORMATION IS TOO COMPLEX TO UNDERSTAND, THE AGENT SHOULD USE ask_expert.
 
 Given the available information, tools, and base task or query, write a couple paragraphs about how an agentic system might use the available tools to research the codebase, identify important components, gather key information, and emit key facts and snippets. The focus is on thorough investigation and understanding before any implementation. Remember, the research agent generally should emit research notes at the end of its execution, right before it calls request_implementation if a change or new work is required.
 
-**IF APPLICABLE*, instruct the agent to grep or read actual library code including system include files, python library files, files in node_modules, etc. and emit key snippets on those. The agent is dumb and will need specific paths to directories/files to look in and how to use tools to do this.
-
-The agent is so dumb it needs you to explicitly say how to use the parameters to the tools as well, e.g. base_dir for ripgrep tool.
+The agent is so dumb it needs you to explicitly say how to use the parameters to the tools as well.
 
 Answer quickly and confidently with five sentences at most.
 
@@ -170,4 +172,7 @@ REFERENCE ACTUAL TOOL NAMES IN YOUR WRITING, BUT KEEP THE WRITING PLAIN LOGICAL 
 BE DETAILED AND INCLUDE LOGIC BRANCHES FOR WHAT TO DO IF DIFFERENT TOOLS RETURN DIFFERENT THINGS.
 THINK OF IT AS A FLOW CHART BUT IN NATURAL ENGLISH.
 THE AGENT IS VERY FORGETFUL AND YOUR WRITING MUST INCLUDE REMARKS ABOUT HOW IT SHOULD USE *ALL* AVAILABLE TOOLS, INCLUDING AND ESPECIALLY ask_expert.
+
+REMEMBER WE ARE INSTRUCTING THE AGENT **HOW TO DO RESEARCH ABOUT WHAT ALREADY EXISTS** AT THIS POINT USING THE TOOLS AVAILABLE. YOU ARE NOT TO DO THE ACTUAL RESEARCH YOURSELF. IF AN IMPLEMENTATION IS REQUESTED, THE AGENT SHOULD BE INSTRUCTED TO CALL request_task_implementation BUT ONLY AFTER EMITTING RESEARCH NOTES, KEY FACTS, AND KEY SNIPPETS AS RELEVANT.
+IT IS IMPERATIVE THAT WE DO NOT START DIRECTLY IMPLEMENTING ANYTHING AT THIS POINT. WE ARE RESEARCHING, THEN CALLING request_implementation *AT MOST ONCE*.
 """

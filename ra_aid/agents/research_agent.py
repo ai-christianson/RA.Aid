@@ -110,7 +110,7 @@ def run_research_agent(
     try:
         human_input_repository = get_human_input_repository()
         recent_inputs = human_input_repository.get_recent(1)
-        if recent_inputs and len(recent_inputs) > 0:
+        if recent_inputs and len(recent_inputs) > 0 and recent_inputs[0].content != base_task_or_query:
             last_human_input = recent_inputs[0].content
             base_task = (
                 f"<last human input>{last_human_input}</last human input>\n{base_task}"
@@ -195,7 +195,7 @@ def run_research_agent(
                     tool_info = get_tool_info(tool.func)
                     name = tool.func.__name__
                     description = inspect.getdoc(tool.func)
-                    tool_metadata.append(f"Tool: {name}\nDescription: {description}\n")
+                    tool_metadata.append(f"Tool: {tool_info}\nDescription: {description}\n")
                 except Exception as e:
                     logger.warning(f"Error getting tool info for {tool}: {e}")
 
