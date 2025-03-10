@@ -179,6 +179,7 @@ class Trajectory(BaseModel):
     - What result was returned by the tool
     - UI rendering data for displaying the tool execution
     - Cost and token usage metrics (placeholders for future implementation)
+    - Error information (when a tool execution fails)
     """
     human_input = peewee.ForeignKeyField(HumanInput, backref='trajectories', null=True)
     tool_name = peewee.TextField()
@@ -188,6 +189,10 @@ class Trajectory(BaseModel):
     record_type = peewee.TextField()  # Type of trajectory record
     cost = peewee.FloatField(null=True)  # Placeholder for cost tracking
     tokens = peewee.IntegerField(null=True)  # Placeholder for token usage tracking
+    is_error = peewee.BooleanField(default=False)  # Flag indicating if this record represents an error
+    error_message = peewee.TextField(null=True)  # The error message
+    error_type = peewee.TextField(null=True)  # The type/class of the error
+    error_details = peewee.TextField(null=True)  # Additional error details like stack traces or context
     # created_at and updated_at are inherited from BaseModel
     
     class Meta:

@@ -58,6 +58,10 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
         record_type = pw.TextField()  # Type of trajectory record
         cost = pw.FloatField(null=True)  # Placeholder for cost tracking
         tokens = pw.IntegerField(null=True)  # Placeholder for token usage tracking
+        is_error = pw.BooleanField(default=False)  # Flag indicating if this record represents an error
+        error_message = pw.TextField(null=True)  # The error message
+        error_type = pw.TextField(null=True)  # The type/class of the error
+        error_details = pw.TextField(null=True)  # Additional error details like stack traces or context
         # We'll add the human_input foreign key in a separate step for safety
         
         class Meta:
