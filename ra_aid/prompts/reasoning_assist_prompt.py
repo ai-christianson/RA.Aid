@@ -156,6 +156,10 @@ IF INFORMATION IS TOO COMPLEX TO UNDERSTAND, THE AGENT SHOULD USE ask_expert.
 
 Given the available information, tools, and base task or query, write a couple paragraphs about how an agentic system might use the available tools to research the codebase, identify important components, gather key information, and emit key facts and snippets. The focus is on thorough investigation and understanding before any implementation. Remember, the research agent generally should emit research notes at the end of its execution, right before it calls request_implementation if a change or new work is required.
 
+**IF APPLICABLE*, instruct the agent to grep or read actual library code including system include files, python library files, files in node_modules, etc. and emit key snippets on those. The agent is dumb and will need specific paths to directories/files to look in and how to use tools to do this.
+
+The agent is so dumb it needs you to explicitly say how to use the parameters to the tools as well, e.g. base_dir for ripgrep tool.
+
 Answer quickly and confidently with five sentences at most.
 
 DO NOT WRITE CODE

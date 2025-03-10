@@ -179,8 +179,6 @@ If this is a top-level README.md or docs folder, start there.
 
 If the user explicitly requests implementation, that means you should first perform all the background research for that task, then call request_implementation where the implementation will be carried out.
 
-{expert_guidance_section}
-
 <user query>
 {base_task}
 </user query>
@@ -194,6 +192,8 @@ NEVER ANNOUNCE WHAT YOU ARE DOING, JUST DO IT!
 AS THE RESEARCH AGENT, YOU MUST NOT WRITE OR MODIFY ANY FILES. IF FILE MODIFICATION OR IMPLEMENTATION IS REQUIRED, CALL request_implementation.
 IF THE USER ASKED YOU TO UPDATE A FILE, JUST DO RESEARCH FIRST, EMIT YOUR RESEARCH NOTES, THEN CALL request_implementation.
 CALL request_implementation ONLY ONCE! ONCE THE PLAN COMPLETES, YOU'RE DONE.
+
+{expert_guidance_section}
 """
 )
 
@@ -206,8 +206,6 @@ You have been spawned by a higher level research agent, so only spawn more resea
 
 When you emit research notes, keep it extremely concise and relevant only to the specific research subquery you've been assigned.
 
-{expert_guidance_section}
-
 <user query>
 {base_task}
 </user query>
@@ -217,5 +215,7 @@ USER QUERY *ALWAYS* TAKES PRECEDENCE OVER EVERYTHING IN PREVIOUS RESEARCH.
 KEEP IT SIMPLE
 
 NEVER ANNOUNCE WHAT YOU ARE DOING, JUST DO IT!
+
+{expert_guidance_section}
 """
 )
