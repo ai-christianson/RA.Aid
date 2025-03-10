@@ -1591,7 +1591,7 @@ def _run_agent_stream(agent: RAgents, msg_list: list[BaseMessage]):
             logger.debug("Agent output: %s", chunk)
             check_interrupt()
             agent_type = get_agent_type(agent)
-            print_agent_output(chunk, agent_type)
+            print_agent_output(chunk, agent_type, cb)
 
             if is_completed() or should_exit():
                 reset_completion_flags()

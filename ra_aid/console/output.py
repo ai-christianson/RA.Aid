@@ -5,13 +5,16 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 
 from ra_aid.exceptions import ToolExecutionError
+from ra_aid.callbacks.anthropic_callback_handler import AnthropicCallbackHandler
 
 # Import shared console instance
 from .formatting import console
 
 
 def print_agent_output(
-    chunk: Dict[str, Any], agent_type: Literal["CiaynAgent", "React"]
+    chunk: Dict[str, Any],
+    agent_type: Literal["CiaynAgent", "React"],
+    cost_cb: Optional[AnthropicCallbackHandler] = None,
 ) -> None:
     """Print only the agent's message content, not tool calls.
 
@@ -27,13 +30,31 @@ def print_agent_output(
                 if isinstance(msg.content, list):
                     for content in msg.content:
                         if content["type"] == "text" and content["text"].strip():
+                            subtitle = None
+                            if cost_cb:
+                                subtitle = f"Cost: ${cost_cb.total_cost:.6f} | Tokens: {cost_cb.total_tokens}"
+
                             console.print(
-                                Panel(Markdown(content["text"]), title="🤖 Assistant")
+                                Panel(
+                                    Markdown(content["text"]),
+                                    title="🤖 Assistant",
+                                    subtitle=subtitle,
+                                    subtitle_align="right",
+                                )
                             )
                 else:
                     if msg.content.strip():
+                        subtitle = None
+                        if cost_cb:
+                            subtitle = f"Total Cost: ${cost_cb.total_cost:.6f} | Tokens: {cost_cb.total_tokens}"
+
                         console.print(
-                            Panel(Markdown(msg.content.strip()), title="🤖 Assistant")
+                            Panel(
+                                Markdown(msg.content.strip()),
+                                title="🤖 Assistant",
+                                subtitle=subtitle,
+                                subtitle_align="right",
+                            )
                         )
     elif "tools" in chunk and "messages" in chunk["tools"]:
         for msg in chunk["tools"]["messages"]:
