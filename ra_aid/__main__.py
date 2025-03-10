@@ -34,9 +34,9 @@ from ra_aid.version_check import check_for_newer_version
 from ra_aid.agent_utils import (
     create_agent,
     run_agent_with_retry,
-    run_planning_agent,
 )
 from ra_aid.agents.research_agent import run_research_agent
+from ra_aid.agents import run_planning_agent
 from ra_aid.config import (
     DEFAULT_MAX_TEST_CMD_RETRIES,
     DEFAULT_RECURSION_LIMIT,

@@ -217,7 +217,7 @@ def test_request_research_and_implementation_uses_key_fact_repository(reset_memo
 def test_request_implementation_uses_key_fact_repository(reset_memory, mock_functions):
     """Test that request_implementation uses KeyFactRepository correctly."""
     # Mock running the planning agent
-    with patch('ra_aid.agent_utils.run_planning_agent'):
+    with patch('ra_aid.agents.planning_agent.run_planning_agent'):
         # Call the function
         result = request_implementation("test task")
         

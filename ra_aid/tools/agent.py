@@ -481,7 +481,7 @@ def request_implementation(task_spec: str) -> str:
 
     try:
         # Run planning agent
-        from ..agent_utils import run_planning_agent
+        from ..agents import run_planning_agent
 
         reset_completion_flags()
 
