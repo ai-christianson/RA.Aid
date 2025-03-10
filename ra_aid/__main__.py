@@ -53,6 +53,9 @@ from ra_aid.database.repositories.human_input_repository import (
 from ra_aid.database.repositories.research_note_repository import (
     ResearchNoteRepositoryManager, get_research_note_repository
 )
+from ra_aid.database.repositories.trajectory_repository import (
+    TrajectoryRepositoryManager, get_trajectory_repository
+)
 from ra_aid.database.repositories.related_files_repository import (
     RelatedFilesRepositoryManager
 )
@@ -528,6 +531,7 @@ def main():
                  HumanInputRepositoryManager(db) as human_input_repo, \
                  ResearchNoteRepositoryManager(db) as research_note_repo, \
                  RelatedFilesRepositoryManager() as related_files_repo, \
+                 TrajectoryRepositoryManager(db) as trajectory_repo, \
                  WorkLogRepositoryManager() as work_log_repo, \
                  ConfigRepositoryManager(config) as config_repo, \
                  EnvInvManager(env_data) as env_inv:
@@ -537,6 +541,7 @@ def main():
                 logger.debug("Initialized HumanInputRepository")
                 logger.debug("Initialized ResearchNoteRepository")
                 logger.debug("Initialized RelatedFilesRepository")
+                logger.debug("Initialized TrajectoryRepository")
                 logger.debug("Initialized WorkLogRepository")
                 logger.debug("Initialized ConfigRepository")
                 logger.debug("Initialized Environment Inventory")
