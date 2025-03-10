@@ -155,7 +155,7 @@ def mock_functions():
 def test_request_research_uses_key_fact_repository(reset_memory, mock_functions):
     """Test that request_research uses KeyFactRepository directly with formatting."""
     # Mock running the research agent
-    with patch('ra_aid.agent_utils.run_research_agent'):
+    with patch('ra_aid.agents.research_agent.run_research_agent'):
         # Call the function
         result = request_research("test query")
         
@@ -197,7 +197,7 @@ def test_request_research_max_depth(reset_memory, mock_functions):
 def test_request_research_and_implementation_uses_key_fact_repository(reset_memory, mock_functions):
     """Test that request_research_and_implementation uses KeyFactRepository correctly."""
     # Mock running the research agent
-    with patch('ra_aid.agent_utils.run_research_agent'):
+    with patch('ra_aid.agents.research_agent.run_research_agent'):
         # Call the function
         result = request_research_and_implementation("test query")
         

@@ -13,7 +13,8 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 
-from ra_aid.agent_utils import create_agent, run_agent_with_retry
+# Import agent_utils functions at runtime to avoid circular imports
+from ra_aid import agent_utils
 from ra_aid.database.repositories.key_snippet_repository import get_key_snippet_repository
 from ra_aid.database.repositories.human_input_repository import get_human_input_repository
 from ra_aid.database.repositories.config_repository import get_config_repository
@@ -168,7 +169,7 @@ def run_key_snippets_gc_agent() -> None:
             )
             
             # Create the agent with the delete_key_snippets tool
-            agent = create_agent(model, [delete_key_snippets])
+            agent = agent_utils.create_agent(model, [delete_key_snippets])
             
             # Format the prompt with the eligible snippets
             prompt = KEY_SNIPPETS_GC_PROMPT.format(key_snippets=formatted_snippets)
@@ -179,7 +180,7 @@ def run_key_snippets_gc_agent() -> None:
             }
             
             # Run the agent
-            run_agent_with_retry(agent, prompt, agent_config)
+            agent_utils.run_agent_with_retry(agent, prompt, agent_config)
             
             # Get updated count
             updated_snippets = get_key_snippet_repository().get_all()

@@ -90,7 +90,7 @@ def request_research(query: str) -> ResearchResult:
 
     try:
         # Run research agent
-        from ..agent_utils import run_research_agent
+        from ..agents.research_agent import run_research_agent
 
         _result = run_research_agent(
             query,
@@ -177,7 +177,7 @@ def request_web_research(query: str) -> ResearchResult:
 
     try:
         # Run web research agent
-        from ..agent_utils import run_web_research_agent
+        from ..agents.research_agent import run_web_research_agent
 
         _result = run_web_research_agent(
             query,
@@ -254,7 +254,7 @@ def request_research_and_implementation(query: str) -> Dict[str, Any]:
 
     try:
         # Run research agent
-        from ..agent_utils import run_research_agent
+        from ..agents.research_agent import run_research_agent
 
         _result = run_research_agent(
             query,
