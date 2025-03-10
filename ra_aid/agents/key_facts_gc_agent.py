@@ -48,9 +48,7 @@ def delete_key_facts(fact_ids: List[int]) -> str:
     # Try to get the current human input to protect its facts
     current_human_input_id = None
     try:
-        recent_inputs = get_human_input_repository().get_recent(1)
-        if recent_inputs and len(recent_inputs) > 0:
-            current_human_input_id = recent_inputs[0].id
+        current_human_input_id = get_human_input_repository().get_most_recent_id()
     except Exception as e:
         console.print(f"Warning: Could not retrieve current human input: {str(e)}")
     
@@ -133,9 +131,7 @@ def run_key_facts_gc_agent() -> None:
         # Try to get the current human input ID to exclude its facts
         current_human_input_id = None
         try:
-            recent_inputs = get_human_input_repository().get_recent(1)
-            if recent_inputs and len(recent_inputs) > 0:
-                current_human_input_id = recent_inputs[0].id
+            current_human_input_id = get_human_input_repository().get_most_recent_id()
         except Exception as e:
             console.print(f"Warning: Could not retrieve current human input: {str(e)}")
         

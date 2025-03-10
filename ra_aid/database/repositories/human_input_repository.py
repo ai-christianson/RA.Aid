@@ -257,6 +257,25 @@ class HumanInputRepository:
         except peewee.DatabaseError as e:
             logger.error(f"Failed to fetch recent human inputs: {str(e)}")
             raise
+
+    def get_most_recent_id(self) -> Optional[int]:
+        """
+        Get the ID of the most recent human input record.
+        
+        Returns:
+            Optional[int]: The ID of the most recent human input, or None if no records exist
+            
+        Raises:
+            peewee.DatabaseError: If there's an error accessing the database
+        """
+        try:
+            recent_inputs = self.get_recent(1)
+            if recent_inputs and len(recent_inputs) > 0:
+                return recent_inputs[0].id
+            return None
+        except peewee.DatabaseError as e:
+            logger.error(f"Failed to fetch most recent human input ID: {str(e)}")
+            raise
     
     def get_by_source(self, source: str) -> List[HumanInput]:
         """

@@ -54,9 +54,7 @@ def emit_research_notes(notes: str) -> str:
     human_input_id = None
     try:
         human_input_repo = get_human_input_repository()
-        recent_inputs = human_input_repo.get_recent(1)
-        if recent_inputs and len(recent_inputs) > 0:
-            human_input_id = recent_inputs[0].id
+        human_input_id = human_input_repo.get_most_recent_id()
     except RuntimeError as e:
         logger.warning(f"No HumanInputRepository available: {str(e)}")
     except Exception as e:
@@ -109,9 +107,7 @@ def emit_key_facts(facts: List[str]) -> str:
     human_input_id = None
     try:
         human_input_repo = get_human_input_repository()
-        recent_inputs = human_input_repo.get_recent(1)
-        if recent_inputs and len(recent_inputs) > 0:
-            human_input_id = recent_inputs[0].id
+        human_input_id = human_input_repo.get_most_recent_id()
     except RuntimeError as e:
         logger.warning(f"No HumanInputRepository available: {str(e)}")
     except Exception as e:
@@ -186,9 +182,7 @@ def emit_key_snippet(snippet_info: SnippetInfo) -> str:
     human_input_id = None
     try:
         human_input_repo = get_human_input_repository()
-        recent_inputs = human_input_repo.get_recent(1)
-        if recent_inputs and len(recent_inputs) > 0:
-            human_input_id = recent_inputs[0].id
+        human_input_id = human_input_repo.get_most_recent_id()
     except RuntimeError as e:
         logger.warning(f"No HumanInputRepository available: {str(e)}")
     except Exception as e:

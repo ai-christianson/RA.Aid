@@ -109,12 +109,14 @@ def run_research_agent(
     base_task = base_task_or_query
     try:
         human_input_repository = get_human_input_repository()
-        recent_inputs = human_input_repository.get_recent(1)
-        if recent_inputs and len(recent_inputs) > 0 and recent_inputs[0].content != base_task_or_query:
-            last_human_input = recent_inputs[0].content
-            base_task = (
-                f"<last human input>{last_human_input}</last human input>\n{base_task}"
-            )
+        most_recent_id = human_input_repository.get_most_recent_id()
+        if most_recent_id is not None:
+            recent_input = human_input_repository.get(most_recent_id)
+            if recent_input and recent_input.content != base_task_or_query:
+                last_human_input = recent_input.content
+                base_task = (
+                    f"<last human input>{last_human_input}</last human input>\n{base_task}"
+                )
     except RuntimeError as e:
         logger.error(f"Failed to access human input repository: {str(e)}")
         # Continue without appending last human input
