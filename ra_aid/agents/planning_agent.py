@@ -92,8 +92,8 @@ def run_planning_agent(
     )
 
     # Get model configuration
-    provider = get_config_repository().get("provider", "")
-    model_name = get_config_repository().get("model", "")
+    provider = get_config_repository().get("expert_provider", "")
+    model_name = get_config_repository().get("expert_model", "")
     logger.debug("Checking for reasoning_assist_default on %s/%s", provider, model_name)
 
     # Get model configuration to check for reasoning_assist_default
