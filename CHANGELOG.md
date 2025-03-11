@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added comprehensive testing for think tag functionality
 - Added `--show-thoughts` flag to show thoughts of thinking models
 - Added `--disable-thinking` flag to disable thinking mode for Claude 3.7 Sonnet
+- Added automatic workaround for Claude 3.7 Sonnet thinking block errors
+- Added `--skip-sonnet37-workaround` flag to opt out of automatic error handling
 
 ### Fixed
 - Fixed unretryable API error (400) when using Claude 3.7 Sonnet with thinking mode enabled for extended periods

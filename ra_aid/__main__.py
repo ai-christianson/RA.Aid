@@ -291,6 +291,11 @@ Examples:
         help="Display model thinking content extracted from think tags when supported by the model",
     )
     parser.add_argument(
+        "--skip-sonnet37-workaround",
+        action="store_true",
+        help="Skip automatic workaround for Claude 3.7 Sonnet thinking block errors",
+    )
+    parser.add_argument(
         "--reasoning-assistance",
         action="store_true",
         help="Force enable reasoning assistance regardless of model defaults",

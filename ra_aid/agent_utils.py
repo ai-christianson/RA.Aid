@@ -760,11 +760,45 @@ def run_agent_with_retry(
                 ) as e:
                     # Check if this is a BadRequestError (HTTP 400) which is unretryable
                     error_str = str(e).lower()
+                    
+                    # Special handling for Claude 3.7 Sonnet thinking block error
                     if (
                         "400" in error_str or "bad request" in error_str
+                    ) and isinstance(e, APIError) and "expected thinking or redacted_thinking" in error_str:
+                        # This is the specific Claude 3.7 Sonnet thinking block error
+                        config = get_config_repository().get_all()
+                        provider = config.get("provider", "")
+                        model_name = config.get("model", "")
+                        
+                        # Check if this is Claude 3.7 Sonnet and the user hasn't opted out of the workaround
+                        if (
+                            provider.lower() == "anthropic" and 
+                            "claude-3-7" in model_name.lower() and
+                            not config.get("skip_sonnet37_workaround", False)
+                        ):
+                            # Apply the workaround by enabling disable_thinking
+                            logger.warning(
+                                "Detected Claude 3.7 Sonnet thinking block error. "
+                                "Automatically applying workaround by disabling thinking mode. "
+                                "Use --skip-sonnet37-workaround to disable this behavior."
+                            )
+                            config_repo = get_config_repository()
+                            config_repo.set("disable_thinking", True)
+                            
+                            # Continue with the next attempt
+                            continue
+                        else:
+                            # User has opted out of the workaround or this isn't Claude 3.7 Sonnet
+                            from ra_aid.agent_context import mark_agent_crashed
+                            crash_message = f"Unretryable API error: {str(e)}"
+                            mark_agent_crashed(crash_message)
+                            logger.error("Agent has crashed: %s", crash_message)
+                            return f"Agent has crashed: {crash_message}"
+                    elif (
+                        "400" in error_str or "bad request" in error_str
                     ) and isinstance(e, APIError):
+                        # Other 400 errors are still unretryable
                         from ra_aid.agent_context import mark_agent_crashed
-
                         crash_message = f"Unretryable API error: {str(e)}"
                         mark_agent_crashed(crash_message)
                         logger.error("Agent has crashed: %s", crash_message)

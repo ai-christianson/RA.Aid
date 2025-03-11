@@ -55,6 +55,18 @@ class TestDisableThinking:
                 {},
                 "Non-Claude model should not have thinking param",
             ),
+            # Test case 5: Claude 3.7 model with skip_sonnet37_workaround enabled
+            (
+                "skip_sonnet37_workaround",
+                {
+                    "provider": "anthropic",
+                    "model": "claude-3-7-sonnet-20250219",
+                    "skip_sonnet37_workaround": True,
+                },
+                {"supports_thinking": True},
+                {"thinking": {"type": "enabled", "budget_tokens": 12000}},
+                "Claude 3.7 with skip_sonnet37_workaround=True should still have thinking param",
+            ),
         ],
     )
     def test_disable_thinking_option(

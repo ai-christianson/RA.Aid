@@ -105,13 +105,37 @@ RA.Aid configures the model to use its native thinking mode, and then processes 
 
 If you run RA.Aid without the `--show-thoughts` flag, the thinking content is still extracted from the model responses, but it won't be displayed in the console. This gives you a cleaner output focused only on the model's final responses.
 
-## Disabling Thinking Mode
+## Automatic Error Handling for Claude 3.7 Thinking Mode
 
-In some cases, you might want to disable the thinking mode feature for Claude 3.7 models, particularly if you're experiencing API errors or if you prefer the model to operate without the thinking capability.
+RA.Aid includes an automatic workaround for a known issue with Claude 3.7 Sonnet's thinking mode. When using Claude 3.7 Sonnet for extended periods (typically more than 10 minutes), you might encounter an unretryable API error (400) related to thinking blocks:
 
-### Using the disable_thinking Configuration Option
+```
+Unretryable API error: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'messages.1.content.0.type: Expected thinking or redacted_thinking, but found text...'}}
+```
 
-RA.Aid provides a `disable_thinking` configuration option that allows you to turn off the thinking mode for Claude 3.7 models:
+### Automatic Workaround
+
+When RA.Aid detects this specific error:
+
+1. It automatically disables thinking mode for Claude 3.7 Sonnet
+2. It continues the session without interruption
+3. It logs a warning message about the workaround being applied
+
+This automatic behavior ensures that your session continues smoothly even if the thinking block error occurs, without requiring manual intervention.
+
+### Opting Out of the Automatic Workaround
+
+If you prefer to handle these errors differently or want to maintain thinking mode at all costs, you can opt out of the automatic workaround using the `--skip-sonnet37-workaround` flag:
+
+```bash
+ra-aid -m "Debug the database connection issue" --provider anthropic --model claude-3-7-sonnet-20250219 --skip-sonnet37-workaround
+```
+
+When this flag is used, RA.Aid will not automatically disable thinking mode when the error occurs, and will instead crash with the unretryable API error.
+
+### Manually Disabling Thinking Mode
+
+You can also choose to disable thinking mode from the start using the `--disable-thinking` flag:
 
 ```bash
 ra-aid -m "Debug the database connection issue" --provider anthropic --model claude-3-7-sonnet-20250219 --disable-thinking
@@ -125,12 +149,11 @@ When this option is enabled:
 
 ### When to Disable Thinking Mode
 
-Consider disabling thinking mode in the following scenarios:
+Consider manually disabling thinking mode in the following scenarios:
 
-1. **API Errors**: If you encounter unretryable API errors (400) related to thinking blocks
-2. **Long-Running Sessions**: For extended sessions that run for more than 10 minutes
-3. **Performance Concerns**: If you need faster responses and don't require the thinking content
-4. **Compatibility Issues**: If you're using tools or workflows that aren't fully compatible with thinking mode
+1. **Long-Running Sessions**: For extended sessions that you know will run for more than 10 minutes
+2. **Performance Concerns**: If you need faster responses and don't require the thinking content
+3. **Compatibility Issues**: If you're using tools or workflows that aren't fully compatible with thinking mode
 
 ## Troubleshooting and Best Practices
 
