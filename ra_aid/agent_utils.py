@@ -526,6 +526,64 @@ def _handle_fallback_response(
         msg_list.extend(msg_list_response)
 
 
+def _ensure_thinking_block(messages: list[BaseMessage], config: Dict[str, Any]) -> list[BaseMessage]:
+    """
+    Ensure that messages sent to Claude 3.7 with thinking enabled have a thinking block at the start.
+    
+    When thinking is enabled for Claude 3.7, the API requires that any assistant message
+    starts with a thinking block. This function checks if the model is Claude 3.7 with
+    thinking enabled, and if so, ensures that assistant messages have a thinking block.
+    
+    Args:
+        messages: List of messages to check and potentially modify
+        config: Configuration dictionary
+        
+    Returns:
+        Modified list of messages with thinking blocks added if needed
+    """
+    # Check if we're using Claude 3.7 with thinking enabled
+    provider = config.get("provider", "")
+    model_name = config.get("model", "")
+    
+    # Skip if thinking is disabled or not using Claude 3.7
+    if config.get("disable_thinking", False):
+        return messages
+        
+    # Only apply to Claude 3.7 models
+    if not (provider.lower() == "anthropic" and "claude-3-7" in model_name.lower()):
+        return messages
+    
+    # Get model configuration to check if thinking is supported
+    model_config = models_params.get(provider, {}).get(model_name, {})
+    if not model_config.get("supports_thinking", False):
+        return messages
+    
+    # Make a copy of the messages to avoid modifying the original
+    modified_messages = messages.copy()
+    
+    # Check each message
+    for i, message in enumerate(modified_messages):
+        # Only check assistant messages
+        if hasattr(message, "type") and message.type == "ai":
+            # If content is a list (structured format)
+            if isinstance(message.content, list):
+                # Check if the first item is a thinking block
+                if not (len(message.content) > 0 and 
+                        isinstance(message.content[0], dict) and 
+                        message.content[0].get("type") == "thinking"):
+                    # Add a redacted_thinking block at the start
+                    message.content.insert(0, {"type": "redacted_thinking"})
+                    logger.debug("Added redacted_thinking block to assistant message")
+            # If content is a string, we can't modify it properly
+            # This shouldn't happen with Claude 3.7, but log it if it does
+            elif isinstance(message.content, str):
+                logger.warning(
+                    "Found string content in assistant message with Claude 3.7 thinking enabled. "
+                    "This may cause API errors if the message doesn't start with a thinking block."
+                )
+    
+    return modified_messages
+
 def _run_agent_stream(agent: RAgents, msg_list: list[BaseMessage]):
     """
     Streams agent output while handling completion and interruption.
@@ -551,6 +609,9 @@ def _run_agent_stream(agent: RAgents, msg_list: list[BaseMessage]):
         if "callbacks" not in stream_config:
             stream_config["callbacks"] = []
         stream_config["callbacks"].append(cb)
+        
+        # Ensure messages have thinking blocks if needed
+        msg_list = _ensure_thinking_block(msg_list, config)
 
     while True:
         for chunk in agent.stream({"messages": msg_list}, stream_config):
@@ -636,6 +697,23 @@ def run_agent_with_retry(
                     return f"Agent has crashed: {crash_message}"
 
                 try:
+                    # Ensure messages have thinking blocks if needed before each run
+                    config = get_config_repository().get_all()
+                    if is_anthropic_claude(config):
+                        provider = config.get("provider", "")
+                        model_name = config.get("model", "")
+                        
+                        # Only apply to Claude 3.7 models with thinking enabled
+                        if (provider.lower() == "anthropic" and 
+                            "claude-3-7" in model_name.lower() and 
+                            not config.get("disable_thinking", False)):
+                            
+                            # Get model configuration to check if thinking is supported
+                            model_config = models_params.get(provider, {}).get(model_name, {})
+                            if model_config.get("supports_thinking", False):
+                                logger.debug("Ensuring thinking blocks for Claude 3.7 before agent run")
+                                msg_list = _ensure_thinking_block(msg_list, config)
+                    
                     _run_agent_stream(agent, msg_list)
                     if fallback_handler:
                         fallback_handler.reset_fallback_handler()

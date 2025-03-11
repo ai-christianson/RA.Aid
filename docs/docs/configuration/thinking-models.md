@@ -105,6 +105,33 @@ RA.Aid configures the model to use its native thinking mode, and then processes 
 
 If you run RA.Aid without the `--show-thoughts` flag, the thinking content is still extracted from the model responses, but it won't be displayed in the console. This gives you a cleaner output focused only on the model's final responses.
 
+## Disabling Thinking Mode
+
+In some cases, you might want to disable the thinking mode feature for Claude 3.7 models, particularly if you're experiencing API errors or if you prefer the model to operate without the thinking capability.
+
+### Using the disable_thinking Configuration Option
+
+RA.Aid provides a `disable_thinking` configuration option that allows you to turn off the thinking mode for Claude 3.7 models:
+
+```bash
+ra-aid -m "Debug the database connection issue" --provider anthropic --model claude-3-7-sonnet-20250219 --disable-thinking
+```
+
+When this option is enabled:
+
+- The thinking mode will not be activated for Claude 3.7 models
+- The model will operate in standard mode without the structured thinking blocks
+- This can help avoid certain API errors that might occur with thinking mode enabled
+
+### When to Disable Thinking Mode
+
+Consider disabling thinking mode in the following scenarios:
+
+1. **API Errors**: If you encounter unretryable API errors (400) related to thinking blocks
+2. **Long-Running Sessions**: For extended sessions that run for more than 10 minutes
+3. **Performance Concerns**: If you need faster responses and don't require the thinking content
+4. **Compatibility Issues**: If you're using tools or workflows that aren't fully compatible with thinking mode
+
 ## Troubleshooting and Best Practices
 
 ### Common Issues
@@ -116,6 +143,20 @@ If you're not seeing thinking content despite using the `--show-thoughts` flag:
 - Ensure you're using a model that supports thinking (qwen-qwq-32b or claude-3-7-sonnet-20250219)
 - Verify that the model is properly configured in your environment
 - Check that the model is actually including thinking content in its responses (not all prompts will generate thinking)
+
+#### API errors with Claude 3.7 Sonnet
+
+If you encounter errors like:
+
+```
+Unretryable API error: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'messages.1.content.0.type: Expected thinking or redacted_thinking, but found text...'}}
+```
+
+This is related to the thinking mode format requirements. You can:
+
+- Use the `--disable-thinking` flag to turn off thinking mode
+- Upgrade to the latest version of RA.Aid which includes fixes for these errors
+- For long-running sessions, consider restarting the assistant periodically
 
 #### Excessive or irrelevant thinking
 
@@ -137,4 +178,3 @@ For the most effective use of thinking models:
 4. **Compare thinking with output**: Use the thinking content to evaluate the quality of the model's reasoning and identify potential flaws in its approach.
 
 5. **Provide clear instructions**: When the model's thinking seems off-track, provide clearer instructions in your next prompt to guide its reasoning process.
-
