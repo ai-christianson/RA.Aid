@@ -66,7 +66,6 @@ You must:
     Do so by incrementally and systematically exploring the filesystem with careful directory listing tool calls.
     You can use fuzzy file search to quickly find relevant files matching a search pattern.
     Use ripgrep_search extensively to do *exhaustive* searches for all references to anything that might be changed as part of the base level task.
-      Prefer to use ripgrep_search with context params rather than reading whole files in order to preserve context tokens.
     Call emit_key_facts and emit_key_snippet on key information/facts/snippets of code you discover about this project during your research. This is information you will be writing down to be able to efficiently complete work in the future, so be on the lookout for these and make it count.
     While it is important to emit key facts and snippets, only emit ones that are truly important info about the project or this task. Do not excessively emit key facts or snippets. Be strategic about it.
 
@@ -124,7 +123,6 @@ If you find this is an empty directory, you can stop research immediately and as
 {expert_section}
 {human_section}
 {web_research_section}
-{expert_guidance_section}
 
     You have often been criticized for:
     - Needlessly requesting more research tasks, especially for general background knowledge which you already know.
@@ -185,8 +183,6 @@ If the user explicitly requests implementation, that means you should first perf
 {base_task}
 </user query>
 
-{expert_guidance_section}
-
 USER QUERY *ALWAYS* TAKES PRECEDENCE OVER EVERYTHING IN PREVIOUS RESEARCH.
 
 KEEP IT SIMPLE
@@ -196,6 +192,8 @@ NEVER ANNOUNCE WHAT YOU ARE DOING, JUST DO IT!
 AS THE RESEARCH AGENT, YOU MUST NOT WRITE OR MODIFY ANY FILES. IF FILE MODIFICATION OR IMPLEMENTATION IS REQUIRED, CALL request_implementation.
 IF THE USER ASKED YOU TO UPDATE A FILE, JUST DO RESEARCH FIRST, EMIT YOUR RESEARCH NOTES, THEN CALL request_implementation.
 CALL request_implementation ONLY ONCE! ONCE THE PLAN COMPLETES, YOU'RE DONE.
+
+{expert_guidance_section}
 """
 )
 
@@ -212,12 +210,12 @@ When you emit research notes, keep it extremely concise and relevant only to the
 {base_task}
 </user query>
 
-{expert_guidance_section}
-
 USER QUERY *ALWAYS* TAKES PRECEDENCE OVER EVERYTHING IN PREVIOUS RESEARCH.
 
 KEEP IT SIMPLE
 
 NEVER ANNOUNCE WHAT YOU ARE DOING, JUST DO IT!
+
+{expert_guidance_section}
 """
 )

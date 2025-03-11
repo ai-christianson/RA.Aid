@@ -139,6 +139,8 @@ put_complete_file_contents("/path/to/file.py", '''def example_function():
 </example good output>
 
 {last_result_section}
+
+ANSWER QUICKLY AND CONFIDENTLY WITH A FUNCTION CALL. IF YOU ARE UNSURE, JUST YEET THE BEST FUNCTION CALL YOU CAN.
 """
 
 # Prompt to send when the model gives no tool call

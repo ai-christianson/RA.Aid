@@ -17,7 +17,8 @@ from rich.panel import Panel
 logger = logging.getLogger(__name__)
 
 from ra_aid.agent_context import mark_should_exit
-from ra_aid.agent_utils import create_agent, run_agent_with_retry
+# Import agent_utils functions at runtime to avoid circular imports
+from ra_aid import agent_utils
 from ra_aid.database.repositories.key_fact_repository import get_key_fact_repository
 from ra_aid.database.repositories.human_input_repository import get_human_input_repository
 from ra_aid.database.repositories.config_repository import get_config_repository
@@ -47,9 +48,7 @@ def delete_key_facts(fact_ids: List[int]) -> str:
     # Try to get the current human input to protect its facts
     current_human_input_id = None
     try:
-        recent_inputs = get_human_input_repository().get_recent(1)
-        if recent_inputs and len(recent_inputs) > 0:
-            current_human_input_id = recent_inputs[0].id
+        current_human_input_id = get_human_input_repository().get_most_recent_id()
     except Exception as e:
         console.print(f"Warning: Could not retrieve current human input: {str(e)}")
     
@@ -132,9 +131,7 @@ def run_key_facts_gc_agent() -> None:
         # Try to get the current human input ID to exclude its facts
         current_human_input_id = None
         try:
-            recent_inputs = get_human_input_repository().get_recent(1)
-            if recent_inputs and len(recent_inputs) > 0:
-                current_human_input_id = recent_inputs[0].id
+            current_human_input_id = get_human_input_repository().get_most_recent_id()
         except Exception as e:
             console.print(f"Warning: Could not retrieve current human input: {str(e)}")
         
@@ -164,7 +161,7 @@ def run_key_facts_gc_agent() -> None:
             )
             
             # Create the agent with the delete_key_facts tool
-            agent = create_agent(model, [delete_key_facts])
+            agent = agent_utils.create_agent(model, [delete_key_facts])
             
             # Format the prompt with the eligible facts
             prompt = KEY_FACTS_GC_PROMPT.format(key_facts=formatted_facts)
@@ -175,7 +172,7 @@ def run_key_facts_gc_agent() -> None:
             }
             
             # Run the agent
-            run_agent_with_retry(agent, prompt, agent_config)
+            agent_utils.run_agent_with_retry(agent, prompt, agent_config)
             
             # Get updated count
             try:

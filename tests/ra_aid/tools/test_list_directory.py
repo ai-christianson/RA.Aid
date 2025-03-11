@@ -128,7 +128,7 @@ def test_gitignore_patterns():
 
 def test_invalid_path():
     """Test error handling for invalid paths"""
-    with pytest.raises(ValueError, match="Path does not exist"):
-        list_directory_tree.invoke({"path": "/nonexistent/path"})
+    result = list_directory_tree.invoke({"path": "/nonexistent/path"})
+    assert "Error: Path does not exist: /nonexistent/path" in result
     
     # We now allow files to be passed to list_directory_tree, so we don't test for this case anymore

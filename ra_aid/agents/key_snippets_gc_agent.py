@@ -13,7 +13,8 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 
-from ra_aid.agent_utils import create_agent, run_agent_with_retry
+# Import agent_utils functions at runtime to avoid circular imports
+from ra_aid import agent_utils
 from ra_aid.database.repositories.key_snippet_repository import get_key_snippet_repository
 from ra_aid.database.repositories.human_input_repository import get_human_input_repository
 from ra_aid.database.repositories.config_repository import get_config_repository
@@ -45,9 +46,7 @@ def delete_key_snippets(snippet_ids: List[int]) -> str:
     # Try to get the current human input to protect its snippets
     current_human_input_id = None
     try:
-        recent_inputs = get_human_input_repository().get_recent(1)
-        if recent_inputs and len(recent_inputs) > 0:
-            current_human_input_id = recent_inputs[0].id
+        current_human_input_id = get_human_input_repository().get_most_recent_id()
     except Exception as e:
         console.print(f"Warning: Could not retrieve current human input: {str(e)}")
     
@@ -124,9 +123,7 @@ def run_key_snippets_gc_agent() -> None:
         # Try to get the current human input ID to exclude its snippets
         current_human_input_id = None
         try:
-            recent_inputs = get_human_input_repository().get_recent(1)
-            if recent_inputs and len(recent_inputs) > 0:
-                current_human_input_id = recent_inputs[0].id
+            current_human_input_id = get_human_input_repository().get_most_recent_id()
         except Exception as e:
             console.print(f"Warning: Could not retrieve current human input: {str(e)}")
         
@@ -168,7 +165,7 @@ def run_key_snippets_gc_agent() -> None:
             )
             
             # Create the agent with the delete_key_snippets tool
-            agent = create_agent(model, [delete_key_snippets])
+            agent = agent_utils.create_agent(model, [delete_key_snippets])
             
             # Format the prompt with the eligible snippets
             prompt = KEY_SNIPPETS_GC_PROMPT.format(key_snippets=formatted_snippets)
@@ -179,7 +176,7 @@ def run_key_snippets_gc_agent() -> None:
             }
             
             # Run the agent
-            run_agent_with_retry(agent, prompt, agent_config)
+            agent_utils.run_agent_with_retry(agent, prompt, agent_config)
             
             # Get updated count
             updated_snippets = get_key_snippet_repository().get_all()

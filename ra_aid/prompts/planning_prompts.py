@@ -48,8 +48,6 @@ Work done so far:
 {work_log}
 </work log>
 
-{expert_guidance_section}
-
 Guidelines:
 
     If you need additional input or assistance from the expert (if expert is available), especially for debugging, deeper logic analysis, or correctness checks, use emit_expert_context to provide all relevant context and wait for the expert's response.
@@ -102,4 +100,6 @@ DO NOT USE run_shell_command TO WRITE ANY FILE CONTENTS! USE request_task_implem
 WORK AND TEST INCREMENTALLY, AND RUN MULTIPLE IMPLEMENTATION TASKS WHERE APPROPRIATE.
 
 NEVER ANNOUNCE WHAT YOU ARE DOING, JUST DO IT!
+
+{expert_guidance_section}
 """

@@ -54,7 +54,7 @@ def mock_dependencies(monkeypatch):
     monkeypatch.setattr("ra_aid.__main__.create_agent", lambda *args, **kwargs: None)
     monkeypatch.setattr("ra_aid.__main__.run_agent_with_retry", lambda *args, **kwargs: None)
     monkeypatch.setattr("ra_aid.__main__.run_research_agent", lambda *args, **kwargs: None)
-    monkeypatch.setattr("ra_aid.__main__.run_planning_agent", lambda *args, **kwargs: None)
+    monkeypatch.setattr("ra_aid.agents.planning_agent.run_planning_agent", lambda *args, **kwargs: None)
     
     # Mock LLM initialization
     def mock_config_update(*args, **kwargs):
@@ -268,7 +268,7 @@ def test_temperature_validation(mock_dependencies, mock_config_repository):
         with patch("ra_aid.__main__.initialize_llm", return_value=None) as mock_init_llm:
             # Also patch any calls that would actually use the mocked initialize_llm function
             with patch("ra_aid.__main__.run_research_agent", return_value=None):
-                with patch("ra_aid.__main__.run_planning_agent", return_value=None):
+                with patch("ra_aid.agents.planning_agent.run_planning_agent", return_value=None):
                     with patch.object(
                         sys, "argv", ["ra-aid", "-m", "test", "--temperature", "0.7"]
                     ):
