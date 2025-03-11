@@ -39,32 +39,38 @@ from ra_aid.agents.research_agent import run_research_agent
 from ra_aid.agents import run_planning_agent
 from ra_aid.config import (
     DEFAULT_MAX_TEST_CMD_RETRIES,
+    DEFAULT_MODEL,
     DEFAULT_RECURSION_LIMIT,
     DEFAULT_TEST_CMD_TIMEOUT,
     VALID_PROVIDERS,
 )
-from ra_aid.database.repositories.key_fact_repository import KeyFactRepositoryManager, get_key_fact_repository
+from ra_aid.database.repositories.key_fact_repository import (
+    KeyFactRepositoryManager,
+    get_key_fact_repository,
+)
 from ra_aid.database.repositories.key_snippet_repository import (
-    KeySnippetRepositoryManager, get_key_snippet_repository
+    KeySnippetRepositoryManager,
+    get_key_snippet_repository,
 )
 from ra_aid.database.repositories.human_input_repository import (
-    HumanInputRepositoryManager, get_human_input_repository
+    HumanInputRepositoryManager,
+    get_human_input_repository,
 )
 from ra_aid.database.repositories.research_note_repository import (
-    ResearchNoteRepositoryManager, get_research_note_repository
+    ResearchNoteRepositoryManager,
+    get_research_note_repository,
 )
 from ra_aid.database.repositories.trajectory_repository import (
-    TrajectoryRepositoryManager, get_trajectory_repository
+    TrajectoryRepositoryManager,
+    get_trajectory_repository,
 )
 from ra_aid.database.repositories.related_files_repository import (
-    RelatedFilesRepositoryManager
+    RelatedFilesRepositoryManager,
 )
-from ra_aid.database.repositories.work_log_repository import (
-    WorkLogRepositoryManager
-)
+from ra_aid.database.repositories.work_log_repository import WorkLogRepositoryManager
 from ra_aid.database.repositories.config_repository import (
     ConfigRepositoryManager,
-    get_config_repository
+    get_config_repository,
 )
 from ra_aid.env_inv import EnvDiscovery
 from ra_aid.env_inv_context import EnvInvManager, get_env_inv
@@ -100,9 +106,9 @@ def launch_webui(host: str, port: int):
 
 
 def parse_arguments(args=None):
-    ANTHROPIC_DEFAULT_MODEL = "claude-3-7-sonnet-20250219"
+    ANTHROPIC_DEFAULT_MODEL = DEFAULT_MODEL
     OPENAI_DEFAULT_MODEL = "gpt-4o"
-    
+
     # Case-insensitive log level argument type
     def log_level_type(value):
         value = value.lower()
@@ -199,8 +205,10 @@ Examples:
         help="Enable chat mode with direct human interaction (implies --hil)",
     )
     parser.add_argument(
-        "--log-mode", choices=["console", "file"], default="file", 
-        help="Logging mode: 'console' shows all logs in console, 'file' logs to file with only warnings+ in console"
+        "--log-mode",
+        choices=["console", "file"],
+        default="file",
+        help="Logging mode: 'console' shows all logs in console, 'file' logs to file with only warnings+ in console",
     )
     parser.add_argument(
         "--pretty-logger", action="store_true", help="Enable pretty logging output"
@@ -378,20 +386,20 @@ def is_stage_requested(stage: str) -> bool:
 
 def wipe_project_memory():
     """Delete the project database file to wipe all stored memory.
-    
+
     Returns:
         str: A message indicating the result of the operation
     """
     import os
     from pathlib import Path
-    
+
     cwd = os.getcwd()
     ra_aid_dir = Path(os.path.join(cwd, ".ra-aid"))
     db_path = os.path.join(ra_aid_dir, "pk.db")
-    
+
     if not os.path.exists(db_path):
         return "No project memory found to wipe."
-    
+
     try:
         os.remove(db_path)
         return "Project memory wiped successfully."
@@ -403,11 +411,11 @@ def wipe_project_memory():
 
 def build_status():
     """Build status panel with model and feature information.
-    
+
     Includes memory statistics at the bottom with counts of key facts, snippets, and research notes.
     """
     status = Text()
-    
+
     # Get the config repository to get model/provider information
     config_repo = get_config_repository()
     provider = config_repo.get("provider", "")
@@ -415,12 +423,14 @@ def build_status():
     temperature = config_repo.get("temperature")
     expert_provider = config_repo.get("expert_provider", "")
     expert_model = config_repo.get("expert_model", "")
-    experimental_fallback_handler = config_repo.get("experimental_fallback_handler", False)
+    experimental_fallback_handler = config_repo.get(
+        "experimental_fallback_handler", False
+    )
     web_research_enabled = config_repo.get("web_research_enabled", False)
-    
+
     # Get the expert enabled status
     expert_enabled = bool(expert_provider and expert_model)
-    
+
     # Basic model information
     status.append("🤖 ")
     status.append(f"{provider}/{model}")
@@ -452,39 +462,41 @@ def build_status():
             [fb_handler._format_model(m) for m in fb_handler.fallback_tool_models]
         )
         status.append(msg)
-    
+
     # Add memory statistics
     # Get counts of key facts, snippets, and research notes with error handling
     fact_count = 0
     snippet_count = 0
     note_count = 0
-    
+
     try:
         fact_count = len(get_key_fact_repository().get_all())
     except RuntimeError as e:
         logger.debug(f"Failed to get key facts count: {e}")
-    
+
     try:
         snippet_count = len(get_key_snippet_repository().get_all())
     except RuntimeError as e:
         logger.debug(f"Failed to get key snippets count: {e}")
-    
+
     try:
         note_count = len(get_research_note_repository().get_all())
     except RuntimeError as e:
         logger.debug(f"Failed to get research notes count: {e}")
-    
+
     # Add memory statistics line with reset option note
-    status.append(f"\n💾 Memory: {fact_count} facts, {snippet_count} snippets, {note_count} notes")
+    status.append(
+        f"\n💾 Memory: {fact_count} facts, {snippet_count} snippets, {note_count} notes"
+    )
     if fact_count > 0 or snippet_count > 0 or note_count > 0:
         status.append(" (use --wipe-project-memory to reset)")
-    
+
     # Check for newer version
     version_message = check_for_newer_version()
     if version_message:
         status.append("\n\n")
         status.append(version_message, style="yellow")
-    
+
     return status
 
 
@@ -493,7 +505,7 @@ def main():
     args = parse_arguments()
     setup_logging(args.log_mode, args.pretty_logger, args.log_level)
     logger.debug("Starting RA.Aid with arguments: %s", args)
-    
+
     # Check if we need to wipe project memory before starting
     if args.wipe_project_memory:
         result = wipe_project_memory()
@@ -519,22 +531,24 @@ def main():
 
             # Initialize empty config dictionary to be populated later
             config = {}
-            
+
             # Initialize repositories with database connection
             # Create environment inventory data
             env_discovery = EnvDiscovery()
             env_discovery.discover()
             env_data = env_discovery.format_markdown()
-            
-            with KeyFactRepositoryManager(db) as key_fact_repo, \
-                 KeySnippetRepositoryManager(db) as key_snippet_repo, \
-                 HumanInputRepositoryManager(db) as human_input_repo, \
-                 ResearchNoteRepositoryManager(db) as research_note_repo, \
-                 RelatedFilesRepositoryManager() as related_files_repo, \
-                 TrajectoryRepositoryManager(db) as trajectory_repo, \
-                 WorkLogRepositoryManager() as work_log_repo, \
-                 ConfigRepositoryManager(config) as config_repo, \
-                 EnvInvManager(env_data) as env_inv:
+
+            with (
+                KeyFactRepositoryManager(db) as key_fact_repo,
+                KeySnippetRepositoryManager(db) as key_snippet_repo,
+                HumanInputRepositoryManager(db) as human_input_repo,
+                ResearchNoteRepositoryManager(db) as research_note_repo,
+                RelatedFilesRepositoryManager() as related_files_repo,
+                TrajectoryRepositoryManager(db) as trajectory_repo,
+                WorkLogRepositoryManager() as work_log_repo,
+                ConfigRepositoryManager(config) as config_repo,
+                EnvInvManager(env_data) as env_inv,
+            ):
                 # This initializes all repositories and makes them available via their respective get methods
                 logger.debug("Initialized KeyFactRepository")
                 logger.debug("Initialized KeySnippetRepository")
@@ -554,7 +568,9 @@ def main():
                     expert_missing,
                     web_research_enabled,
                     web_research_missing,
-                ) = validate_environment(args)  # Will exit if main env vars missing
+                ) = validate_environment(
+                    args
+                )  # Will exit if main env vars missing
                 logger.debug("Environment validation successful")
 
                 # Validate model configuration early
@@ -590,11 +606,15 @@ def main():
                 config_repo.set("expert_provider", args.expert_provider)
                 config_repo.set("expert_model", args.expert_model)
                 config_repo.set("temperature", args.temperature)
-                config_repo.set("experimental_fallback_handler", args.experimental_fallback_handler)
+                config_repo.set(
+                    "experimental_fallback_handler", args.experimental_fallback_handler
+                )
                 config_repo.set("web_research_enabled", web_research_enabled)
                 config_repo.set("show_thoughts", args.show_thoughts)
                 config_repo.set("force_reasoning_assistance", args.reasoning_assistance)
-                config_repo.set("disable_reasoning_assistance", args.no_reasoning_assistance)
+                config_repo.set(
+                    "disable_reasoning_assistance", args.no_reasoning_assistance
+                )
 
                 # Build status panel with memory statistics
                 status = build_status()
@@ -633,13 +653,15 @@ def main():
                     initial_request = ask_human.invoke(
                         {"question": "What would you like help with?"}
                     )
-                    
+
                     # Record chat input in database (redundant as ask_human already records it,
                     # but needed in case the ask_human implementation changes)
                     try:
                         # Using get_human_input_repository() to access the repository from context
                         human_input_repository = get_human_input_repository()
-                        human_input_repository.create(content=initial_request, source='chat')
+                        human_input_repository.create(
+                            content=initial_request, source="chat"
+                        )
                         human_input_repository.garbage_collect()
                     except Exception as e:
                         logger.error(f"Failed to record initial chat input: {str(e)}")
@@ -668,8 +690,12 @@ def main():
                     config_repo.set("expert_model", args.expert_model)
                     config_repo.set("temperature", args.temperature)
                     config_repo.set("show_thoughts", args.show_thoughts)
-                    config_repo.set("force_reasoning_assistance", args.reasoning_assistance)
-                    config_repo.set("disable_reasoning_assistance", args.no_reasoning_assistance)
+                    config_repo.set(
+                        "force_reasoning_assistance", args.reasoning_assistance
+                    )
+                    config_repo.set(
+                        "disable_reasoning_assistance", args.no_reasoning_assistance
+                    )
 
                     # Set modification tools based on use_aider flag
                     set_modification_tools(args.use_aider)
@@ -696,8 +722,12 @@ def main():
                             ),
                             working_directory=working_directory,
                             current_date=current_date,
-                            key_facts=format_key_facts_dict(get_key_fact_repository().get_facts_dict()),
-                            key_snippets=format_key_snippets_dict(get_key_snippet_repository().get_snippets_dict()),
+                            key_facts=format_key_facts_dict(
+                                get_key_fact_repository().get_facts_dict()
+                            ),
+                            key_snippets=format_key_snippets_dict(
+                                get_key_snippet_repository().get_snippets_dict()
+                            ),
                             project_info=formatted_project_info,
                             env_inv=get_env_inv(),
                         ),
@@ -711,12 +741,12 @@ def main():
                     sys.exit(1)
 
                 base_task = args.message
-                
+
                 # Record CLI input in database
                 try:
                     # Using get_human_input_repository() to access the repository from context
                     human_input_repository = get_human_input_repository()
-                    human_input_repository.create(content=base_task, source='cli')
+                    human_input_repository.create(content=base_task, source="cli")
                     # Run garbage collection to ensure we don't exceed 100 inputs
                     human_input_repository.garbage_collect()
                     logger.debug(f"Recorded CLI input: {base_task}")
@@ -750,19 +780,25 @@ def main():
                 config_repo.set("expert_model", args.expert_model)
 
                 # Store planner config with fallback to base values
-                config_repo.set("planner_provider", args.planner_provider or args.provider)
+                config_repo.set(
+                    "planner_provider", args.planner_provider or args.provider
+                )
                 config_repo.set("planner_model", args.planner_model or args.model)
 
                 # Store research config with fallback to base values
-                config_repo.set("research_provider", args.research_provider or args.provider)
+                config_repo.set(
+                    "research_provider", args.research_provider or args.provider
+                )
                 config_repo.set("research_model", args.research_model or args.model)
 
                 # Store temperature in config
                 config_repo.set("temperature", args.temperature)
-                
+
                 # Store reasoning assistance flags
                 config_repo.set("force_reasoning_assistance", args.reasoning_assistance)
-                config_repo.set("disable_reasoning_assistance", args.no_reasoning_assistance)
+                config_repo.set(
+                    "disable_reasoning_assistance", args.no_reasoning_assistance
+                )
 
                 # Set modification tools based on use_aider flag
                 set_modification_tools(args.use_aider)
@@ -793,6 +829,7 @@ def main():
         print(" 👋 Bye!")
         print()
         sys.exit(0)
+
 
 if __name__ == "__main__":
     main()

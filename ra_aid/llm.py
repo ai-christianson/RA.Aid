@@ -241,8 +241,9 @@ def create_llm_client(
     else:
         temp_kwargs = {}
 
+    thinking_kwargs = {}
     if supports_thinking:
-        temp_kwargs = {"thinking": {"type": "enabled", "budget_tokens": 12000}}
+        thinking_kwargs = {"thinking": {"type": "enabled", "budget_tokens": 12000}}
 
     if provider == "deepseek":
         return create_deepseek_client(
@@ -250,6 +251,7 @@ def create_llm_client(
             api_key=config["api_key"],
             base_url=config["base_url"],
             **temp_kwargs,
+            **thinking_kwargs,
             is_expert=is_expert,
         )
     elif provider == "openrouter":
@@ -257,6 +259,7 @@ def create_llm_client(
             model_name=model_name,
             api_key=config["api_key"],
             **temp_kwargs,
+            **thinking_kwargs,
             is_expert=is_expert,
         )
     elif provider == "openai":
@@ -271,6 +274,7 @@ def create_llm_client(
         return ChatOpenAI(
             **{
                 **openai_kwargs,
+                **thinking_kwargs,
                 "timeout": LLM_REQUEST_TIMEOUT,
                 "max_retries": LLM_MAX_RETRIES,
             }
@@ -283,6 +287,7 @@ def create_llm_client(
             max_retries=LLM_MAX_RETRIES,
             max_tokens=model_config.get("max_tokens", 64000),
             **temp_kwargs,
+            **thinking_kwargs,
         )
     elif provider == "openai-compatible":
         return ChatOpenAI(
@@ -292,6 +297,7 @@ def create_llm_client(
             timeout=LLM_REQUEST_TIMEOUT,
             max_retries=LLM_MAX_RETRIES,
             **temp_kwargs,
+            **thinking_kwargs,
         )
     elif provider == "gemini":
         return ChatGoogleGenerativeAI(
@@ -300,6 +306,7 @@ def create_llm_client(
             timeout=LLM_REQUEST_TIMEOUT,
             max_retries=LLM_MAX_RETRIES,
             **temp_kwargs,
+            **thinking_kwargs,
         )
     else:
         raise ValueError(f"Unsupported provider: {provider}")

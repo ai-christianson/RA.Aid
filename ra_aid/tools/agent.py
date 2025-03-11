@@ -14,6 +14,7 @@ from ra_aid.agent_context import (
     is_crashed,
     reset_completion_flags,
 )
+from ra_aid.config import DEFAULT_MODEL
 from ra_aid.console.formatting import print_error
 from ra_aid.database.repositories.human_input_repository import HumanInputRepository
 from ra_aid.database.repositories.key_fact_repository import get_key_fact_repository
@@ -337,7 +338,7 @@ def request_task_implementation(task_spec: str) -> str:
     config = get_config_repository().get_all()
     model = initialize_llm(
         config.get("provider", "anthropic"),
-        config.get("model", "claude-3-5-sonnet-20241022"),
+        config.get("model",DEFAULT_MODEL),
         temperature=config.get("temperature"),
     )
 
@@ -475,7 +476,7 @@ def request_implementation(task_spec: str) -> str:
     config = get_config_repository().get_all()
     model = initialize_llm(
         config.get("provider", "anthropic"),
-        config.get("model", "claude-3-5-sonnet-20241022"),
+        config.get("model", DEFAULT_MODEL),
         temperature=config.get("temperature"),
     )
 
