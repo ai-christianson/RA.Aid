@@ -397,7 +397,7 @@ def test_run_agent_stream(monkeypatch, mock_config_repository):
     call_flag = {"called": False}
 
     def fake_print_agent_output(
-        chunk: Dict[str, Any], agent_type: Literal["CiaynAgent", "React"]
+        chunk: Dict[str, Any], agent_type: Literal["CiaynAgent", "React"], cost_cb=None
     ):
         call_flag["called"] = True
 
