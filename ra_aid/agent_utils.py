@@ -116,6 +116,7 @@ from ra_aid.tools.memory import (
 )
 from ra_aid.database.repositories.config_repository import get_config_repository
 from ra_aid.env_inv_context import get_env_inv
+from ra_aid.agents.research_agent import run_web_research_agent
 
 console = Console()
 
@@ -360,7 +361,6 @@ def create_agent(
         agent_kwargs = build_agent_kwargs(checkpointer, max_input_tokens)
         return create_react_agent(
             model, tools, interrupt_after=["tools"], **agent_kwargs
-<<<<<<< HEAD
         )
 
 
@@ -1415,13 +1415,9 @@ def run_task_implementation_agent(
     except Exception as e:
         logger.error("Implementation agent failed: %s", str(e), exc_info=True)
         raise
-=======
         )
 
 
-from ra_aid.agents.research_agent import run_research_agent, run_web_research_agent
-from ra_aid.agents.implementation_agent import run_task_implementation_agent
->>>>>>> @{-1}
 
 
 _CONTEXT_STACK = []
