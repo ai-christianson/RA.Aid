@@ -1,5 +1,6 @@
 import fnmatch
-from typing import List, Tuple
+import logging
+from typing import List, Tuple, Dict, Optional, Any
 
 from fuzzywuzzy import process
 from git import Repo, exc
@@ -11,6 +12,49 @@ from rich.panel import Panel
 from ra_aid.file_listing import get_all_project_files, FileListerError
 
 console = Console()
+
+
+def record_trajectory(
+    tool_name: str,
+    tool_parameters: Dict,
+    step_data: Dict,
+    record_type: str = "tool_execution",
+    is_error: bool = False,
+    error_message: Optional[str] = None,
+    error_type: Optional[str] = None
+) -> None:
+    """
+    Helper function to record trajectory information, handling the case when repositories are not available.
+    
+    Args:
+        tool_name: Name of the tool
+        tool_parameters: Parameters passed to the tool
+        step_data: UI rendering data
+        record_type: Type of trajectory record
+        is_error: Flag indicating if this record represents an error
+        error_message: The error message
+        error_type: The type/class of the error
+    """
+    try:
+        from ra_aid.database.repositories.trajectory_repository import get_trajectory_repository
+        from ra_aid.database.repositories.human_input_repository import get_human_input_repository
+        
+        trajectory_repo = get_trajectory_repository()
+        human_input_id = get_human_input_repository().get_most_recent_id()
+        trajectory_repo.create(
+            tool_name=tool_name,
+            tool_parameters=tool_parameters,
+            step_data=step_data,
+            record_type=record_type,
+            human_input_id=human_input_id,
+            is_error=is_error,
+            error_message=error_message,
+            error_type=error_type
+        )
+    except (ImportError, RuntimeError):
+        # If either the repository modules can't be imported or no repository is available,
+        # just log and continue without recording trajectory
+        logging.debug("Skipping trajectory recording: repositories not available")
 
 DEFAULT_EXCLUDE_PATTERNS = [
     "*.pyc",
@@ -57,7 +101,32 @@ def fuzzy_find_project_files(
     """
     # Validate threshold
     if not 0 <= threshold <= 100:
-        raise ValueError("Threshold must be between 0 and 100")
+        error_msg = "Threshold must be between 0 and 100"
+        
+        # Record error in trajectory
+        record_trajectory(
+            tool_name="fuzzy_find_project_files",
+            tool_parameters={
+                "search_term": search_term,
+                "repo_path": repo_path,
+                "threshold": threshold,
+                "max_results": max_results,
+                "include_paths": include_paths,
+                "exclude_patterns": exclude_patterns,
+                "include_hidden": include_hidden
+            },
+            step_data={
+                "search_term": search_term,
+                "display_title": "Invalid Threshold Value",
+                "error_message": error_msg
+            },
+            record_type="tool_execution",
+            is_error=True,
+            error_message=error_msg,
+            error_type="ValueError"
+        )
+        
+        raise ValueError(error_msg)
 
     # Handle empty search term as special case
     if not search_term:
@@ -126,6 +195,27 @@ def fuzzy_find_project_files(
         else:
             info_sections.append("## Results\n*No matches found*")
 
+        # Record fuzzy find in trajectory
+        record_trajectory(
+            tool_name="fuzzy_find_project_files",
+            tool_parameters={
+                "search_term": search_term,
+                "repo_path": repo_path,
+                "threshold": threshold,
+                "max_results": max_results,
+                "include_paths": include_paths,
+                "exclude_patterns": exclude_patterns,
+                "include_hidden": include_hidden
+            },
+            step_data={
+                "search_term": search_term,
+                "display_title": "Fuzzy Find Results",
+                "total_files": len(all_files),
+                "matches_found": len(filtered_matches)
+            },
+            record_type="tool_execution"
+        )
+        
         # Display the panel
         console.print(
             Panel(
@@ -138,5 +228,30 @@ def fuzzy_find_project_files(
         return filtered_matches
         
     except FileListerError as e:
-        console.print(f"[bold red]Error listing files: {e}[/bold red]")
+        error_msg = f"Error listing files: {e}"
+        
+        # Record error in trajectory
+        record_trajectory(
+            tool_name="fuzzy_find_project_files",
+            tool_parameters={
+                "search_term": search_term,
+                "repo_path": repo_path,
+                "threshold": threshold,
+                "max_results": max_results,
+                "include_paths": include_paths,
+                "exclude_patterns": exclude_patterns,
+                "include_hidden": include_hidden
+            },
+            step_data={
+                "search_term": search_term,
+                "display_title": "Fuzzy Find Error",
+                "error_message": error_msg
+            },
+            record_type="tool_execution",
+            is_error=True,
+            error_message=error_msg,
+            error_type=type(e).__name__
+        )
+        
+        console.print(f"[bold red]{error_msg}[/bold red]")
         return []

@@ -62,7 +62,23 @@ def request_research(query: str) -> ResearchResult:
     # Check recursion depth
     current_depth = get_depth()
     if current_depth >= RESEARCH_AGENT_RECURSION_LIMIT:
-        print_error("Maximum research recursion depth reached")
+        error_message = "Maximum research recursion depth reached"
+        
+        # Record error in trajectory
+        trajectory_repo = get_trajectory_repository()
+        human_input_id = get_human_input_repository().get_most_recent_id()
+        trajectory_repo.create(
+            step_data={
+                "error_message": error_message,
+                "display_title": "Error",
+            },
+            record_type="error",
+            human_input_id=human_input_id,
+            is_error=True,
+            error_message=error_message
+        )
+        
+        print_error(error_message)
         try:
             key_facts = format_key_facts_dict(get_key_fact_repository().get_facts_dict())
         except RuntimeError as e:
@@ -109,7 +125,23 @@ def request_research(query: str) -> ResearchResult:
     except KeyboardInterrupt:
         raise
     except Exception as e:
-        print_error(f"Error during research: {str(e)}")
+        error_message = f"Error during research: {str(e)}"
+        
+        # Record error in trajectory
+        trajectory_repo = get_trajectory_repository()
+        human_input_id = get_human_input_repository().get_most_recent_id()
+        trajectory_repo.create(
+            step_data={
+                "error_message": error_message,
+                "display_title": "Error",
+            },
+            record_type="error",
+            human_input_id=human_input_id,
+            is_error=True,
+            error_message=error_message
+        )
+        
+        print_error(error_message)
         success = False
         reason = f"error: {str(e)}"
     finally:
@@ -194,7 +226,23 @@ def request_web_research(query: str) -> ResearchResult:
     except KeyboardInterrupt:
         raise
     except Exception as e:
-        print_error(f"Error during web research: {str(e)}")
+        error_message = f"Error during web research: {str(e)}"
+        
+        # Record error in trajectory
+        trajectory_repo = get_trajectory_repository()
+        human_input_id = get_human_input_repository().get_most_recent_id()
+        trajectory_repo.create(
+            step_data={
+                "error_message": error_message,
+                "display_title": "Error",
+            },
+            record_type="error",
+            human_input_id=human_input_id,
+            is_error=True,
+            error_message=error_message
+        )
+        
+        print_error(error_message)
         success = False
         reason = f"error: {str(e)}"
     finally:
@@ -384,7 +432,23 @@ def request_task_implementation(task_spec: str) -> str:
     except KeyboardInterrupt:
         raise
     except Exception as e:
-        print_error(f"Error during task implementation: {str(e)}")
+        error_message = f"Error during task implementation: {str(e)}"
+        
+        # Record error in trajectory
+        trajectory_repo = get_trajectory_repository()
+        human_input_id = get_human_input_repository().get_most_recent_id()
+        trajectory_repo.create(
+            step_data={
+                "error_message": error_message,
+                "display_title": "Error",
+            },
+            record_type="error",
+            human_input_id=human_input_id,
+            is_error=True,
+            error_message=error_message
+        )
+        
+        print_error(error_message)
         success = False
         reason = f"error: {str(e)}"
 
@@ -515,7 +579,23 @@ def request_implementation(task_spec: str) -> str:
     except KeyboardInterrupt:
         raise
     except Exception as e:
-        print_error(f"Error during planning: {str(e)}")
+        error_message = f"Error during planning: {str(e)}"
+        
+        # Record error in trajectory
+        trajectory_repo = get_trajectory_repository()
+        human_input_id = get_human_input_repository().get_most_recent_id()
+        trajectory_repo.create(
+            step_data={
+                "error_message": error_message,
+                "display_title": "Error",
+            },
+            record_type="error",
+            human_input_id=human_input_id,
+            is_error=True,
+            error_message=error_message
+        )
+        
+        print_error(error_message)
         success = False
         reason = f"error: {str(e)}"
 

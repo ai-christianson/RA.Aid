@@ -154,6 +154,24 @@ class FallbackHandler:
         logger.debug(
             f"Tool call failed {self.tool_failure_consecutive_failures} times. Attempting fallback for tool: {self.current_failing_tool_name}"
         )
+        # Import repository classes directly to avoid circular imports
+        from ra_aid.database.repositories.trajectory_repository import TrajectoryRepository
+        from ra_aid.database.repositories.human_input_repository import HumanInputRepository
+        from ra_aid.database.connection import get_db
+        
+        # Create repositories directly
+        trajectory_repo = TrajectoryRepository(get_db())
+        human_input_repo = HumanInputRepository(get_db())
+        human_input_id = human_input_repo.get_most_recent_id()
+        
+        trajectory_repo.create(
+            step_data={
+                "message": f"**Tool fallback activated**: Attempting fallback for tool {self.current_failing_tool_name}.",
+                "display_title": "Fallback Notification",
+            },
+            record_type="info",
+            human_input_id=human_input_id
+        )
         cpm(
             f"**Tool fallback activated**: Attempting fallback for tool {self.current_failing_tool_name}.",
             title="Fallback Notification",
@@ -163,6 +181,24 @@ class FallbackHandler:
             if result_list:
                 return result_list
 
+        # Import repository classes directly to avoid circular imports
+        from ra_aid.database.repositories.trajectory_repository import TrajectoryRepository
+        from ra_aid.database.repositories.human_input_repository import HumanInputRepository
+        from ra_aid.database.connection import get_db
+        
+        # Create repositories directly
+        trajectory_repo = TrajectoryRepository(get_db())
+        human_input_repo = HumanInputRepository(get_db())
+        human_input_id = human_input_repo.get_most_recent_id()
+        
+        trajectory_repo.create(
+            step_data={
+                "message": "All fallback models have failed.",
+                "display_title": "Fallback Failed",
+            },
+            record_type="error",
+            human_input_id=human_input_id
+        )
         cpm("All fallback models have failed.", title="Fallback Failed")
 
         current_failing_tool_name = self.current_failing_tool_name

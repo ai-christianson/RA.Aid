@@ -17,6 +17,8 @@ __all__ = [
 
 from ra_aid.file_listing import FileListerError, get_file_listing
 from ra_aid.project_state import ProjectStateError, is_new_project
+from ra_aid.database.repositories.trajectory_repository import get_trajectory_repository
+from ra_aid.database.repositories.human_input_repository import get_human_input_repository
 
 
 @dataclass
@@ -129,6 +131,24 @@ def display_project_status(info: ProjectInfo) -> None:
     status_text = f"""
 {status} with **{file_count} file(s)**
 """
+
+    # Record project status in trajectory
+    try:
+        trajectory_repo = get_trajectory_repository()
+        human_input_id = get_human_input_repository().get_most_recent_id()
+        trajectory_repo.create(
+            step_data={
+                "project_status": "new" if info.is_new else "existing",
+                "file_count": file_count,
+                "total_files": info.total_files,
+                "display_title": "Project Status",
+            },
+            record_type="info",
+            human_input_id=human_input_id
+        )
+    except Exception as e:
+        # Silently continue if trajectory recording fails
+        pass
 
     # Create and display panel
     console = Console()

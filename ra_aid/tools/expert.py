@@ -9,6 +9,9 @@ from rich.panel import Panel
 
 logger = logging.getLogger(__name__)
 
+from ..database.repositories.trajectory_repository import get_trajectory_repository
+from ..database.repositories.human_input_repository import get_human_input_repository
+
 from ..database.repositories.key_fact_repository import get_key_fact_repository
 from ..database.repositories.key_snippet_repository import get_key_snippet_repository
 from ..database.repositories.related_files_repository import get_related_files_repository
@@ -71,6 +74,23 @@ def emit_expert_context(context: str) -> str:
         context: The context to add
     """
     expert_context["text"].append(context)
+
+    # Record expert context in trajectory
+    try:
+        trajectory_repo = get_trajectory_repository()
+        human_input_id = get_human_input_repository().get_most_recent_id()
+        trajectory_repo.create(
+            tool_name="emit_expert_context",
+            tool_parameters={"context_length": len(context)},
+            step_data={
+                "display_title": "Expert Context",
+                "context_length": len(context),
+            },
+            record_type="tool_execution",
+            human_input_id=human_input_id
+        )
+    except Exception as e:
+        logger.error(f"Failed to record trajectory: {e}")
 
     # Create and display status panel
     panel_content = f"Added expert context ({len(context)} characters)"
@@ -184,6 +204,23 @@ def ask_expert(question: str) -> str:
     # Build display query (just question)
     display_query = "# Question\n" + question
 
+    # Record expert query in trajectory
+    try:
+        trajectory_repo = get_trajectory_repository()
+        human_input_id = get_human_input_repository().get_most_recent_id()
+        trajectory_repo.create(
+            tool_name="ask_expert",
+            tool_parameters={"question": question},
+            step_data={
+                "display_title": "Expert Query",
+                "question": question,
+            },
+            record_type="tool_execution",
+            human_input_id=human_input_id
+        )
+    except Exception as e:
+        logger.error(f"Failed to record trajectory: {e}")
+
     # Show only question in panel
     console.print(
         Panel(Markdown(display_query), title="🤔 Expert Query", border_style="yellow")
@@ -263,6 +300,23 @@ def ask_expert(question: str) -> str:
         logger.error(f"Exception during content processing: {str(e)}")
         raise
     
+    # Record expert response in trajectory
+    try:
+        trajectory_repo = get_trajectory_repository()
+        human_input_id = get_human_input_repository().get_most_recent_id()
+        trajectory_repo.create(
+            tool_name="ask_expert",
+            tool_parameters={"question": question},
+            step_data={
+                "display_title": "Expert Response",
+                "response_length": len(content),
+            },
+            record_type="tool_execution",
+            human_input_id=human_input_id
+        )
+    except Exception as e:
+        logger.error(f"Failed to record trajectory: {e}")
+
     # Format and display response
     console.print(
         Panel(Markdown(content), title="Expert Response", border_style="blue")

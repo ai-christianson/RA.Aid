@@ -17,6 +17,7 @@ from ra_aid.database.repositories.key_fact_repository import get_key_fact_reposi
 from ra_aid.database.repositories.key_snippet_repository import get_key_snippet_repository
 from ra_aid.database.repositories.human_input_repository import get_human_input_repository
 from ra_aid.database.repositories.research_note_repository import get_research_note_repository
+from ra_aid.database.repositories.trajectory_repository import get_trajectory_repository
 from ra_aid.database.repositories.work_log_repository import get_work_log_repository
 from ra_aid.model_formatters import key_snippets_formatter
 from ra_aid.logging_config import get_logger
@@ -68,6 +69,22 @@ def emit_research_notes(notes: str) -> str:
         # Format the note using the formatter
         from ra_aid.model_formatters.research_notes_formatter import format_research_note
         formatted_note = format_research_note(note_id, notes)
+        
+        # Record to trajectory before displaying panel
+        try:
+            trajectory_repo = get_trajectory_repository()
+            trajectory_repo.create(
+                tool_name="emit_research_notes",
+                tool_parameters={"notes": notes},
+                step_data={
+                    "note_id": note_id,
+                    "display_title": "Research Notes",
+                },
+                record_type="memory_operation",
+                human_input_id=human_input_id
+            )
+        except RuntimeError as e:
+            logger.warning(f"Failed to record trajectory: {str(e)}")
         
         # Display formatted note
         console.print(Panel(Markdown(formatted_note), title="🔍 Research Notes"))
@@ -122,6 +139,23 @@ def emit_key_facts(facts: List[str]) -> str:
             logger.error(f"Failed to access key fact repository: {str(e)}")
             console.print(f"Error storing fact: {str(e)}", style="red")
             continue
+
+        # Record to trajectory before displaying panel
+        try:
+            trajectory_repo = get_trajectory_repository()
+            trajectory_repo.create(
+                tool_name="emit_key_facts",
+                tool_parameters={"facts": [fact]},
+                step_data={
+                    "fact_id": fact_id,
+                    "fact": fact,
+                    "display_title": f"Key Fact #{fact_id}",
+                },
+                record_type="memory_operation",
+                human_input_id=human_input_id
+            )
+        except RuntimeError as e:
+            logger.warning(f"Failed to record trajectory: {str(e)}")
 
         # Display panel with ID
         console.print(
@@ -214,6 +248,32 @@ def emit_key_snippet(snippet_info: SnippetInfo) -> str:
     if snippet_info["description"]:
         display_text.extend(["", "**Description**:", snippet_info["description"]])
 
+    # Record to trajectory before displaying panel
+    try:
+        trajectory_repo = get_trajectory_repository()
+        trajectory_repo.create(
+            tool_name="emit_key_snippet",
+            tool_parameters={
+                "snippet_info": {
+                    "filepath": snippet_info["filepath"],
+                    "line_number": snippet_info["line_number"],
+                    "description": snippet_info["description"],
+                    # Omit the full snippet content to avoid duplicating large text in the database
+                    "snippet_length": len(snippet_info["snippet"])
+                }
+            },
+            step_data={
+                "snippet_id": snippet_id,
+                "filepath": snippet_info["filepath"],
+                "line_number": snippet_info["line_number"],
+                "display_title": f"Key Snippet #{snippet_id}",
+            },
+            record_type="memory_operation",
+            human_input_id=human_input_id
+        )
+    except RuntimeError as e:
+        logger.warning(f"Failed to record trajectory: {str(e)}")
+
     # Display panel
     console.print(
         Panel(
@@ -248,6 +308,25 @@ def one_shot_completed(message: str) -> str:
         message: Completion message to display
     """
     mark_task_completed(message)
+    
+    # Record to trajectory before displaying panel
+    human_input_id = None
+    try:
+        human_input_id = get_human_input_repository().get_most_recent_id()
+        trajectory_repo = get_trajectory_repository()
+        trajectory_repo.create(
+            tool_name="one_shot_completed",
+            tool_parameters={"message": message},
+            step_data={
+                "completion_message": message,
+                "display_title": "Task Completed",
+            },
+            record_type="task_completion",
+            human_input_id=human_input_id
+        )
+    except RuntimeError as e:
+        logger.warning(f"Failed to record trajectory: {str(e)}")
+    
     console.print(Panel(Markdown(message), title="✅ Task Completed"))
     log_work_event(f"Task completed:\n\n{message}")
     return "Completion noted."
@@ -261,6 +340,25 @@ def task_completed(message: str) -> str:
         message: Message explaining how/why the task is complete
     """
     mark_task_completed(message)
+    
+    # Record to trajectory before displaying panel
+    human_input_id = None
+    try:
+        human_input_id = get_human_input_repository().get_most_recent_id()
+        trajectory_repo = get_trajectory_repository()
+        trajectory_repo.create(
+            tool_name="task_completed",
+            tool_parameters={"message": message},
+            step_data={
+                "completion_message": message,
+                "display_title": "Task Completed",
+            },
+            record_type="task_completion",
+            human_input_id=human_input_id
+        )
+    except RuntimeError as e:
+        logger.warning(f"Failed to record trajectory: {str(e)}")
+    
     console.print(Panel(Markdown(message), title="✅ Task Completed"))
     log_work_event(f"Task completed:\n\n{message}")
     return "Completion noted."
@@ -275,6 +373,25 @@ def plan_implementation_completed(message: str) -> str:
     """
     mark_should_exit(propagation_depth=1)
     mark_plan_completed(message)
+    
+    # Record to trajectory before displaying panel
+    human_input_id = None
+    try:
+        human_input_id = get_human_input_repository().get_most_recent_id()
+        trajectory_repo = get_trajectory_repository()
+        trajectory_repo.create(
+            tool_name="plan_implementation_completed",
+            tool_parameters={"message": message},
+            step_data={
+                "completion_message": message,
+                "display_title": "Plan Executed",
+            },
+            record_type="plan_completion",
+            human_input_id=human_input_id
+        )
+    except RuntimeError as e:
+        logger.warning(f"Failed to record trajectory: {str(e)}")
+    
     console.print(Panel(Markdown(message), title="✅ Plan Executed"))
     log_work_event(f"Completed implementation:\n\n{message}")
     return "Plan completion noted."
@@ -361,10 +478,29 @@ def emit_related_files(files: List[str]) -> str:
                 
             results.append(f"File ID #{file_id}: {file}")
 
-    # Rich output - single consolidated panel for added files
+    # Record to trajectory before displaying panel for added files
     if added_files:
         files_added_md = "\n".join(f"- `{file}`" for id, file in added_files)
         md_content = f"**Files Noted:**\n{files_added_md}"
+        
+        human_input_id = None
+        try:
+            human_input_id = get_human_input_repository().get_most_recent_id()
+            trajectory_repo = get_trajectory_repository()
+            trajectory_repo.create(
+                tool_name="emit_related_files",
+                tool_parameters={"files": files},
+                step_data={
+                    "added_files": [file for _, file in added_files],
+                    "added_file_ids": [file_id for file_id, _ in added_files],
+                    "display_title": "Related Files Noted",
+                },
+                record_type="memory_operation",
+                human_input_id=human_input_id
+            )
+        except RuntimeError as e:
+            logger.warning(f"Failed to record trajectory: {str(e)}")
+        
         console.print(
             Panel(
                 Markdown(md_content),
@@ -373,10 +509,28 @@ def emit_related_files(files: List[str]) -> str:
             )
         )
 
-    # Display skipped binary files
+    # Record to trajectory before displaying panel for binary files
     if binary_files:
         binary_files_md = "\n".join(f"- `{file}`" for file in binary_files)
         md_content = f"**Binary Files Skipped:**\n{binary_files_md}"
+        
+        human_input_id = None
+        try:
+            human_input_id = get_human_input_repository().get_most_recent_id()
+            trajectory_repo = get_trajectory_repository()
+            trajectory_repo.create(
+                tool_name="emit_related_files",
+                tool_parameters={"files": files},
+                step_data={
+                    "binary_files": binary_files,
+                    "display_title": "Binary Files Not Added",
+                },
+                record_type="memory_operation",
+                human_input_id=human_input_id
+            )
+        except RuntimeError as e:
+            logger.warning(f"Failed to record trajectory: {str(e)}")
+        
         console.print(
             Panel(
                 Markdown(md_content),

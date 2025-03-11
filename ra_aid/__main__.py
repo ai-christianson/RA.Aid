@@ -616,6 +616,24 @@ def main():
                     )
 
                     if args.research_only:
+                        try:
+                            trajectory_repo = get_trajectory_repository()
+                            human_input_id = get_human_input_repository().get_most_recent_id()
+                            error_message = "Chat mode cannot be used with --research-only"
+                            trajectory_repo.create(
+                                step_data={
+                                    "display_title": "Error",
+                                    "error_message": error_message,
+                                },
+                                record_type="error",
+                                human_input_id=human_input_id,
+                                is_error=True,
+                                error_message=error_message,
+                            )
+                        except Exception as traj_error:
+                            # Swallow exception to avoid recursion
+                            logger.debug(f"Error recording trajectory: {traj_error}")
+                            pass
                         print_error("Chat mode cannot be used with --research-only")
                         sys.exit(1)
 
@@ -719,6 +737,24 @@ def main():
 
                 # Validate message is provided
                 if not args.message:
+                    try:
+                        trajectory_repo = get_trajectory_repository()
+                        human_input_id = get_human_input_repository().get_most_recent_id()
+                        error_message = "--message is required"
+                        trajectory_repo.create(
+                            step_data={
+                                "display_title": "Error",
+                                "error_message": error_message,
+                            },
+                            record_type="error",
+                            human_input_id=human_input_id,
+                            is_error=True,
+                            error_message=error_message,
+                        )
+                    except Exception as traj_error:
+                        # Swallow exception to avoid recursion
+                        logger.debug(f"Error recording trajectory: {traj_error}")
+                        pass
                     print_error("--message is required")
                     sys.exit(1)
 

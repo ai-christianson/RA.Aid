@@ -22,6 +22,7 @@ from ra_aid import agent_utils
 from ra_aid.database.repositories.key_fact_repository import get_key_fact_repository
 from ra_aid.database.repositories.human_input_repository import get_human_input_repository
 from ra_aid.database.repositories.config_repository import get_config_repository
+from ra_aid.database.repositories.trajectory_repository import get_trajectory_repository
 from ra_aid.llm import initialize_llm
 from ra_aid.prompts.key_facts_gc_prompts import KEY_FACTS_GC_PROMPT
 from ra_aid.tools.memory import log_work_event
@@ -82,6 +83,22 @@ def delete_key_facts(fact_ids: List[int]) -> str:
     if deleted_facts:
         deleted_msg = "Successfully deleted facts:\n" + "\n".join([f"- #{fact_id}: {content}" for fact_id, content in deleted_facts])
         result_parts.append(deleted_msg)
+        # Record GC operation in trajectory
+        try:
+            trajectory_repo = get_trajectory_repository()
+            human_input_id = get_human_input_repository().get_most_recent_id()
+            trajectory_repo.create(
+                step_data={
+                    "deleted_facts": deleted_facts,
+                    "display_title": "Facts Deleted",
+                },
+                record_type="gc_operation",
+                human_input_id=human_input_id,
+                tool_name="key_facts_gc_agent"
+            )
+        except Exception:
+            pass  # Continue if trajectory recording fails
+            
         console.print(
             Panel(Markdown(deleted_msg), title="Facts Deleted", border_style="green")
         )
@@ -89,6 +106,22 @@ def delete_key_facts(fact_ids: List[int]) -> str:
     if protected_facts:
         protected_msg = "Protected facts (associated with current request):\n" + "\n".join([f"- #{fact_id}: {content}" for fact_id, content in protected_facts])
         result_parts.append(protected_msg)
+        # Record GC operation in trajectory
+        try:
+            trajectory_repo = get_trajectory_repository()
+            human_input_id = get_human_input_repository().get_most_recent_id()
+            trajectory_repo.create(
+                step_data={
+                    "protected_facts": protected_facts,
+                    "display_title": "Facts Protected",
+                },
+                record_type="gc_operation",
+                human_input_id=human_input_id,
+                tool_name="key_facts_gc_agent"
+            )
+        except Exception:
+            pass  # Continue if trajectory recording fails
+            
         console.print(
             Panel(Markdown(protected_msg), title="Facts Protected", border_style="blue")
         )
@@ -120,10 +153,44 @@ def run_key_facts_gc_agent() -> None:
         fact_count = len(facts)
     except RuntimeError as e:
         logger.error(f"Failed to access key fact repository: {str(e)}")
+        # Record GC error in trajectory
+        try:
+            trajectory_repo = get_trajectory_repository()
+            human_input_id = get_human_input_repository().get_most_recent_id()
+            trajectory_repo.create(
+                step_data={
+                    "error": str(e),
+                    "display_title": "GC Error",
+                },
+                record_type="gc_operation",
+                human_input_id=human_input_id,
+                tool_name="key_facts_gc_agent",
+                is_error=True,
+                error_message=str(e),
+                error_type="Repository Error"
+            )
+        except Exception:
+            pass  # Continue if trajectory recording fails
+            
         console.print(Panel(f"Error: {str(e)}", title="🗑 GC Error", border_style="red"))
         return  # Exit the function if we can't access the repository
     
     # Display status panel with fact count included
+    try:
+        trajectory_repo = get_trajectory_repository()
+        human_input_id = get_human_input_repository().get_most_recent_id()
+        trajectory_repo.create(
+            step_data={
+                "fact_count": fact_count,
+                "display_title": "Garbage Collection",
+            },
+            record_type="gc_operation",
+            human_input_id=human_input_id,
+            tool_name="key_facts_gc_agent"
+        )
+    except Exception:
+        pass  # Continue if trajectory recording fails
+        
     console.print(Panel(f"Gathering my thoughts...\nCurrent number of key facts: {fact_count}", title="🗑 Garbage Collection"))
     
     # Only run the agent if we actually have facts to clean
@@ -185,6 +252,24 @@ def run_key_facts_gc_agent() -> None:
             # Show info panel with updated count and protected facts count
             protected_count = len(protected_facts)
             if protected_count > 0:
+                # Record GC completion in trajectory
+                try:
+                    trajectory_repo = get_trajectory_repository()
+                    human_input_id = get_human_input_repository().get_most_recent_id()
+                    trajectory_repo.create(
+                        step_data={
+                            "original_count": fact_count,
+                            "updated_count": updated_count,
+                            "protected_count": protected_count,
+                            "display_title": "GC Complete",
+                        },
+                        record_type="gc_operation",
+                        human_input_id=human_input_id,
+                        tool_name="key_facts_gc_agent"
+                    )
+                except Exception:
+                    pass  # Continue if trajectory recording fails
+                
                 console.print(
                     Panel(
                         f"Cleaned key facts: {fact_count} → {updated_count}\nProtected facts (associated with current request): {protected_count}",
@@ -192,6 +277,24 @@ def run_key_facts_gc_agent() -> None:
                     )
                 )
             else:
+                # Record GC completion in trajectory
+                try:
+                    trajectory_repo = get_trajectory_repository()
+                    human_input_id = get_human_input_repository().get_most_recent_id()
+                    trajectory_repo.create(
+                        step_data={
+                            "original_count": fact_count,
+                            "updated_count": updated_count,
+                            "protected_count": 0,
+                            "display_title": "GC Complete",
+                        },
+                        record_type="gc_operation",
+                        human_input_id=human_input_id,
+                        tool_name="key_facts_gc_agent"
+                    )
+                except Exception:
+                    pass  # Continue if trajectory recording fails
+                
                 console.print(
                     Panel(
                         f"Cleaned key facts: {fact_count} → {updated_count}",
@@ -199,6 +302,40 @@ def run_key_facts_gc_agent() -> None:
                     )
                 )
         else:
+            # Record GC info in trajectory
+            try:
+                trajectory_repo = get_trajectory_repository()
+                human_input_id = get_human_input_repository().get_most_recent_id()
+                trajectory_repo.create(
+                    step_data={
+                        "protected_count": len(protected_facts),
+                        "message": "All facts are protected",
+                        "display_title": "GC Info",
+                    },
+                    record_type="gc_operation",
+                    human_input_id=human_input_id,
+                    tool_name="key_facts_gc_agent"
+                )
+            except Exception:
+                pass  # Continue if trajectory recording fails
+                
             console.print(Panel(f"All {len(protected_facts)} facts are associated with the current request and protected from deletion.", title="🗑 GC Info"))
     else:
+        # Record GC info in trajectory
+        try:
+            trajectory_repo = get_trajectory_repository()
+            human_input_id = get_human_input_repository().get_most_recent_id()
+            trajectory_repo.create(
+                step_data={
+                    "fact_count": 0,
+                    "message": "No key facts to clean",
+                    "display_title": "GC Info",
+                },
+                record_type="gc_operation",
+                human_input_id=human_input_id,
+                tool_name="key_facts_gc_agent"
+            )
+        except Exception:
+            pass  # Continue if trajectory recording fails
+            
         console.print(Panel("No key facts to clean.", title="🗑 GC Info"))

@@ -18,6 +18,7 @@ from ra_aid import agent_utils
 from ra_aid.database.repositories.key_snippet_repository import get_key_snippet_repository
 from ra_aid.database.repositories.human_input_repository import get_human_input_repository
 from ra_aid.database.repositories.config_repository import get_config_repository
+from ra_aid.database.repositories.trajectory_repository import get_trajectory_repository
 from ra_aid.llm import initialize_llm
 from ra_aid.prompts.key_snippets_gc_prompts import KEY_SNIPPETS_GC_PROMPT
 from ra_aid.tools.memory import log_work_event
@@ -65,6 +66,23 @@ def delete_key_snippets(snippet_ids: List[int]) -> str:
             success = get_key_snippet_repository().delete(snippet_id)
             if success:
                 success_msg = f"Successfully deleted snippet #{snippet_id} from {filepath}"
+                # Record GC operation in trajectory
+                try:
+                    trajectory_repo = get_trajectory_repository()
+                    human_input_id = get_human_input_repository().get_most_recent_id()
+                    trajectory_repo.create(
+                        step_data={
+                            "deleted_snippet_id": snippet_id,
+                            "filepath": filepath,
+                            "display_title": "Snippet Deleted",
+                        },
+                        record_type="gc_operation",
+                        human_input_id=human_input_id,
+                        tool_name="key_snippets_gc_agent"
+                    )
+                except Exception:
+                    pass  # Continue if trajectory recording fails
+                
                 console.print(
                     Panel(
                         Markdown(success_msg), title="Snippet Deleted", border_style="green"
@@ -86,6 +104,22 @@ def delete_key_snippets(snippet_ids: List[int]) -> str:
     if protected_snippets:
         protected_msg = "Protected snippets (associated with current request):\n" + "\n".join([f"- #{snippet_id}: {filepath}" for snippet_id, filepath in protected_snippets])
         result_parts.append(protected_msg)
+        # Record GC operation in trajectory
+        try:
+            trajectory_repo = get_trajectory_repository()
+            human_input_id = get_human_input_repository().get_most_recent_id()
+            trajectory_repo.create(
+                step_data={
+                    "protected_snippets": protected_snippets,
+                    "display_title": "Snippets Protected",
+                },
+                record_type="gc_operation",
+                human_input_id=human_input_id,
+                tool_name="key_snippets_gc_agent"
+            )
+        except Exception:
+            pass  # Continue if trajectory recording fails
+            
         console.print(
             Panel(Markdown(protected_msg), title="Snippets Protected", border_style="blue")
         )
@@ -116,6 +150,21 @@ def run_key_snippets_gc_agent() -> None:
     snippet_count = len(snippets)
     
     # Display status panel with snippet count included
+    try:
+        trajectory_repo = get_trajectory_repository()
+        human_input_id = get_human_input_repository().get_most_recent_id()
+        trajectory_repo.create(
+            step_data={
+                "snippet_count": snippet_count,
+                "display_title": "Garbage Collection",
+            },
+            record_type="gc_operation",
+            human_input_id=human_input_id,
+            tool_name="key_snippets_gc_agent"
+        )
+    except Exception:
+        pass  # Continue if trajectory recording fails
+        
     console.print(Panel(f"Gathering my thoughts...\nCurrent number of key snippets: {snippet_count}", title="🗑 Garbage Collection"))
     
     # Only run the agent if we actually have snippets to clean
@@ -185,6 +234,24 @@ def run_key_snippets_gc_agent() -> None:
             # Show info panel with updated count and protected snippets count
             protected_count = len(protected_snippets)
             if protected_count > 0:
+                # Record GC completion in trajectory
+                try:
+                    trajectory_repo = get_trajectory_repository()
+                    human_input_id = get_human_input_repository().get_most_recent_id()
+                    trajectory_repo.create(
+                        step_data={
+                            "original_count": snippet_count,
+                            "updated_count": updated_count,
+                            "protected_count": protected_count,
+                            "display_title": "GC Complete",
+                        },
+                        record_type="gc_operation",
+                        human_input_id=human_input_id,
+                        tool_name="key_snippets_gc_agent"
+                    )
+                except Exception:
+                    pass  # Continue if trajectory recording fails
+                
                 console.print(
                     Panel(
                         f"Cleaned key snippets: {snippet_count} → {updated_count}\nProtected snippets (associated with current request): {protected_count}",
@@ -192,6 +259,24 @@ def run_key_snippets_gc_agent() -> None:
                     )
                 )
             else:
+                # Record GC completion in trajectory
+                try:
+                    trajectory_repo = get_trajectory_repository()
+                    human_input_id = get_human_input_repository().get_most_recent_id()
+                    trajectory_repo.create(
+                        step_data={
+                            "original_count": snippet_count,
+                            "updated_count": updated_count,
+                            "protected_count": 0,
+                            "display_title": "GC Complete",
+                        },
+                        record_type="gc_operation",
+                        human_input_id=human_input_id,
+                        tool_name="key_snippets_gc_agent"
+                    )
+                except Exception:
+                    pass  # Continue if trajectory recording fails
+                
                 console.print(
                     Panel(
                         f"Cleaned key snippets: {snippet_count} → {updated_count}",
@@ -199,6 +284,40 @@ def run_key_snippets_gc_agent() -> None:
                     )
                 )
         else:
+            # Record GC info in trajectory
+            try:
+                trajectory_repo = get_trajectory_repository()
+                human_input_id = get_human_input_repository().get_most_recent_id()
+                trajectory_repo.create(
+                    step_data={
+                        "protected_count": len(protected_snippets),
+                        "message": "All snippets are protected",
+                        "display_title": "GC Info",
+                    },
+                    record_type="gc_operation",
+                    human_input_id=human_input_id,
+                    tool_name="key_snippets_gc_agent"
+                )
+            except Exception:
+                pass  # Continue if trajectory recording fails
+                
             console.print(Panel(f"All {len(protected_snippets)} snippets are associated with the current request and protected from deletion.", title="🗑 GC Info"))
     else:
+        # Record GC info in trajectory
+        try:
+            trajectory_repo = get_trajectory_repository()
+            human_input_id = get_human_input_repository().get_most_recent_id()
+            trajectory_repo.create(
+                step_data={
+                    "snippet_count": 0,
+                    "message": "No key snippets to clean",
+                    "display_title": "GC Info",
+                },
+                record_type="gc_operation",
+                human_input_id=human_input_id,
+                tool_name="key_snippets_gc_agent"
+            )
+        except Exception:
+            pass  # Continue if trajectory recording fails
+            
         console.print(Panel("No key snippets to clean.", title="🗑 GC Info"))

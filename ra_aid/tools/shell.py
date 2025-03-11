@@ -10,6 +10,8 @@ from ra_aid.proc.interactive import run_interactive_command
 from ra_aid.text.processing import truncate_output
 from ra_aid.tools.memory import log_work_event
 from ra_aid.database.repositories.config_repository import get_config_repository
+from ra_aid.database.repositories.trajectory_repository import get_trajectory_repository
+from ra_aid.database.repositories.human_input_repository import get_human_input_repository
 
 console = Console()
 
@@ -54,6 +56,20 @@ def run_shell_command(
         console.print(" " + get_cowboy_message())
         console.print("")
 
+    # Record tool execution in trajectory
+    trajectory_repo = get_trajectory_repository()
+    human_input_id = get_human_input_repository().get_most_recent_id()
+    trajectory_repo.create(
+        tool_name="run_shell_command",
+        tool_parameters={"command": command, "timeout": timeout},
+        step_data={
+            "command": command,
+            "display_title": "Shell Command",
+        },
+        record_type="tool_execution",
+        human_input_id=human_input_id
+    )
+
     # Show just the command in a simple panel
     console.print(Panel(command, title="🐚 Shell", border_style="bright_yellow"))
 
@@ -96,5 +112,23 @@ def run_shell_command(
         return result
     except Exception as e:
         print()
+        # Record error in trajectory
+        trajectory_repo = get_trajectory_repository()
+        human_input_id = get_human_input_repository().get_most_recent_id()
+        trajectory_repo.create(
+            tool_name="run_shell_command",
+            tool_parameters={"command": command, "timeout": timeout},
+            step_data={
+                "command": command,
+                "error": str(e),
+                "display_title": "Shell Error",
+            },
+            record_type="tool_execution",
+            is_error=True,
+            error_message=str(e),
+            error_type=type(e).__name__,
+            human_input_id=human_input_id
+        )
+        
         console.print(Panel(str(e), title="❌ Error", border_style="red"))
         return {"output": str(e), "return_code": 1, "success": False}

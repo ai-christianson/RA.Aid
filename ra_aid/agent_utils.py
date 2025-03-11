@@ -106,6 +106,7 @@ from ra_aid.database.repositories.human_input_repository import (
 from ra_aid.database.repositories.research_note_repository import (
     get_research_note_repository,
 )
+from ra_aid.database.repositories.trajectory_repository import get_trajectory_repository
 from ra_aid.database.repositories.work_log_repository import get_work_log_repository
 from ra_aid.model_formatters import format_key_facts_dict
 from ra_aid.model_formatters.key_snippets_formatter import format_key_snippets_dict
@@ -460,9 +461,23 @@ def _handle_api_error(e, attempt, max_retries, base_delay):
 
     logger.warning("API error (attempt %d/%d): %s", attempt + 1, max_retries, str(e))
     delay = base_delay * (2**attempt)
-    print_error(
-        f"Encountered {e.__class__.__name__}: {e}. Retrying in {delay}s... (Attempt {attempt+1}/{max_retries})"
+    error_message = f"Encountered {e.__class__.__name__}: {e}. Retrying in {delay}s... (Attempt {attempt+1}/{max_retries})"
+    
+    # Record error in trajectory
+    trajectory_repo = get_trajectory_repository()
+    human_input_id = get_human_input_repository().get_most_recent_id()
+    trajectory_repo.create(
+        step_data={
+            "error_message": error_message,
+            "display_title": "Error",
+        },
+        record_type="error",
+        human_input_id=human_input_id,
+        is_error=True,
+        error_message=error_message
     )
+    
+    print_error(error_message)
     start = time.monotonic()
     while time.monotonic() - start < delay:
         check_interrupt()

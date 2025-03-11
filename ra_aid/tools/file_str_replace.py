@@ -7,6 +7,8 @@ from rich.panel import Panel
 from ra_aid.console import console
 from ra_aid.console.formatting import print_error
 from ra_aid.tools.memory import emit_related_files
+from ra_aid.database.repositories.trajectory_repository import get_trajectory_repository
+from ra_aid.database.repositories.human_input_repository import get_human_input_repository
 
 
 def truncate_display_str(s: str, max_length: int = 30) -> str:
@@ -54,6 +56,32 @@ def file_str_replace(filepath: str, old_str: str, new_str: str, *, replace_all: 
         path = Path(filepath)
         if not path.exists():
             msg = f"File not found: {filepath}"
+            
+            # Record error in trajectory
+            try:
+                trajectory_repo = get_trajectory_repository()
+                human_input_id = get_human_input_repository().get_most_recent_id()
+                trajectory_repo.create(
+                    step_data={
+                        "error_message": msg,
+                        "display_title": "Error",
+                    },
+                    record_type="error",
+                    human_input_id=human_input_id,
+                    is_error=True,
+                    error_message=msg,
+                    tool_name="file_str_replace",
+                    tool_parameters={
+                        "filepath": filepath,
+                        "old_str": old_str,
+                        "new_str": new_str,
+                        "replace_all": replace_all
+                    }
+                )
+            except Exception:
+                # Silently handle trajectory recording failures (e.g., in test environments)
+                pass
+            
             print_error(msg)
             return {"success": False, "message": msg}
 
@@ -62,10 +90,62 @@ def file_str_replace(filepath: str, old_str: str, new_str: str, *, replace_all: 
 
         if count == 0:
             msg = f"String not found: {truncate_display_str(old_str)}"
+            
+            # Record error in trajectory
+            try:
+                trajectory_repo = get_trajectory_repository()
+                human_input_id = get_human_input_repository().get_most_recent_id()
+                trajectory_repo.create(
+                    step_data={
+                        "error_message": msg,
+                        "display_title": "Error",
+                    },
+                    record_type="error",
+                    human_input_id=human_input_id,
+                    is_error=True,
+                    error_message=msg,
+                    tool_name="file_str_replace",
+                    tool_parameters={
+                        "filepath": filepath,
+                        "old_str": old_str,
+                        "new_str": new_str,
+                        "replace_all": replace_all
+                    }
+                )
+            except Exception:
+                # Silently handle trajectory recording failures (e.g., in test environments)
+                pass
+            
             print_error(msg)
             return {"success": False, "message": msg}
         elif count > 1 and not replace_all:
             msg = f"String appears {count} times - must be unique (use replace_all=True to replace all occurrences)"
+            
+            # Record error in trajectory
+            try:
+                trajectory_repo = get_trajectory_repository()
+                human_input_id = get_human_input_repository().get_most_recent_id()
+                trajectory_repo.create(
+                    step_data={
+                        "error_message": msg,
+                        "display_title": "Error",
+                    },
+                    record_type="error",
+                    human_input_id=human_input_id,
+                    is_error=True,
+                    error_message=msg,
+                    tool_name="file_str_replace",
+                    tool_parameters={
+                        "filepath": filepath,
+                        "old_str": old_str,
+                        "new_str": new_str,
+                        "replace_all": replace_all
+                    }
+                )
+            except Exception:
+                # Silently handle trajectory recording failures (e.g., in test environments)
+                pass
+            
             print_error(msg)
             return {"success": False, "message": msg}
 
@@ -93,7 +173,34 @@ def file_str_replace(filepath: str, old_str: str, new_str: str, *, replace_all: 
             emit_related_files.invoke({"files": [filepath]})
         except Exception as e:
             # Don't let related files error affect main function success
-            print_error(f"Note: Could not add to related files: {str(e)}")
+            error_msg = f"Note: Could not add to related files: {str(e)}"
+            
+            # Record error in trajectory
+            try:
+                trajectory_repo = get_trajectory_repository()
+                human_input_id = get_human_input_repository().get_most_recent_id()
+                trajectory_repo.create(
+                    step_data={
+                        "error_message": error_msg,
+                        "display_title": "Error",
+                    },
+                    record_type="error",
+                    human_input_id=human_input_id,
+                    is_error=True,
+                    error_message=error_msg,
+                    tool_name="file_str_replace",
+                    tool_parameters={
+                        "filepath": filepath,
+                        "old_str": old_str,
+                        "new_str": new_str,
+                        "replace_all": replace_all
+                    }
+                )
+            except Exception:
+                # Silently handle trajectory recording failures (e.g., in test environments)
+                pass
+            
+            print_error(error_msg)
             
         return {
             "success": True,
@@ -102,5 +209,31 @@ def file_str_replace(filepath: str, old_str: str, new_str: str, *, replace_all: 
 
     except Exception as e:
         msg = f"Error: {str(e)}"
+        
+        # Record error in trajectory
+        try:
+            trajectory_repo = get_trajectory_repository()
+            human_input_id = get_human_input_repository().get_most_recent_id()
+            trajectory_repo.create(
+                step_data={
+                    "error_message": msg,
+                    "display_title": "Error",
+                },
+                record_type="error",
+                human_input_id=human_input_id,
+                is_error=True,
+                error_message=msg,
+                tool_name="file_str_replace",
+                tool_parameters={
+                    "filepath": filepath,
+                    "old_str": old_str,
+                    "new_str": new_str,
+                    "replace_all": replace_all
+                }
+            )
+        except Exception:
+            # Silently handle trajectory recording failures (e.g., in test environments)
+            pass
+        
         print_error(msg)
         return {"success": False, "message": msg}
