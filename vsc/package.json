@@ -12,6 +12,24 @@
   "activationEvents": [],
   "main": "./dist/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "ra-aid-view",
+          "title": "RA.Aid",
+          "icon": "assets/RA-white-transp.png"
+        }
+      ]
+    },
+    "views": {
+      "ra-aid-view": [
+        {
+          "type": "webview",
+          "id": "ra-aid.view",
+          "name": "RA.Aid"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "ra-aid.helloWorld",
