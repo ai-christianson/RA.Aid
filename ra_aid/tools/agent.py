@@ -14,11 +14,12 @@ from ra_aid.agent_context import (
     is_crashed,
     reset_completion_flags,
 )
-from ra_aid.console.formatting import print_error
-from ra_aid.database.repositories.human_input_repository import HumanInputRepository
+from ra_aid.console.formatting import print_error, print_task_header
+from ra_aid.database.repositories.human_input_repository import HumanInputRepository, get_human_input_repository
 from ra_aid.database.repositories.key_fact_repository import get_key_fact_repository
 from ra_aid.database.repositories.key_snippet_repository import get_key_snippet_repository
 from ra_aid.database.repositories.config_repository import get_config_repository
+from ra_aid.database.repositories.trajectory_repository import get_trajectory_repository
 from ra_aid.database.repositories.related_files_repository import get_related_files_repository
 from ra_aid.database.repositories.research_note_repository import get_research_note_repository
 from ra_aid.exceptions import AgentInterrupt
@@ -26,8 +27,7 @@ from ra_aid.model_formatters import format_key_facts_dict
 from ra_aid.model_formatters.key_snippets_formatter import format_key_snippets_dict
 from ra_aid.model_formatters.research_notes_formatter import format_research_notes_dict
 
-from ..console import print_task_header
-from ..llm import initialize_llm
+from ra_aid.llm import initialize_llm
 from .human import ask_human
 from .memory import get_related_files, get_work_log
 
@@ -346,6 +346,19 @@ def request_task_implementation(task_spec: str) -> str:
 
     try:
         print_task_header(task_spec)
+        
+        # Record task display in trajectory
+        trajectory_repo = get_trajectory_repository()
+        human_input_id = get_human_input_repository().get_most_recent_id()
+        trajectory_repo.create(
+            step_data={
+                "task": task_spec,
+                "display_title": "Task",
+            },
+            record_type="task_display",
+            human_input_id=human_input_id
+        )
+        
         # Run implementation agent
         from ..agents.implementation_agent import run_task_implementation_agent
 

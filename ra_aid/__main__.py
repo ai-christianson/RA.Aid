@@ -620,6 +620,18 @@ def main():
                         sys.exit(1)
 
                     print_stage_header("Chat Mode")
+                    
+                    # Record stage transition in trajectory
+                    trajectory_repo = get_trajectory_repository()
+                    human_input_id = get_human_input_repository().get_most_recent_id()
+                    trajectory_repo.create(
+                        step_data={
+                            "stage": "chat_mode",
+                            "display_title": "Chat Mode",
+                        },
+                        record_type="stage_transition",
+                        human_input_id=human_input_id
+                    )
 
                     # Get project info
                     try:
@@ -769,6 +781,18 @@ def main():
 
                 # Run research stage
                 print_stage_header("Research Stage")
+                
+                # Record stage transition in trajectory
+                trajectory_repo = get_trajectory_repository()
+                human_input_id = get_human_input_repository().get_most_recent_id()
+                trajectory_repo.create(
+                    step_data={
+                        "stage": "research_stage",
+                        "display_title": "Research Stage",
+                    },
+                    record_type="stage_transition",
+                    human_input_id=human_input_id
+                )
 
                 # Initialize research model with potential overrides
                 research_provider = args.research_provider or args.provider
