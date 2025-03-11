@@ -60,6 +60,20 @@ def print_task_header(task: str) -> None:
         task: The task text to print (supports Markdown formatting)
     """
     console.print(Panel(Markdown(task), title="🔧 Task", border_style="yellow bold"))
+    
+    # Record trajectory event
+    trajectory_repo = get_trajectory_repository()
+    human_input_id = get_human_input_repository().get_most_recent_id()
+    
+    trajectory_repo.create(
+        step_data={
+            "task": task,
+            "display_title": "Task",
+            "display_icon": "🔧",
+        },
+        record_type="task_display",
+        human_input_id=human_input_id
+    )
 
 
 def print_error(message: str) -> None:
