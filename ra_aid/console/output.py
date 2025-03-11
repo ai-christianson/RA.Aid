@@ -14,7 +14,7 @@ from .formatting import console
 def get_cost_subtitle(cost_cb: Optional[AnthropicCallbackHandler]) -> Optional[str]:
     """Generate a subtitle with cost information if a callback is provided."""
     if cost_cb:
-        return f"Total Cost: ${cost_cb.total_cost:.6f} | Tokens: {cost_cb.total_tokens}"
+        return f"Cost: ${cost_cb.total_cost:.6f} | Tokens: {cost_cb.total_tokens}"
     return None
 
 
