@@ -259,6 +259,7 @@ def create_llm_client(
     else:
         temp_kwargs = {}
 
+    # Enable thinking mode for models that support it, unless it's been disabled by the automatic workaround
     if supports_thinking and not config.get("disable_thinking", False):
         temp_kwargs = {"thinking": {"type": "enabled", "budget_tokens": 12000}}
 

@@ -135,17 +135,12 @@ When this flag is used, RA.Aid will not automatically disable thinking mode when
 
 ### Manually Disabling Thinking Mode
 
-You can also choose to disable thinking mode from the start using the `--disable-thinking` flag:
+When the automatic workaround is applied, thinking mode is disabled for the current session. If you want to disable thinking mode from the start of a session, you can simply use a model that doesn't support thinking mode, such as Claude 3.5 Sonnet.
 
-```bash
-ra-aid -m "Debug the database connection issue" --provider anthropic --model claude-3-7-sonnet-20250219 --disable-thinking
-```
-
-When this option is enabled:
-
-- The thinking mode will not be activated for Claude 3.7 models
-- The model will operate in standard mode without the structured thinking blocks
-- This can help avoid certain API errors that might occur with thinking mode enabled
+This approach:
+- Prevents the thinking mode from being activated
+- Makes the model operate in standard mode without the structured thinking blocks
+- Avoids the API errors that can occur with thinking mode enabled
 
 ### When to Disable Thinking Mode
 
@@ -177,8 +172,8 @@ Unretryable API error: Error code: 400 - {'type': 'error', 'error': {'type': 'in
 
 This is related to the thinking mode format requirements. You can:
 
-- Use the `--disable-thinking` flag to turn off thinking mode
-- Upgrade to the latest version of RA.Aid which includes fixes for these errors
+- Use a model that doesn't support thinking mode, such as Claude 3.5 Sonnet
+- Upgrade to the latest version of RA.Aid which includes the automatic workaround for these errors
 - For long-running sessions, consider restarting the assistant periodically
 
 #### Excessive or irrelevant thinking
