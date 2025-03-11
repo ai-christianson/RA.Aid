@@ -63,6 +63,42 @@ def mock_config_repository():
         yield mock_repo
 
 
+@pytest.fixture(autouse=True)
+def mock_trajectory_repository():
+    """Mock the TrajectoryRepository to avoid database operations during tests"""
+    with patch('ra_aid.database.repositories.trajectory_repository.trajectory_repo_var') as mock_repo_var:
+        # Setup a mock repository
+        mock_repo = MagicMock()
+        
+        # Setup create method to return a mock trajectory
+        def mock_create(**kwargs):
+            mock_trajectory = MagicMock()
+            mock_trajectory.id = 1
+            return mock_trajectory
+        mock_repo.create.side_effect = mock_create
+        
+        # Make the mock context var return our mock repo
+        mock_repo_var.get.return_value = mock_repo
+        
+        yield mock_repo
+
+
+@pytest.fixture(autouse=True)
+def mock_human_input_repository():
+    """Mock the HumanInputRepository to avoid database operations during tests"""
+    with patch('ra_aid.database.repositories.human_input_repository.human_input_repo_var') as mock_repo_var:
+        # Setup a mock repository
+        mock_repo = MagicMock()
+        
+        # Setup get_most_recent_id method to return a dummy ID
+        mock_repo.get_most_recent_id.return_value = 1
+        
+        # Make the mock context var return our mock repo
+        mock_repo_var.get.return_value = mock_repo
+        
+        yield mock_repo
+
+
 def test_get_model_token_limit_anthropic(mock_config_repository):
     """Test get_model_token_limit with Anthropic model."""
     config = {"provider": "anthropic", "model": "claude2"}
