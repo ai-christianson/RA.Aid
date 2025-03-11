@@ -14,3 +14,4 @@ __pycache__/
 .envrc
 appmap.log
 *.swp
+/vsc/node_modules
