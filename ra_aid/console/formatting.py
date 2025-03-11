@@ -1,6 +1,10 @@
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
+from typing import Optional
+
+from ra_aid.database.repositories.trajectory_repository import get_trajectory_repository
+from ra_aid.database.repositories.human_input_repository import get_human_input_repository
 
 console = Console()
 
@@ -33,6 +37,20 @@ def print_stage_header(stage: str) -> None:
     # Create styled panel with icon
     panel_content = f" {icon} {stage_title}"
     console.print(Panel(panel_content, style="green bold", padding=0))
+    
+    # Record trajectory event - focus on semantic meaning
+    trajectory_repo = get_trajectory_repository()
+    human_input_id = get_human_input_repository().get_most_recent_id()
+    
+    trajectory_repo.create(
+        step_data={
+            "stage": stage_key,
+            "display_icon": icon,
+            "display_title": stage_title,
+        },
+        record_type="stage_transition",
+        human_input_id=human_input_id
+    )
 
 
 def print_task_header(task: str) -> None:

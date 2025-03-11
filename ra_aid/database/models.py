@@ -182,11 +182,11 @@ class Trajectory(BaseModel):
     - Error information (when a tool execution fails)
     """
     human_input = peewee.ForeignKeyField(HumanInput, backref='trajectories', null=True)
-    tool_name = peewee.TextField()
-    tool_parameters = peewee.TextField()  # JSON-encoded parameters
-    tool_result = peewee.TextField()  # JSON-encoded result
-    step_data = peewee.TextField()  # JSON-encoded UI rendering data
-    record_type = peewee.TextField()  # Type of trajectory record
+    tool_name = peewee.TextField(null=True)
+    tool_parameters = peewee.TextField(null=True)  # JSON-encoded parameters
+    tool_result = peewee.TextField(null=True)  # JSON-encoded result
+    step_data = peewee.TextField(null=True)  # JSON-encoded UI rendering data
+    record_type = peewee.TextField(null=True)  # Type of trajectory record
     cost = peewee.FloatField(null=True)  # Placeholder for cost tracking
     tokens = peewee.IntegerField(null=True)  # Placeholder for token usage tracking
     is_error = peewee.BooleanField(default=False)  # Flag indicating if this record represents an error
