@@ -697,22 +697,21 @@ def run_agent_with_retry(
                     return f"Agent has crashed: {crash_message}"
 
                 try:
-                    # Ensure messages have thinking blocks if needed before each run
+                    # Check if we need to ensure thinking blocks
                     config = get_config_repository().get_all()
-                    if is_anthropic_claude(config):
-                        provider = config.get("provider", "")
-                        model_name = config.get("model", "")
+                    provider = config.get("provider", "")
+                    model_name = config.get("model", "")
+                    
+                    # Only apply to Claude 3.7 models with thinking enabled
+                    if (provider.lower() == "anthropic" and 
+                        "claude-3-7" in model_name.lower() and 
+                        not config.get("disable_thinking", False)):
                         
-                        # Only apply to Claude 3.7 models with thinking enabled
-                        if (provider.lower() == "anthropic" and 
-                            "claude-3-7" in model_name.lower() and 
-                            not config.get("disable_thinking", False)):
-                            
-                            # Get model configuration to check if thinking is supported
-                            model_config = models_params.get(provider, {}).get(model_name, {})
-                            if model_config.get("supports_thinking", False):
-                                logger.debug("Ensuring thinking blocks for Claude 3.7 before agent run")
-                                msg_list = _ensure_thinking_block(msg_list, config)
+                        # Get model configuration to check if thinking is supported
+                        model_config = models_params.get(provider, {}).get(model_name, {})
+                        if model_config.get("supports_thinking", False):
+                            logger.debug("Ensuring thinking blocks for Claude 3.7 before agent run")
+                            msg_list = _ensure_thinking_block(msg_list, config)
                     
                     _run_agent_stream(agent, msg_list)
                     if fallback_handler:
