@@ -294,6 +294,11 @@ Examples:
         help="Display model thinking content extracted from think tags when supported by the model",
     )
     parser.add_argument(
+        "--show-cost",
+        action="store_true",
+        help="Display cost information as the agent works",
+    )
+    parser.add_argument(
         "--reasoning-assistance",
         action="store_true",
         help="Force enable reasoning assistance regardless of model defaults",
@@ -602,6 +607,7 @@ def main():
                 config_repo.set("experimental_fallback_handler", args.experimental_fallback_handler)
                 config_repo.set("web_research_enabled", web_research_enabled)
                 config_repo.set("show_thoughts", args.show_thoughts)
+                config_repo.set("show_cost", args.show_cost)
                 config_repo.set("force_reasoning_assistance", args.reasoning_assistance)
                 config_repo.set("disable_reasoning_assistance", args.no_reasoning_assistance)
 
@@ -707,6 +713,7 @@ def main():
                     config_repo.set("expert_model", args.expert_model)
                     config_repo.set("temperature", args.temperature)
                     config_repo.set("show_thoughts", args.show_thoughts)
+                    config_repo.set("show_cost", args.show_cost)
                     config_repo.set("force_reasoning_assistance", args.reasoning_assistance)
                     config_repo.set("disable_reasoning_assistance", args.no_reasoning_assistance)
 
