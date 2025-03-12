@@ -292,7 +292,6 @@ def create_llm_client(
         return ChatOpenAI(
             **{
                 **openai_kwargs,
-                **thinking_kwargs,
                 "timeout": LLM_REQUEST_TIMEOUT,
                 "max_retries": LLM_MAX_RETRIES,
             }
