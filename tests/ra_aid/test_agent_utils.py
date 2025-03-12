@@ -84,6 +84,7 @@ def test_create_agent_anthropic(mock_model, mock_config_repository):
             interrupt_after=['tools'],
             version="v2",
             state_modifier=mock_react.call_args[1]["state_modifier"],
+            name="React",
         )
 
 
@@ -213,7 +214,7 @@ def test_create_agent_anthropic_token_limiting_disabled(mock_model, mock_config_
         agent = create_agent(mock_model, [])
 
         assert agent == "react_agent"
-        mock_react.assert_called_once_with(mock_model, [], interrupt_after=['tools'], version="v2")
+        mock_react.assert_called_once_with(mock_model, [], interrupt_after=['tools'], version="v2", name="React")
 
 
 # These tests have been moved to test_anthropic_token_limiter.py
