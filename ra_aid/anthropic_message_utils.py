@@ -82,41 +82,6 @@ def is_tool_pair(message1: BaseMessage, message2: BaseMessage) -> bool:
     )
 
 
-def fix_anthropic_message_content(message: BaseMessage) -> BaseMessage:
-    """Fix message content format for Anthropic API compatibility."""
-    if not isinstance(message, AIMessage) or not isinstance(message.content, list):
-        return message
-
-    fixed_message = message.model_copy(deep=True)
-
-    # Ensure first block is valid thinking type
-    if fixed_message.content and isinstance(fixed_message.content[0], dict):
-        first_block_type = fixed_message.content[0].get("type")
-        if first_block_type not in ("thinking", "redacted_thinking"):
-            # Prepend redacted_thinking block instead of thinking
-            fixed_message.content.insert(
-                0,
-                {
-                    "type": "redacted_thinking",
-                    "data": "ENCRYPTED_REASONING",  # Required field for redacted_thinking
-                },
-            )
-
-    # Ensure all thinking blocks have valid structure
-    for i, block in enumerate(fixed_message.content):
-        if block.get("type") == "thinking":
-            # Convert thinking blocks to redacted_thinking to avoid signature validation
-            fixed_message.content[i] = {
-                "type": "redacted_thinking",
-                "data": "ENCRYPTED_REASONING",
-            }
-        elif block.get("type") == "redacted_thinking":
-            # Ensure required data field exists
-            if "data" not in block:
-                fixed_message.content[i]["data"] = "ENCRYPTED_REASONING"
-
-    return fixed_message
-
 
 def anthropic_trim_messages(
     messages: Sequence[BaseMessage],

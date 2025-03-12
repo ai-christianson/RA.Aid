@@ -15,7 +15,6 @@ from langchain_core.messages import (
 from langchain_core.messages.base import message_to_dict
 
 from ra_aid.anthropic_message_utils import (
-    fix_anthropic_message_content,
     anthropic_trim_messages,
     has_tool_use,
 )
