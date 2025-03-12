@@ -5,23 +5,7 @@ import sys
 import uuid
 from datetime import datetime
 
-# Add litellm import
 import litellm
-
-# Configure litellm to suppress debug logs
-os.environ["LITELLM_LOG"] = "ERROR"
-litellm.suppress_debug_info = True
-litellm.set_verbose = False
-
-# Explicitly configure LiteLLM's loggers
-for logger_name in ["litellm", "LiteLLM"]:
-    litellm_logger = logging.getLogger(logger_name)
-    litellm_logger.setLevel(logging.WARNING)
-    litellm_logger.propagate = True
-
-# Use litellm's internal method to disable debugging
-if hasattr(litellm, "_logging") and hasattr(litellm._logging, "_disable_debugging"):
-    litellm._logging._disable_debugging()
 
 from langgraph.checkpoint.memory import MemorySaver
 from rich.console import Console
@@ -36,7 +20,6 @@ from ra_aid.agent_utils import (
     run_agent_with_retry,
 )
 from ra_aid.agents.research_agent import run_research_agent
-from ra_aid.agents import run_planning_agent
 from ra_aid.config import (
     DEFAULT_MAX_TEST_CMD_RETRIES,
     DEFAULT_MODEL,
@@ -64,9 +47,7 @@ from ra_aid.database.repositories.trajectory_repository import (
     TrajectoryRepositoryManager,
     get_trajectory_repository,
 )
-from ra_aid.database.repositories.session_repository import (
-    SessionRepositoryManager, get_session_repository
-)
+from ra_aid.database.repositories.session_repository import SessionRepositoryManager
 from ra_aid.database.repositories.related_files_repository import (
     RelatedFilesRepositoryManager,
 )
@@ -96,6 +77,21 @@ from ra_aid.prompts.chat_prompts import CHAT_PROMPT
 from ra_aid.prompts.web_research_prompts import WEB_RESEARCH_PROMPT_SECTION_CHAT
 from ra_aid.tool_configs import get_chat_tools, set_modification_tools
 from ra_aid.tools.human import ask_human
+
+# Configure litellm to suppress debug logs
+os.environ["LITELLM_LOG"] = "ERROR"
+litellm.suppress_debug_info = True
+litellm.set_verbose = False
+
+# Explicitly configure LiteLLM's loggers
+for logger_name in ["litellm", "LiteLLM"]:
+    litellm_logger = logging.getLogger(logger_name)
+    litellm_logger.setLevel(logging.WARNING)
+    litellm_logger.propagate = True
+
+# Use litellm's internal method to disable debugging
+if hasattr(litellm, "_logging") and hasattr(litellm._logging, "_disable_debugging"):
+    litellm._logging._disable_debugging()
 
 logger = get_logger(__name__)
 
@@ -545,17 +541,19 @@ def main():
             env_discovery = EnvDiscovery()
             env_discovery.discover()
             env_data = env_discovery.format_markdown()
-            
-            with SessionRepositoryManager(db) as session_repo, \
-                 KeyFactRepositoryManager(db) as key_fact_repo, \
-                 KeySnippetRepositoryManager(db) as key_snippet_repo, \
-                 HumanInputRepositoryManager(db) as human_input_repo, \
-                 ResearchNoteRepositoryManager(db) as research_note_repo, \
-                 RelatedFilesRepositoryManager() as related_files_repo, \
-                 TrajectoryRepositoryManager(db) as trajectory_repo, \
-                 WorkLogRepositoryManager() as work_log_repo, \
-                 ConfigRepositoryManager(config) as config_repo, \
-                 EnvInvManager(env_data) as env_inv:
+
+            with (
+                SessionRepositoryManager(db) as session_repo,
+                KeyFactRepositoryManager(db) as key_fact_repo,
+                KeySnippetRepositoryManager(db) as key_snippet_repo,
+                HumanInputRepositoryManager(db) as human_input_repo,
+                ResearchNoteRepositoryManager(db) as research_note_repo,
+                RelatedFilesRepositoryManager() as related_files_repo,
+                TrajectoryRepositoryManager(db) as trajectory_repo,
+                WorkLogRepositoryManager() as work_log_repo,
+                ConfigRepositoryManager(config) as config_repo,
+                EnvInvManager(env_data) as env_inv,
+            ):
                 # This initializes all repositories and makes them available via their respective get methods
                 logger.debug("Initialized SessionRepository")
                 logger.debug("Initialized KeyFactRepository")
@@ -567,7 +565,7 @@ def main():
                 logger.debug("Initialized WorkLogRepository")
                 logger.debug("Initialized ConfigRepository")
                 logger.debug("Initialized Environment Inventory")
-                
+
                 # Create a new session for this program run
                 logger.debug("Initializing new session")
                 session_repo.create_session()
@@ -651,8 +649,12 @@ def main():
                     if args.research_only:
                         try:
                             trajectory_repo = get_trajectory_repository()
-                            human_input_id = get_human_input_repository().get_most_recent_id()
-                            error_message = "Chat mode cannot be used with --research-only"
+                            human_input_id = (
+                                get_human_input_repository().get_most_recent_id()
+                            )
+                            error_message = (
+                                "Chat mode cannot be used with --research-only"
+                            )
                             trajectory_repo.create(
                                 step_data={
                                     "display_title": "Error",
@@ -671,7 +673,7 @@ def main():
                         sys.exit(1)
 
                     print_stage_header("Chat Mode")
-                    
+
                     # Record stage transition in trajectory
                     trajectory_repo = get_trajectory_repository()
                     human_input_id = get_human_input_repository().get_most_recent_id()
@@ -681,7 +683,7 @@ def main():
                             "display_title": "Chat Mode",
                         },
                         record_type="stage_transition",
-                        human_input_id=human_input_id
+                        human_input_id=human_input_id,
                     )
 
                     # Get project info
@@ -734,8 +736,12 @@ def main():
                     config_repo.set("temperature", args.temperature)
                     config_repo.set("show_thoughts", args.show_thoughts)
                     config_repo.set("show_cost", args.show_cost)
-                    config_repo.set("force_reasoning_assistance", args.reasoning_assistance)
-                    config_repo.set("disable_reasoning_assistance", args.no_reasoning_assistance)
+                    config_repo.set(
+                        "force_reasoning_assistance", args.reasoning_assistance
+                    )
+                    config_repo.set(
+                        "disable_reasoning_assistance", args.no_reasoning_assistance
+                    )
 
                     # Set modification tools based on use_aider flag
                     set_modification_tools(args.use_aider)
@@ -779,7 +785,9 @@ def main():
                 if not args.message:
                     try:
                         trajectory_repo = get_trajectory_repository()
-                        human_input_id = get_human_input_repository().get_most_recent_id()
+                        human_input_id = (
+                            get_human_input_repository().get_most_recent_id()
+                        )
                         error_message = "--message is required"
                         trajectory_repo.create(
                             step_data={
@@ -863,7 +871,7 @@ def main():
 
                 # Run research stage
                 print_stage_header("Research Stage")
-                
+
                 # Record stage transition in trajectory
                 trajectory_repo = get_trajectory_repository()
                 human_input_id = get_human_input_repository().get_most_recent_id()
@@ -873,7 +881,7 @@ def main():
                         "display_title": "Research Stage",
                     },
                     record_type="stage_transition",
-                    human_input_id=human_input_id
+                    human_input_id=human_input_id,
                 )
 
                 # Initialize research model with potential overrides

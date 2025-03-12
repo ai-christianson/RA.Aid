@@ -140,6 +140,8 @@ class TrajectoryRepository:
         human_input_id: Optional[int] = None,
         cost: Optional[float] = None,
         tokens: Optional[int] = None,
+        input_tokens: Optional[int] = None,
+        output_tokens: Optional[int] = None,
         is_error: bool = False,
         error_message: Optional[str] = None,
         error_type: Optional[str] = None,
@@ -155,8 +157,10 @@ class TrajectoryRepository:
             step_data: UI rendering data (will be JSON encoded)
             record_type: Type of trajectory record
             human_input_id: Optional ID of the associated human input
-            cost: Optional cost of the operation (placeholder)
-            tokens: Optional token usage (placeholder)
+            cost: Optional cost of the operation
+            tokens: Optional total token usage (kept for backward compatibility)
+            input_tokens: Optional input/prompt token usage
+            output_tokens: Optional output/completion token usage
             is_error: Flag indicating if this record represents an error (default: False)
             error_message: The error message (if is_error is True)
             error_type: The type/class of the error (if is_error is True)
@@ -192,6 +196,8 @@ class TrajectoryRepository:
                 record_type=record_type,
                 cost=cost,
                 tokens=tokens,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
                 is_error=is_error,
                 error_message=error_message,
                 error_type=error_type,
@@ -232,6 +238,8 @@ class TrajectoryRepository:
         step_data: Optional[Dict[str, Any]] = None,
         cost: Optional[float] = None,
         tokens: Optional[int] = None,
+        input_tokens: Optional[int] = None,
+        output_tokens: Optional[int] = None,
         is_error: Optional[bool] = None,
         error_message: Optional[str] = None,
         error_type: Optional[str] = None,
@@ -247,7 +255,9 @@ class TrajectoryRepository:
             tool_result: Updated tool result (will be JSON encoded)
             step_data: Updated UI rendering data (will be JSON encoded)
             cost: Updated cost information
-            tokens: Updated token usage information
+            tokens: Updated total token usage information (kept for backward compatibility)
+            input_tokens: Updated input/prompt token usage
+            output_tokens: Updated output/completion token usage
             is_error: Flag indicating if this record represents an error
             error_message: The error message 
             error_type: The type/class of the error
@@ -280,6 +290,12 @@ class TrajectoryRepository:
             
             if tokens is not None:
                 update_data["tokens"] = tokens
+                
+            if input_tokens is not None:
+                update_data["input_tokens"] = input_tokens
+                
+            if output_tokens is not None:
+                update_data["output_tokens"] = output_tokens
                 
             if is_error is not None:
                 update_data["is_error"] = is_error
@@ -412,6 +428,8 @@ class TrajectoryRepository:
             "record_type": trajectory.record_type,
             "cost": trajectory.cost,
             "tokens": trajectory.tokens,
+            "input_tokens": trajectory.input_tokens,
+            "output_tokens": trajectory.output_tokens,
             "human_input_id": trajectory.human_input.id if trajectory.human_input else None,
             "is_error": trajectory.is_error,
             "error_message": trajectory.error_message,

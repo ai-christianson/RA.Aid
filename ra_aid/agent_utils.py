@@ -51,7 +51,11 @@ from ra_aid.database.repositories.human_input_repository import (
 )
 from ra_aid.database.repositories.trajectory_repository import get_trajectory_repository
 from ra_aid.database.repositories.config_repository import get_config_repository
-from ra_aid.anthropic_token_limiter import sonnet_35_state_modifier, state_modifier, get_model_token_limit
+from ra_aid.anthropic_token_limiter import (
+    sonnet_35_state_modifier,
+    state_modifier,
+    get_model_token_limit,
+)
 
 console = Console()
 
@@ -65,8 +69,6 @@ def output_markdown_message(message: str) -> str:
     """Outputs a message to the user, optionally prompting for input."""
     console.print(Panel(Markdown(message.strip()), title="🤖 Assistant"))
     return "Message output."
-
-
 
 
 def build_agent_kwargs(
@@ -99,8 +101,13 @@ def build_agent_kwargs(
     ):
 
         def wrapped_state_modifier(state: AgentState) -> list[BaseMessage]:
-            if any(pattern in model.model for pattern in ["claude-3.5", "claude3.5", "claude-3-5"]):
-                return sonnet_35_state_modifier(state, max_input_tokens=max_input_tokens)
+            if any(
+                pattern in model.model
+                for pattern in ["claude-3.5", "claude3.5", "claude-3-5"]
+            ):
+                return sonnet_35_state_modifier(
+                    state, max_input_tokens=max_input_tokens
+                )
 
             return state_modifier(state, model, max_input_tokens=max_input_tokens)
 
@@ -289,8 +296,7 @@ def _handle_api_error(e, attempt, max_retries, base_delay):
     logger.warning("API error (attempt %d/%d): %s", attempt + 1, max_retries, str(e))
     delay = base_delay * (2**attempt)
     error_message = f"Encountered {e.__class__.__name__}: {e}. Retrying in {delay}s... (Attempt {attempt+1}/{max_retries})"
-    
-    # Record error in trajectory
+
     trajectory_repo = get_trajectory_repository()
     human_input_id = get_human_input_repository().get_most_recent_id()
     trajectory_repo.create(
@@ -301,9 +307,9 @@ def _handle_api_error(e, attempt, max_retries, base_delay):
         record_type="error",
         human_input_id=human_input_id,
         is_error=True,
-        error_message=error_message
+        error_message=error_message,
     )
-    
+
     print_error(error_message)
     start = time.monotonic()
     while time.monotonic() - start < delay:
@@ -333,6 +339,30 @@ def init_fallback_handler(agent: RAgents, tools: List[Any]):
     if agent_type == "React":
         return FallbackHandler(get_config_repository().get_all(), tools)
     return None
+
+
+def _handle_callback_update(cb: Optional[AnthropicCallbackHandler]) -> None:
+    """
+    Handle callback updates and record trajectory data.
+
+    Args:
+        cb: Optional AnthropicCallbackHandler with usage data
+    """
+    if not cb:
+        return
+
+    logger.debug(f"AnthropicCallbackHandler:\n{cb}")
+    try:
+        trajectory_repo = get_trajectory_repository()
+        trajectory_repo.create(
+            record_type="model_usage",
+            cost=cb.total_cost,
+            tokens=cb.total_tokens,
+            input_tokens=cb.prompt_tokens,
+            output_tokens=cb.completion_tokens,
+        )
+    except Exception as e:
+        logger.error(f"Failed to store token usage data: {e}")
 
 
 def _handle_fallback_response(
@@ -381,17 +411,18 @@ def _run_agent_stream(agent: RAgents, msg_list: list[BaseMessage]):
 
     while True:
         for chunk in agent.stream({"messages": msg_list}, stream_config):
-            logger.debug("Agent output: %s", chunk)
+            # logger.debug("Agent output: %s", chunk)
+            logger.debug(f"CALLBACK: {cb}")
             check_interrupt()
             agent_type = get_agent_type(agent)
             print_agent_output(chunk, agent_type, cost_cb=cb)
 
             if is_completed() or should_exit():
                 reset_completion_flags()
-                if cb:
-                    logger.debug(f"AnthropicCallbackHandler:\n{cb}")
+                _handle_callback_update(cb)
                 return True
 
+        _handle_callback_update(cb)
         logger.debug("Stream iteration ended; checking agent state for continuation.")
 
         # Prepare state configuration, ensuring 'configurable' is present.
@@ -417,14 +448,14 @@ def _run_agent_stream(agent: RAgents, msg_list: list[BaseMessage]):
                 "State indicates continuation (state.next: %s); resuming execution.",
                 state.next,
             )
-            agent.invoke(None, stream_config)
+            result = agent.invoke(None, stream_config)
+            print(f"result={result}")
             continue
         else:
             logger.debug("No continuation indicated in state; exiting stream loop.")
             break
 
-    if cb:
-        logger.debug(f"AnthropicCallbackHandler:\n{cb}")
+    # _handle_callback_update(cb)
     return True
 
 

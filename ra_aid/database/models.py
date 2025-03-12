@@ -201,7 +201,8 @@ class Trajectory(BaseModel):
     - What parameters were passed to the tool
     - What result was returned by the tool
     - UI rendering data for displaying the tool execution
-    - Cost and token usage metrics (placeholders for future implementation)
+    - Cost and token usage metrics for tracking resource utilization
+    - Detailed token usage breakdown (input_tokens and output_tokens)
     - Error information (when a tool execution fails)
     """
     human_input = peewee.ForeignKeyField(HumanInput, backref='trajectories', null=True)
@@ -210,8 +211,10 @@ class Trajectory(BaseModel):
     tool_result = peewee.TextField(null=True)  # JSON-encoded result
     step_data = peewee.TextField(null=True)  # JSON-encoded UI rendering data
     record_type = peewee.TextField(null=True)  # Type of trajectory record
-    cost = peewee.FloatField(null=True)  # Placeholder for cost tracking
-    tokens = peewee.IntegerField(null=True)  # Placeholder for token usage tracking
+    cost = peewee.FloatField(null=True)  # Cost tracking (e.g., API costs)
+    tokens = peewee.IntegerField(null=True)  # Total token usage tracking (for backward compatibility)
+    input_tokens = peewee.IntegerField(null=True)  # Prompt/input token usage tracking
+    output_tokens = peewee.IntegerField(null=True)  # Completion/output token usage tracking
     is_error = peewee.BooleanField(default=False)  # Flag indicating if this record represents an error
     error_message = peewee.TextField(null=True)  # The error message
     error_type = peewee.TextField(null=True)  # The type/class of the error
