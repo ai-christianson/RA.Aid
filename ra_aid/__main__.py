@@ -56,6 +56,9 @@ from ra_aid.database.repositories.research_note_repository import (
 from ra_aid.database.repositories.trajectory_repository import (
     TrajectoryRepositoryManager, get_trajectory_repository
 )
+from ra_aid.database.repositories.session_repository import (
+    SessionRepositoryManager, get_session_repository
+)
 from ra_aid.database.repositories.related_files_repository import (
     RelatedFilesRepositoryManager
 )
@@ -526,7 +529,8 @@ def main():
             env_discovery.discover()
             env_data = env_discovery.format_markdown()
             
-            with KeyFactRepositoryManager(db) as key_fact_repo, \
+            with SessionRepositoryManager(db) as session_repo, \
+                 KeyFactRepositoryManager(db) as key_fact_repo, \
                  KeySnippetRepositoryManager(db) as key_snippet_repo, \
                  HumanInputRepositoryManager(db) as human_input_repo, \
                  ResearchNoteRepositoryManager(db) as research_note_repo, \
@@ -536,6 +540,7 @@ def main():
                  ConfigRepositoryManager(config) as config_repo, \
                  EnvInvManager(env_data) as env_inv:
                 # This initializes all repositories and makes them available via their respective get methods
+                logger.debug("Initialized SessionRepository")
                 logger.debug("Initialized KeyFactRepository")
                 logger.debug("Initialized KeySnippetRepository")
                 logger.debug("Initialized HumanInputRepository")
@@ -545,6 +550,10 @@ def main():
                 logger.debug("Initialized WorkLogRepository")
                 logger.debug("Initialized ConfigRepository")
                 logger.debug("Initialized Environment Inventory")
+                
+                # Create a new session for this program run
+                logger.debug("Initializing new session")
+                session_repo.create_session()
 
                 # Check dependencies before proceeding
                 check_dependencies()
