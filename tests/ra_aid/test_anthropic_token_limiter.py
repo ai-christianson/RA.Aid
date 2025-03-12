@@ -1,5 +1,6 @@
 import unittest
 from unittest.mock import MagicMock, patch
+import litellm
 
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import (
@@ -19,6 +20,7 @@ from ra_aid.anthropic_token_limiter import (
     convert_message_to_litellm_format
 )
 from ra_aid.anthropic_message_utils import has_tool_use, is_tool_pair
+from ra_aid.models_params import models_params, DEFAULT_TOKEN_LIMIT
 
 
 class TestAnthropicTokenLimiter(unittest.TestCase):
@@ -140,6 +142,35 @@ class TestAnthropicTokenLimiter(unittest.TestCase):
         # Verify print_messages_compact was called at least once
         self.assertTrue(mock_print.call_count >= 1)
         
+    def test_state_modifier_with_messages(self):
+        """Test that state_modifier correctly trims recent messages while preserving the first message when total tokens > max_tokens."""
+        # Create a state with messages
+        messages = [
+            SystemMessage(content="System prompt"),
+            HumanMessage(content="Human message 1"),
+            AIMessage(content="AI response 1"),
+            HumanMessage(content="Human message 2"),
+            AIMessage(content="AI response 2"),
+        ]
+        state = AgentState(messages=messages)
+        model = MagicMock(spec=ChatAnthropic)
+        model.model = "claude-3-opus-20240229"
+
+        with patch("ra_aid.anthropic_token_limiter.create_token_counter_wrapper") as mock_wrapper, \
+             patch("ra_aid.anthropic_token_limiter.anthropic_trim_messages") as mock_trim, \
+             patch("ra_aid.anthropic_token_limiter.print_messages_compact"):
+            # Setup mock to return a fixed token count per message
+            mock_wrapper.return_value = lambda msgs: len(msgs) * 100
+            # Setup mock to return a subset of messages
+            mock_trim.return_value = [messages[0], messages[-2], messages[-1]]
+            
+            result = state_modifier(state, model, max_input_tokens=250)
+            
+            # Should return what anthropic_trim_messages returned
+            self.assertEqual(len(result), 3)
+            self.assertEqual(result[0], messages[0])  # First message preserved
+            self.assertEqual(result[-1], messages[-1])  # Last message preserved
+        
     @patch("ra_aid.anthropic_token_limiter.estimate_messages_tokens")
     @patch("ra_aid.anthropic_token_limiter.anthropic_trim_messages")
     def test_sonnet_35_state_modifier(self, mock_trim, mock_estimate):
@@ -191,6 +222,42 @@ class TestAnthropicTokenLimiter(unittest.TestCase):
         
         # Verify get_model_info was called with the right model
         mock_get_model_info.assert_called_with(f"anthropic/{DEFAULT_MODEL}")
+        
+    def test_get_model_token_limit_research(self):
+        """Test get_model_token_limit with research provider and model."""
+        config = {
+            "provider": "openai",
+            "model": "gpt-4",
+            "research_provider": "anthropic",
+            "research_model": "claude-2",
+        }
+        
+        with patch("ra_aid.anthropic_token_limiter.get_config_repository") as mock_get_config_repo, \
+             patch("litellm.get_model_info") as mock_get_info:
+            mock_get_config_repo.return_value.get_all.return_value = config
+            mock_get_info.return_value = {"max_input_tokens": 150000}
+            token_limit = get_model_token_limit(config, "research")
+            self.assertEqual(token_limit, 150000)
+            # Verify get_model_info was called with the research model
+            mock_get_info.assert_called_with("anthropic/claude-2")
+
+    def test_get_model_token_limit_planner(self):
+        """Test get_model_token_limit with planner provider and model."""
+        config = {
+            "provider": "openai",
+            "model": "gpt-4",
+            "planner_provider": "deepseek",
+            "planner_model": "dsm-1",
+        }
+        
+        with patch("ra_aid.anthropic_token_limiter.get_config_repository") as mock_get_config_repo, \
+             patch("litellm.get_model_info") as mock_get_info:
+            mock_get_config_repo.return_value.get_all.return_value = config
+            mock_get_info.return_value = {"max_input_tokens": 120000}
+            token_limit = get_model_token_limit(config, "planner")
+            self.assertEqual(token_limit, 120000)
+            # Verify get_model_info was called with the planner model
+            mock_get_info.assert_called_with("deepseek/dsm-1")
 
     @patch("ra_aid.anthropic_token_limiter.get_config_repository")
     @patch("litellm.get_model_info")
@@ -251,6 +318,85 @@ class TestAnthropicTokenLimiter(unittest.TestCase):
         # Test planner agent type
         result = get_model_token_limit(mock_config, "planner")
         self.assertEqual(result, 100000)
+        
+    def test_get_model_token_limit_anthropic(self):
+        """Test get_model_token_limit with Anthropic model."""
+        config = {"provider": "anthropic", "model": "claude2"}
+        
+        with patch("ra_aid.anthropic_token_limiter.get_config_repository") as mock_get_config_repo:
+            mock_get_config_repo.return_value.get_all.return_value = config
+            token_limit = get_model_token_limit(config, "default")
+            self.assertEqual(token_limit, models_params["anthropic"]["claude2"]["token_limit"])
+
+    def test_get_model_token_limit_openai(self):
+        """Test get_model_token_limit with OpenAI model."""
+        config = {"provider": "openai", "model": "gpt-4"}
+        
+        with patch("ra_aid.anthropic_token_limiter.get_config_repository") as mock_get_config_repo:
+            mock_get_config_repo.return_value.get_all.return_value = config
+            token_limit = get_model_token_limit(config, "default")
+            self.assertEqual(token_limit, models_params["openai"]["gpt-4"]["token_limit"])
+
+    def test_get_model_token_limit_unknown(self):
+        """Test get_model_token_limit with unknown provider/model."""
+        config = {"provider": "unknown", "model": "unknown-model"}
+        
+        with patch("ra_aid.anthropic_token_limiter.get_config_repository") as mock_get_config_repo:
+            mock_get_config_repo.return_value.get_all.return_value = config
+            token_limit = get_model_token_limit(config, "default")
+            self.assertIsNone(token_limit)
+
+    def test_get_model_token_limit_missing_config(self):
+        """Test get_model_token_limit with missing configuration."""
+        config = {}
+        
+        with patch("ra_aid.anthropic_token_limiter.get_config_repository") as mock_get_config_repo:
+            mock_get_config_repo.return_value.get_all.return_value = config
+            token_limit = get_model_token_limit(config, "default")
+            self.assertIsNone(token_limit)
+
+    def test_get_model_token_limit_litellm_success(self):
+        """Test get_model_token_limit successfully getting limit from litellm."""
+        config = {"provider": "anthropic", "model": "claude-2"}
+
+        with patch("ra_aid.anthropic_token_limiter.get_config_repository") as mock_get_config_repo, \
+             patch("litellm.get_model_info") as mock_get_info:
+            mock_get_config_repo.return_value.get_all.return_value = config
+            mock_get_info.return_value = {"max_input_tokens": 100000}
+            token_limit = get_model_token_limit(config, "default")
+            self.assertEqual(token_limit, 100000)
+            mock_get_info.assert_called_with("anthropic/claude-2")
+
+    def test_get_model_token_limit_litellm_not_found(self):
+        """Test fallback to models_tokens when litellm raises NotFoundError."""
+        config = {"provider": "anthropic", "model": "claude-2"}
+
+        with patch("ra_aid.anthropic_token_limiter.get_config_repository") as mock_get_config_repo, \
+             patch("litellm.get_model_info") as mock_get_info:
+            mock_get_config_repo.return_value.get_all.return_value = config
+            mock_get_info.side_effect = litellm.exceptions.NotFoundError(
+                message="Model not found", model="claude-2", llm_provider="anthropic"
+            )
+            token_limit = get_model_token_limit(config, "default")
+            self.assertEqual(token_limit, models_params["anthropic"]["claude2"]["token_limit"])
+
+    def test_get_model_token_limit_litellm_error(self):
+        """Test fallback to models_tokens when litellm raises other exceptions."""
+        config = {"provider": "anthropic", "model": "claude-2"}
+
+        with patch("ra_aid.anthropic_token_limiter.get_config_repository") as mock_get_config_repo, \
+             patch("litellm.get_model_info") as mock_get_info:
+            mock_get_config_repo.return_value.get_all.return_value = config
+            mock_get_info.side_effect = Exception("Unknown error")
+            token_limit = get_model_token_limit(config, "default")
+            self.assertEqual(token_limit, models_params["anthropic"]["claude2"]["token_limit"])
+
+    def test_get_model_token_limit_unexpected_error(self):
+        """Test returning None when unexpected errors occur."""
+        config = None  # This will cause an attribute error when accessed
+
+        token_limit = get_model_token_limit(config, "default")
+        self.assertIsNone(token_limit)
         
     def test_has_tool_use(self):
         """Test the has_tool_use function."""
