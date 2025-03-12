@@ -115,8 +115,7 @@ def state_modifier(
 
     wrapped_token_counter = create_token_counter_wrapper(model.model)
 
-    # Keep max_input_tokens at 21000 as requested
-    max_input_tokens = 21000
+    # max_input_tokens = 33440
 
     print("\nDEBUG - Starting token trimming with max_tokens:", max_input_tokens)
     print(f"Current token total: {wrapped_token_counter(messages)}")
@@ -143,12 +142,12 @@ def state_modifier(
 
     if len(result) < len(messages):
         print(f"TRIMMED: {len(messages)} messages → {len(result)} messages")
-        total_tokens_after = wrapped_token_counter(result)
-        print(f"New token total: {total_tokens_after}")
-        print("BEFORE TRIMMING")
-        print_messages_compact(messages)
-        print("AFTER TRIMMING")
-        print_messages_compact(result)
+        # total_tokens_after = wrapped_token_counter(result)
+        # print(f"New token total: {total_tokens_after}")
+        # print("BEFORE TRIMMING")
+        # print_messages_compact(messages)
+        # print("AFTER TRIMMING")
+        # print_messages_compact(result)
 
     return result
 
