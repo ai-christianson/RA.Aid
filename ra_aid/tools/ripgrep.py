@@ -5,6 +5,8 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 
+from ra_aid.database.repositories.human_input_repository import get_human_input_repository
+from ra_aid.database.repositories.trajectory_repository import get_trajectory_repository
 from ra_aid.proc.interactive import run_interactive_command
 from ra_aid.text.processing import truncate_output
 
@@ -158,6 +160,30 @@ def ripgrep_search(
     info_sections.append("\n".join(params))
 
     # Execute command
+    # Record ripgrep search in trajectory
+    trajectory_repo = get_trajectory_repository()
+    human_input_id = get_human_input_repository().get_most_recent_id()
+    trajectory_repo.create(
+        tool_name="ripgrep_search",
+        tool_parameters={
+            "pattern": pattern,
+            "before_context_lines": before_context_lines,
+            "after_context_lines": after_context_lines,
+            "file_type": file_type,
+            "case_sensitive": case_sensitive,
+            "include_hidden": include_hidden,
+            "follow_links": follow_links,
+            "exclude_dirs": exclude_dirs,
+            "fixed_string": fixed_string
+        },
+        step_data={
+            "search_pattern": pattern,
+            "display_title": "Ripgrep Search",
+        },
+        record_type="tool_execution",
+        human_input_id=human_input_id
+    )
+    
     console.print(
         Panel(
             Markdown(f"Searching for: **{pattern}**"),
@@ -179,5 +205,34 @@ def ripgrep_search(
 
     except Exception as e:
         error_msg = str(e)
+        
+        # Record error in trajectory
+        trajectory_repo = get_trajectory_repository()
+        human_input_id = get_human_input_repository().get_most_recent_id()
+        trajectory_repo.create(
+            tool_name="ripgrep_search",
+            tool_parameters={
+                "pattern": pattern,
+                "before_context_lines": before_context_lines,
+                "after_context_lines": after_context_lines,
+                "file_type": file_type,
+                "case_sensitive": case_sensitive,
+                "include_hidden": include_hidden,
+                "follow_links": follow_links,
+                "exclude_dirs": exclude_dirs,
+                "fixed_string": fixed_string
+            },
+            step_data={
+                "search_pattern": pattern,
+                "display_title": "Ripgrep Search Error",
+                "error_message": error_msg
+            },
+            record_type="tool_execution",
+            human_input_id=human_input_id,
+            is_error=True,
+            error_message=error_msg,
+            error_type=type(e).__name__
+        )
+        
         console.print(Panel(error_msg, title="❌ Error", border_style="red"))
         return {"output": error_msg, "return_code": 1, "success": False}

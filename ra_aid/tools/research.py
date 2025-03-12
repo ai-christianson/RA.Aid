@@ -2,6 +2,9 @@ from langchain_core.tools import tool
 from rich.console import Console
 from rich.panel import Panel
 
+from ra_aid.database.repositories.trajectory_repository import get_trajectory_repository
+from ra_aid.database.repositories.human_input_repository import get_human_input_repository
+
 console = Console()
 
 
@@ -10,6 +13,24 @@ def existing_project_detected() -> dict:
     """
     When to call: Once you have confirmed that the current working directory contains project files.
     """
+    try:
+        # Record detection in trajectory
+        trajectory_repo = get_trajectory_repository()
+        human_input_id = get_human_input_repository().get_most_recent_id()
+        trajectory_repo.create(
+            tool_name="existing_project_detected",
+            tool_parameters={},
+            step_data={
+                "detection_type": "existing_project",
+                "display_title": "Existing Project Detected",
+            },
+            record_type="tool_execution",
+            human_input_id=human_input_id
+        )
+    except Exception as e:
+        # Continue even if trajectory recording fails
+        console.print(f"Warning: Could not record trajectory: {str(e)}")
+
     console.print(Panel("📁 Existing Project Detected", style="bright_blue", padding=0))
     return {
         "hint": (
@@ -30,6 +51,24 @@ def monorepo_detected() -> dict:
     """
     When to call: After identifying that multiple packages or modules exist within a single repository.
     """
+    try:
+        # Record detection in trajectory
+        trajectory_repo = get_trajectory_repository()
+        human_input_id = get_human_input_repository().get_most_recent_id()
+        trajectory_repo.create(
+            tool_name="monorepo_detected",
+            tool_parameters={},
+            step_data={
+                "detection_type": "monorepo",
+                "display_title": "Monorepo Detected",
+            },
+            record_type="tool_execution",
+            human_input_id=human_input_id
+        )
+    except Exception as e:
+        # Continue even if trajectory recording fails
+        console.print(f"Warning: Could not record trajectory: {str(e)}")
+
     console.print(Panel("📦 Monorepo Detected", style="bright_blue", padding=0))
     return {
         "hint": (
@@ -53,6 +92,24 @@ def ui_detected() -> dict:
     """
     When to call: After detecting that the project contains a user interface layer or front-end component.
     """
+    try:
+        # Record detection in trajectory
+        trajectory_repo = get_trajectory_repository()
+        human_input_id = get_human_input_repository().get_most_recent_id()
+        trajectory_repo.create(
+            tool_name="ui_detected",
+            tool_parameters={},
+            step_data={
+                "detection_type": "ui",
+                "display_title": "UI Detected",
+            },
+            record_type="tool_execution",
+            human_input_id=human_input_id
+        )
+    except Exception as e:
+        # Continue even if trajectory recording fails
+        console.print(f"Warning: Could not record trajectory: {str(e)}")
+
     console.print(Panel("🎯 UI Detected", style="bright_blue", padding=0))
     return {
         "hint": (

@@ -234,6 +234,24 @@ def create_llm_client(
     elif supports_temperature:
         if temperature is None:
             temperature = 0.7
+            # Import repository classes directly to avoid circular imports
+            from ra_aid.database.repositories.trajectory_repository import TrajectoryRepository
+            from ra_aid.database.repositories.human_input_repository import HumanInputRepository
+            from ra_aid.database.connection import get_db
+            
+            # Create repositories directly
+            trajectory_repo = TrajectoryRepository(get_db())
+            human_input_repo = HumanInputRepository(get_db())
+            human_input_id = human_input_repo.get_most_recent_id()
+            
+            trajectory_repo.create(
+                step_data={
+                    "message": "This model supports temperature argument but none was given. Setting default temperature to 0.7.",
+                    "display_title": "Information",
+                },
+                record_type="info",
+                human_input_id=human_input_id
+            )
             cpm(
                 "This model supports temperature argument but none was given. Setting default temperature to 0.7."
             )

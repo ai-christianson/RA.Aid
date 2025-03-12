@@ -462,6 +462,38 @@ class CiaynAgent:
             error_msg = f"Error: {str(e)} \n Could not execute code: {code}"
             tool_name = self.extract_tool_name(code)
             logger.info(f"Tool execution failed for `{tool_name}`: {str(e)}")
+            
+            # Record error in trajectory
+            try:
+                # Import here to avoid circular imports
+                from ra_aid.database.repositories.trajectory_repository import TrajectoryRepository
+                from ra_aid.database.repositories.human_input_repository import HumanInputRepository
+                from ra_aid.database.connection import get_db
+                
+                # Create repositories directly
+                trajectory_repo = TrajectoryRepository(get_db())
+                human_input_repo = HumanInputRepository(get_db())
+                human_input_id = human_input_repo.get_most_recent_id()
+                
+                trajectory_repo.create(
+                    step_data={
+                        "error_message": f"Tool execution failed for `{tool_name}`:\nError: {str(e)}",
+                        "display_title": "Tool Error",
+                        "code": code,
+                        "tool_name": tool_name
+                    },
+                    record_type="tool_execution",
+                    human_input_id=human_input_id,
+                    is_error=True,
+                    error_message=str(e),
+                    error_type="ToolExecutionError",
+                    tool_name=tool_name,
+                    tool_parameters={"code": code}
+                )
+            except Exception as trajectory_error:
+                # Just log and continue if there's an error in trajectory recording
+                logger.error(f"Error recording trajectory for tool error display: {trajectory_error}")
+                
             print_warning(f"Tool execution failed for `{tool_name}`:\nError: {str(e)}\n\nCode:\n\n````\n{code}\n````", title="Tool Error")
             raise ToolExecutionError(
                 error_msg, base_message=msg, tool_name=tool_name
@@ -495,6 +527,36 @@ class CiaynAgent:
         if not fallback_response:
             self.chat_history.append(err_msg)
             logger.info(f"Tool fallback was attempted but did not succeed. Original error: {str(e)}")
+            
+            # Record error in trajectory
+            try:
+                # Import here to avoid circular imports
+                from ra_aid.database.repositories.trajectory_repository import TrajectoryRepository
+                from ra_aid.database.repositories.human_input_repository import HumanInputRepository
+                from ra_aid.database.connection import get_db
+                
+                # Create repositories directly
+                trajectory_repo = TrajectoryRepository(get_db())
+                human_input_repo = HumanInputRepository(get_db())
+                human_input_id = human_input_repo.get_most_recent_id()
+                
+                trajectory_repo.create(
+                    step_data={
+                        "error_message": f"Tool fallback was attempted but did not succeed. Original error: {str(e)}",
+                        "display_title": "Fallback Failed",
+                        "tool_name": e.tool_name if hasattr(e, "tool_name") else "unknown_tool"
+                    },
+                    record_type="error",
+                    human_input_id=human_input_id,
+                    is_error=True,
+                    error_message=str(e),
+                    error_type="FallbackFailedError",
+                    tool_name=e.tool_name if hasattr(e, "tool_name") else "unknown_tool"
+                )
+            except Exception as trajectory_error:
+                # Just log and continue if there's an error in trajectory recording
+                logger.error(f"Error recording trajectory for fallback failed warning: {trajectory_error}")
+                
             print_warning(f"Tool fallback was attempted but did not succeed. Original error: {str(e)}", title="Fallback Failed")
             return ""
 
@@ -595,6 +657,35 @@ class CiaynAgent:
         matches = re.findall(pattern, response, re.DOTALL)
         if len(matches) == 0:
             logger.info("Failed to extract a valid tool call from the model's response.")
+            
+            # Record error in trajectory
+            try:
+                # Import here to avoid circular imports
+                from ra_aid.database.repositories.trajectory_repository import TrajectoryRepository
+                from ra_aid.database.repositories.human_input_repository import HumanInputRepository
+                from ra_aid.database.connection import get_db
+                
+                # Create repositories directly
+                trajectory_repo = TrajectoryRepository(get_db())
+                human_input_repo = HumanInputRepository(get_db())
+                human_input_id = human_input_repo.get_most_recent_id()
+                
+                trajectory_repo.create(
+                    step_data={
+                        "error_message": "Failed to extract a valid tool call from the model's response.",
+                        "display_title": "Extraction Failed",
+                        "code": code
+                    },
+                    record_type="error",
+                    human_input_id=human_input_id,
+                    is_error=True,
+                    error_message="Failed to extract a valid tool call from the model's response.",
+                    error_type="ExtractionError"
+                )
+            except Exception as trajectory_error:
+                # Just log and continue if there's an error in trajectory recording
+                logger.error(f"Error recording trajectory for extraction error display: {trajectory_error}")
+                
             print_warning("Failed to extract a valid tool call from the model's response.", title="Extraction Failed")
             raise ToolExecutionError("Failed to extract tool call")
         ma = matches[0][0].strip()
@@ -647,6 +738,36 @@ class CiaynAgent:
                 
                 warning_message = f"The model returned an empty response (attempt {empty_response_count} of {max_empty_responses}). Requesting the model to make a valid tool call."
                 logger.info(warning_message)
+                
+                # Record warning in trajectory
+                try:
+                    # Import here to avoid circular imports
+                    from ra_aid.database.repositories.trajectory_repository import TrajectoryRepository
+                    from ra_aid.database.repositories.human_input_repository import HumanInputRepository
+                    from ra_aid.database.connection import get_db_connection
+                    
+                    # Create repositories directly
+                    trajectory_repo = TrajectoryRepository(get_db_connection())
+                    human_input_repo = HumanInputRepository(get_db_connection())
+                    human_input_id = human_input_repo.get_most_recent_id()
+                    
+                    trajectory_repo.create(
+                        step_data={
+                            "warning_message": warning_message,
+                            "display_title": "Empty Response",
+                            "attempt": empty_response_count,
+                            "max_attempts": max_empty_responses
+                        },
+                        record_type="error",
+                        human_input_id=human_input_id,
+                        is_error=True,
+                        error_message=warning_message,
+                        error_type="EmptyResponseWarning"
+                    )
+                except Exception as trajectory_error:
+                    # Just log and continue if there's an error in trajectory recording
+                    logger.error(f"Error recording trajectory for empty response warning: {trajectory_error}")
+                    
                 print_warning(warning_message, title="Empty Response")
                 
                 if empty_response_count >= max_empty_responses:
@@ -658,6 +779,36 @@ class CiaynAgent:
                     
                     error_message = "The agent has crashed after multiple failed attempts to generate a valid tool call."
                     logger.error(error_message)
+                    
+                    # Record error in trajectory
+                    try:
+                        # Import here to avoid circular imports
+                        from ra_aid.database.repositories.trajectory_repository import TrajectoryRepository
+                        from ra_aid.database.repositories.human_input_repository import HumanInputRepository
+                        from ra_aid.database.connection import get_db_connection
+                        
+                        # Create repositories directly
+                        trajectory_repo = TrajectoryRepository(get_db_connection())
+                        human_input_repo = HumanInputRepository(get_db_connection())
+                        human_input_id = human_input_repo.get_most_recent_id()
+                        
+                        trajectory_repo.create(
+                            step_data={
+                                "error_message": error_message,
+                                "display_title": "Agent Crashed",
+                                "crash_reason": crash_message,
+                                "attempts": empty_response_count
+                            },
+                            record_type="error",
+                            human_input_id=human_input_id,
+                            is_error=True,
+                            error_message=error_message,
+                            error_type="AgentCrashError"
+                        )
+                    except Exception as trajectory_error:
+                        # Just log and continue if there's an error in trajectory recording
+                        logger.error(f"Error recording trajectory for agent crash: {trajectory_error}")
+                        
                     print_error(error_message)
                     
                     yield self._create_error_chunk(crash_message)

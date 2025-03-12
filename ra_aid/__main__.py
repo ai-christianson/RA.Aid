@@ -64,6 +64,9 @@ from ra_aid.database.repositories.trajectory_repository import (
     TrajectoryRepositoryManager,
     get_trajectory_repository,
 )
+from ra_aid.database.repositories.session_repository import (
+    SessionRepositoryManager, get_session_repository
+)
 from ra_aid.database.repositories.related_files_repository import (
     RelatedFilesRepositoryManager,
 )
@@ -297,6 +300,11 @@ Examples:
         "--show-thoughts",
         action="store_true",
         help="Display model thinking content extracted from think tags when supported by the model",
+    )
+    parser.add_argument(
+        "--show-cost",
+        action="store_true",
+        help="Display cost information as the agent works",
     )
     parser.add_argument(
         "--reasoning-assistance",
@@ -537,19 +545,19 @@ def main():
             env_discovery = EnvDiscovery()
             env_discovery.discover()
             env_data = env_discovery.format_markdown()
-
-            with (
-                KeyFactRepositoryManager(db) as key_fact_repo,
-                KeySnippetRepositoryManager(db) as key_snippet_repo,
-                HumanInputRepositoryManager(db) as human_input_repo,
-                ResearchNoteRepositoryManager(db) as research_note_repo,
-                RelatedFilesRepositoryManager() as related_files_repo,
-                TrajectoryRepositoryManager(db) as trajectory_repo,
-                WorkLogRepositoryManager() as work_log_repo,
-                ConfigRepositoryManager(config) as config_repo,
-                EnvInvManager(env_data) as env_inv,
-            ):
+            
+            with SessionRepositoryManager(db) as session_repo, \
+                 KeyFactRepositoryManager(db) as key_fact_repo, \
+                 KeySnippetRepositoryManager(db) as key_snippet_repo, \
+                 HumanInputRepositoryManager(db) as human_input_repo, \
+                 ResearchNoteRepositoryManager(db) as research_note_repo, \
+                 RelatedFilesRepositoryManager() as related_files_repo, \
+                 TrajectoryRepositoryManager(db) as trajectory_repo, \
+                 WorkLogRepositoryManager() as work_log_repo, \
+                 ConfigRepositoryManager(config) as config_repo, \
+                 EnvInvManager(env_data) as env_inv:
                 # This initializes all repositories and makes them available via their respective get methods
+                logger.debug("Initialized SessionRepository")
                 logger.debug("Initialized KeyFactRepository")
                 logger.debug("Initialized KeySnippetRepository")
                 logger.debug("Initialized HumanInputRepository")
@@ -559,6 +567,10 @@ def main():
                 logger.debug("Initialized WorkLogRepository")
                 logger.debug("Initialized ConfigRepository")
                 logger.debug("Initialized Environment Inventory")
+                
+                # Create a new session for this program run
+                logger.debug("Initializing new session")
+                session_repo.create_session()
 
                 # Check dependencies before proceeding
                 check_dependencies()
@@ -611,6 +623,7 @@ def main():
                 )
                 config_repo.set("web_research_enabled", web_research_enabled)
                 config_repo.set("show_thoughts", args.show_thoughts)
+                config_repo.set("show_cost", args.show_cost)
                 config_repo.set("force_reasoning_assistance", args.reasoning_assistance)
                 config_repo.set(
                     "disable_reasoning_assistance", args.no_reasoning_assistance
@@ -636,10 +649,40 @@ def main():
                     )
 
                     if args.research_only:
+                        try:
+                            trajectory_repo = get_trajectory_repository()
+                            human_input_id = get_human_input_repository().get_most_recent_id()
+                            error_message = "Chat mode cannot be used with --research-only"
+                            trajectory_repo.create(
+                                step_data={
+                                    "display_title": "Error",
+                                    "error_message": error_message,
+                                },
+                                record_type="error",
+                                human_input_id=human_input_id,
+                                is_error=True,
+                                error_message=error_message,
+                            )
+                        except Exception as traj_error:
+                            # Swallow exception to avoid recursion
+                            logger.debug(f"Error recording trajectory: {traj_error}")
+                            pass
                         print_error("Chat mode cannot be used with --research-only")
                         sys.exit(1)
 
                     print_stage_header("Chat Mode")
+                    
+                    # Record stage transition in trajectory
+                    trajectory_repo = get_trajectory_repository()
+                    human_input_id = get_human_input_repository().get_most_recent_id()
+                    trajectory_repo.create(
+                        step_data={
+                            "stage": "chat_mode",
+                            "display_title": "Chat Mode",
+                        },
+                        record_type="stage_transition",
+                        human_input_id=human_input_id
+                    )
 
                     # Get project info
                     try:
@@ -690,12 +733,9 @@ def main():
                     config_repo.set("expert_model", args.expert_model)
                     config_repo.set("temperature", args.temperature)
                     config_repo.set("show_thoughts", args.show_thoughts)
-                    config_repo.set(
-                        "force_reasoning_assistance", args.reasoning_assistance
-                    )
-                    config_repo.set(
-                        "disable_reasoning_assistance", args.no_reasoning_assistance
-                    )
+                    config_repo.set("show_cost", args.show_cost)
+                    config_repo.set("force_reasoning_assistance", args.reasoning_assistance)
+                    config_repo.set("disable_reasoning_assistance", args.no_reasoning_assistance)
 
                     # Set modification tools based on use_aider flag
                     set_modification_tools(args.use_aider)
@@ -737,6 +777,24 @@ def main():
 
                 # Validate message is provided
                 if not args.message:
+                    try:
+                        trajectory_repo = get_trajectory_repository()
+                        human_input_id = get_human_input_repository().get_most_recent_id()
+                        error_message = "--message is required"
+                        trajectory_repo.create(
+                            step_data={
+                                "display_title": "Error",
+                                "error_message": error_message,
+                            },
+                            record_type="error",
+                            human_input_id=human_input_id,
+                            is_error=True,
+                            error_message=error_message,
+                        )
+                    except Exception as traj_error:
+                        # Swallow exception to avoid recursion
+                        logger.debug(f"Error recording trajectory: {traj_error}")
+                        pass
                     print_error("--message is required")
                     sys.exit(1)
 
@@ -805,6 +863,18 @@ def main():
 
                 # Run research stage
                 print_stage_header("Research Stage")
+                
+                # Record stage transition in trajectory
+                trajectory_repo = get_trajectory_repository()
+                human_input_id = get_human_input_repository().get_most_recent_id()
+                trajectory_repo.create(
+                    step_data={
+                        "stage": "research_stage",
+                        "display_title": "Research Stage",
+                    },
+                    record_type="stage_transition",
+                    human_input_id=human_input_id
+                )
 
                 # Initialize research model with potential overrides
                 research_provider = args.research_provider or args.provider

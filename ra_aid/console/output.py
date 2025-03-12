@@ -6,14 +6,18 @@ from rich.panel import Panel
 
 from ra_aid.exceptions import ToolExecutionError
 from ra_aid.callbacks.anthropic_callback_handler import AnthropicCallbackHandler
+from ra_aid.database.repositories.config_repository import get_config_repository
+from ra_aid.config import DEFAULT_SHOW_COST
 
 # Import shared console instance
 from .formatting import console
 
 
 def get_cost_subtitle(cost_cb: Optional[AnthropicCallbackHandler]) -> Optional[str]:
-    """Generate a subtitle with cost information if a callback is provided."""
-    if cost_cb:
+    """Generate a subtitle with cost information if a callback is provided and show_cost is enabled."""
+    # Only show cost information if both cost_cb is provided AND show_cost is True
+    show_cost = get_config_repository().get("show_cost", DEFAULT_SHOW_COST)
+    if cost_cb and show_cost:
         return f"Cost: ${cost_cb.total_cost:.6f} | Tokens: {cost_cb.total_tokens}"
     return None
 

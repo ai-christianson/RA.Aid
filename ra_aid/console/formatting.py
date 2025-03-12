@@ -1,6 +1,10 @@
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
+from typing import Optional
+
+from ra_aid.database.repositories.trajectory_repository import get_trajectory_repository
+from ra_aid.database.repositories.human_input_repository import get_human_input_repository
 
 console = Console()
 

@@ -132,8 +132,8 @@ class TrajectoryRepository:
     
     def create(
         self,
-        tool_name: str,
-        tool_parameters: Dict[str, Any],
+        tool_name: Optional[str] = None,
+        tool_parameters: Optional[Dict[str, Any]] = None,
         tool_result: Optional[Dict[str, Any]] = None,
         step_data: Optional[Dict[str, Any]] = None,
         record_type: str = "tool_execution",
@@ -149,8 +149,8 @@ class TrajectoryRepository:
         Create a new trajectory record in the database.
         
         Args:
-            tool_name: Name of the tool that was executed
-            tool_parameters: Parameters passed to the tool (will be JSON encoded)
+            tool_name: Optional name of the tool that was executed
+            tool_parameters: Optional parameters passed to the tool (will be JSON encoded)
             tool_result: Result returned by the tool (will be JSON encoded)
             step_data: UI rendering data (will be JSON encoded)
             record_type: Type of trajectory record
@@ -170,7 +170,7 @@ class TrajectoryRepository:
         """
         try:
             # Serialize JSON fields
-            tool_parameters_json = json.dumps(tool_parameters)
+            tool_parameters_json = json.dumps(tool_parameters) if tool_parameters is not None else None
             tool_result_json = json.dumps(tool_result) if tool_result is not None else None
             step_data_json = json.dumps(step_data) if step_data is not None else None
             
@@ -185,7 +185,7 @@ class TrajectoryRepository:
             # Create the trajectory record
             trajectory = Trajectory.create(
                 human_input=human_input,
-                tool_name=tool_name,
+                tool_name=tool_name or "",  # Use empty string if tool_name is None
                 tool_parameters=tool_parameters_json,
                 tool_result=tool_result_json,
                 step_data=step_data_json,
@@ -197,7 +197,10 @@ class TrajectoryRepository:
                 error_type=error_type,
                 error_details=error_details
             )
-            logger.debug(f"Created trajectory record ID {trajectory.id} for tool: {tool_name}")
+            if tool_name:
+                logger.debug(f"Created trajectory record ID {trajectory.id} for tool: {tool_name}")
+            else:
+                logger.debug(f"Created trajectory record ID {trajectory.id} of type: {record_type}")
             return trajectory
         except peewee.DatabaseError as e:
             logger.error(f"Failed to create trajectory record: {str(e)}")

@@ -21,7 +21,11 @@ from ra_aid.anthropic_token_limiter import (
     state_modifier,
 )
 from ra_aid.models_params import DEFAULT_TOKEN_LIMIT, models_params
-from ra_aid.database.repositories.config_repository import ConfigRepositoryManager, get_config_repository, config_repo_var
+from ra_aid.database.repositories.config_repository import (
+    ConfigRepositoryManager,
+    get_config_repository,
+    config_repo_var,
+)
 
 
 @pytest.fixture
@@ -34,46 +38,91 @@ def mock_model():
 @pytest.fixture
 def mock_config_repository():
     """Mock the ConfigRepository to avoid database operations during tests"""
-    with patch('ra_aid.database.repositories.config_repository.config_repo_var') as mock_repo_var:
+    with patch(
+        "ra_aid.database.repositories.config_repository.config_repo_var"
+    ) as mock_repo_var:
         # Setup a mock repository
         mock_repo = MagicMock()
-        
+
         # Create a dictionary to simulate config
         config = {}
-        
+
         # Setup get method to return config values
         def get_config(key, default=None):
             return config.get(key, default)
+
         mock_repo.get.side_effect = get_config
-        
+
         # Setup get_all method to return all config values
         mock_repo.get_all.return_value = config
-        
+
         # Setup set method to update config values
         def set_config(key, value):
             config[key] = value
+
         mock_repo.set.side_effect = set_config
-        
+
         # Setup update method to update multiple config values
         def update_config(update_dict):
             config.update(update_dict)
+
         mock_repo.update.side_effect = update_config
-        
+
         # Make the mock context var return our mock repo
         mock_repo_var.get.return_value = mock_repo
-        
+
         yield mock_repo
 
 
-# These tests have been moved to test_anthropic_token_limiter.py
+@pytest.fixture(autouse=True)
+def mock_trajectory_repository():
+    """Mock the TrajectoryRepository to avoid database operations during tests"""
+    with patch(
+        "ra_aid.database.repositories.trajectory_repository.trajectory_repo_var"
+    ) as mock_repo_var:
+        # Setup a mock repository
+        mock_repo = MagicMock()
+
+        # Setup create method to return a mock trajectory
+        def mock_create(**kwargs):
+            mock_trajectory = MagicMock()
+            mock_trajectory.id = 1
+            return mock_trajectory
+
+        mock_repo.create.side_effect = mock_create
+
+        # Make the mock context var return our mock repo
+        mock_repo_var.get.return_value = mock_repo
+
+        yield mock_repo
+
+
+@pytest.fixture(autouse=True)
+def mock_human_input_repository():
+    """Mock the HumanInputRepository to avoid database operations during tests"""
+    with patch(
+        "ra_aid.database.repositories.human_input_repository.human_input_repo_var"
+    ) as mock_repo_var:
+        # Setup a mock repository
+        mock_repo = MagicMock()
+
+        # Setup get_most_recent_id method to return a dummy ID
+        mock_repo.get_most_recent_id.return_value = 1
+
+        # Make the mock context var return our mock repo
+        mock_repo_var.get.return_value = mock_repo
+
+        yield mock_repo
 
 
 def test_create_agent_anthropic(mock_model, mock_config_repository):
     """Test create_agent with Anthropic Claude model."""
     mock_config_repository.update({"provider": "anthropic", "model": "claude-2"})
 
-    with patch("ra_aid.agent_utils.create_react_agent") as mock_react, \
-         patch("ra_aid.anthropic_token_limiter.state_modifier") as mock_state_modifier:
+    with (
+        patch("ra_aid.agent_utils.create_react_agent") as mock_react,
+        patch("ra_aid.anthropic_token_limiter.state_modifier") as mock_state_modifier,
+    ):
         mock_react.return_value = "react_agent"
         agent = create_agent(mock_model, [])
 
@@ -81,7 +130,7 @@ def test_create_agent_anthropic(mock_model, mock_config_repository):
         mock_react.assert_called_once_with(
             mock_model,
             [],
-            interrupt_after=['tools'],
+            interrupt_after=["tools"],
             version="v2",
             state_modifier=mock_react.call_args[1]["state_modifier"],
             name="React",
@@ -173,13 +222,17 @@ def test_create_agent_with_checkpointer(mock_model, mock_config_repository):
         )
 
 
-def test_create_agent_anthropic_token_limiting_enabled(mock_model, mock_config_repository):
+def test_create_agent_anthropic_token_limiting_enabled(
+    mock_model, mock_config_repository
+):
     """Test create_agent sets up token limiting for Claude models when enabled."""
-    mock_config_repository.update({
-        "provider": "anthropic",
-        "model": "claude-2",
-        "limit_tokens": True,
-    })
+    mock_config_repository.update(
+        {
+            "provider": "anthropic",
+            "model": "claude-2",
+            "limit_tokens": True,
+        }
+    )
 
     with (
         patch("ra_aid.agent_utils.create_react_agent") as mock_react,
@@ -196,13 +249,17 @@ def test_create_agent_anthropic_token_limiting_enabled(mock_model, mock_config_r
         assert callable(args[1]["state_modifier"])
 
 
-def test_create_agent_anthropic_token_limiting_disabled(mock_model, mock_config_repository):
+def test_create_agent_anthropic_token_limiting_disabled(
+    mock_model, mock_config_repository
+):
     """Test create_agent doesn't set up token limiting for Claude models when disabled."""
-    mock_config_repository.update({
-        "provider": "anthropic",
-        "model": "claude-2",
-        "limit_tokens": False,
-    })
+    mock_config_repository.update(
+        {
+            "provider": "anthropic",
+            "model": "claude-2",
+            "limit_tokens": False,
+        }
+    )
 
     with (
         patch("ra_aid.agent_utils.create_react_agent") as mock_react,
@@ -214,7 +271,9 @@ def test_create_agent_anthropic_token_limiting_disabled(mock_model, mock_config_
         agent = create_agent(mock_model, [])
 
         assert agent == "react_agent"
-        mock_react.assert_called_once_with(mock_model, [], interrupt_after=['tools'], version="v2", name="React")
+        mock_react.assert_called_once_with(
+            mock_model, [], interrupt_after=["tools"], version="v2", name="React"
+        )
 
 
 # These tests have been moved to test_anthropic_token_limiter.py
@@ -249,11 +308,11 @@ def test_agent_context_depth():
     with agent_context() as ctx1:
         assert get_depth() == 0  # Root context has depth 0
         assert ctx1.depth == 0
-        
+
         with agent_context() as ctx2:
             assert get_depth() == 1  # Nested context has depth 1
             assert ctx2.depth == 1
-            
+
             with agent_context() as ctx3:
                 assert get_depth() == 2  # Doubly nested context has depth 2
                 assert ctx3.depth == 2
@@ -271,7 +330,7 @@ def test_run_agent_stream(monkeypatch, mock_config_repository):
     class DummyAgent:
         def stream(self, input_data, cfg: dict):
             yield {"content": "chunk1"}
-            
+
         def get_state(self, state_config=None):
             # Return an object with a next property set to None
             return State()
@@ -322,28 +381,28 @@ def test_handle_api_error_valueerror():
     # ValueError not containing "code" or rate limit phrases should be re-raised
     with pytest.raises(ValueError):
         _handle_api_error(ValueError("some unrelated error"), 0, 5, 1)
-        
+
     # ValueError with "429" should be handled without raising
     _handle_api_error(ValueError("error code 429"), 0, 5, 1)
-    
+
     # ValueError with "rate limit" phrase should be handled without raising
     _handle_api_error(ValueError("hit rate limit"), 0, 5, 1)
-    
+
     # ValueError with "too many requests" phrase should be handled without raising
     _handle_api_error(ValueError("too many requests, try later"), 0, 5, 1)
-    
+
     # ValueError with "quota exceeded" phrase should be handled without raising
     _handle_api_error(ValueError("quota exceeded for this month"), 0, 5, 1)
 
 
 def test_handle_api_error_status_code():
     from ra_aid.agent_utils import _handle_api_error
-    
+
     # Error with status_code=429 attribute should be handled without raising
     error_with_status = Exception("Rate limited")
     error_with_status.status_code = 429
     _handle_api_error(error_with_status, 0, 5, 1)
-    
+
     # Error with http_status=429 attribute should be handled without raising
     error_with_http_status = Exception("Too many requests")
     error_with_http_status.http_status = 429
@@ -352,16 +411,16 @@ def test_handle_api_error_status_code():
 
 def test_handle_api_error_rate_limit_phrases():
     from ra_aid.agent_utils import _handle_api_error
-    
+
     # Generic exception with "rate limit" phrase should be handled without raising
     _handle_api_error(Exception("You have exceeded your rate limit"), 0, 5, 1)
-    
+
     # Generic exception with "too many requests" phrase should be handled without raising
     _handle_api_error(Exception("Too many requests, please slow down"), 0, 5, 1)
-    
+
     # Generic exception with "quota exceeded" phrase should be handled without raising
     _handle_api_error(Exception("API quota exceeded for this billing period"), 0, 5, 1)
-    
+
     # Generic exception with "rate" and "limit" separate but in message should be handled
     _handle_api_error(Exception("You hit the rate at which we limit requests"), 0, 5, 1)
 
@@ -482,7 +541,9 @@ def test_run_agent_with_retry_checks_crash_status(monkeypatch, mock_config_repos
         assert "Agent has crashed: Test crash message" in result
 
 
-def test_run_agent_with_retry_handles_badrequest_error(monkeypatch, mock_config_repository):
+def test_run_agent_with_retry_handles_badrequest_error(
+    monkeypatch, mock_config_repository
+):
     """Test that run_agent_with_retry properly handles BadRequestError as unretryable."""
     from ra_aid.agent_context import agent_context, is_crashed
     from ra_aid.agent_utils import run_agent_with_retry
@@ -540,7 +601,9 @@ def test_run_agent_with_retry_handles_badrequest_error(monkeypatch, mock_config_
         assert is_crashed()
 
 
-def test_run_agent_with_retry_handles_api_badrequest_error(monkeypatch, mock_config_repository):
+def test_run_agent_with_retry_handles_api_badrequest_error(
+    monkeypatch, mock_config_repository
+):
     """Test that run_agent_with_retry properly handles API BadRequestError as unretryable."""
     # Import APIError from anthropic module and patch it on the agent_utils module
 
@@ -611,7 +674,9 @@ def test_run_agent_with_retry_handles_api_badrequest_error(monkeypatch, mock_con
 def test_handle_api_error_resource_exhausted():
     from google.api_core.exceptions import ResourceExhausted
     from ra_aid.agent_utils import _handle_api_error
-    
+
     # ResourceExhausted exception should be handled without raising
-    resource_exhausted_error = ResourceExhausted("429 Resource has been exhausted (e.g. check quota).")
+    resource_exhausted_error = ResourceExhausted(
+        "429 Resource has been exhausted (e.g. check quota)."
+    )
     _handle_api_error(resource_exhausted_error, 0, 5, 1)

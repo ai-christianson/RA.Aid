@@ -42,8 +42,8 @@ def initialize_database():
     # to avoid circular imports
     # Note: This import needs to be here, not at the top level
     try:
-        from ra_aid.database.models import KeyFact, KeySnippet, HumanInput, ResearchNote, Trajectory
-        db.create_tables([KeyFact, KeySnippet, HumanInput, ResearchNote, Trajectory], safe=True)
+        from ra_aid.database.models import KeyFact, KeySnippet, HumanInput, ResearchNote, Trajectory, Session
+        db.create_tables([KeyFact, KeySnippet, HumanInput, ResearchNote, Trajectory, Session], safe=True)
         logger.debug("Ensured database tables exist")
     except Exception as e:
         logger.error(f"Error creating tables: {str(e)}")
@@ -99,6 +99,25 @@ class BaseModel(peewee.Model):
             raise
 
 
+class Session(BaseModel):
+    """
+    Model representing a session stored in the database.
+    
+    Sessions track information about each program run, providing a way to group
+    related records like human inputs, trajectories, and key facts.
+    
+    Each session record captures details about when the program was started,
+    what command line arguments were used, and environment information.
+    """
+    start_time = peewee.DateTimeField(default=datetime.datetime.now)
+    command_line = peewee.TextField(null=True)
+    program_version = peewee.TextField(null=True)
+    machine_info = peewee.TextField(null=True)  # JSON-encoded machine information
+    
+    class Meta:
+        table_name = "session"
+
+
 class HumanInput(BaseModel):
     """
     Model representing human input stored in the database.
@@ -109,6 +128,7 @@ class HumanInput(BaseModel):
     """
     content = peewee.TextField()
     source = peewee.TextField()  # 'cli', 'chat', or 'hil'
+    session = peewee.ForeignKeyField(Session, backref='human_inputs', null=True)
     # created_at and updated_at are inherited from BaseModel
     
     class Meta:
@@ -124,6 +144,7 @@ class KeyFact(BaseModel):
     """
     content = peewee.TextField()
     human_input = peewee.ForeignKeyField(HumanInput, backref='key_facts', null=True)
+    session = peewee.ForeignKeyField(Session, backref='key_facts', null=True)
     # created_at and updated_at are inherited from BaseModel
     
     class Meta:
@@ -143,6 +164,7 @@ class KeySnippet(BaseModel):
     snippet = peewee.TextField()
     description = peewee.TextField(null=True)
     human_input = peewee.ForeignKeyField(HumanInput, backref='key_snippets', null=True)
+    session = peewee.ForeignKeyField(Session, backref='key_snippets', null=True)
     # created_at and updated_at are inherited from BaseModel
     
     class Meta:
@@ -159,6 +181,7 @@ class ResearchNote(BaseModel):
     """
     content = peewee.TextField()
     human_input = peewee.ForeignKeyField(HumanInput, backref='research_notes', null=True)
+    session = peewee.ForeignKeyField(Session, backref='research_notes', null=True)
     # created_at and updated_at are inherited from BaseModel
     
     class Meta:
@@ -182,17 +205,18 @@ class Trajectory(BaseModel):
     - Error information (when a tool execution fails)
     """
     human_input = peewee.ForeignKeyField(HumanInput, backref='trajectories', null=True)
-    tool_name = peewee.TextField()
-    tool_parameters = peewee.TextField()  # JSON-encoded parameters
-    tool_result = peewee.TextField()  # JSON-encoded result
-    step_data = peewee.TextField()  # JSON-encoded UI rendering data
-    record_type = peewee.TextField()  # Type of trajectory record
+    tool_name = peewee.TextField(null=True)
+    tool_parameters = peewee.TextField(null=True)  # JSON-encoded parameters
+    tool_result = peewee.TextField(null=True)  # JSON-encoded result
+    step_data = peewee.TextField(null=True)  # JSON-encoded UI rendering data
+    record_type = peewee.TextField(null=True)  # Type of trajectory record
     cost = peewee.FloatField(null=True)  # Placeholder for cost tracking
     tokens = peewee.IntegerField(null=True)  # Placeholder for token usage tracking
     is_error = peewee.BooleanField(default=False)  # Flag indicating if this record represents an error
     error_message = peewee.TextField(null=True)  # The error message
     error_type = peewee.TextField(null=True)  # The type/class of the error
     error_details = peewee.TextField(null=True)  # Additional error details like stack traces or context
+    session = peewee.ForeignKeyField(Session, backref='trajectories', null=True)
     # created_at and updated_at are inherited from BaseModel
     
     class Meta:

@@ -22,6 +22,7 @@ from ra_aid.agent_utils import create_agent, run_agent_with_retry
 from ra_aid.database.repositories.research_note_repository import get_research_note_repository
 from ra_aid.database.repositories.human_input_repository import get_human_input_repository
 from ra_aid.database.repositories.config_repository import get_config_repository
+from ra_aid.database.repositories.trajectory_repository import get_trajectory_repository
 from ra_aid.llm import initialize_llm
 from ra_aid.model_formatters.research_notes_formatter import format_research_note
 from ra_aid.tools.memory import log_work_event
@@ -84,6 +85,22 @@ def delete_research_notes(note_ids: List[int]) -> str:
     if deleted_notes:
         deleted_msg = "Successfully deleted research notes:\n" + "\n".join([f"- #{note_id}: {content[:100]}..." if len(content) > 100 else f"- #{note_id}: {content}" for note_id, content in deleted_notes])
         result_parts.append(deleted_msg)
+        # Record GC operation in trajectory
+        try:
+            trajectory_repo = get_trajectory_repository()
+            human_input_id = get_human_input_repository().get_most_recent_id()
+            trajectory_repo.create(
+                step_data={
+                    "deleted_notes": deleted_notes,
+                    "display_title": "Research Notes Deleted",
+                },
+                record_type="gc_operation",
+                human_input_id=human_input_id,
+                tool_name="research_notes_gc_agent"
+            )
+        except Exception:
+            pass  # Continue if trajectory recording fails
+            
         console.print(
             Panel(Markdown(deleted_msg), title="Research Notes Deleted", border_style="green")
         )
@@ -91,6 +108,22 @@ def delete_research_notes(note_ids: List[int]) -> str:
     if protected_notes:
         protected_msg = "Protected research notes (associated with current request):\n" + "\n".join([f"- #{note_id}: {content[:100]}..." if len(content) > 100 else f"- #{note_id}: {content}" for note_id, content in protected_notes])
         result_parts.append(protected_msg)
+        # Record GC operation in trajectory
+        try:
+            trajectory_repo = get_trajectory_repository()
+            human_input_id = get_human_input_repository().get_most_recent_id()
+            trajectory_repo.create(
+                step_data={
+                    "protected_notes": protected_notes,
+                    "display_title": "Research Notes Protected",
+                },
+                record_type="gc_operation",
+                human_input_id=human_input_id,
+                tool_name="research_notes_gc_agent"
+            )
+        except Exception:
+            pass  # Continue if trajectory recording fails
+            
         console.print(
             Panel(Markdown(protected_msg), title="Research Notes Protected", border_style="blue")
         )
@@ -125,10 +158,44 @@ def run_research_notes_gc_agent(threshold: int = 30) -> None:
         note_count = len(notes)
     except RuntimeError as e:
         logger.error(f"Failed to access research note repository: {str(e)}")
+        # Record GC error in trajectory
+        try:
+            trajectory_repo = get_trajectory_repository()
+            human_input_id = get_human_input_repository().get_most_recent_id()
+            trajectory_repo.create(
+                step_data={
+                    "error": str(e),
+                    "display_title": "GC Error",
+                },
+                record_type="gc_operation",
+                human_input_id=human_input_id,
+                tool_name="research_notes_gc_agent",
+                is_error=True,
+                error_message=str(e),
+                error_type="Repository Error"
+            )
+        except Exception:
+            pass  # Continue if trajectory recording fails
+            
         console.print(Panel(f"Error: {str(e)}", title="🗑 GC Error", border_style="red"))
         return  # Exit the function if we can't access the repository
     
     # Display status panel with note count included
+    try:
+        trajectory_repo = get_trajectory_repository()
+        human_input_id = get_human_input_repository().get_most_recent_id()
+        trajectory_repo.create(
+            step_data={
+                "note_count": note_count,
+                "display_title": "Garbage Collection",
+            },
+            record_type="gc_operation",
+            human_input_id=human_input_id,
+            tool_name="research_notes_gc_agent"
+        )
+    except Exception:
+        pass  # Continue if trajectory recording fails
+        
     console.print(Panel(f"Gathering my thoughts...\nCurrent number of research notes: {note_count}", title="🗑 Garbage Collection"))
     
     # Only run the agent if we actually have notes to clean and we're over the threshold
@@ -235,6 +302,24 @@ Remember: Your goal is to maintain a concise, high-value collection of research 
             # Show info panel with updated count and protected notes count
             protected_count = len(protected_notes)
             if protected_count > 0:
+                # Record GC completion in trajectory
+                try:
+                    trajectory_repo = get_trajectory_repository()
+                    human_input_id = get_human_input_repository().get_most_recent_id()
+                    trajectory_repo.create(
+                        step_data={
+                            "original_count": note_count,
+                            "updated_count": updated_count,
+                            "protected_count": protected_count,
+                            "display_title": "GC Complete",
+                        },
+                        record_type="gc_operation",
+                        human_input_id=human_input_id,
+                        tool_name="research_notes_gc_agent"
+                    )
+                except Exception:
+                    pass  # Continue if trajectory recording fails
+                
                 console.print(
                     Panel(
                         f"Cleaned research notes: {note_count} → {updated_count}\nProtected notes (associated with current request): {protected_count}",
@@ -242,6 +327,24 @@ Remember: Your goal is to maintain a concise, high-value collection of research 
                     )
                 )
             else:
+                # Record GC completion in trajectory
+                try:
+                    trajectory_repo = get_trajectory_repository()
+                    human_input_id = get_human_input_repository().get_most_recent_id()
+                    trajectory_repo.create(
+                        step_data={
+                            "original_count": note_count,
+                            "updated_count": updated_count,
+                            "protected_count": 0,
+                            "display_title": "GC Complete",
+                        },
+                        record_type="gc_operation",
+                        human_input_id=human_input_id,
+                        tool_name="research_notes_gc_agent"
+                    )
+                except Exception:
+                    pass  # Continue if trajectory recording fails
+                
                 console.print(
                     Panel(
                         f"Cleaned research notes: {note_count} → {updated_count}",
@@ -249,6 +352,41 @@ Remember: Your goal is to maintain a concise, high-value collection of research 
                     )
                 )
         else:
+            # Record GC info in trajectory
+            try:
+                trajectory_repo = get_trajectory_repository()
+                human_input_id = get_human_input_repository().get_most_recent_id()
+                trajectory_repo.create(
+                    step_data={
+                        "protected_count": len(protected_notes),
+                        "message": "All research notes are protected",
+                        "display_title": "GC Info",
+                    },
+                    record_type="gc_operation",
+                    human_input_id=human_input_id,
+                    tool_name="research_notes_gc_agent"
+                )
+            except Exception:
+                pass  # Continue if trajectory recording fails
+                
             console.print(Panel(f"All {len(protected_notes)} research notes are associated with the current request and protected from deletion.", title="🗑 GC Info"))
     else:
+        # Record GC info in trajectory
+        try:
+            trajectory_repo = get_trajectory_repository()
+            human_input_id = get_human_input_repository().get_most_recent_id()
+            trajectory_repo.create(
+                step_data={
+                    "note_count": note_count,
+                    "threshold": threshold,
+                    "message": "Below threshold - no cleanup needed",
+                    "display_title": "GC Info",
+                },
+                record_type="gc_operation",
+                human_input_id=human_input_id,
+                tool_name="research_notes_gc_agent"
+            )
+        except Exception:
+            pass  # Continue if trajectory recording fails
+            
         console.print(Panel(f"Research notes count ({note_count}) is below threshold ({threshold}). No cleanup needed.", title="🗑 GC Info"))

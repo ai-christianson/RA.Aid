@@ -32,6 +32,7 @@ class ConfigRepository:
             FALLBACK_TOOL_MODEL_LIMIT,
             RETRY_FALLBACK_COUNT,
             DEFAULT_TEST_CMD_TIMEOUT,
+            DEFAULT_SHOW_COST,
             VALID_PROVIDERS,
         )
         
@@ -42,6 +43,7 @@ class ConfigRepository:
             "fallback_tool_model_limit": FALLBACK_TOOL_MODEL_LIMIT,
             "retry_fallback_count": RETRY_FALLBACK_COUNT,
             "test_cmd_timeout": DEFAULT_TEST_CMD_TIMEOUT,
+            "show_cost": DEFAULT_SHOW_COST,
             "valid_providers": VALID_PROVIDERS,
         }
         

@@ -46,6 +46,10 @@ from ra_aid.fallback_handler import FallbackHandler
 from ra_aid.logging_config import get_logger
 from ra_aid.models_params import DEFAULT_TOKEN_LIMIT
 from ra_aid.tools.handle_user_defined_test_cmd_execution import execute_test_command
+from ra_aid.database.repositories.human_input_repository import (
+    get_human_input_repository,
+)
+from ra_aid.database.repositories.trajectory_repository import get_trajectory_repository
 from ra_aid.database.repositories.config_repository import get_config_repository
 from ra_aid.anthropic_token_limiter import sonnet_35_state_modifier, state_modifier, get_model_token_limit
 
@@ -284,9 +288,23 @@ def _handle_api_error(e, attempt, max_retries, base_delay):
 
     logger.warning("API error (attempt %d/%d): %s", attempt + 1, max_retries, str(e))
     delay = base_delay * (2**attempt)
-    print_error(
-        f"Encountered {e.__class__.__name__}: {e}. Retrying in {delay}s... (Attempt {attempt+1}/{max_retries})"
+    error_message = f"Encountered {e.__class__.__name__}: {e}. Retrying in {delay}s... (Attempt {attempt+1}/{max_retries})"
+    
+    # Record error in trajectory
+    trajectory_repo = get_trajectory_repository()
+    human_input_id = get_human_input_repository().get_most_recent_id()
+    trajectory_repo.create(
+        step_data={
+            "error_message": error_message,
+            "display_title": "Error",
+        },
+        record_type="error",
+        human_input_id=human_input_id,
+        is_error=True,
+        error_message=error_message
     )
+    
+    print_error(error_message)
     start = time.monotonic()
     while time.monotonic() - start < delay:
         check_interrupt()

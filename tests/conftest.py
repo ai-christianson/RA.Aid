@@ -7,7 +7,7 @@ ensuring consistent test environments and proper isolation.
 
 import os
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -24,6 +24,39 @@ def mock_config_repository():
     repo.get.side_effect = lambda key, default=None: config_values.get(key, default)
     get_config_repository.return_value = repo
     yield repo
+
+
+@pytest.fixture()
+def mock_trajectory_repository():
+    """Mock the TrajectoryRepository to avoid database operations during tests."""
+    with patch('ra_aid.database.repositories.trajectory_repository.TrajectoryRepository') as mock:
+        # Setup a mock repository
+        mock_repo = MagicMock()
+        mock_repo.create.return_value = MagicMock(id=1)
+        mock.return_value = mock_repo
+        yield mock_repo
+
+
+@pytest.fixture()
+def mock_human_input_repository():
+    """Mock the HumanInputRepository to avoid database operations during tests."""
+    with patch('ra_aid.database.repositories.human_input_repository.HumanInputRepository') as mock:
+        # Setup a mock repository
+        mock_repo = MagicMock()
+        mock_repo.get_most_recent_id.return_value = 1
+        mock_repo.create.return_value = MagicMock(id=1)
+        mock.return_value = mock_repo
+        yield mock_repo
+
+
+@pytest.fixture()
+def mock_repository_access(mock_trajectory_repository, mock_human_input_repository):
+    """Mock all repository accessor functions."""
+    with patch('ra_aid.database.repositories.trajectory_repository.get_trajectory_repository', 
+              return_value=mock_trajectory_repository):
+        with patch('ra_aid.database.repositories.human_input_repository.get_human_input_repository',
+                  return_value=mock_human_input_repository):
+            yield
 
 
 @pytest.fixture(autouse=True)

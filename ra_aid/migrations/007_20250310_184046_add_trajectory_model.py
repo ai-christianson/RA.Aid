@@ -51,11 +51,11 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
         id = pw.AutoField()
         created_at = pw.DateTimeField()
         updated_at = pw.DateTimeField()
-        tool_name = pw.TextField()
-        tool_parameters = pw.TextField()  # JSON-encoded parameters
-        tool_result = pw.TextField()  # JSON-encoded result
-        step_data = pw.TextField()  # JSON-encoded UI rendering data
-        record_type = pw.TextField()  # Type of trajectory record
+        tool_name = pw.TextField(null=True)  # JSON-encoded parameters
+        tool_parameters = pw.TextField(null=True)  # JSON-encoded parameters
+        tool_result = pw.TextField(null=True)  # JSON-encoded result
+        step_data = pw.TextField(null=True)  # JSON-encoded UI rendering data
+        record_type = pw.TextField(null=True)  # Type of trajectory record
         cost = pw.FloatField(null=True)  # Placeholder for cost tracking
         tokens = pw.IntegerField(null=True)  # Placeholder for token usage tracking
         is_error = pw.BooleanField(default=False)  # Flag indicating if this record represents an error

@@ -24,6 +24,8 @@ from ra_aid.database.repositories.key_snippet_repository import get_key_snippet_
 from ra_aid.database.repositories.research_note_repository import get_research_note_repository
 from ra_aid.database.repositories.config_repository import get_config_repository
 from ra_aid.database.repositories.work_log_repository import get_work_log_repository
+from ra_aid.database.repositories.trajectory_repository import get_trajectory_repository
+from ra_aid.database.repositories.human_input_repository import get_human_input_repository
 from ra_aid.env_inv_context import get_env_inv
 from ra_aid.exceptions import AgentInterrupt
 from ra_aid.llm import initialize_expert_llm
@@ -155,6 +157,18 @@ def run_planning_agent(
 
     # Display the planning stage header before any reasoning assistance
     print_stage_header("Planning Stage")
+    
+    # Record stage transition in trajectory
+    trajectory_repo = get_trajectory_repository()
+    human_input_id = get_human_input_repository().get_most_recent_id()
+    trajectory_repo.create(
+        step_data={
+            "stage": "planning_stage",
+            "display_title": "Planning Stage",
+        },
+        record_type="stage_transition",
+        human_input_id=human_input_id
+    )
 
     # Initialize expert guidance section
     expert_guidance = ""
