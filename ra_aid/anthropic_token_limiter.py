@@ -2,9 +2,16 @@
 
 from functools import partial
 from typing import Any, Dict, List, Optional, Sequence
+from dataclasses import dataclass
 
 from langchain_anthropic import ChatAnthropic
-from langchain_core.messages import AIMessage, BaseMessage, ToolMessage, trim_messages
+from langchain_core.messages import (
+    AIMessage,
+    BaseMessage,
+    RemoveMessage,
+    ToolMessage,
+    trim_messages,
+)
 from langchain_core.messages.base import message_to_dict
 
 from ra_aid.anthropic_message_utils import (
@@ -143,6 +150,7 @@ def state_modifier(
         print_messages_compact(messages)
         print("AFTER TRIMMING")
         print_messages_compact(result)
+
     return result
 
 
