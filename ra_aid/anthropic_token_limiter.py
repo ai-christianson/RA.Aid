@@ -1,11 +1,17 @@
 """Utilities for handling token limits with Anthropic models."""
 
 from functools import partial
-from typing import Any, Dict, List, Optional, Sequence, Union
+from typing import Any, Dict, List, Optional, Sequence
 
 from langchain_anthropic import ChatAnthropic
-from langchain_core.messages import BaseMessage, trim_messages
+from langchain_core.messages import AIMessage, BaseMessage, ToolMessage, trim_messages
 from langchain_core.messages.base import message_to_dict
+
+from ra_aid.anthropic_message_utils import (
+    fix_anthropic_message_content,
+    anthropic_trim_messages,
+    has_tool_use,
+)
 from langgraph.prebuilt.chat_agent_executor import AgentState
 from litellm import token_counter
 
@@ -13,7 +19,7 @@ from ra_aid.agent_backends.ciayn_agent import CiaynAgent
 from ra_aid.database.repositories.config_repository import get_config_repository
 from ra_aid.logging_config import get_logger
 from ra_aid.models_params import DEFAULT_TOKEN_LIMIT, models_params
-from ra_aid.console.output import print_messages_compact
+from ra_aid.console.output import cpm, print_messages_compact
 
 logger = get_logger(__name__)
 
@@ -85,68 +91,58 @@ def create_token_counter_wrapper(model: str):
 def state_modifier(
     state: AgentState, model: ChatAnthropic, max_input_tokens: int = DEFAULT_TOKEN_LIMIT
 ) -> list[BaseMessage]:
-    """Given the agent state and max_tokens, return a trimmed list of messages but always keep the first message.
+    """Given the agent state and max_tokens, return a trimmed list of messages.
+
+    This uses anthropic_trim_messages which always keeps the first 2 messages.
 
     Args:
         state: The current agent state containing messages
         model: The language model to use for token counting
-        max_tokens: Maximum number of tokens to allow (default: DEFAULT_TOKEN_LIMIT)
+        max_input_tokens: Maximum number of tokens to allow (default: DEFAULT_TOKEN_LIMIT)
 
     Returns:
         list[BaseMessage]: Trimmed list of messages that fits within token limit
     """
     messages = state["messages"]
-
     if not messages:
         return []
 
-    first_message = messages[0]
-    remaining_messages = messages[1:]
-
     wrapped_token_counter = create_token_counter_wrapper(model.model)
 
-    print(f"max_input_tokens={max_input_tokens}")
-    max_input_tokens = 17000
-    first_tokens = wrapped_token_counter([first_message])
-    print(f"first_tokens={first_tokens}")
-    new_max_tokens = max_input_tokens - first_tokens
+    # Keep max_input_tokens at 21000 as requested
+    max_input_tokens = 21000
 
-    # Calculate total tokens before trimming
-    total_tokens_before = wrapped_token_counter(messages)
-    print(
-        f"Current token total: {total_tokens_before} (should be at least {first_tokens})"
-    )
+    print("\nDEBUG - Starting token trimming with max_tokens:", max_input_tokens)
+    print(f"Current token total: {wrapped_token_counter(messages)}")
 
-    # Verify the token count is correct
-    if total_tokens_before < first_tokens:
-        print(f"WARNING: Token count inconsistency detected! Recounting...")
-        # Count message by message to debug
-        for i, msg in enumerate(messages):
-            msg_tokens = wrapped_token_counter([msg])
-            print(f"  Message {i}: {msg_tokens} tokens")
-        # Try alternative counting method
-        alt_count = sum(wrapped_token_counter([msg]) for msg in messages)
-        print(f"  Alternative count method: {alt_count} tokens")
+    # Print more details about the messages to help debug
+    for i, msg in enumerate(messages):
+        if isinstance(msg, AIMessage):
+            print(f"DEBUG - AIMessage[{i}] content type: {type(msg.content)}")
+            print(f"DEBUG - AIMessage[{i}] has_tool_use: {has_tool_use(msg)}")
+            if has_tool_use(msg) and i < len(messages) - 1:
+                print(
+                    f"DEBUG - Next message is ToolMessage: {isinstance(messages[i+1], ToolMessage)}"
+                )
 
-    print_messages_compact(messages)
-
-    trimmed_remaining = trim_messages(
-        remaining_messages,
+    result = anthropic_trim_messages(
+        messages,
         token_counter=wrapped_token_counter,
-        max_tokens=new_max_tokens,
+        max_tokens=max_input_tokens,
         strategy="last",
         allow_partial=False,
+        include_system=True,
+        num_messages_to_keep=2,
     )
 
-    result = [first_message] + trimmed_remaining
-
-    # Only show message if some messages were trimmed
     if len(result) < len(messages):
         print(f"TRIMMED: {len(messages)} messages → {len(result)} messages")
-        # Calculate total tokens after trimming
         total_tokens_after = wrapped_token_counter(result)
         print(f"New token total: {total_tokens_after}")
-
+        print("BEFORE TRIMMING")
+        print_messages_compact(messages)
+        print("AFTER TRIMMING")
+        print_messages_compact(result)
     return result
 
 
@@ -176,12 +172,14 @@ def sonnet_35_state_modifier(
     total_tokens_before = estimate_messages_tokens(messages)
     print(f"Current token total: {total_tokens_before}")
 
-    trimmed_remaining = trim_messages(
+    # Trim remaining messages
+    trimmed_remaining = anthropic_trim_messages(
         remaining_messages,
         token_counter=estimate_messages_tokens,
         max_tokens=new_max_tokens,
         strategy="last",
         allow_partial=False,
+        include_system=True,
     )
 
     result = [first_message] + trimmed_remaining
@@ -192,6 +190,8 @@ def sonnet_35_state_modifier(
         # Calculate total tokens after trimming
         total_tokens_after = estimate_messages_tokens(result)
         print(f"New token total: {total_tokens_after}")
+
+        # No need to fix message content as anthropic_trim_messages already handles this
 
     return result
 

@@ -164,7 +164,6 @@ def create_agent(
         max_input_tokens = (
             get_model_token_limit(config, agent_type) or DEFAULT_TOKEN_LIMIT
         )
-        print(f"max_input_tokens={max_input_tokens}")
 
         # Use REACT agent for Anthropic Claude models, otherwise use CIAYN
         if is_anthropic_claude(config):
