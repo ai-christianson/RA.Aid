@@ -541,7 +541,7 @@ source venv/bin/activate  # On Windows use `venv\Scripts\activate`
 
 3. Install development dependencies:
 ```bash
-pip install -r requirements-dev.txt
+pip install -e ".[dev]"
 ```
 
 4. Run tests:
