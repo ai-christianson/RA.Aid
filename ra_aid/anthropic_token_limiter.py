@@ -109,26 +109,12 @@ def state_modifier(
     Returns:
         list[BaseMessage]: Trimmed list of messages that fits within token limit
     """
+
     messages = state["messages"]
     if not messages:
         return []
 
     wrapped_token_counter = create_token_counter_wrapper(model.model)
-
-    # max_input_tokens = 33440
-
-    print("\nDEBUG - Starting token trimming with max_tokens:", max_input_tokens)
-    print(f"Current token total: {wrapped_token_counter(messages)}")
-
-    # Print more details about the messages to help debug
-    for i, msg in enumerate(messages):
-        if isinstance(msg, AIMessage):
-            print(f"DEBUG - AIMessage[{i}] content type: {type(msg.content)}")
-            print(f"DEBUG - AIMessage[{i}] has_tool_use: {has_tool_use(msg)}")
-            if has_tool_use(msg) and i < len(messages) - 1:
-                print(
-                    f"DEBUG - Next message is ToolMessage: {isinstance(messages[i+1], ToolMessage)}"
-                )
 
     result = anthropic_trim_messages(
         messages,
@@ -141,13 +127,7 @@ def state_modifier(
     )
 
     if len(result) < len(messages):
-        print(f"TRIMMED: {len(messages)} messages → {len(result)} messages")
-        # total_tokens_after = wrapped_token_counter(result)
-        # print(f"New token total: {total_tokens_after}")
-        # print("BEFORE TRIMMING")
-        # print_messages_compact(messages)
-        # print("AFTER TRIMMING")
-        # print_messages_compact(result)
+        logger.info(f"Anthropic Token Limiter Trimmed: {len(messages)} messages → {len(result)} messages")
 
     return result
 
@@ -174,12 +154,7 @@ def sonnet_35_state_modifier(
     first_tokens = estimate_messages_tokens([first_message])
     new_max_tokens = max_input_tokens - first_tokens
 
-    # Calculate total tokens before trimming
-    total_tokens_before = estimate_messages_tokens(messages)
-    print(f"Current token total: {total_tokens_before}")
-
-    # Trim remaining messages
-    trimmed_remaining = anthropic_trim_messages(
+    trimmed_remaining = trim_messages(
         remaining_messages,
         token_counter=estimate_messages_tokens,
         max_tokens=new_max_tokens,
@@ -189,15 +164,6 @@ def sonnet_35_state_modifier(
     )
 
     result = [first_message] + trimmed_remaining
-
-    # Only show message if some messages were trimmed
-    if len(result) < len(messages):
-        print(f"TRIMMED: {len(messages)} messages → {len(result)} messages")
-        # Calculate total tokens after trimming
-        total_tokens_after = estimate_messages_tokens(result)
-        print(f"New token total: {total_tokens_after}")
-
-        # No need to fix message content as anthropic_trim_messages already handles this
 
     return result
 

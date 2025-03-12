@@ -124,23 +124,6 @@ def anthropic_trim_messages(
     kept_messages = messages[:num_messages_to_keep]
     remaining_msgs = messages[num_messages_to_keep:]
 
-    # Debug: Print message types for all messages
-    print("\nDEBUG - All messages:")
-    for i, msg in enumerate(messages):
-        msg_type = type(msg).__name__
-        tool_use = (
-            "tool_use"
-            if isinstance(msg, AIMessage)
-            and hasattr(msg, "additional_kwargs")
-            and msg.additional_kwargs.get("tool_calls")
-            else ""
-        )
-        tool_result = (
-            f"tool_call_id: {msg.tool_call_id}"
-            if isinstance(msg, ToolMessage) and hasattr(msg, "tool_call_id")
-            else ""
-        )
-        print(f"  [{i}] {msg_type} {tool_use} {tool_result}")
 
     # For Anthropic, we need to maintain the conversation structure where:
     # 1. Every AIMessage with tool_use must be followed by a ToolMessage
@@ -148,21 +131,11 @@ def anthropic_trim_messages(
 
     # First, check if we have any tool_use in the messages
     has_tool_use_anywhere = any(has_tool_use(msg) for msg in messages)
-    print(f"DEBUG - Has tool_use anywhere in messages: {has_tool_use_anywhere}")
-
-    # Print debug info for AIMessages
-    for i, msg in enumerate(messages):
-        if isinstance(msg, AIMessage):
-            print(f"DEBUG - AIMessage[{i}] details:")
-            print(f"  has_tool_use: {has_tool_use(msg)}")
-            if hasattr(msg, "additional_kwargs"):
-                print(f"  additional_kwargs keys: {list(msg.additional_kwargs.keys())}")
 
     # If we have tool_use anywhere, we need to be very careful about trimming
     if has_tool_use_anywhere:
         # For safety, just keep all messages if we're under the token limit
         if token_counter(messages) <= max_tokens:
-            print("DEBUG - All messages fit within token limit, keeping all")
             return messages
 
         # We need to identify all tool_use/tool_result relationships
@@ -172,12 +145,9 @@ def anthropic_trim_messages(
         while i < len(messages) - 1:
             if is_tool_pair(messages[i], messages[i + 1]):
                 pairs.append((i, i + 1))
-                print(f"DEBUG - Found tool_use pair: ({i}, {i+1})")
                 i += 2
             else:
                 i += 1
-
-        print(f"DEBUG - Found {len(pairs)} AIMessage+ToolMessage pairs")
 
         # For Anthropic, we need to ensure that:
         # 1. If we include an AIMessage with tool_use, we must include the following ToolMessage
@@ -188,10 +158,6 @@ def anthropic_trim_messages(
         complete_pairs = []
         for start, end in pairs:
             complete_pairs.append((start, end))
-
-        print(
-            f"DEBUG - Found {len(complete_pairs)} complete AIMessage+ToolMessage pairs"
-        )
 
         # Now we'll build our result, starting with the kept_messages
         # But we need to be careful about the first message if it has tool_use
@@ -240,12 +206,8 @@ def anthropic_trim_messages(
                 if token_counter(test_msgs) <= max_tokens:
                     # This pair fits, add it to our list
                     pairs_to_include.append((ai_idx, tool_idx))
-                    print(f"DEBUG - Added complete pair ({ai_idx}, {tool_idx})")
                 else:
                     # This pair would exceed the token limit
-                    print(
-                        f"DEBUG - Pair ({ai_idx}, {tool_idx}) would exceed token limit, stopping"
-                    )
                     break
 
             # Now add the pairs in the correct order
@@ -256,7 +218,6 @@ def anthropic_trim_messages(
 
         # No need to sort - we've already added messages in the correct order
 
-        print(f"DEBUG - Final result has {len(result)} messages")
         return result
 
     # If no tool_use, proceed with normal segmentation
@@ -266,13 +227,7 @@ def anthropic_trim_messages(
     # Group messages into segments
     while i < len(remaining_msgs):
         segments.append([remaining_msgs[i]])
-        print(f"DEBUG - Added message as segment: [{i}]")
         i += 1
-
-    print(f"\nDEBUG - Created {len(segments)} segments")
-    for i, segment in enumerate(segments):
-        segment_types = [type(msg).__name__ for msg in segment]
-        print(f"  Segment {i}: {segment_types}")
 
     # Now we have segments that maintain the required structure
     # We'll add segments from the end (for "last" strategy) or beginning (for "first")
@@ -292,22 +247,14 @@ def anthropic_trim_messages(
 
             if token_counter(kept_messages + test_msgs) <= max_tokens:
                 result = segment + result
-                print(f"DEBUG - Added segment {len(segments)-i-1} to result")
             else:
                 # This segment would exceed the token limit
-                print(
-                    f"DEBUG - Segment {len(segments)-i-1} would exceed token limit, stopping"
-                )
                 break
 
         final_result = kept_messages + result
 
         # For Anthropic, we need to ensure the conversation follows a valid structure
         # We'll do a final check of the entire conversation
-        print("\nDEBUG - Final result before validation:")
-        for i, msg in enumerate(final_result):
-            msg_type = type(msg).__name__
-            print(f"  [{i}] {msg_type}")
 
         # Validate the conversation structure
         valid_result = []
@@ -327,21 +274,14 @@ def anthropic_trim_messages(
                     # This is a valid tool_use + tool_result pair
                     valid_result.append(current_msg)
                     valid_result.append(final_result[i + 1])
-                    print(
-                        f"DEBUG - Added valid tool_use + tool_result pair at positions {i}, {i+1}"
-                    )
                     i += 2
                 else:
                     # Invalid: AIMessage with tool_use not followed by ToolMessage
-                    print(
-                        f"WARNING: AIMessage at position {i} has tool_use but is not followed by a ToolMessage"
-                    )
                     # Skip this message to maintain valid structure
                     i += 1
             else:
                 # Regular message, just add it
                 valid_result.append(current_msg)
-                print(f"DEBUG - Added regular message at position {i}")
                 i += 1
 
         # Final check: don't end with an AIMessage that has tool_use
@@ -350,15 +290,7 @@ def anthropic_trim_messages(
             and isinstance(valid_result[-1], AIMessage)
             and has_tool_use(valid_result[-1])
         ):
-            print(
-                "WARNING: Last message is AIMessage with tool_use but no following ToolMessage"
-            )
             valid_result.pop()  # Remove the last message
-
-        print("\nDEBUG - Final validated result:")
-        for i, msg in enumerate(valid_result):
-            msg_type = type(msg).__name__
-            print(f"  [{i}] {msg_type}")
 
         return valid_result
 
@@ -371,16 +303,10 @@ def anthropic_trim_messages(
             test_msgs = result + segment
             if token_counter(kept_messages + test_msgs) <= max_tokens:
                 result = result + segment
-                print(f"DEBUG - Added segment {i} to result")
             else:
                 # This segment would exceed the token limit
-                print(f"DEBUG - Segment {i} would exceed token limit, stopping")
                 break
 
         final_result = kept_messages + result
-        print("\nDEBUG - Final result:")
-        for i, msg in enumerate(final_result):
-            msg_type = type(msg).__name__
-            print(f"  [{i}] {msg_type}")
 
         return final_result

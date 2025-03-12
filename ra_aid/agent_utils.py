@@ -47,7 +47,7 @@ from ra_aid.logging_config import get_logger
 from ra_aid.models_params import DEFAULT_TOKEN_LIMIT
 from ra_aid.tools.handle_user_defined_test_cmd_execution import execute_test_command
 from ra_aid.database.repositories.config_repository import get_config_repository
-from ra_aid.anthropic_token_limiter import state_modifier, get_model_token_limit
+from ra_aid.anthropic_token_limiter import sonnet_35_state_modifier, state_modifier, get_model_token_limit
 
 console = Console()
 
@@ -95,6 +95,9 @@ def build_agent_kwargs(
     ):
 
         def wrapped_state_modifier(state: AgentState) -> list[BaseMessage]:
+            if any(pattern in model.model for pattern in ["claude-3.5", "claude3.5", "claude-3-5"]):
+                return sonnet_35_state_modifier(state, max_input_tokens=max_input_tokens)
+
             return state_modifier(state, model, max_input_tokens=max_input_tokens)
 
         agent_kwargs["state_modifier"] = wrapped_state_modifier
