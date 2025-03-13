@@ -49,7 +49,10 @@ from ra_aid.tools.handle_user_defined_test_cmd_execution import execute_test_com
 from ra_aid.database.repositories.human_input_repository import (
     get_human_input_repository,
 )
-from ra_aid.database.repositories.trajectory_repository import get_trajectory_repository
+from ra_aid.database.repositories.trajectory_repository import (
+    TrajectoryRepository,
+    get_trajectory_repository,
+)
 from ra_aid.database.repositories.config_repository import get_config_repository
 from ra_aid.anthropic_token_limiter import (
     sonnet_35_state_modifier,
@@ -341,19 +344,21 @@ def init_fallback_handler(agent: RAgents, tools: List[Any]):
     return None
 
 
-def _handle_callback_update(cb: Optional[AnthropicCallbackHandler]) -> None:
+def _handle_callback_update(
+    cb: Optional[AnthropicCallbackHandler], trajectory_repo: TrajectoryRepository
+) -> None:
     """
     Handle callback updates and record trajectory data.
 
     Args:
         cb: Optional AnthropicCallbackHandler with usage data
+        trajectory_repo: Repository for storing trajectory data
     """
     if not cb:
         return
 
     logger.debug(f"AnthropicCallbackHandler:\n{cb}")
     try:
-        trajectory_repo = get_trajectory_repository()
         trajectory_repo.create(
             record_type="model_usage",
             cost=cb.total_cost,
@@ -399,6 +404,7 @@ def _run_agent_stream(agent: RAgents, msg_list: list[BaseMessage]):
     config = get_config_repository().get_all()
     stream_config = config.copy()
 
+    trajectory_repo = get_trajectory_repository()
     cb = None
     if is_anthropic_claude(config):
         model_name = config.get("model", "")
@@ -411,19 +417,18 @@ def _run_agent_stream(agent: RAgents, msg_list: list[BaseMessage]):
 
     while True:
         for chunk in agent.stream({"messages": msg_list}, stream_config):
-            # logger.debug("Agent output: %s", chunk)
-            logger.debug(f"CALLBACK: {cb}")
+            logger.debug("Agent output: %s", chunk)
             check_interrupt()
             agent_type = get_agent_type(agent)
             print_agent_output(chunk, agent_type, cost_cb=cb)
 
             if is_completed() or should_exit():
                 reset_completion_flags()
-                _handle_callback_update(cb)
+                _handle_callback_update(cb, trajectory_repo)
                 return True
 
-        _handle_callback_update(cb)
         logger.debug("Stream iteration ended; checking agent state for continuation.")
+        _handle_callback_update(cb, trajectory_repo)
 
         # Prepare state configuration, ensuring 'configurable' is present.
         state_config = get_config_repository().get_all().copy()
@@ -455,7 +460,7 @@ def _run_agent_stream(agent: RAgents, msg_list: list[BaseMessage]):
             logger.debug("No continuation indicated in state; exiting stream loop.")
             break
 
-    # _handle_callback_update(cb)
+    # _handle_callback_update(cb, trajectory_repo)
     return True
 
 
