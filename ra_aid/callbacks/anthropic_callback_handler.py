@@ -7,6 +7,8 @@ from typing import Any, Dict, List, Optional
 
 from langchain_core.callbacks import BaseCallbackHandler
 
+from ra_aid.config import DEFAULT_MODEL
+
 # Define cost per 1K tokens for various models
 ANTHROPIC_MODEL_COSTS = {
     # Claude 3.7 Sonnet input
@@ -113,6 +115,29 @@ def get_anthropic_token_cost_for_model(
     return total_cost
 
 
+def calculate_token_cost(
+    model_name: str, input_tokens: int = 0, output_tokens: int = 0
+) -> float:
+    """
+    Calculate the total cost for input and output tokens.
+    
+    Args:
+        model_name: Name of the model
+        input_tokens: Number of input/prompt tokens
+        output_tokens: Number of output/completion tokens
+        
+    Returns:
+        float: Total cost in USD
+    """
+    input_cost = get_anthropic_token_cost_for_model(
+        model_name, input_tokens, is_completion=False
+    )
+    output_cost = get_anthropic_token_cost_for_model(
+        model_name, output_tokens, is_completion=True
+    )
+    return input_cost + output_cost
+
+
 class AnthropicCallbackHandler(BaseCallbackHandler):
     """Callback Handler that tracks Anthropic token usage and costs."""
 
@@ -121,7 +146,7 @@ class AnthropicCallbackHandler(BaseCallbackHandler):
     completion_tokens: int = 0
     successful_requests: int = 0
     total_cost: float = 0.0
-    model_name: str = "claude-3-sonnet"  # Default model
+    model_name: str = DEFAULT_MODEL
 
     def __init__(self, model_name: Optional[str] = None) -> None:
         super().__init__()

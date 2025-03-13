@@ -15,6 +15,7 @@ import sys
 
 import peewee
 
+from ra_aid.config import DEFAULT_MODEL
 from ra_aid.database.models import Session
 from ra_aid.__version__ import __version__
 from ra_aid.logging_config import get_logger
@@ -49,7 +50,7 @@ class SessionRepositoryManager:
         """
         self.db = db
 
-    def __enter__(self) -> 'SessionRepository':
+    def __enter__(self) -> "SessionRepository":
         """
         Initialize the SessionRepository and return it.
 
@@ -81,13 +82,13 @@ class SessionRepositoryManager:
         return False
 
 
-def get_session_repository() -> 'SessionRepository':
+def get_session_repository() -> "SessionRepository":
     """
     Get the current SessionRepository instance.
 
     Returns:
         SessionRepository: The current repository instance
-        
+
     Raises:
         RuntimeError: If no repository has been initialized with SessionRepositoryManager
     """
@@ -124,36 +125,40 @@ class SessionRepository:
     def create_session(self, metadata: Optional[Dict[str, Any]] = None) -> Session:
         """
         Create a new session record in the database.
-        
+
         Args:
             metadata: Optional dictionary of additional metadata to store with the session
-            
+
         Returns:
             Session: The newly created session instance
-            
+
         Raises:
             peewee.DatabaseError: If there's an error creating the record
         """
         try:
             # Get command line arguments
             command_line = " ".join(sys.argv)
-            
+
             # Get program version
             program_version = __version__
-            
+
             # JSON encode metadata if provided
             machine_info = json.dumps(metadata) if metadata is not None else None
-            
+
             session = Session.create(
                 start_time=datetime.datetime.now(),
                 command_line=command_line,
                 program_version=program_version,
-                machine_info=machine_info
+                machine_info=machine_info,
+                total_input_tokens=0,
+                total_output_tokens=0,
+                total_tokens=0,
+                total_cost=0.0,
             )
-            
+
             # Store the current session
             self.current_session = session
-            
+
             logger.debug(f"Created new session with ID {session.id}")
             return session
         except peewee.DatabaseError as e:
@@ -163,16 +168,16 @@ class SessionRepository:
     def get_current_session(self) -> Optional[Session]:
         """
         Get the current active session.
-        
+
         If no session has been created in this repository instance,
         retrieves the most recent session from the database.
-        
+
         Returns:
             Optional[Session]: The current session or None if no sessions exist
         """
         if self.current_session is not None:
             return self.current_session
-        
+
         try:
             # Find the most recent session
             session = Session.select().order_by(Session.created_at.desc()).first()
@@ -186,7 +191,7 @@ class SessionRepository:
     def get_current_session_id(self) -> Optional[int]:
         """
         Get the ID of the current active session.
-        
+
         Returns:
             Optional[int]: The ID of the current session or None if no session exists
         """
@@ -196,10 +201,10 @@ class SessionRepository:
     def get(self, session_id: int) -> Optional[Session]:
         """
         Get a session by its ID.
-        
+
         Args:
             session_id: The ID of the session to retrieve
-            
+
         Returns:
             Optional[Session]: The session with the given ID or None if not found
         """
@@ -212,7 +217,7 @@ class SessionRepository:
     def get_all(self) -> List[Session]:
         """
         Get all sessions from the database.
-        
+
         Returns:
             List[Session]: List of all sessions
         """
@@ -225,19 +230,69 @@ class SessionRepository:
     def get_recent(self, limit: int = 10) -> List[Session]:
         """
         Get the most recent sessions from the database.
-        
+
         Args:
             limit: Maximum number of sessions to return (default: 10)
-            
+
         Returns:
             List[Session]: List of the most recent sessions
         """
         try:
             return list(
-                Session.select()
-                .order_by(Session.created_at.desc())
-                .limit(limit)
+                Session.select().order_by(Session.created_at.desc()).limit(limit)
             )
         except peewee.DatabaseError as e:
             logger.error(f"Failed to get recent sessions: {str(e)}")
             return []
+
+    def update_token_usage(
+        self,
+        session_id: int,
+        input_tokens: int = 0,
+        output_tokens: int = 0,
+        model_name: str = DEFAULT_MODEL,
+    ) -> Optional[Session]:
+        """
+        Update token usage for a session.
+
+        Args:
+            session_id: ID of the session to update
+            input_tokens: Number of input tokens to add
+            output_tokens: Number of output tokens to add
+            model_name: Model name used for cost calculation
+
+        Returns:
+            Optional[Session]: Updated session or None if not found
+        """
+        try:
+            session = self.get(session_id)
+            if not session:
+                logger.warning(f"Attempted to update non-existent session {session_id}")
+                return None
+
+            from ra_aid.callbacks.anthropic_callback_handler import calculate_token_cost
+            total_cost = calculate_token_cost(model_name, input_tokens, output_tokens)
+
+            query = Session.update(
+                total_input_tokens=Session.total_input_tokens + input_tokens,
+                total_output_tokens=Session.total_output_tokens + output_tokens,
+                total_tokens=Session.total_tokens + input_tokens + output_tokens,
+                total_cost=Session.total_cost + total_cost,
+            ).where(Session.id == session_id)
+
+            query.execute()
+
+            if self.current_session and self.current_session.id == session_id:
+                self.current_session = self.get(session_id)
+
+            logger.debug(
+                f"Updated session {session_id} with {input_tokens} input tokens, "
+                f"{output_tokens} output tokens, ${total_cost:.6f} cost"
+            )
+
+            return self.get(session_id)
+        except peewee.DatabaseError as e:
+            logger.error(
+                f"Failed to update token usage for session {session_id}: {str(e)}"
+            )
+            return None

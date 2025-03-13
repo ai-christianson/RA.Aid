@@ -7,9 +7,18 @@ import time
 from typing import Any, Dict, List, Literal, Optional
 
 from langchain_anthropic import ChatAnthropic
-from ra_aid.callbacks.anthropic_callback_handler import AnthropicCallbackHandler
+from ra_aid.callbacks.anthropic_callback_handler import (
+    AnthropicCallbackHandler,
+    calculate_token_cost,
+)
 
+
+from playhouse.shortcuts import model_to_dict
 from anthropic import APIError, APITimeoutError, InternalServerError, RateLimitError
+from ra_aid.database.repositories.session_repository import (
+    SessionRepository,
+    get_session_repository,
+)
 from openai import RateLimitError as OpenAIRateLimitError
 from litellm.exceptions import RateLimitError as LiteLLMRateLimitError
 from google.api_core.exceptions import ResourceExhausted
@@ -59,6 +68,40 @@ from ra_aid.anthropic_token_limiter import (
     state_modifier,
     get_model_token_limit,
 )
+
+# Global session totals object to maintain consistency across agent switches
+SESSION_TOTALS = {
+    "cost": 0.0,
+    "tokens": 0,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "session_id": None,
+}
+
+
+def initialize_session_tracking():
+    """
+    Initialize session tracking by getting the current session and updating SESSION_TOTALS.
+
+    Returns:
+        tuple: (session_id, session) - The current session ID and session object
+    """
+
+    session_repo = get_session_repository()
+    current_session = session_repo.get_current_session()
+    current_session_id = current_session.id if current_session else None
+
+    # Initialize global SESSION_TOTALS with current session data
+    global SESSION_TOTALS
+    if current_session:
+        SESSION_TOTALS["cost"] = current_session.total_cost
+        SESSION_TOTALS["tokens"] = current_session.total_tokens
+        SESSION_TOTALS["input_tokens"] = current_session.total_input_tokens
+        SESSION_TOTALS["output_tokens"] = current_session.total_output_tokens
+        SESSION_TOTALS["session_id"] = current_session_id
+
+    return current_session_id, current_session
+
 
 console = Console()
 
@@ -309,6 +352,11 @@ def _handle_api_error(e, attempt, max_retries, base_delay):
         },
         record_type="error",
         human_input_id=human_input_id,
+        session_id=SESSION_TOTALS["session_id"],
+        current_cost=0.0,
+        current_tokens=0,
+        total_cost=SESSION_TOTALS["cost"],
+        total_tokens=SESSION_TOTALS["tokens"],
         is_error=True,
         error_message=error_message,
     )
@@ -345,7 +393,9 @@ def init_fallback_handler(agent: RAgents, tools: List[Any]):
 
 
 def _handle_callback_update(
-    cb: Optional[AnthropicCallbackHandler], trajectory_repo: TrajectoryRepository
+    cb: Optional[AnthropicCallbackHandler],
+    trajectory_repo: TrajectoryRepository,
+    session_repo: SessionRepository,
 ) -> None:
     """
     Handle callback updates and record trajectory data.
@@ -353,19 +403,56 @@ def _handle_callback_update(
     Args:
         cb: Optional AnthropicCallbackHandler with usage data
         trajectory_repo: Repository for storing trajectory data
+        session_repo: Optional SessionRepository to avoid repeated lookups
     """
     if not cb:
         return
 
     logger.debug(f"AnthropicCallbackHandler:\n{cb}")
     try:
-        trajectory_repo.create(
-            record_type="model_usage",
-            cost=cb.total_cost,
-            tokens=cb.total_tokens,
+        global SESSION_TOTALS
+
+        if not SESSION_TOTALS["session_id"]:
+            logger.warning("session_id not initialized")
+            return
+
+        updated_session = session_repo.update_token_usage(
+            session_id=SESSION_TOTALS["session_id"],
             input_tokens=cb.prompt_tokens,
             output_tokens=cb.completion_tokens,
+            model_name=cb.model_name,
         )
+
+        if updated_session:
+            SESSION_TOTALS["cost"] = updated_session.total_cost
+            SESSION_TOTALS["tokens"] = updated_session.total_tokens
+            SESSION_TOTALS["input_tokens"] = updated_session.total_input_tokens
+            SESSION_TOTALS["output_tokens"] = updated_session.total_output_tokens
+
+            last_msg_cost = calculate_token_cost(
+                cb.model_name, cb.prompt_tokens, cb.completion_tokens
+            )
+            created_traj = trajectory_repo.create(
+                record_type="model_usage",
+                current_cost=last_msg_cost,
+                current_tokens=cb.prompt_tokens + cb.completion_tokens,
+                total_cost=SESSION_TOTALS["cost"],  # Running total cost from session
+                total_tokens=SESSION_TOTALS[
+                    "tokens"
+                ],  # Running total tokens from session
+                input_tokens=cb.prompt_tokens,
+                output_tokens=cb.completion_tokens,
+                session_id=SESSION_TOTALS["session_id"],
+            )
+            logger.info(f"updated_session={model_to_dict(updated_session)}")
+            logger.info(f"SESSION_TOTALS={SESSION_TOTALS}")
+            logger.info(
+                f"current_cost: ${created_traj.current_cost:.6f} | current_token: {created_traj.current_tokens} (in: {created_traj.input_tokens}, out: {created_traj.output_tokens})"
+            )
+            logger.info(
+                f"current_cost: ${created_traj.total_cost:.6f} | current_token: {created_traj.total_tokens}"
+            )
+
     except Exception as e:
         logger.error(f"Failed to store token usage data: {e}")
 
@@ -388,6 +475,72 @@ def _handle_fallback_response(
         msg_list.extend(msg_list_response)
 
 
+def _initialize_callback_handler(config):
+    """
+    Initialize the callback handler for token tracking.
+
+    Args:
+        config: Configuration dictionary containing provider and model information
+
+    Returns:
+        tuple: (callback_handler, stream_config) - The callback handler and updated stream config
+    """
+    stream_config = config.copy()
+    cb = None
+
+    if is_anthropic_claude(config):
+        model_name = config.get("model", "")
+        full_model_name = model_name
+        cb = AnthropicCallbackHandler(full_model_name)
+
+        if "callbacks" not in stream_config:
+            stream_config["callbacks"] = []
+        stream_config["callbacks"].append(cb)
+
+    return cb, stream_config
+
+
+def _prepare_state_config():
+    """
+    Prepare the state configuration for agent.get_state().
+
+    Returns:
+        dict: The prepared state configuration
+    """
+    state_config = get_config_repository().get_all().copy()
+    if "configurable" not in state_config:
+        logger.debug(
+            "Key 'configurable' not found in config; adding it as an empty dict."
+        )
+        state_config["configurable"] = {}
+    return state_config
+
+
+def _get_agent_state(agent: RAgents, state_config: Dict[str, Any]):
+    """
+    Safely retrieve the agent state.
+
+    Args:
+        agent: The agent instance
+        state_config: The state configuration
+
+    Returns:
+        The agent state
+
+    Raises:
+        Exception: If there's an error retrieving the agent state
+    """
+    try:
+        state = agent.get_state(state_config)
+        logger.debug("Agent state retrieved: %s", state)
+        return state
+    except Exception as e:
+        logger.error(
+            "Error retrieving agent state with state_config %s: %s", state_config, e
+        )
+        raise
+
+
 def _run_agent_stream(agent: RAgents, msg_list: list[BaseMessage]):
     """
     Streams agent output while handling completion and interruption.
@@ -402,18 +555,10 @@ def _run_agent_stream(agent: RAgents, msg_list: list[BaseMessage]):
     human-in-the-loop interruptions using interrupt_after=["tools"].
     """
     config = get_config_repository().get_all()
-    stream_config = config.copy()
-
     trajectory_repo = get_trajectory_repository()
-    cb = None
-    if is_anthropic_claude(config):
-        model_name = config.get("model", "")
-        full_model_name = model_name
-        cb = AnthropicCallbackHandler(full_model_name)
+    session_repo = get_session_repository()
 
-        if "callbacks" not in stream_config:
-            stream_config["callbacks"] = []
-        stream_config["callbacks"].append(cb)
+    cb, stream_config = _initialize_callback_handler(config)
 
     while True:
         for chunk in agent.stream({"messages": msg_list}, stream_config):
@@ -424,43 +569,30 @@ def _run_agent_stream(agent: RAgents, msg_list: list[BaseMessage]):
 
             if is_completed() or should_exit():
                 reset_completion_flags()
-                _handle_callback_update(cb, trajectory_repo)
+                _handle_callback_update(cb, trajectory_repo, session_repo)
                 return True
 
         logger.debug("Stream iteration ended; checking agent state for continuation.")
-        _handle_callback_update(cb, trajectory_repo)
+        print(f"cb1={cb}")
+        _handle_callback_update(cb, trajectory_repo, session_repo)
 
-        # Prepare state configuration, ensuring 'configurable' is present.
-        state_config = get_config_repository().get_all().copy()
-        if "configurable" not in state_config:
-            logger.debug(
-                "Key 'configurable' not found in config; adding it as an empty dict."
-            )
-            state_config["configurable"] = {}
+        state_config = _prepare_state_config()
         logger.debug("Using state_config for agent.get_state(): %s", state_config)
 
-        try:
-            state = agent.get_state(state_config)
-            logger.debug("Agent state retrieved: %s", state)
-        except Exception as e:
-            logger.error(
-                "Error retrieving agent state with state_config %s: %s", state_config, e
-            )
-            raise
+        state = _get_agent_state(agent, state_config)
 
         if state.next:
             logger.debug(
                 "State indicates continuation (state.next: %s); resuming execution.",
                 state.next,
             )
-            result = agent.invoke(None, stream_config)
-            print(f"result={result}")
+            agent.invoke(None, stream_config)
+            print(f"cb2={cb}")
             continue
         else:
             logger.debug("No continuation indicated in state; exiting stream loop.")
             break
 
-    # _handle_callback_update(cb, trajectory_repo)
     return True
 
 
@@ -475,6 +607,9 @@ def run_agent_with_retry(
     max_retries = 20
     base_delay = 1
     test_attempts = 0
+
+    # Get session ID from global SESSION_TOTALS
+    current_session_id = SESSION_TOTALS["session_id"]
     _max_test_retries = get_config_repository().get(
         "max_test_cmd_retries", DEFAULT_MAX_TEST_CMD_RETRIES
     )

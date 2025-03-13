@@ -569,6 +569,10 @@ def main():
                 # Create a new session for this program run
                 logger.debug("Initializing new session")
                 session_repo.create_session()
+                
+                # Initialize session tracking for token usage
+                from ra_aid.agent_utils import initialize_session_tracking
+                initialize_session_tracking()
 
                 # Check dependencies before proceeding
                 check_dependencies()

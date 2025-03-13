@@ -129,7 +129,7 @@ class TrajectoryRepository:
         if db is None:
             raise ValueError("Database connection is required for TrajectoryRepository")
         self.db = db
-    
+        
     def create(
         self,
         tool_name: Optional[str] = None,
@@ -138,8 +138,11 @@ class TrajectoryRepository:
         step_data: Optional[Dict[str, Any]] = None,
         record_type: str = "tool_execution",
         human_input_id: Optional[int] = None,
-        cost: Optional[float] = None,
-        tokens: Optional[int] = None,
+        session_id: Optional[int] = None,
+        current_cost: Optional[float] = None,  # Cost of the last LLM message
+        current_tokens: Optional[int] = None,  # Tokens (input + output) for the last message
+        total_cost: Optional[float] = None,    # Running total cost across all AI agents in this session
+        total_tokens: Optional[int] = None,    # Running total tokens across all AI agents in this session
         input_tokens: Optional[int] = None,
         output_tokens: Optional[int] = None,
         is_error: bool = False,
@@ -186,16 +189,30 @@ class TrajectoryRepository:
                 except peewee.DoesNotExist:
                     logger.warning(f"Human input with ID {human_input_id} not found")
             
+            # Create session reference if provided
+            session = None
+            if session_id is not None:
+                try:
+                    from ra_aid.database.models import Session
+                    session = Session.get_by_id(session_id)
+                except peewee.DoesNotExist:
+                    logger.warning(f"Session with ID {session_id} not found")
+                except ImportError:
+                    logger.warning("Could not import Session model")
+            
             # Create the trajectory record
             trajectory = Trajectory.create(
                 human_input=human_input,
+                session=session,
                 tool_name=tool_name or "",  # Use empty string if tool_name is None
                 tool_parameters=tool_parameters_json,
                 tool_result=tool_result_json,
                 step_data=step_data_json,
                 record_type=record_type,
-                cost=cost,
-                tokens=tokens,
+                current_cost=current_cost,
+                current_tokens=current_tokens,
+                total_cost=total_cost,
+                total_tokens=total_tokens,
                 input_tokens=input_tokens,
                 output_tokens=output_tokens,
                 is_error=is_error,
@@ -236,8 +253,10 @@ class TrajectoryRepository:
         trajectory_id: int,
         tool_result: Optional[Dict[str, Any]] = None,
         step_data: Optional[Dict[str, Any]] = None,
-        cost: Optional[float] = None,
-        tokens: Optional[int] = None,
+        current_cost: Optional[float] = None,
+        current_tokens: Optional[int] = None,
+        total_cost: Optional[float] = None,
+        total_tokens: Optional[int] = None,
         input_tokens: Optional[int] = None,
         output_tokens: Optional[int] = None,
         is_error: Optional[bool] = None,
@@ -285,11 +304,19 @@ class TrajectoryRepository:
             if step_data is not None:
                 update_data["step_data"] = json.dumps(step_data)
             
-            if cost is not None:
-                update_data["cost"] = cost
+            if current_cost is not None:
+                update_data["current_cost"] = current_cost
+                update_data["cost"] = current_cost  # For backward compatibility
             
-            if tokens is not None:
-                update_data["tokens"] = tokens
+            if current_tokens is not None:
+                update_data["current_tokens"] = current_tokens
+                update_data["tokens"] = current_tokens  # For backward compatibility
+                
+            if total_cost is not None:
+                update_data["total_cost"] = total_cost
+                
+            if total_tokens is not None:
+                update_data["total_tokens"] = total_tokens
                 
             if input_tokens is not None:
                 update_data["input_tokens"] = input_tokens
