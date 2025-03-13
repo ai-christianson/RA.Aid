@@ -14,8 +14,12 @@ export default defineConfig({
     watch: {
       // Watch for changes in the common package.
       // This pattern forces Vite to notice file changes in the shared library.
-      // Adjust the pattern if your common package layout is different.
       paths: ['../common/src/**']
     }
+  },
+  css: {
+    // PostCSS configuration is loaded from postcss.config.js
+    // This ensures proper processing of Tailwind directives
+    devSourcemap: true,
   }
 });
