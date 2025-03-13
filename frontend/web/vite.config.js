@@ -10,12 +10,22 @@ export default defineConfig({
       '@ra-aid/common': path.resolve(__dirname, '../common/src')
     }
   },
+  css: {
+    // Enable PostCSS processing
+    postcss: './postcss.config.js',
+  },
   server: {
     watch: {
-      // Watch for changes in the common package.
-      // This pattern forces Vite to notice file changes in the shared library.
-      // Adjust the pattern if your common package layout is different.
-      paths: ['../common/src/**']
+      // Watch for changes in the common package, including style files
+      // This pattern forces Vite to notice file changes in the shared library
+      paths: [
+        '../common/src/**',
+        '../common/src/styles/**'
+      ]
     }
+  },
+  // Ensure CommonJS modules are properly processed (for Tailwind and PostCSS)
+  optimizeDeps: {
+    include: ['@ra-aid/common'],
   }
 });

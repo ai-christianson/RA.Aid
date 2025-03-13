@@ -1,0 +1,4 @@
+/* Import Tailwind CSS using the v4 syntax */
+@import "tailwindcss";
+
+/* Additional styles specific to the web package can be added here */
