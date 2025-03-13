@@ -17,5 +17,3 @@ appmap.log
 /vsc/node_modules
 /vsc/dist
 node_modules/
-/frontend/web/dist/
-/frontend/common/dist/

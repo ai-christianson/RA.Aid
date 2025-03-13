@@ -4,17 +4,13 @@
     "module": "ESNext",
     "moduleResolution": "node",
     "declaration": true,
-    "jsx": "react-jsx",
+    "jsx": "react",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "outDir": "dist",
-    "rootDir": "src",
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["src/*"]
-    }
+    "rootDir": "src"
   },
   "include": ["src"]
 }

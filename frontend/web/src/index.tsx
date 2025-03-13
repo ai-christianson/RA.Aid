@@ -1,10 +1,14 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { ShadcnDemo } from '@ra-aid/common';
+import { hello } from '@ra-aid/common';
 
-// Import styles
-import './styles.css';
+hello();
 
-// Render the ShadcnDemo component
+const App = () => (
+  <div>
+    <h1>Hello from @ra-aid/web using Vite</h1>
+  </div>
+);
+
 const root = ReactDOM.createRoot(document.getElementById('root')!);
-root.render(<ShadcnDemo />);
+root.render(<App />);
