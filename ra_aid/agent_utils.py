@@ -450,7 +450,7 @@ def _handle_callback_update(
                 f"current_cost: ${created_traj.current_cost:.6f} | current_token: {created_traj.current_tokens} (in: {created_traj.input_tokens}, out: {created_traj.output_tokens})"
             )
             logger.info(
-                f"current_cost: ${created_traj.total_cost:.6f} | current_token: {created_traj.total_tokens}"
+                f"total_cost: ${created_traj.total_cost:.6f} | total_tokens: {created_traj.total_tokens}"
             )
 
     except Exception as e:
