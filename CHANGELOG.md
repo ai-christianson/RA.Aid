@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.1] 2025-03-13
+
+### Fixed
+- Fixed bug with `process_thinking_content` function by moving it from `agent_utils` to `ra_aid.text.processing` module
+- Fixed config parameter handling in research request functions
+- Updated development setup instructions in README to use `pip install -e ".[dev]"` instead of `pip install -r requirements-dev.txt`
+
 ## [0.17.0] 2025-03-12
 
 ### Added
