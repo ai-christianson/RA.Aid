@@ -7,14 +7,14 @@ export default defineConfig({
   resolve: {
     // Ensure that Vite treats symlinked packages as local, so HMR works correctly.
     alias: {
-      '@ra-aid/common': path.resolve(__dirname, '../common/src')
+      '@ra-aid/common': path.resolve(__dirname, '../common/dist')
     }
   },
   server: {
     watch: {
       // Watch for changes in the common package.
       // This pattern forces Vite to notice file changes in the shared library.
-      paths: ['../common/src/**']
+      paths: ['../common/src/**', '../common/dist/**']
     }
   },
   css: {

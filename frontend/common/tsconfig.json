@@ -10,7 +10,8 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "outDir": "dist",
-    "rootDir": "src"
+    "rootDir": "src",
+    "lib": ["DOM", "DOM.Iterable", "ESNext", "ES2016"]
   },
   "include": ["src"]
 }

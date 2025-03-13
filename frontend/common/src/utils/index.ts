@@ -9,5 +9,5 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-// Re-export everything from utils directory
-export * from './utils';
+// Note: Sample data functions and types are now exported directly from the root index.ts
+// to avoid circular references
