@@ -27,15 +27,15 @@ const App = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-50">
+    <div className="min-h-screen bg-background text-foreground dark">
       <div className="container mx-auto py-10 px-4">
         <header className="mb-10">
           <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-400 to-purple-500 inline-block text-transparent bg-clip-text">shadcn/ui Components Demo</h1>
-          <p className="text-slate-400">A showcase of UI components from the common package</p>
+          <p className="text-muted-foreground">A showcase of UI components from the common package</p>
         </header>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card className="border border-slate-800 bg-slate-900">
+          <Card className="border-border bg-card">
             <CardHeader>
               <CardTitle>Button Component</CardTitle>
               <CardDescription>Various button variants from shadcn/ui</CardDescription>
@@ -69,7 +69,7 @@ const App = () => {
             </CardContent>
           </Card>
 
-          <Card className="border border-slate-800 bg-slate-900">
+          <Card className="border-border bg-card">
             <CardHeader>
               <CardTitle>Input Component</CardTitle>
               <CardDescription>Text input with various states</CardDescription>
@@ -83,7 +83,7 @@ const App = () => {
                   onChange={(e) => setInputValue(e.target.value)}
                 />
                 {inputValue && (
-                  <p className="text-sm mt-1 text-slate-400">You typed: {inputValue}</p>
+                  <p className="text-sm mt-1 text-muted-foreground">You typed: {inputValue}</p>
                 )}
               </div>
               <div>
@@ -95,7 +95,7 @@ const App = () => {
                 <div className="relative">
                   <Input placeholder="Search..." />
                   <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground">
                       <circle cx="11" cy="11" r="8"></circle>
                       <path d="m21 21-4.3-4.3"></path>
                     </svg>
@@ -105,7 +105,7 @@ const App = () => {
             </CardContent>
           </Card>
 
-          <Card className="border border-slate-800 bg-slate-900">
+          <Card className="border-border bg-card">
             <CardHeader>
               <CardTitle>Switch Component</CardTitle>
               <CardDescription>Toggle switch with controlled state</CardDescription>
@@ -118,7 +118,7 @@ const App = () => {
                   onCheckedChange={setSwitchState}
                 />
               </div>
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-muted-foreground">
                 Current theme: <span className="font-medium">{switchState ? 'Dark' : 'Light'}</span>
               </p>
               <div className="flex items-center justify-between">
@@ -127,18 +127,18 @@ const App = () => {
               </div>
             </CardContent>
             <CardFooter>
-              <p className="text-xs text-slate-500">Click the switch to toggle its state</p>
+              <p className="text-xs text-muted-foreground">Click the switch to toggle its state</p>
             </CardFooter>
           </Card>
 
-          <Card className="border border-slate-800 bg-slate-900">
+          <Card className="border-border bg-card">
             <CardHeader>
               <CardTitle>Card Component</CardTitle>
               <CardDescription>Card with header, content, and footer sections</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-slate-300">Cards are versatile containers that group related content and actions.</p>
-              <div className="mt-4 p-3 bg-slate-800 rounded-md">
+              <p className="text-card-foreground">Cards are versatile containers that group related content and actions.</p>
+              <div className="mt-4 p-3 bg-muted rounded-md">
                 <code className="text-xs text-pink-400">
                   {'<Card>'}<br/>
                   {'  <CardHeader>'}<br/>
@@ -151,14 +151,14 @@ const App = () => {
                 </code>
               </div>
             </CardContent>
-            <CardFooter className="flex justify-between border-t border-slate-800 pt-4">
+            <CardFooter className="flex justify-between border-t border-border pt-4">
               <Button variant="outline" size="sm">Cancel</Button>
               <Button size="sm">Save</Button>
             </CardFooter>
           </Card>
         </div>
 
-        <footer className="mt-12 text-center text-slate-500 text-sm">
+        <footer className="mt-12 text-center text-muted-foreground text-sm">
           <p>Built with shadcn/ui components from the RA-Aid common package</p>
         </footer>
       </div>
