@@ -464,7 +464,7 @@ def run_agent_with_retry(
 
                 try:
                     _run_agent_stream(agent, msg_list)
-                    if fallback_handler:
+                    if fallback_handler and hasattr(fallback_handler, 'reset_fallback_handler'):
                         fallback_handler.reset_fallback_handler()
                     should_break, prompt, auto_test, test_attempts = (
                         _execute_test_command_wrapper(

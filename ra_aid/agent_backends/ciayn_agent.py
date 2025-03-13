@@ -825,7 +825,8 @@ class CiaynAgent:
             try:
                 last_result = self._execute_tool(response)
                 self.chat_history.append(response)
-                self.fallback_handler.reset_fallback_handler()
+                if hasattr(self.fallback_handler, 'reset_fallback_handler'):
+                    self.fallback_handler.reset_fallback_handler()
                 yield {}
 
             except ToolExecutionError as e:
