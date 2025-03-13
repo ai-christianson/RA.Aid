@@ -33,6 +33,7 @@ from ra_aid.logging_config import get_logger
 from ra_aid.model_formatters import format_key_facts_dict
 from ra_aid.model_formatters.key_snippets_formatter import format_key_snippets_dict
 from ra_aid.model_formatters.research_notes_formatter import format_research_notes_dict
+from ra_aid.text.processing import process_thinking_content
 from ra_aid.models_params import models_params
 from ra_aid.project_info import format_project_info, get_project_info
 from ra_aid.prompts.expert_prompts import EXPERT_PROMPT_SECTION_PLANNING
@@ -286,7 +287,7 @@ def run_planning_agent(
                     content = "\n".join(str(item) for item in content)
             elif supports_think_tag or supports_thinking:
                 # Process thinking content using the centralized function
-                content, _ = agent_utils.process_thinking_content(
+                content, _ = process_thinking_content(
                     content=content,
                     supports_think_tag=supports_think_tag,
                     supports_thinking=supports_thinking,
