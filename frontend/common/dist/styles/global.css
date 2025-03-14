@@ -812,6 +812,9 @@ video {
      -moz-user-select: none;
           user-select: none;
 }
+.resize {
+  resize: both;
+}
 .grid-cols-1 {
   grid-template-columns: repeat(1, minmax(0, 1fr));
 }
@@ -1024,9 +1027,6 @@ video {
 .bg-clip-text {
   -webkit-background-clip: text;
           background-clip: text;
-}
-.p-2 {
-  padding: 0.5rem;
 }
 .p-3 {
   padding: 0.75rem;

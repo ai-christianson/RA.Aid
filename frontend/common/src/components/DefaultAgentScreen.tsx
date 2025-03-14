@@ -42,6 +42,22 @@ export const DefaultAgentScreen: React.FC = () => {
     }
   }, [sessions, selectedSessionId]);
   
+  // Close drawer when window resizes to desktop width
+  useEffect(() => {
+    const handleResize = () => {
+      // Check if we're at desktop size (corresponds to md: breakpoint in Tailwind)
+      if (window.innerWidth >= 768 && isDrawerOpen) {
+        setIsDrawerOpen(false);
+      }
+    };
+
+    // Add event listener
+    window.addEventListener('resize', handleResize);
+    
+    // Clean up event listener on component unmount
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isDrawerOpen]);
+  
   // Filter steps for selected session
   const selectedSessionSteps = selectedSessionId 
     ? allSteps.filter(step => sessions.find(s => s.id === selectedSessionId)?.steps.some(s => s.id === step.id))
