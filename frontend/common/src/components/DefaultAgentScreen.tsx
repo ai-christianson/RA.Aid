@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { PanelLeft } from 'lucide-react';
 import { 
   Button,
@@ -183,18 +184,37 @@ export const DefaultAgentScreen: React.FC = () => {
     )
   );
 
-  // Create floating action button for mobile sidebar toggle
-  const floatingAction = (
-    <Button
-      variant="default"
-      size="icon"
-      onClick={() => setIsDrawerOpen(true)}
-      aria-label="Toggle sessions panel"
-      className="h-14 w-14 rounded-full shadow-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-100 flex items-center justify-center border-2 border-zinc-700 dark:border-zinc-600"
-    >
-      <PanelLeft className="h-6 w-6" />
-    </Button>
-  );
+  // Floating action button component that uses Portal to render at document body level
+  const FloatingActionButton = ({ onClick }: { onClick: () => void }) => {
+    // Only render the portal on the client side, not during SSR
+    const [mounted, setMounted] = useState(false);
+    
+    useEffect(() => {
+      setMounted(true);
+      return () => setMounted(false);
+    }, []);
+    
+    const button = (
+      <Button
+        variant="default"
+        size="icon"
+        onClick={onClick}
+        aria-label="Toggle sessions panel"
+        className="h-14 w-14 rounded-full shadow-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-100 flex items-center justify-center border-2 border-zinc-700 dark:border-zinc-600"
+      >
+        <PanelLeft className="h-6 w-6" />
+      </Button>
+    );
+    
+    const container = (
+      <div className="fixed bottom-6 right-6 z-[9999] md:hidden" style={{ pointerEvents: 'auto' }}>
+        {button}
+      </div>
+    );
+    
+    // Return null during SSR, or the portal on the client
+    return mounted ? createPortal(container, document.body) : null;
+  };
 
   return (
     <>
@@ -205,9 +225,7 @@ export const DefaultAgentScreen: React.FC = () => {
       >
         {mainContent}
       </Layout>
-      <div className="fixed bottom-6 right-6 z-50 md:hidden" style={{zIndex: 9999}}>
-        {floatingAction}
-      </div>
+      <FloatingActionButton onClick={() => setIsDrawerOpen(true)} />
     </>
   );
 };
