@@ -446,14 +446,17 @@ def _handle_callback_update(
             )
             logger.info(f"updated_session={model_to_dict(updated_session)}")
             logger.info(f"SESSION_TOTALS={SESSION_TOTALS}")
+            
+            # Safe formatting for cost values
+            current_cost_str = f"${float(created_traj.current_cost):.6f}" if created_traj.current_cost is not None else "$0.000000"
+            total_cost_str = f"${float(created_traj.total_cost):.6f}" if created_traj.total_cost is not None else "$0.000000"
+            
             logger.info(
-                f"current_cost: ${created_traj.current_cost:.6f} | current_token: {created_traj.current_tokens} (in: {created_traj.input_tokens}, out: {created_traj.output_tokens})"
+                f"current_cost: {current_cost_str} | current_token: {created_traj.current_tokens} (in: {created_traj.input_tokens}, out: {created_traj.output_tokens})"
             )
             logger.info(
-                f"total_cost: ${created_traj.total_cost:.6f} | total_tokens: {created_traj.total_tokens}"
+                f"total_cost: {total_cost_str} | total_tokens: {created_traj.total_tokens}"
             )
-            # r3: start $26.69 - 1.056702 = 25.63
-            # actual $25.56
 
     except Exception as e:
         logger.error(f"Failed to store token usage data: {e}")

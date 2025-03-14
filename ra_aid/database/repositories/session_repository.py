@@ -271,23 +271,21 @@ class SessionRepository:
                 return None
 
             from ra_aid.callbacks.anthropic_callback_handler import calculate_token_cost
-            total_cost = calculate_token_cost(model_name, input_tokens, output_tokens)
+            last_cost = calculate_token_cost(model_name, input_tokens, output_tokens)
 
-            query = Session.update(
-                total_input_tokens=Session.total_input_tokens + input_tokens,
-                total_output_tokens=Session.total_output_tokens + output_tokens,
-                total_tokens=Session.total_tokens + input_tokens + output_tokens,
-                total_cost=Session.total_cost + total_cost,
-            ).where(Session.id == session_id)
-
-            query.execute()
+            session.total_input_tokens = session.total_input_tokens + input_tokens
+            session.total_output_tokens = session.total_output_tokens + output_tokens
+            session.total_tokens = session.total_input_tokens + session.total_output_tokens
+            session.total_cost = session.total_cost + last_cost
+            # Save the updated session
+            session.save()
 
             if self.current_session and self.current_session.id == session_id:
                 self.current_session = self.get(session_id)
 
             logger.debug(
                 f"Updated session {session_id} with {input_tokens} input tokens, "
-                f"{output_tokens} output tokens, ${total_cost:.6f} cost"
+                f"{output_tokens} output tokens, ${session.total_cost:.6f} cost"
             )
 
             return self.get(session_id)
