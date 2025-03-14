@@ -13,8 +13,7 @@ from ra_aid.agent_context import (
 )
 from ra_aid.agent_utils import (
     AgentState,
-    create_agent,
-    is_anthropic_claude,
+    create_agent
 )
 from ra_aid.anthropic_token_limiter import (
     get_model_token_limit,
@@ -451,31 +450,6 @@ def test_handle_api_error_retry(monkeypatch):
     monkeypatch.setattr(time, "sleep", lambda s: None)
     # Should not raise error when attempt is lower than max retries
     _handle_api_error(Exception("error code 429"), 0, 5, 1)
-
-
-def test_is_anthropic_claude():
-    """Test is_anthropic_claude function with various configurations."""
-    # Test Anthropic provider cases
-    assert is_anthropic_claude({"provider": "anthropic", "model": "claude-2"})
-    assert is_anthropic_claude({"provider": "ANTHROPIC", "model": "claude-instant"})
-    assert not is_anthropic_claude({"provider": "anthropic", "model": "gpt-4"})
-
-    # Test OpenRouter provider cases
-    assert is_anthropic_claude(
-        {"provider": "openrouter", "model": "anthropic/claude-2"}
-    )
-    assert is_anthropic_claude(
-        {"provider": "openrouter", "model": "anthropic/claude-instant"}
-    )
-    assert not is_anthropic_claude({"provider": "openrouter", "model": "openai/gpt-4"})
-
-    # Test edge cases
-    assert not is_anthropic_claude({})  # Empty config
-    assert not is_anthropic_claude({"provider": "anthropic"})  # Missing model
-    assert not is_anthropic_claude({"model": "claude-2"})  # Missing provider
-    assert not is_anthropic_claude(
-        {"provider": "other", "model": "claude-2"}
-    )  # Wrong provider
 
 
 def test_run_agent_with_retry_checks_crash_status(monkeypatch, mock_config_repository):

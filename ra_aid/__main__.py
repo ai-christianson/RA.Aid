@@ -5,23 +5,7 @@ import sys
 import uuid
 from datetime import datetime
 
-# Add litellm import
 import litellm
-
-# Configure litellm to suppress debug logs
-os.environ["LITELLM_LOG"] = "ERROR"
-litellm.suppress_debug_info = True
-litellm.set_verbose = False
-
-# Explicitly configure LiteLLM's loggers
-for logger_name in ["litellm", "LiteLLM"]:
-    litellm_logger = logging.getLogger(logger_name)
-    litellm_logger.setLevel(logging.WARNING)
-    litellm_logger.propagate = True
-
-# Use litellm's internal method to disable debugging
-if hasattr(litellm, "_logging") and hasattr(litellm._logging, "_disable_debugging"):
-    litellm._logging._disable_debugging()
 
 from langgraph.checkpoint.memory import MemorySaver
 from rich.console import Console
@@ -98,6 +82,21 @@ from ra_aid.tool_configs import get_chat_tools, set_modification_tools
 from ra_aid.tools.human import ask_human
 
 logger = get_logger(__name__)
+
+# Configure litellm to suppress debug logs
+os.environ["LITELLM_LOG"] = "ERROR"
+litellm.suppress_debug_info = True
+litellm.set_verbose = False
+
+# Explicitly configure LiteLLM's loggers
+for logger_name in ["litellm", "LiteLLM"]:
+    litellm_logger = logging.getLogger(logger_name)
+    litellm_logger.setLevel(logging.WARNING)
+    litellm_logger.propagate = True
+
+# Use litellm's internal method to disable debugging
+if hasattr(litellm, "_logging") and hasattr(litellm._logging, "_disable_debugging"):
+    litellm._logging._disable_debugging()
 
 
 def launch_webui(host: str, port: int):
