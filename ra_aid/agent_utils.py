@@ -593,6 +593,7 @@ def _run_agent_stream(agent: RAgents, msg_list: list[BaseMessage]):
             )
             agent.invoke(None, stream_config)
             logger.info(f"cb2={cb}")
+            _handle_callback_update(cb, trajectory_repo, session_repo)
             continue
         else:
             logger.debug("No continuation indicated in state; exiting stream loop.")
