@@ -32,13 +32,13 @@ export const Layout: React.FC<LayoutProps> = ({
       
       {/* Sidebar - hidden on mobile, visible on tablet/desktop */}
       {sidebar && (
-        <aside className="hidden md:block h-[calc(100vh-64px)] overflow-hidden z-20 bg-background border-r border-border row-start-2 col-start-1">
+        <aside className="hidden md:block fixed top-16 bottom-0 w-[280px] lg:w-[320px] xl:w-[350px] overflow-y-auto z-20 bg-background border-r border-border">
           {sidebar}
         </aside>
       )}
       
       {/* Main content area */}
-      <main className="overflow-y-auto p-4 row-start-2 col-start-1 md:col-start-2">
+      <main className="overflow-y-auto p-4 row-start-2 col-start-1 md:col-start-2 md:h-[calc(100vh-64px)]">
         {children}
       </main>
       
