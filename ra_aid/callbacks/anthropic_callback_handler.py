@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional
 from langchain_core.callbacks import BaseCallbackHandler
 
 from ra_aid.config import DEFAULT_MODEL
+from ra_aid.utils.singleton import Singleton
 
 # Define cost per 1K tokens for various models
 ANTHROPIC_MODEL_COSTS = {
@@ -138,8 +139,11 @@ def calculate_token_cost(
     return input_cost + output_cost
 
 
-class AnthropicCallbackHandler(BaseCallbackHandler):
-    """Callback Handler that tracks Anthropic token usage and costs."""
+class AnthropicCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
+    """Callback Handler that tracks Anthropic token usage and costs.
+    
+    This class uses the Singleton metaclass to ensure only one instance exists.
+    """
 
     total_tokens: int = 0
     prompt_tokens: int = 0
@@ -147,6 +151,11 @@ class AnthropicCallbackHandler(BaseCallbackHandler):
     successful_requests: int = 0
     total_cost: float = 0.0
     model_name: str = DEFAULT_MODEL
+    
+    # Track cumulative totals separately from last message
+    cumulative_total_tokens: int = 0
+    cumulative_prompt_tokens: int = 0
+    cumulative_completion_tokens: int = 0
 
     def __init__(self, model_name: Optional[str] = None) -> None:
         super().__init__()
@@ -160,7 +169,7 @@ class AnthropicCallbackHandler(BaseCallbackHandler):
 
     def __repr__(self) -> str:
         return (
-            f"Tokens Used: {self.total_tokens}\n"
+            f"Tokens Used: {self.prompt_tokens + self.completion_tokens}\n"
             f"\tPrompt Tokens: {self.prompt_tokens}\n"
             f"\tCompletion Tokens: {self.completion_tokens}\n"
             f"Successful Requests: {self.successful_requests}\n"
@@ -193,6 +202,22 @@ class AnthropicCallbackHandler(BaseCallbackHandler):
     def on_llm_end(self, response: Any, **kwargs: Any) -> None:
         """Collect token usage from response."""
         token_usage = {}
+
+        # Print input token details and cache tokens if available
+        if hasattr(response, "llm_output") and response.llm_output and "usage" in response.llm_output:
+            usage = response.llm_output["usage"]
+            if "cache_creation_input_tokens" in usage or "cache_read_input_tokens" in usage:
+                print(f"Input token details: cache_creation={usage.get('cache_creation_input_tokens', 0)}, "
+                      f"cache_read={usage.get('cache_read_input_tokens', 0)}")
+        elif hasattr(response, "generations") and response.generations:
+            for gen in response.generations:
+                if gen and hasattr(gen[0], "usage_metadata") and gen[0].usage_metadata:
+                    metadata = gen[0].usage_metadata
+                    if "input_token_details" in metadata:
+                        details = metadata["input_token_details"]
+                        print(f"Input token details: cache_creation={details.get('cache_creation', 0)}, "
+                              f"cache_read={details.get('cache_read', 0)}")
+                        break
 
         if hasattr(response, "llm_output") and response.llm_output:
             llm_output = response.llm_output
@@ -230,25 +255,30 @@ class AnthropicCallbackHandler(BaseCallbackHandler):
 
         # Update counts with lock to prevent race conditions
         with self._lock:
+            # Store the current message's tokens directly (non-cumulative)
             prompt_tokens = token_usage.get("prompt_tokens", 0)
             completion_tokens = token_usage.get("completion_tokens", 0)
+            
+            # Update cumulative totals
+            self.cumulative_prompt_tokens += prompt_tokens
+            self.cumulative_completion_tokens += completion_tokens
+            self.cumulative_total_tokens += prompt_tokens + completion_tokens
+            
+            # Set the current message tokens (non-cumulative)
+            self.prompt_tokens = prompt_tokens
+            self.completion_tokens = completion_tokens
+            self.total_tokens = prompt_tokens + completion_tokens
 
-            # Only update prompt tokens if we have them
+            # Calculate costs based on the current message
             if prompt_tokens > 0:
-                self.prompt_tokens += prompt_tokens
-                self.total_tokens += prompt_tokens
                 prompt_cost = get_anthropic_token_cost_for_model(
                     self.model_name, prompt_tokens, is_completion=False
                 )
                 self.total_cost += prompt_cost
 
-            # Only update completion tokens if not already counted by on_llm_new_token
-            if completion_tokens > 0 and completion_tokens > self.completion_tokens:
-                additional_tokens = completion_tokens - self.completion_tokens
-                self.completion_tokens = completion_tokens
-                self.total_tokens += additional_tokens
+            if completion_tokens > 0:
                 completion_cost = get_anthropic_token_cost_for_model(
-                    self.model_name, additional_tokens, is_completion=True
+                    self.model_name, completion_tokens, is_completion=True
                 )
                 self.total_cost += completion_cost
 
