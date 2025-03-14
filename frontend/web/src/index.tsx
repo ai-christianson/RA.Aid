@@ -8,6 +8,7 @@ import {
   getSampleAgentSessions,
   getSampleAgentSteps
 } from '@ra-aid/common';
+import { Layout } from './components/Layout';
 // The CSS import happens through the common package's index.ts
 
 // Theme management helper function
@@ -85,121 +86,124 @@ const App = () => {
     localStorage.setItem('theme', newIsDark ? 'dark' : 'light');
   };
   
-  return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
-      {/* Header */}
-      <header className="border-b border-border py-4 px-4 sticky top-0 z-10 bg-background">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 inline-block text-transparent bg-clip-text">
-            RA-Aid
-          </h1>
-          
-          <div className="flex items-center gap-2">
-            {/* Theme toggle button */}
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={toggleTheme}
-              aria-label={isDarkTheme ? "Switch to light mode" : "Switch to dark mode"}
-              className="mr-2"
+  // Render header content
+  const headerContent = (
+    <div className="flex justify-between items-center h-full px-4">
+      <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 inline-block text-transparent bg-clip-text">
+        RA-Aid
+      </h1>
+      
+      <div className="flex items-center gap-2">
+        {/* Theme toggle button */}
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={toggleTheme}
+          aria-label={isDarkTheme ? "Switch to light mode" : "Switch to dark mode"}
+          className="mr-2"
+        >
+          {isDarkTheme ? (
+            // Sun icon for light mode toggle
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              width="20" 
+              height="20" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
             >
-              {isDarkTheme ? (
-                // Sun icon for light mode toggle
-                <svg 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  width="20" 
-                  height="20" 
-                  viewBox="0 0 24 24" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  strokeWidth="2" 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round"
-                >
-                  <circle cx="12" cy="12" r="5" />
-                  <line x1="12" y1="1" x2="12" y2="3" />
-                  <line x1="12" y1="21" x2="12" y2="23" />
-                  <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-                  <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-                  <line x1="1" y1="12" x2="3" y2="12" />
-                  <line x1="21" y1="12" x2="23" y2="12" />
-                  <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-                  <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-                </svg>
-              ) : (
-                // Moon icon for dark mode toggle
-                <svg 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  width="20" 
-                  height="20" 
-                  viewBox="0 0 24 24" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  strokeWidth="2" 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round"
-                >
-                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-                </svg>
-              )}
-            </Button>
-            
-            {/* Mobile drawer toggle - show only on small screens */}
-            <div className="md:hidden">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => setIsDrawerOpen(true)}
-                aria-label="Open menu"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-menu"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
-      
-      {/* Main content */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Desktop sidebar - hidden on mobile */}
-        <SessionSidebar 
-          sessions={sessions}
-          currentSessionId={selectedSessionId || undefined}
-          onSelectSession={handleSessionSelect}
-          className="shrink-0"
-        />
-        
-        {/* Mobile drawer */}
-        <SessionDrawer 
-          sessions={sessions}
-          currentSessionId={selectedSessionId || undefined}
-          onSelectSession={handleSessionSelect}
-        />
-        
-        {/* Main content area */}
-        <main className="flex-1 overflow-auto p-4">
-          {selectedSessionId ? (
-            <>
-              <h2 className="text-xl font-semibold mb-4">
-                Session: {sessions.find(s => s.id === selectedSessionId)?.name || 'Unknown'}
-              </h2>
-              <TimelineFeed 
-                steps={selectedSessionSteps} 
-                maxHeight="calc(100vh - 14rem)"
-              />
-            </>
+              <circle cx="12" cy="12" r="5" />
+              <line x1="12" y1="1" x2="12" y2="3" />
+              <line x1="12" y1="21" x2="12" y2="23" />
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+              <line x1="1" y1="12" x2="3" y2="12" />
+              <line x1="21" y1="12" x2="23" y2="12" />
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+            </svg>
           ) : (
-            <div className="flex items-center justify-center h-full">
-              <p className="text-muted-foreground">Select a session to view details</p>
-            </div>
+            // Moon icon for dark mode toggle
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              width="20" 
+              height="20" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+            >
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+            </svg>
           )}
-        </main>
+        </Button>
+        
+        {/* Mobile drawer toggle - show only on small screens */}
+        <div className="md:hidden">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => setIsDrawerOpen(true)}
+            aria-label="Open menu"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-menu"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+          </Button>
+        </div>
       </div>
-      
-      <footer className="border-t border-border py-4 px-4 text-center text-muted-foreground text-sm">
-        <p>Built with shadcn/ui components from the RA-Aid common package</p>
-      </footer>
     </div>
+  );
+
+  // Render sidebar content
+  const sidebarContent = (
+    <SessionSidebar 
+      sessions={sessions}
+      currentSessionId={selectedSessionId || undefined}
+      onSelectSession={handleSessionSelect}
+    />
+  );
+
+  // Render drawer
+  const drawerContent = (
+    <SessionDrawer 
+      sessions={sessions}
+      currentSessionId={selectedSessionId || undefined}
+      onSelectSession={handleSessionSelect}
+      isOpen={isDrawerOpen}
+      onClose={() => setIsDrawerOpen(false)}
+    />
+  );
+
+  // Render main content
+  const mainContent = (
+    selectedSessionId ? (
+      <>
+        <h2 className="text-xl font-semibold mb-4">
+          Session: {sessions.find(s => s.id === selectedSessionId)?.name || 'Unknown'}
+        </h2>
+        <TimelineFeed 
+          steps={selectedSessionSteps}
+        />
+      </>
+    ) : (
+      <div className="flex items-center justify-center h-full">
+        <p className="text-muted-foreground">Select a session to view details</p>
+      </div>
+    )
+  );
+  
+  return (
+    <Layout
+      header={headerContent}
+      sidebar={sidebarContent}
+      drawer={drawerContent}
+    >
+      {mainContent}
+    </Layout>
   );
 };
 

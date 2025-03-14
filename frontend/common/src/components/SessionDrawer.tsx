@@ -1,14 +1,11 @@
 import React from 'react';
-import { Menu } from 'lucide-react';
 import { 
   Sheet, 
-  SheetTrigger, 
   SheetContent, 
   SheetHeader, 
   SheetTitle, 
   SheetClose 
 } from './ui/sheet';
-import { Button } from './ui/button';
 import { ScrollArea } from './ui/scroll-area';
 import { AgentSession, getSampleAgentSessions } from '../utils/sample-data';
 
@@ -16,12 +13,16 @@ interface SessionDrawerProps {
   onSelectSession?: (sessionId: string) => void;
   currentSessionId?: string;
   sessions?: AgentSession[];
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
 export const SessionDrawer: React.FC<SessionDrawerProps> = ({ 
   onSelectSession, 
   currentSessionId,
-  sessions = getSampleAgentSessions()
+  sessions = getSampleAgentSessions(),
+  isOpen = false,
+  onClose
 }) => {
   // Get status color
   const getStatusColor = (status: string) => {
@@ -48,19 +49,16 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
   };
 
   return (
-    <Sheet>
-      <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="md:hidden">
-          <Menu className="h-5 w-5" />
-          <span className="sr-only">Toggle navigation</span>
-        </Button>
-      </SheetTrigger>
-      <SheetContent side="left" className="w-[85%] sm:max-w-md">
+    <Sheet open={isOpen} onOpenChange={onClose}>
+      <SheetContent 
+        side="left" 
+        className="w-[85%] sm:max-w-md border-r border-border"
+      >
         <SheetHeader>
           <SheetTitle>Sessions</SheetTitle>
         </SheetHeader>
-        <ScrollArea className="h-[calc(100vh-5rem)] mt-6">
-          <div className="space-y-4">
+        <ScrollArea className="h-[calc(100vh-9rem)] mt-6">
+          <div className="space-y-4 p-2">
             {sessions.map((session) => (
               <SheetClose key={session.id} asChild>
                 <button

@@ -40,11 +40,11 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
   };
 
   return (
-    <div className={`hidden md:block w-[250px] lg:w-[300px] h-screen border-r border-border ${className}`}>
+    <div className={`flex flex-col h-full ${className}`}>
       <div className="p-4 border-b border-border">
         <h3 className="font-medium text-lg">Sessions</h3>
       </div>
-      <ScrollArea className="h-[calc(100vh-5rem)]">
+      <ScrollArea className="flex-1">
         <div className="p-4 space-y-4">
           {sessions.map((session) => (
             <button

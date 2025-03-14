@@ -47,34 +47,47 @@ export const TimelineStep: React.FC<TimelineStepProps> = ({ step }) => {
   };
 
   return (
-    <Collapsible className="w-full mb-4 border border-border rounded-md overflow-hidden transition-all duration-200">
-      <CollapsibleTrigger className="w-full flex items-center justify-between p-3 text-left hover:bg-accent/50 cursor-pointer">
-        <div className="flex items-center">
-          <div className={`w-3 h-3 rounded-full ${getStatusColor(step.status)} mr-3`} />
-          <div className="mr-2">{getTypeIcon(step.type)}</div>
+    <Collapsible className="w-full mb-5 border border-border rounded-md overflow-hidden shadow-sm hover:shadow-md transition-all duration-200">
+      <CollapsibleTrigger className="w-full flex items-center justify-between p-4 text-left hover:bg-accent/30 cursor-pointer group">
+        <div className="flex items-center space-x-3">
+          <div className={`w-3 h-3 rounded-full ${getStatusColor(step.status)} ring-1 ring-ring/20`} />
+          <div className="text-lg group-hover:scale-110 transition-transform">{getTypeIcon(step.type)}</div>
           <div>
-            <div className="font-medium">{step.title}</div>
-            <div className="text-sm text-muted-foreground truncate max-w-xs">
+            <div className="font-medium text-foreground">{step.title}</div>
+            <div className="text-sm text-muted-foreground truncate max-w-md">
               {step.type === 'tool-execution' ? 'Run tool' : step.content.substring(0, 60)}
               {step.content.length > 60 ? '...' : ''}
             </div>
           </div>
         </div>
         <div className="text-xs text-muted-foreground flex flex-col items-end">
-          <span>{formatTime(step.timestamp)}</span>
+          <span className="font-medium">{formatTime(step.timestamp)}</span>
           {step.duration && (
-            <span className="mt-1">{(step.duration / 1000).toFixed(1)}s</span>
+            <span className="mt-1 px-2 py-0.5 bg-secondary/50 rounded-full">
+              {(step.duration / 1000).toFixed(1)}s
+            </span>
           )}
         </div>
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <div className="p-4 bg-card border-t border-border">
-          <div className="text-sm whitespace-pre-wrap">
+        <div className="p-5 bg-card/50 border-t border-border">
+          <div className="text-sm whitespace-pre-wrap text-foreground leading-relaxed">
             {step.content}
           </div>
           {step.duration && (
-            <div className="mt-3 pt-3 border-t border-border">
-              <div className="text-xs text-muted-foreground">
+            <div className="mt-4 pt-3 border-t border-border/50">
+              <div className="text-xs text-muted-foreground flex items-center">
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  className="h-3.5 w-3.5 mr-1" 
+                  fill="none" 
+                  viewBox="0 0 24 24" 
+                  stroke="currentColor" 
+                  strokeWidth={2}
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
+                </svg>
                 Duration: {(step.duration / 1000).toFixed(1)} seconds
               </div>
             </div>
