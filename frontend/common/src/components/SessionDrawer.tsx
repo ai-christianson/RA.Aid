@@ -29,16 +29,16 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent 
         side="left" 
-        className="w-full sm:max-w-md border-r border-border"
+        className="w-full sm:max-w-md border-r border-border p-4"
       >
-        <SheetHeader>
+        <SheetHeader className="px-2">
           <SheetTitle>Sessions</SheetTitle>
         </SheetHeader>
         <SessionList
           sessions={sessions}
           currentSessionId={currentSessionId}
           onSelectSession={onSelectSession}
-          className="h-[calc(100vh-9rem)] mt-6"
+          className="h-[calc(100vh-9rem)] mt-4"
           wrapperComponent={SheetClose}
         />
       </SheetContent>

@@ -24,7 +24,7 @@ export const Layout: React.FC<LayoutProps> = ({
   floatingAction
 }) => {
   return (
-    <div className="grid min-h-screen grid-cols-1 grid-rows-[64px_1fr] md:grid-cols-[250px_1fr] lg:grid-cols-[300px_1fr] bg-background text-foreground relative">
+    <div className="grid min-h-screen grid-cols-1 grid-rows-[64px_1fr] md:grid-cols-[280px_1fr] lg:grid-cols-[320px_1fr] xl:grid-cols-[350px_1fr] bg-background text-foreground relative">
       {/* Header - always visible, spans full width */}
       <header className="sticky top-0 z-30 h-16 flex items-center bg-background border-b border-border col-span-full">
         {header}
@@ -32,7 +32,7 @@ export const Layout: React.FC<LayoutProps> = ({
       
       {/* Sidebar - hidden on mobile, visible on tablet/desktop */}
       {sidebar && (
-        <aside className="hidden md:block sticky top-16 h-[calc(100vh-64px)] overflow-y-auto z-20 bg-background border-r border-border row-start-2 col-start-1">
+        <aside className="hidden md:block h-[calc(100vh-64px)] overflow-hidden z-20 bg-background border-r border-border row-start-2 col-start-1">
           {sidebar}
         </aside>
       )}

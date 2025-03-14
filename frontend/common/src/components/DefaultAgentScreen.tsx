@@ -6,7 +6,7 @@ import {
   Layout
 } from './ui';
 import { SessionDrawer } from './SessionDrawer';
-import { SessionSidebar } from './SessionSidebar';
+import { SessionList } from './SessionList';
 import { TimelineFeed } from './TimelineFeed';
 import { getSampleAgentSessions, getSampleAgentSteps } from '../utils/sample-data';
 
@@ -146,13 +146,19 @@ export const DefaultAgentScreen: React.FC = () => {
     </div>
   );
 
-  // Render sidebar content
+  // Sidebar content with sessions list
   const sidebarContent = (
-    <SessionSidebar 
-      sessions={sessions}
-      currentSessionId={selectedSessionId || undefined}
-      onSelectSession={handleSessionSelect}
-    />
+    <div className="h-full flex flex-col px-4 py-3">
+      <div className="border-b border-border pb-3">
+        <h2 className="text-xl font-semibold">Sessions</h2>
+      </div>
+      <SessionList 
+        sessions={sessions}
+        onSelectSession={handleSessionSelect}
+        currentSessionId={selectedSessionId || undefined}
+        className="flex-1 mt-3 pr-1 -mr-1"
+      />
+    </div>
   );
 
   // Render drawer

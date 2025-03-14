@@ -45,18 +45,18 @@ export const SessionList: React.FC<SessionListProps> = ({
   };
 
   return (
-    <ScrollArea className={`${className}`}>
-      <div className="px-2 py-2 space-y-3 w-full">
+    <ScrollArea className={className}>
+      <div className="space-y-1.5 pt-1.5 pb-2">
         {sessions.map((session) => {
           const buttonContent = (
             <>
-              <div className={`w-2.5 h-2.5 rounded-full ${getStatusColor(session.status)} mt-1.5 mr-2 flex-shrink-0`} />
-              <div className="flex-1 min-w-0 w-full overflow-hidden">
-                <div className="font-medium truncate max-w-full">{session.name}</div>
-                <div className="text-xs text-muted-foreground mt-0.5 truncate">
+              <div className={`w-2.5 h-2.5 rounded-full ${getStatusColor(session.status)} mt-1.5 mr-3 flex-shrink-0`} />
+              <div className="flex-1 min-w-0 pr-1">
+                <div className="font-medium text-sm+ break-words">{session.name}</div>
+                <div className="text-xs text-muted-foreground mt-1 break-words">
                   {session.steps.length} steps • {formatDate(session.updated)}
                 </div>
-                <div className="text-xs text-muted-foreground mt-0.5 truncate">
+                <div className="text-xs text-muted-foreground mt-0.5 break-words">
                   <span className="capitalize">{session.status}</span>
                 </div>
               </div>
@@ -68,19 +68,21 @@ export const SessionList: React.FC<SessionListProps> = ({
             {
               key: session.id,
               onClick: () => onSelectSession?.(session.id),
-              className: `w-full flex items-start px-2 py-2 text-left rounded-md transition-colors hover:bg-accent/50 ${
+              className: `w-full flex items-start px-3 py-2.5 text-left rounded-md transition-colors hover:bg-accent/50 ${
                 currentSessionId === session.id ? 'bg-accent' : ''
               }`
             },
             closeAction ? (
               <>
                 {buttonContent}
-                {React.cloneElement(closeAction as React.ReactElement, { 
-                  onClick: (e: React.MouseEvent) => {
-                    e.stopPropagation();
-                    onSelectSession?.(session.id);
-                  }
-                })}
+                <div className="ml-2 flex-shrink-0 self-center">
+                  {React.cloneElement(closeAction as React.ReactElement, { 
+                    onClick: (e: React.MouseEvent) => {
+                      e.stopPropagation();
+                      onSelectSession?.(session.id);
+                    }
+                  })}
+                </div>
               </>
             ) : buttonContent
           );
