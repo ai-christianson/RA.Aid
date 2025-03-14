@@ -46,17 +46,17 @@ export const SessionList: React.FC<SessionListProps> = ({
 
   return (
     <ScrollArea className={`${className}`}>
-      <div className="p-4 space-y-4">
+      <div className="px-2 py-2 space-y-3 w-full">
         {sessions.map((session) => {
           const buttonContent = (
             <>
-              <div className={`w-3 h-3 rounded-full ${getStatusColor(session.status)} mt-1.5 mr-3 flex-shrink-0`} />
-              <div className="flex-1 min-w-0">
-                <div className="font-medium truncate">{session.name}</div>
-                <div className="text-xs text-muted-foreground mt-1">
+              <div className={`w-2.5 h-2.5 rounded-full ${getStatusColor(session.status)} mt-1.5 mr-2 flex-shrink-0`} />
+              <div className="flex-1 min-w-0 w-full overflow-hidden">
+                <div className="font-medium truncate max-w-full">{session.name}</div>
+                <div className="text-xs text-muted-foreground mt-0.5 truncate">
                   {session.steps.length} steps • {formatDate(session.updated)}
                 </div>
-                <div className="text-xs text-muted-foreground mt-1">
+                <div className="text-xs text-muted-foreground mt-0.5 truncate">
                   <span className="capitalize">{session.status}</span>
                 </div>
               </div>
@@ -68,7 +68,7 @@ export const SessionList: React.FC<SessionListProps> = ({
             {
               key: session.id,
               onClick: () => onSelectSession?.(session.id),
-              className: `w-full flex items-start p-3 text-left rounded-md transition-colors hover:bg-accent/50 ${
+              className: `w-full flex items-start px-2 py-2 text-left rounded-md transition-colors hover:bg-accent/50 ${
                 currentSessionId === session.id ? 'bg-accent' : ''
               }`
             },
