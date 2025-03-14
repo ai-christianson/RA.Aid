@@ -29,7 +29,7 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent 
         side="left" 
-        className="w-[85%] sm:max-w-md border-r border-border"
+        className="w-full sm:max-w-md border-r border-border"
       >
         <SheetHeader>
           <SheetTitle>Sessions</SheetTitle>
