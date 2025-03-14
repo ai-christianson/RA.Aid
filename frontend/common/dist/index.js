@@ -4,7 +4,7 @@ import './styles/global.css';
 export * from './utils/types';
 // Export utility functions
 export * from './utils';
-// Export all UI components
+// Export UI components
 export * from './components/ui';
 // Export timeline components
 export * from './components/TimelineStep';
@@ -12,7 +12,7 @@ export * from './components/TimelineFeed';
 // Export session navigation components
 export * from './components/SessionDrawer';
 export * from './components/SessionSidebar';
-// Export the main screen component
+// Export main screens
 export * from './components/DefaultAgentScreen';
 // Export the hello function (temporary example)
 export const hello = () => {

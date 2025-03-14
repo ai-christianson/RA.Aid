@@ -1,46 +1,40 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
+import fs from 'fs';
+
+// Get all component files from common package
+const commonSrcDir = path.resolve(__dirname, '../common/src');
 
 export default defineConfig({
-  plugins: [
-    react(),
-  ],
+  plugins: [react()],
   resolve: {
-    // Point to the source files instead of dist for development
     alias: {
+      // Direct alias to the source directory
       '@ra-aid/common': path.resolve(__dirname, '../common/src')
-    }
+    },
+    preserveSymlinks: true
   },
   optimizeDeps: {
-    // Force Vite to include these dependencies in its optimization
-    include: ['@ra-aid/common'],
-    // Tell Vite to respect our aliased packages instead of using node_modules for them
-    esbuildOptions: {
-      preserveSymlinks: true,
-    }
+    // Exclude the common package from optimization so it can trigger hot reload
+    exclude: ['@ra-aid/common']
   },
   server: {
-    hmr: {
-      // More verbose logging for HMR
-      overlay: true,
-    },
+    hmr: true,
     watch: {
-      // Watch for changes in the common package
-      paths: ['../common/src/**'],
-      // Ensure changes in source files trigger a reload
       usePolling: true,
+      interval: 100,
+      // Make sure to explicitly NOT ignore the common package
+      ignored: [
+        '**/node_modules/**',
+        '**/dist/**',
+        '!**/common/src/**'
+      ]
     }
   },
-  css: {
-    // PostCSS configuration is loaded from postcss.config.js
-    // This ensures proper processing of Tailwind directives
-    devSourcemap: true,
-  },
   build: {
-    // When building for production, we need to make sure the common package is built too
     commonjsOptions: {
-      transformMixedEsModules: true,
-    },
+      transformMixedEsModules: true
+    }
   }
 });

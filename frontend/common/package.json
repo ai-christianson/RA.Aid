@@ -6,7 +6,9 @@
   "types": "src/index.ts",
   "scripts": {
     "build": "tsc && postcss src/styles/global.css -o dist/styles/global.css",
-    "dev": "concurrently \"tsc --watch\" \"postcss src/styles/global.css -o dist/styles/global.css --watch\"",
+    "dev": "tsc --watch",
+    "watch:css": "postcss src/styles/global.css -o dist/styles/global.css --watch",
+    "watch": "concurrently \"npm run dev\" \"npm run watch:css\"",
     "prepare": "npm run build"
   },
   "dependencies": {

@@ -89,7 +89,7 @@ export const DefaultAgentScreen: React.FC = () => {
   const headerContent = (
     <div className="flex justify-between items-center h-full px-4">
       <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 inline-block text-transparent bg-clip-text">
-        RA-Aid
+        RA.Aid
       </h1>
       
       <div className="flex items-center gap-2">
