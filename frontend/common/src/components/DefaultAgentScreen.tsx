@@ -174,7 +174,7 @@ export const DefaultAgentScreen: React.FC = () => {
       size="icon"
       onClick={() => setIsDrawerOpen(true)}
       aria-label="Toggle sessions panel"
-      className="h-14 w-14 rounded-full shadow-xl bg-red-600 hover:bg-red-700 text-white flex items-center justify-center border-2 border-white dark:border-gray-800"
+      className="h-14 w-14 rounded-full shadow-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-100 flex items-center justify-center border-2 border-zinc-700 dark:border-zinc-600"
     >
       <PanelLeft className="h-6 w-6" />
     </Button>
