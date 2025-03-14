@@ -1,7 +1,9 @@
 """Utilities for handling token limits with Anthropic models."""
 
 from functools import partial
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence, Union
+from langchain_core.language_models import BaseChatModel
+from ra_aid.model_detection import is_claude_37
 from dataclasses import dataclass
 
 from langchain_anthropic import ChatAnthropic
@@ -19,7 +21,7 @@ from ra_aid.anthropic_message_utils import (
     has_tool_use,
 )
 from langgraph.prebuilt.chat_agent_executor import AgentState
-from litellm import token_counter
+from litellm import token_counter, get_model_info
 
 from ra_aid.agent_backends.ciayn_agent import CiaynAgent
 from ra_aid.database.repositories.config_repository import get_config_repository
@@ -168,14 +170,39 @@ def sonnet_35_state_modifier(
     return result
 
 
+def adjust_claude_37_token_limit(max_input_tokens: int, model: Optional[BaseChatModel]) -> Optional[int]:
+    """Adjust token limit for Claude 3.7 models by subtracting max_tokens.
+    
+    Args:
+        max_input_tokens: The original token limit
+        model: The model instance to check
+        
+    Returns:
+        Optional[int]: Adjusted token limit if model is Claude 3.7, otherwise original limit
+    """
+    if not max_input_tokens:
+        return max_input_tokens
+        
+    if model and hasattr(model, 'model') and is_claude_37(model.model):
+        if hasattr(model, 'max_tokens') and model.max_tokens:
+            effective_max_input_tokens = max_input_tokens - model.max_tokens
+            logger.debug(
+                f"Adjusting token limit for Claude 3.7 model: {max_input_tokens} - {model.max_tokens} = {effective_max_input_tokens}"
+            )
+            return effective_max_input_tokens
+    
+    return max_input_tokens
+
+
 def get_model_token_limit(
-    config: Dict[str, Any], agent_type: str = "default"
+    config: Dict[str, Any], agent_type: str = "default", model: Optional[BaseChatModel] = None
 ) -> Optional[int]:
     """Get the token limit for the current model configuration based on agent type.
 
     Args:
         config: Configuration dictionary containing provider and model information
         agent_type: Type of agent ("default", "research", or "planner")
+        model: Optional BaseChatModel instance to check for model-specific attributes
 
     Returns:
         Optional[int]: The token limit if found, None otherwise
@@ -201,7 +228,6 @@ def get_model_token_limit(
             model_name = config.get("model", "")
 
         try:
-            from litellm import get_model_info
 
             provider_model = model_name if not provider else f"{provider}/{model_name}"
             model_info = get_model_info(provider_model)
@@ -210,7 +236,7 @@ def get_model_token_limit(
                 logger.debug(
                     f"Using litellm token limit for {model_name}: {max_input_tokens}"
                 )
-                return max_input_tokens
+                return adjust_claude_37_token_limit(max_input_tokens, model)
         except Exception as e:
             logger.debug(
                 f"Error getting model info from litellm: {e}, falling back to models_params"
@@ -229,7 +255,7 @@ def get_model_token_limit(
             max_input_tokens = None
             logger.debug(f"Could not find token limit for {provider}/{model_name}")
 
-        return max_input_tokens
+        return adjust_claude_37_token_limit(max_input_tokens, model)
 
     except Exception as e:
         logger.warning(f"Failed to get model token limit: {e}")

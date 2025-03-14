@@ -51,7 +51,12 @@ from ra_aid.database.repositories.human_input_repository import (
 )
 from ra_aid.database.repositories.trajectory_repository import get_trajectory_repository
 from ra_aid.database.repositories.config_repository import get_config_repository
-from ra_aid.anthropic_token_limiter import sonnet_35_state_modifier, state_modifier, get_model_token_limit
+from ra_aid.anthropic_token_limiter import (
+    sonnet_35_state_modifier,
+    state_modifier,
+    get_model_token_limit,
+)
+from ra_aid.model_detection import is_anthropic_claude
 
 console = Console()
 
@@ -65,8 +70,6 @@ def output_markdown_message(message: str) -> str:
     """Outputs a message to the user, optionally prompting for input."""
     console.print(Panel(Markdown(message.strip()), title="🤖 Assistant"))
     return "Message output."
-
-
 
 
 def build_agent_kwargs(
@@ -99,8 +102,13 @@ def build_agent_kwargs(
     ):
 
         def wrapped_state_modifier(state: AgentState) -> list[BaseMessage]:
-            if any(pattern in model.model for pattern in ["claude-3.5", "claude3.5", "claude-3-5"]):
-                return sonnet_35_state_modifier(state, max_input_tokens=max_input_tokens)
+            if any(
+                pattern in model.model
+                for pattern in ["claude-3.5", "claude3.5", "claude-3-5"]
+            ):
+                return sonnet_35_state_modifier(
+                    state, max_input_tokens=max_input_tokens
+                )
 
             return state_modifier(state, model, max_input_tokens=max_input_tokens)
 
@@ -110,27 +118,6 @@ def build_agent_kwargs(
     return agent_kwargs
 
 
-def is_anthropic_claude(config: Dict[str, Any]) -> bool:
-    """Check if the provider and model name indicate an Anthropic Claude model.
-
-    Args:
-        config: Configuration dictionary containing provider and model information
-
-    Returns:
-        bool: True if this is an Anthropic Claude model
-    """
-    # For backwards compatibility, allow passing of config directly
-    provider = config.get("provider", "")
-    model_name = config.get("model", "")
-    result = (
-        provider.lower() == "anthropic"
-        and model_name
-        and "claude" in model_name.lower()
-    ) or (
-        provider.lower() == "openrouter"
-        and model_name.lower().startswith("anthropic/claude-")
-    )
-    return result
 
 
 def create_agent(
@@ -169,7 +156,7 @@ def create_agent(
             # So we'll use the passed config directly
             pass
         max_input_tokens = (
-            get_model_token_limit(config, agent_type) or DEFAULT_TOKEN_LIMIT
+            get_model_token_limit(config, agent_type, model) or DEFAULT_TOKEN_LIMIT
         )
 
         # Use REACT agent for Anthropic Claude models, otherwise use CIAYN
@@ -188,7 +175,7 @@ def create_agent(
         # Default to REACT agent if provider/model detection fails
         logger.warning(f"Failed to detect model type: {e}. Defaulting to REACT agent.")
         config = get_config_repository().get_all()
-        max_input_tokens = get_model_token_limit(config, agent_type)
+        max_input_tokens = get_model_token_limit(config, agent_type, model)
         agent_kwargs = build_agent_kwargs(checkpointer, model, max_input_tokens)
         return create_react_agent(
             model, tools, interrupt_after=["tools"], **agent_kwargs
@@ -289,7 +276,7 @@ def _handle_api_error(e, attempt, max_retries, base_delay):
     logger.warning("API error (attempt %d/%d): %s", attempt + 1, max_retries, str(e))
     delay = base_delay * (2**attempt)
     error_message = f"Encountered {e.__class__.__name__}: {e}. Retrying in {delay}s... (Attempt {attempt+1}/{max_retries})"
-    
+
     # Record error in trajectory
     trajectory_repo = get_trajectory_repository()
     human_input_id = get_human_input_repository().get_most_recent_id()
@@ -301,9 +288,9 @@ def _handle_api_error(e, attempt, max_retries, base_delay):
         record_type="error",
         human_input_id=human_input_id,
         is_error=True,
-        error_message=error_message
+        error_message=error_message,
     )
-    
+
     print_error(error_message)
     start = time.monotonic()
     while time.monotonic() - start < delay:
@@ -464,7 +451,9 @@ def run_agent_with_retry(
 
                 try:
                     _run_agent_stream(agent, msg_list)
-                    if fallback_handler and hasattr(fallback_handler, 'reset_fallback_handler'):
+                    if fallback_handler and hasattr(
+                        fallback_handler, "reset_fallback_handler"
+                    ):
                         fallback_handler.reset_fallback_handler()
                     should_break, prompt, auto_test, test_attempts = (
                         _execute_test_command_wrapper(

@@ -10,6 +10,7 @@ from openai import OpenAI
 from ra_aid.chat_models.deepseek_chat import ChatDeepseekReasoner
 from ra_aid.console.output import cpm
 from ra_aid.logging_config import get_logger
+from ra_aid.model_detection import is_claude_37
 
 from .models_params import models_params
 
@@ -218,7 +219,6 @@ def create_llm_client(
         is_expert,
     )
 
-    # Get model configuration
     model_config = models_params.get(provider, {}).get(model_name, {})
 
     # Default to True for known providers that support temperature if not specified
@@ -228,6 +228,10 @@ def create_llm_client(
     supports_temperature = model_config["supports_temperature"]
     supports_thinking = model_config.get("supports_thinking", False)
 
+    other_kwargs = {}
+    if is_claude_37(model_name):
+        other_kwargs = {"max_tokens": 64000}
+
     # Handle temperature settings
     if is_expert:
         temp_kwargs = {"temperature": 0} if supports_temperature else {}
@@ -235,22 +239,26 @@ def create_llm_client(
         if temperature is None:
             temperature = 0.7
             # Import repository classes directly to avoid circular imports
-            from ra_aid.database.repositories.trajectory_repository import TrajectoryRepository
-            from ra_aid.database.repositories.human_input_repository import HumanInputRepository
+            from ra_aid.database.repositories.trajectory_repository import (
+                TrajectoryRepository,
+            )
+            from ra_aid.database.repositories.human_input_repository import (
+                HumanInputRepository,
+            )
             from ra_aid.database.connection import get_db
-            
+
             # Create repositories directly
             trajectory_repo = TrajectoryRepository(get_db())
             human_input_repo = HumanInputRepository(get_db())
             human_input_id = human_input_repo.get_most_recent_id()
-            
+
             trajectory_repo.create(
                 step_data={
                     "message": "This model supports temperature argument but none was given. Setting default temperature to 0.7.",
                     "display_title": "Information",
                 },
                 record_type="info",
-                human_input_id=human_input_id
+                human_input_id=human_input_id,
             )
             cpm(
                 "This model supports temperature argument but none was given. Setting default temperature to 0.7."
@@ -302,9 +310,9 @@ def create_llm_client(
             model_name=model_name,
             timeout=LLM_REQUEST_TIMEOUT,
             max_retries=LLM_MAX_RETRIES,
-            max_tokens=model_config.get("max_tokens", 64000),
             **temp_kwargs,
             **thinking_kwargs,
+            **other_kwargs,
         )
     elif provider == "openai-compatible":
         return ChatOpenAI(
