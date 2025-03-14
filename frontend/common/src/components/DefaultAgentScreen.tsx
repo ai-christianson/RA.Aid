@@ -88,19 +88,20 @@ export const DefaultAgentScreen: React.FC = () => {
   
   // Render header content
   const headerContent = (
-    <div className="flex justify-between items-center h-full px-4">
-      <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 inline-block text-transparent bg-clip-text">
-        RA.Aid
-      </h1>
+    <div className="w-full flex items-center justify-between h-full px-4">
+      <div className="flex-initial">
+        <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 inline-block text-transparent bg-clip-text">
+          RA.Aid
+        </h1>
+      </div>
       
-      <div className="flex items-center gap-2">
+      <div className="flex-initial ml-auto">
         {/* Theme toggle button */}
         <Button 
           variant="ghost" 
           size="icon" 
           onClick={toggleTheme}
           aria-label={isDarkTheme ? "Switch to light mode" : "Switch to dark mode"}
-          className="mr-2"
         >
           {isDarkTheme ? (
             // Sun icon for light mode toggle
