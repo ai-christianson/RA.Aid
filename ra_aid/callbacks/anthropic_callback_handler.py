@@ -180,20 +180,20 @@ class AnthropicCallbackHandler(BaseCallbackHandler):
             self.model_name = serialized["name"]
 
     def on_llm_new_token(self, token: str, **kwargs: Any) -> None:
-        """Count tokens as they're generated."""
-        with self._lock:
-            self.completion_tokens += 1
-            self.total_tokens += 1
-            token_cost = get_anthropic_token_cost_for_model(
-                self.model_name, 1, is_completion=True
-            )
-            self.total_cost += token_cost
+        # """Count tokens as they're generated."""
+        # with self._lock:
+        #     self.completion_tokens += 1
+        #     self.total_tokens += 1
+        #     token_cost = get_anthropic_token_cost_for_model(
+        #         self.model_name, 1, is_completion=True
+        #     )
+        #     self.total_cost += token_cost
+        pass
 
     def on_llm_end(self, response: Any, **kwargs: Any) -> None:
         """Collect token usage from response."""
         token_usage = {}
 
-        # Try to extract token usage from response
         if hasattr(response, "llm_output") and response.llm_output:
             llm_output = response.llm_output
             if "token_usage" in llm_output:
@@ -201,13 +201,11 @@ class AnthropicCallbackHandler(BaseCallbackHandler):
             elif "usage" in llm_output:
                 usage = llm_output["usage"]
 
-                # Handle Anthropic's specific usage format
                 if "input_tokens" in usage:
                     token_usage["prompt_tokens"] = usage["input_tokens"]
                 if "output_tokens" in usage:
                     token_usage["completion_tokens"] = usage["output_tokens"]
 
-            # Extract model name if available
             if "model_name" in llm_output:
                 self.model_name = llm_output["model_name"]
 

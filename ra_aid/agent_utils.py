@@ -452,6 +452,8 @@ def _handle_callback_update(
             logger.info(
                 f"total_cost: ${created_traj.total_cost:.6f} | total_tokens: {created_traj.total_tokens}"
             )
+            # 31.30 - 4.136808 = 27.16
+            # actual 29.62 -> caching savings????
 
     except Exception as e:
         logger.error(f"Failed to store token usage data: {e}")
