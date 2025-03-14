@@ -1,25 +1,40 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
+import fs from 'fs';
+
+// Get all component files from common package
+const commonSrcDir = path.resolve(__dirname, '../common/src');
 
 export default defineConfig({
   plugins: [react()],
   resolve: {
-    // Ensure that Vite treats symlinked packages as local, so HMR works correctly.
     alias: {
-      '@ra-aid/common': path.resolve(__dirname, '../common/dist')
-    }
+      // Direct alias to the source directory
+      '@ra-aid/common': path.resolve(__dirname, '../common/src')
+    },
+    preserveSymlinks: true
+  },
+  optimizeDeps: {
+    // Exclude the common package from optimization so it can trigger hot reload
+    exclude: ['@ra-aid/common']
   },
   server: {
+    hmr: true,
     watch: {
-      // Watch for changes in the common package.
-      // This pattern forces Vite to notice file changes in the shared library.
-      paths: ['../common/src/**', '../common/dist/**']
+      usePolling: true,
+      interval: 100,
+      // Make sure to explicitly NOT ignore the common package
+      ignored: [
+        '**/node_modules/**',
+        '**/dist/**',
+        '!**/common/src/**'
+      ]
     }
   },
-  css: {
-    // PostCSS configuration is loaded from postcss.config.js
-    // This ensures proper processing of Tailwind directives
-    devSourcemap: true,
+  build: {
+    commonjsOptions: {
+      transformMixedEsModules: true
+    }
   }
 });

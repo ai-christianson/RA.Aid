@@ -1,10 +1,13 @@
 // Entry point for @ra-aid/common package
 import './styles/global.css';
 
-// Export utility functions (excluding sample data to avoid circular references)
+// Export types first to avoid circular references
+export * from './utils/types';
+
+// Export utility functions
 export * from './utils';
 
-// Export all UI components
+// Export UI components
 export * from './components/ui';
 
 // Export timeline components
@@ -15,15 +18,16 @@ export * from './components/TimelineFeed';
 export * from './components/SessionDrawer';
 export * from './components/SessionSidebar';
 
+// Export main screens
+export * from './components/DefaultAgentScreen';
+
 // Export the hello function (temporary example)
 export const hello = (): void => {
   console.log("Hello from @ra-aid/common");
 };
 
-// Directly export sample data functions and types to avoid circular references
+// Directly export sample data functions
 export { 
   getSampleAgentSteps, 
-  getSampleAgentSessions,
-  type AgentStep,
-  type AgentSession 
+  getSampleAgentSessions
 } from './utils/sample-data';
