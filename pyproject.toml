@@ -50,6 +50,7 @@ dependencies = [
     "platformdirs>=3.17.9",
     "requests",
     "packaging",
+    "prompt-toolkit"
 ]
 
 [project.optional-dependencies]
