@@ -12,6 +12,8 @@ export * from './components/TimelineFeed';
 // Export session navigation components
 export * from './components/SessionDrawer';
 export * from './components/SessionSidebar';
+// Export the main screen component
+export * from './components/DefaultAgentScreen';
 // Export the hello function (temporary example)
 export const hello = () => {
     console.log("Hello from @ra-aid/common");

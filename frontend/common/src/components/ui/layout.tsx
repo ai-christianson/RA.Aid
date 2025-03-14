@@ -6,17 +6,25 @@ import React from 'react';
  * - Sticky header at the top (z-index 30)
  * - Sidebar on desktop (hidden on mobile)
  * - Main content area with proper positioning
+ * - Optional floating action button for mobile navigation
  */
 export interface LayoutProps {
   header: React.ReactNode;
   sidebar?: React.ReactNode;
   drawer?: React.ReactNode;
   children: React.ReactNode;
+  floatingAction?: React.ReactNode;
 }
 
-export const Layout: React.FC<LayoutProps> = ({ header, sidebar, drawer, children }) => {
+export const Layout: React.FC<LayoutProps> = ({ 
+  header, 
+  sidebar, 
+  drawer, 
+  children,
+  floatingAction
+}) => {
   return (
-    <div className="grid min-h-screen grid-cols-1 grid-rows-[64px_1fr] md:grid-cols-[250px_1fr] lg:grid-cols-[300px_1fr] bg-background text-foreground">
+    <div className="grid min-h-screen grid-cols-1 grid-rows-[64px_1fr] md:grid-cols-[250px_1fr] lg:grid-cols-[300px_1fr] bg-background text-foreground relative">
       {/* Header - always visible, spans full width */}
       <header className="sticky top-0 z-30 h-16 flex items-center bg-background border-b border-border col-span-full">
         {header}
@@ -36,6 +44,13 @@ export const Layout: React.FC<LayoutProps> = ({ header, sidebar, drawer, childre
       
       {/* Mobile drawer - rendered outside grid */}
       {drawer}
+
+      {/* Floating action button for mobile */}
+      {floatingAction && (
+        <div className="fixed bottom-6 right-6 z-50 md:hidden">
+          {floatingAction}
+        </div>
+      )}
     </div>
   );
 };
