@@ -452,6 +452,8 @@ def _handle_callback_update(
             logger.info(
                 f"total_cost: ${created_traj.total_cost:.6f} | total_tokens: {created_traj.total_tokens}"
             )
+            # r3: start $26.69 - 1.056702 = 25.63
+            # actual $25.56
 
     except Exception as e:
         logger.error(f"Failed to store token usage data: {e}")
@@ -573,7 +575,7 @@ def _run_agent_stream(agent: RAgents, msg_list: list[BaseMessage]):
                 return True
 
         logger.debug("Stream iteration ended; checking agent state for continuation.")
-        print(f"cb1={cb}")
+        logger.info(f"cb1={cb}")
         _handle_callback_update(cb, trajectory_repo, session_repo)
 
         state_config = _prepare_state_config()
@@ -587,7 +589,7 @@ def _run_agent_stream(agent: RAgents, msg_list: list[BaseMessage]):
                 state.next,
             )
             agent.invoke(None, stream_config)
-            print(f"cb2={cb}")
+            logger.info(f"cb2={cb}")
             continue
         else:
             logger.debug("No continuation indicated in state; exiting stream loop.")

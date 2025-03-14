@@ -203,22 +203,6 @@ class AnthropicCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
         """Collect token usage from response."""
         token_usage = {}
 
-        # Print input token details and cache tokens if available
-        if hasattr(response, "llm_output") and response.llm_output and "usage" in response.llm_output:
-            usage = response.llm_output["usage"]
-            if "cache_creation_input_tokens" in usage or "cache_read_input_tokens" in usage:
-                print(f"Input token details: cache_creation={usage.get('cache_creation_input_tokens', 0)}, "
-                      f"cache_read={usage.get('cache_read_input_tokens', 0)}")
-        elif hasattr(response, "generations") and response.generations:
-            for gen in response.generations:
-                if gen and hasattr(gen[0], "usage_metadata") and gen[0].usage_metadata:
-                    metadata = gen[0].usage_metadata
-                    if "input_token_details" in metadata:
-                        details = metadata["input_token_details"]
-                        print(f"Input token details: cache_creation={details.get('cache_creation', 0)}, "
-                              f"cache_read={details.get('cache_read', 0)}")
-                        break
-
         if hasattr(response, "llm_output") and response.llm_output:
             llm_output = response.llm_output
             if "token_usage" in llm_output:
