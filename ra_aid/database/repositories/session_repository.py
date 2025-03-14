@@ -277,7 +277,6 @@ class SessionRepository:
             session.total_output_tokens = session.total_output_tokens + output_tokens
             session.total_tokens = session.total_input_tokens + session.total_output_tokens
             session.total_cost = session.total_cost + last_cost
-            # Save the updated session
             session.save()
 
             if self.current_session and self.current_session.id == session_id:
