@@ -585,6 +585,9 @@ video {
 .pointer-events-none {
   pointer-events: none;
 }
+.visible {
+  visibility: visible;
+}
 .fixed {
   position: fixed;
 }
@@ -593,6 +596,9 @@ video {
 }
 .relative {
   position: relative;
+}
+.sticky {
+  position: sticky;
 }
 .inset-0 {
   inset: 0px;
@@ -620,14 +626,26 @@ video {
 .top-0 {
   top: 0px;
 }
+.top-16 {
+  top: 4rem;
+}
 .top-4 {
   top: 1rem;
 }
-.z-40 {
-  z-index: 40;
+.z-20 {
+  z-index: 20;
 }
-.z-50 {
-  z-index: 50;
+.z-30 {
+  z-index: 30;
+}
+.col-span-full {
+  grid-column: 1 / -1;
+}
+.col-start-1 {
+  grid-column-start: 1;
+}
+.row-start-2 {
+  grid-row-start: 2;
 }
 .mx-auto {
   margin-left: auto;
@@ -666,8 +684,17 @@ video {
 .inline-flex {
   display: inline-flex;
 }
+.grid {
+  display: grid;
+}
+.hidden {
+  display: none;
+}
 .h-10 {
   height: 2.5rem;
+}
+.h-16 {
+  height: 4rem;
 }
 .h-2\.5 {
   height: 0.625rem;
@@ -690,11 +717,17 @@ video {
 .h-9 {
   height: 2.25rem;
 }
-.h-\[calc\(100vh-5rem\)\] {
-  height: calc(100vh - 5rem);
+.h-\[calc\(100vh-64px\)\] {
+  height: calc(100vh - 64px);
+}
+.h-\[calc\(100vh-9rem\)\] {
+  height: calc(100vh - 9rem);
 }
 .h-full {
   height: 100%;
+}
+.min-h-screen {
+  min-height: 100vh;
 }
 .w-2\.5 {
   width: 0.625rem;
@@ -748,6 +781,12 @@ video {
   -webkit-user-select: none;
      -moz-user-select: none;
           user-select: none;
+}
+.grid-cols-1 {
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+.grid-rows-\[64px_1fr\] {
+  grid-template-rows: 64px 1fr;
 }
 .flex-col {
   flex-direction: column;
@@ -803,6 +842,9 @@ video {
 }
 .overflow-hidden {
   overflow: hidden;
+}
+.overflow-y-auto {
+  overflow-y: auto;
 }
 .truncate {
   overflow: hidden;
@@ -918,6 +960,9 @@ video {
 .bg-yellow-500 {
   --tw-bg-opacity: 1;
   background-color: rgb(234 179 8 / var(--tw-bg-opacity, 1));
+}
+.p-2 {
+  padding: 0.5rem;
 }
 .p-3 {
   padding: 0.75rem;
@@ -1362,5 +1407,25 @@ video {
 
   .sm\:text-left {
     text-align: left;
+  }
+}
+@media (min-width: 768px) {
+
+  .md\:col-start-2 {
+    grid-column-start: 2;
+  }
+
+  .md\:block {
+    display: block;
+  }
+
+  .md\:grid-cols-\[250px_1fr\] {
+    grid-template-columns: 250px 1fr;
+  }
+}
+@media (min-width: 1024px) {
+
+  .lg\:grid-cols-\[300px_1fr\] {
+    grid-template-columns: 300px 1fr;
   }
 }

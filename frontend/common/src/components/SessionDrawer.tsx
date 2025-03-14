@@ -7,7 +7,8 @@ import {
   SheetClose 
 } from './ui/sheet';
 import { ScrollArea } from './ui/scroll-area';
-import { AgentSession, getSampleAgentSessions } from '../utils/sample-data';
+import { AgentSession } from '../utils/types';
+import { getSampleAgentSessions } from '../utils/sample-data';
 
 interface SessionDrawerProps {
   onSelectSession?: (sessionId: string) => void;

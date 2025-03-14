@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { TimelineStep } from './TimelineStep';
-import { AgentStep } from '../utils/sample-data';
+import { AgentStep } from '../utils/types';
 
 interface TimelineFeedProps {
   steps: AgentStep[];

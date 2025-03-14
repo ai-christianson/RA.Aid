@@ -1,6 +1,6 @@
 import React from 'react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
-import { AgentStep } from '../utils/sample-data';
+import { AgentStep } from '../utils/types';
 
 interface TimelineStepProps {
   step: AgentStep;

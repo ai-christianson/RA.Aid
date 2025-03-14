@@ -1,7 +1,10 @@
 // Entry point for @ra-aid/common package
 import './styles/global.css';
 
-// Export utility functions (excluding sample data to avoid circular references)
+// Export types first to avoid circular references
+export * from './utils/types';
+
+// Export utility functions
 export * from './utils';
 
 // Export all UI components
@@ -20,10 +23,8 @@ export const hello = (): void => {
   console.log("Hello from @ra-aid/common");
 };
 
-// Directly export sample data functions and types to avoid circular references
+// Directly export sample data functions
 export { 
   getSampleAgentSteps, 
-  getSampleAgentSessions,
-  type AgentStep,
-  type AgentSession 
+  getSampleAgentSessions
 } from './utils/sample-data';

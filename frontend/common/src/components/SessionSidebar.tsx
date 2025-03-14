@@ -1,6 +1,7 @@
 import React from 'react';
 import { ScrollArea } from './ui/scroll-area';
-import { AgentSession, getSampleAgentSessions } from '../utils/sample-data';
+import { AgentSession } from '../utils/types';
+import { getSampleAgentSessions } from '../utils/sample-data';
 
 interface SessionSidebarProps {
   onSelectSession?: (sessionId: string) => void;

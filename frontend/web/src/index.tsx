@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { 
   Button,
+  Layout,
   SessionDrawer,
   SessionSidebar,
   TimelineFeed,
   getSampleAgentSessions,
   getSampleAgentSteps
 } from '@ra-aid/common';
-import { Layout } from './components/Layout';
 // The CSS import happens through the common package's index.ts
 
 // Theme management helper function
