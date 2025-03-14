@@ -1,24 +1,19 @@
 """Utilities for handling token limits with Anthropic models."""
 
 from functools import partial
-from typing import Any, Dict, List, Optional, Sequence, Union
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 from langchain_core.language_models import BaseChatModel
 from ra_aid.model_detection import is_claude_37
-from dataclasses import dataclass
 
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import (
-    AIMessage,
     BaseMessage,
-    RemoveMessage,
-    ToolMessage,
     trim_messages,
 )
 from langchain_core.messages.base import message_to_dict
 
 from ra_aid.anthropic_message_utils import (
     anthropic_trim_messages,
-    has_tool_use,
 )
 from langgraph.prebuilt.chat_agent_executor import AgentState
 from litellm import token_counter, get_model_info
@@ -27,7 +22,6 @@ from ra_aid.agent_backends.ciayn_agent import CiaynAgent
 from ra_aid.database.repositories.config_repository import get_config_repository
 from ra_aid.logging_config import get_logger
 from ra_aid.models_params import DEFAULT_TOKEN_LIMIT, models_params
-from ra_aid.console.output import cpm, print_messages_compact
 
 logger = get_logger(__name__)
 
@@ -170,6 +164,29 @@ def sonnet_35_state_modifier(
     return result
 
 
+def get_provider_and_model_for_agent_type(config: Dict[str, Any], agent_type: str) -> Tuple[str, str]:
+    """Get the provider and model name for the specified agent type.
+    
+    Args:
+        config: Configuration dictionary containing provider and model information
+        agent_type: Type of agent ("default", "research", or "planner")
+        
+    Returns:
+        Tuple[str, str]: A tuple containing (provider, model_name)
+    """
+    if agent_type == "research":
+        provider = config.get("research_provider", "") or config.get("provider", "")
+        model_name = config.get("research_model", "") or config.get("model", "")
+    elif agent_type == "planner":
+        provider = config.get("planner_provider", "") or config.get("provider", "")
+        model_name = config.get("planner_model", "") or config.get("model", "")
+    else:
+        provider = config.get("provider", "")
+        model_name = config.get("model", "")
+    
+    return provider, model_name
+
+
 def adjust_claude_37_token_limit(max_input_tokens: int, model: Optional[BaseChatModel]) -> Optional[int]:
     """Adjust token limit for Claude 3.7 models by subtracting max_tokens.
     
@@ -217,19 +234,13 @@ def get_model_token_limit(
             # In tests, this may fail because the repository isn't set up
             # So we'll use the passed config directly
             pass
-        if agent_type == "research":
-            provider = config.get("research_provider", "") or config.get("provider", "")
-            model_name = config.get("research_model", "") or config.get("model", "")
-        elif agent_type == "planner":
-            provider = config.get("planner_provider", "") or config.get("provider", "")
-            model_name = config.get("planner_model", "") or config.get("model", "")
-        else:
-            provider = config.get("provider", "")
-            model_name = config.get("model", "")
+            
+        provider, model_name = get_provider_and_model_for_agent_type(config, agent_type)
+
+        # Always attempt to get model info from litellm first
+        provider_model = model_name if not provider else f"{provider}/{model_name}"
 
         try:
-
-            provider_model = model_name if not provider else f"{provider}/{model_name}"
             model_info = get_model_info(provider_model)
             max_input_tokens = model_info.get("max_input_tokens")
             if max_input_tokens:
