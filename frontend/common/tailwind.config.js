@@ -4,7 +4,13 @@ module.exports = {
   content: [
     './src/**/*.{js,jsx,ts,tsx}',
   ],
-  safelist: ['dark'],
+  safelist: [
+    'dark',
+    {
+      pattern: /^dark:/,
+      variants: ['hover', 'focus', 'active']
+    }
+  ],
   theme: {
     extend: {},
   },
