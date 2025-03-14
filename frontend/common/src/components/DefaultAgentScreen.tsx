@@ -9,6 +9,8 @@ import { SessionDrawer } from './SessionDrawer';
 import { SessionList } from './SessionList';
 import { TimelineFeed } from './TimelineFeed';
 import { getSampleAgentSessions, getSampleAgentSteps } from '../utils/sample-data';
+import logoBlack from '../assets/logo-black-transparent.png';
+import logoWhite from '../assets/logo-white-transparent.gif';
 
 /**
  * DefaultAgentScreen component
@@ -90,9 +92,12 @@ export const DefaultAgentScreen: React.FC = () => {
   const headerContent = (
     <div className="w-full flex items-center justify-between h-full px-4">
       <div className="flex-initial">
-        <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 inline-block text-transparent bg-clip-text">
-          RA.Aid
-        </h1>
+        {/* Use the appropriate logo based on theme */}
+        <img 
+          src={isDarkTheme ? logoWhite : logoBlack} 
+          alt="RA.Aid Logo" 
+          className="h-8"
+        />
       </div>
       
       <div className="flex-initial ml-auto">
