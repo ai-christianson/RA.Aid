@@ -2,11 +2,12 @@
   "name": "@ra-aid/common",
   "version": "1.0.0",
   "private": true,
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
   "scripts": {
     "build": "tsc && postcss src/styles/global.css -o dist/styles/global.css",
-    "dev": "concurrently \"tsc --watch\" \"postcss src/styles/global.css -o dist/styles/global.css --watch\""
+    "dev": "concurrently \"tsc --watch\" \"postcss src/styles/global.css -o dist/styles/global.css --watch\"",
+    "prepare": "npm run build"
   },
   "dependencies": {
     "@radix-ui/react-collapsible": "^1.1.3",
