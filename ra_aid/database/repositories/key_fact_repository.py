@@ -12,6 +12,7 @@ from contextlib import contextmanager
 import peewee
 
 from ra_aid.database.models import KeyFact
+from ra_aid.database.pydantic_models import KeyFactModel
 from ra_aid.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -120,7 +121,22 @@ class KeyFactRepository:
             raise ValueError("Database connection is required for KeyFactRepository")
         self.db = db
     
-    def create(self, content: str, human_input_id: Optional[int] = None) -> KeyFact:
+    def _to_model(self, fact: Optional[KeyFact]) -> Optional[KeyFactModel]:
+        """
+        Convert a Peewee KeyFact object to a Pydantic KeyFactModel.
+        
+        Args:
+            fact: Peewee KeyFact instance or None
+            
+        Returns:
+            Optional[KeyFactModel]: Pydantic model representation or None if fact is None
+        """
+        if fact is None:
+            return None
+        
+        return KeyFactModel.model_validate(fact, from_attributes=True)
+    
+    def create(self, content: str, human_input_id: Optional[int] = None) -> KeyFactModel:
         """
         Create a new key fact in the database.
         
@@ -129,7 +145,7 @@ class KeyFactRepository:
             human_input_id: Optional ID of the associated human input
             
         Returns:
-            KeyFact: The newly created key fact instance
+            KeyFactModel: The newly created key fact instance
             
         Raises:
             peewee.DatabaseError: If there's an error creating the fact
@@ -137,12 +153,12 @@ class KeyFactRepository:
         try:
             fact = KeyFact.create(content=content, human_input_id=human_input_id)
             logger.debug(f"Created key fact ID {fact.id}: {content}")
-            return fact
+            return self._to_model(fact)
         except peewee.DatabaseError as e:
             logger.error(f"Failed to create key fact: {str(e)}")
             raise
     
-    def get(self, fact_id: int) -> Optional[KeyFact]:
+    def get(self, fact_id: int) -> Optional[KeyFactModel]:
         """
         Retrieve a key fact by its ID.
         
@@ -150,18 +166,19 @@ class KeyFactRepository:
             fact_id: The ID of the key fact to retrieve
             
         Returns:
-            Optional[KeyFact]: The key fact instance if found, None otherwise
+            Optional[KeyFactModel]: The key fact instance if found, None otherwise
             
         Raises:
             peewee.DatabaseError: If there's an error accessing the database
         """
         try:
-            return KeyFact.get_or_none(KeyFact.id == fact_id)
+            fact = KeyFact.get_or_none(KeyFact.id == fact_id)
+            return self._to_model(fact)
         except peewee.DatabaseError as e:
             logger.error(f"Failed to fetch key fact {fact_id}: {str(e)}")
             raise
     
-    def update(self, fact_id: int, content: str) -> Optional[KeyFact]:
+    def update(self, fact_id: int, content: str) -> Optional[KeyFactModel]:
         """
         Update an existing key fact.
         
@@ -170,14 +187,14 @@ class KeyFactRepository:
             content: The new content for the key fact
             
         Returns:
-            Optional[KeyFact]: The updated key fact if found, None otherwise
+            Optional[KeyFactModel]: The updated key fact if found, None otherwise
             
         Raises:
             peewee.DatabaseError: If there's an error updating the fact
         """
         try:
             # First check if the fact exists
-            fact = self.get(fact_id)
+            fact = KeyFact.get_or_none(KeyFact.id == fact_id)
             if not fact:
                 logger.warning(f"Attempted to update non-existent key fact {fact_id}")
                 return None
@@ -186,7 +203,7 @@ class KeyFactRepository:
             fact.content = content
             fact.save()
             logger.debug(f"Updated key fact ID {fact_id}: {content}")
-            return fact
+            return self._to_model(fact)
         except peewee.DatabaseError as e:
             logger.error(f"Failed to update key fact {fact_id}: {str(e)}")
             raise
@@ -206,7 +223,7 @@ class KeyFactRepository:
         """
         try:
             # First check if the fact exists
-            fact = self.get(fact_id)
+            fact = KeyFact.get_or_none(KeyFact.id == fact_id)
             if not fact:
                 logger.warning(f"Attempted to delete non-existent key fact {fact_id}")
                 return False
@@ -219,18 +236,19 @@ class KeyFactRepository:
             logger.error(f"Failed to delete key fact {fact_id}: {str(e)}")
             raise
     
-    def get_all(self) -> List[KeyFact]:
+    def get_all(self) -> List[KeyFactModel]:
         """
         Retrieve all key facts from the database.
         
         Returns:
-            List[KeyFact]: List of all key fact instances
+            List[KeyFactModel]: List of all key fact instances
             
         Raises:
             peewee.DatabaseError: If there's an error accessing the database
         """
         try:
-            return list(KeyFact.select().order_by(KeyFact.id))
+            facts = list(KeyFact.select().order_by(KeyFact.id))
+            return [self._to_model(fact) for fact in facts]
         except peewee.DatabaseError as e:
             logger.error(f"Failed to fetch all key facts: {str(e)}")
             raise

@@ -14,6 +14,7 @@ import logging
 import peewee
 
 from ra_aid.database.models import Trajectory, HumanInput
+from ra_aid.database.pydantic_models import TrajectoryModel
 from ra_aid.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -130,6 +131,21 @@ class TrajectoryRepository:
             raise ValueError("Database connection is required for TrajectoryRepository")
         self.db = db
     
+    def _to_model(self, trajectory: Optional[Trajectory]) -> Optional[TrajectoryModel]:
+        """
+        Convert a Peewee Trajectory object to a Pydantic TrajectoryModel.
+        
+        Args:
+            trajectory: Peewee Trajectory instance or None
+            
+        Returns:
+            Optional[TrajectoryModel]: Pydantic model representation or None if trajectory is None
+        """
+        if trajectory is None:
+            return None
+        
+        return TrajectoryModel.model_validate(trajectory, from_attributes=True)
+    
     def create(
         self,
         tool_name: Optional[str] = None,
@@ -144,7 +160,7 @@ class TrajectoryRepository:
         error_message: Optional[str] = None,
         error_type: Optional[str] = None,
         error_details: Optional[str] = None
-    ) -> Trajectory:
+    ) -> TrajectoryModel:
         """
         Create a new trajectory record in the database.
         
@@ -163,7 +179,7 @@ class TrajectoryRepository:
             error_details: Additional error details like stack traces (if is_error is True)
             
         Returns:
-            Trajectory: The newly created trajectory instance
+            TrajectoryModel: The newly created trajectory instance as a Pydantic model
             
         Raises:
             peewee.DatabaseError: If there's an error creating the record
@@ -201,12 +217,12 @@ class TrajectoryRepository:
                 logger.debug(f"Created trajectory record ID {trajectory.id} for tool: {tool_name}")
             else:
                 logger.debug(f"Created trajectory record ID {trajectory.id} of type: {record_type}")
-            return trajectory
+            return self._to_model(trajectory)
         except peewee.DatabaseError as e:
             logger.error(f"Failed to create trajectory record: {str(e)}")
             raise
     
-    def get(self, trajectory_id: int) -> Optional[Trajectory]:
+    def get(self, trajectory_id: int) -> Optional[TrajectoryModel]:
         """
         Retrieve a trajectory record by its ID.
         
@@ -214,13 +230,14 @@ class TrajectoryRepository:
             trajectory_id: The ID of the trajectory record to retrieve
             
         Returns:
-            Optional[Trajectory]: The trajectory instance if found, None otherwise
+            Optional[TrajectoryModel]: The trajectory instance as a Pydantic model if found, None otherwise
             
         Raises:
             peewee.DatabaseError: If there's an error accessing the database
         """
         try:
-            return Trajectory.get_or_none(Trajectory.id == trajectory_id)
+            trajectory = Trajectory.get_or_none(Trajectory.id == trajectory_id)
+            return self._to_model(trajectory)
         except peewee.DatabaseError as e:
             logger.error(f"Failed to fetch trajectory {trajectory_id}: {str(e)}")
             raise
@@ -236,7 +253,7 @@ class TrajectoryRepository:
         error_message: Optional[str] = None,
         error_type: Optional[str] = None,
         error_details: Optional[str] = None
-    ) -> Optional[Trajectory]:
+    ) -> Optional[TrajectoryModel]:
         """
         Update an existing trajectory record.
         
@@ -254,15 +271,15 @@ class TrajectoryRepository:
             error_details: Additional error details like stack traces
             
         Returns:
-            Optional[Trajectory]: The updated trajectory if found, None otherwise
+            Optional[TrajectoryModel]: The updated trajectory as a Pydantic model if found, None otherwise
             
         Raises:
             peewee.DatabaseError: If there's an error updating the record
         """
         try:
             # First check if the trajectory exists
-            trajectory = self.get(trajectory_id)
-            if not trajectory:
+            peewee_trajectory = Trajectory.get_or_none(Trajectory.id == trajectory_id)
+            if not peewee_trajectory:
                 logger.warning(f"Attempted to update non-existent trajectory {trajectory_id}")
                 return None
             
@@ -299,7 +316,7 @@ class TrajectoryRepository:
                 logger.debug(f"Updated trajectory record ID {trajectory_id}")
                 return self.get(trajectory_id)
             
-            return trajectory
+            return self._to_model(peewee_trajectory)
         except peewee.DatabaseError as e:
             logger.error(f"Failed to update trajectory {trajectory_id}: {str(e)}")
             raise
@@ -319,7 +336,7 @@ class TrajectoryRepository:
         """
         try:
             # First check if the trajectory exists
-            trajectory = self.get(trajectory_id)
+            trajectory = Trajectory.get_or_none(Trajectory.id == trajectory_id)
             if not trajectory:
                 logger.warning(f"Attempted to delete non-existent trajectory {trajectory_id}")
                 return False
@@ -332,23 +349,24 @@ class TrajectoryRepository:
             logger.error(f"Failed to delete trajectory {trajectory_id}: {str(e)}")
             raise
     
-    def get_all(self) -> Dict[int, Trajectory]:
+    def get_all(self) -> Dict[int, TrajectoryModel]:
         """
         Retrieve all trajectory records from the database.
         
         Returns:
-            Dict[int, Trajectory]: Dictionary mapping trajectory IDs to trajectory instances
+            Dict[int, TrajectoryModel]: Dictionary mapping trajectory IDs to trajectory Pydantic models
             
         Raises:
             peewee.DatabaseError: If there's an error accessing the database
         """
         try:
-            return {trajectory.id: trajectory for trajectory in Trajectory.select().order_by(Trajectory.id)}
+            trajectories = Trajectory.select().order_by(Trajectory.id)
+            return {trajectory.id: self._to_model(trajectory) for trajectory in trajectories}
         except peewee.DatabaseError as e:
             logger.error(f"Failed to fetch all trajectories: {str(e)}")
             raise
     
-    def get_trajectories_by_human_input(self, human_input_id: int) -> List[Trajectory]:
+    def get_trajectories_by_human_input(self, human_input_id: int) -> List[TrajectoryModel]:
         """
         Retrieve all trajectory records associated with a specific human input.
         
@@ -356,37 +374,19 @@ class TrajectoryRepository:
             human_input_id: The ID of the human input to get trajectories for
             
         Returns:
-            List[Trajectory]: List of trajectory instances associated with the human input
+            List[TrajectoryModel]: List of trajectory Pydantic models associated with the human input
             
         Raises:
             peewee.DatabaseError: If there's an error accessing the database
         """
         try:
-            return list(Trajectory.select().where(Trajectory.human_input == human_input_id).order_by(Trajectory.id))
+            trajectories = list(Trajectory.select().where(Trajectory.human_input == human_input_id).order_by(Trajectory.id))
+            return [self._to_model(trajectory) for trajectory in trajectories]
         except peewee.DatabaseError as e:
             logger.error(f"Failed to fetch trajectories for human input {human_input_id}: {str(e)}")
             raise
     
-    def parse_json_field(self, json_str: Optional[str]) -> Optional[Dict[str, Any]]:
-        """
-        Parse a JSON string into a Python dictionary.
-        
-        Args:
-            json_str: JSON string to parse
-            
-        Returns:
-            Optional[Dict[str, Any]]: Parsed dictionary or None if input is None or invalid
-        """
-        if not json_str:
-            return None
-        
-        try:
-            return json.loads(json_str)
-        except json.JSONDecodeError as e:
-            logger.error(f"Error parsing JSON field: {str(e)}")
-            return None
-    
-    def get_parsed_trajectory(self, trajectory_id: int) -> Optional[Dict[str, Any]]:
+    def get_parsed_trajectory(self, trajectory_id: int) -> Optional[TrajectoryModel]:
         """
         Get a trajectory record with JSON fields parsed into dictionaries.
         
@@ -394,27 +394,7 @@ class TrajectoryRepository:
             trajectory_id: ID of the trajectory to retrieve
             
         Returns:
-            Optional[Dict[str, Any]]: Dictionary with trajectory data and parsed JSON fields,
-                                   or None if not found
+            Optional[TrajectoryModel]: The trajectory as a Pydantic model with parsed JSON fields,
+                                      or None if not found
         """
-        trajectory = self.get(trajectory_id)
-        if trajectory is None:
-            return None
-        
-        return {
-            "id": trajectory.id,
-            "created_at": trajectory.created_at,
-            "updated_at": trajectory.updated_at,
-            "tool_name": trajectory.tool_name,
-            "tool_parameters": self.parse_json_field(trajectory.tool_parameters),
-            "tool_result": self.parse_json_field(trajectory.tool_result),
-            "step_data": self.parse_json_field(trajectory.step_data),
-            "record_type": trajectory.record_type,
-            "cost": trajectory.cost,
-            "tokens": trajectory.tokens,
-            "human_input_id": trajectory.human_input.id if trajectory.human_input else None,
-            "is_error": trajectory.is_error,
-            "error_message": trajectory.error_message,
-            "error_type": trajectory.error_type,
-            "error_details": trajectory.error_details,
-        }
+        return self.get(trajectory_id)

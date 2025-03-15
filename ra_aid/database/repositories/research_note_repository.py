@@ -12,6 +12,7 @@ from contextlib import contextmanager
 import peewee
 
 from ra_aid.database.models import ResearchNote
+from ra_aid.database.pydantic_models import ResearchNoteModel
 from ra_aid.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -120,7 +121,22 @@ class ResearchNoteRepository:
             raise ValueError("Database connection is required for ResearchNoteRepository")
         self.db = db
     
-    def create(self, content: str, human_input_id: Optional[int] = None) -> ResearchNote:
+    def _to_model(self, note: Optional[ResearchNote]) -> Optional[ResearchNoteModel]:
+        """
+        Convert a Peewee ResearchNote object to a Pydantic ResearchNoteModel.
+        
+        Args:
+            note: Peewee ResearchNote instance or None
+            
+        Returns:
+            Optional[ResearchNoteModel]: Pydantic model representation or None if note is None
+        """
+        if note is None:
+            return None
+        
+        return ResearchNoteModel.model_validate(note, from_attributes=True)
+    
+    def create(self, content: str, human_input_id: Optional[int] = None) -> ResearchNoteModel:
         """
         Create a new research note in the database.
         
@@ -129,7 +145,7 @@ class ResearchNoteRepository:
             human_input_id: Optional ID of the associated human input
             
         Returns:
-            ResearchNote: The newly created research note instance
+            ResearchNoteModel: The newly created research note instance
             
         Raises:
             peewee.DatabaseError: If there's an error creating the note
@@ -137,12 +153,12 @@ class ResearchNoteRepository:
         try:
             note = ResearchNote.create(content=content, human_input_id=human_input_id)
             logger.debug(f"Created research note ID {note.id}: {content[:50]}...")
-            return note
+            return self._to_model(note)
         except peewee.DatabaseError as e:
             logger.error(f"Failed to create research note: {str(e)}")
             raise
     
-    def get(self, note_id: int) -> Optional[ResearchNote]:
+    def get(self, note_id: int) -> Optional[ResearchNoteModel]:
         """
         Retrieve a research note by its ID.
         
@@ -150,18 +166,19 @@ class ResearchNoteRepository:
             note_id: The ID of the research note to retrieve
             
         Returns:
-            Optional[ResearchNote]: The research note instance if found, None otherwise
+            Optional[ResearchNoteModel]: The research note instance if found, None otherwise
             
         Raises:
             peewee.DatabaseError: If there's an error accessing the database
         """
         try:
-            return ResearchNote.get_or_none(ResearchNote.id == note_id)
+            note = ResearchNote.get_or_none(ResearchNote.id == note_id)
+            return self._to_model(note)
         except peewee.DatabaseError as e:
             logger.error(f"Failed to fetch research note {note_id}: {str(e)}")
             raise
     
-    def update(self, note_id: int, content: str) -> Optional[ResearchNote]:
+    def update(self, note_id: int, content: str) -> Optional[ResearchNoteModel]:
         """
         Update an existing research note.
         
@@ -170,14 +187,14 @@ class ResearchNoteRepository:
             content: The new content for the research note
             
         Returns:
-            Optional[ResearchNote]: The updated research note if found, None otherwise
+            Optional[ResearchNoteModel]: The updated research note if found, None otherwise
             
         Raises:
             peewee.DatabaseError: If there's an error updating the note
         """
         try:
             # First check if the note exists
-            note = self.get(note_id)
+            note = ResearchNote.get_or_none(ResearchNote.id == note_id)
             if not note:
                 logger.warning(f"Attempted to update non-existent research note {note_id}")
                 return None
@@ -186,7 +203,7 @@ class ResearchNoteRepository:
             note.content = content
             note.save()
             logger.debug(f"Updated research note ID {note_id}: {content[:50]}...")
-            return note
+            return self._to_model(note)
         except peewee.DatabaseError as e:
             logger.error(f"Failed to update research note {note_id}: {str(e)}")
             raise
@@ -206,7 +223,7 @@ class ResearchNoteRepository:
         """
         try:
             # First check if the note exists
-            note = self.get(note_id)
+            note = ResearchNote.get_or_none(ResearchNote.id == note_id)
             if not note:
                 logger.warning(f"Attempted to delete non-existent research note {note_id}")
                 return False
@@ -219,18 +236,19 @@ class ResearchNoteRepository:
             logger.error(f"Failed to delete research note {note_id}: {str(e)}")
             raise
     
-    def get_all(self) -> List[ResearchNote]:
+    def get_all(self) -> List[ResearchNoteModel]:
         """
         Retrieve all research notes from the database.
         
         Returns:
-            List[ResearchNote]: List of all research note instances
+            List[ResearchNoteModel]: List of all research note instances
             
         Raises:
             peewee.DatabaseError: If there's an error accessing the database
         """
         try:
-            return list(ResearchNote.select().order_by(ResearchNote.id))
+            notes = list(ResearchNote.select().order_by(ResearchNote.id))
+            return [self._to_model(note) for note in notes]
         except peewee.DatabaseError as e:
             logger.error(f"Failed to fetch all research notes: {str(e)}")
             raise

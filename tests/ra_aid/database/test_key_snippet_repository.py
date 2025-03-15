@@ -6,6 +6,7 @@ import pytest
 
 from ra_aid.database.connection import DatabaseManager, db_var
 from ra_aid.database.models import KeySnippet
+from ra_aid.database.pydantic_models import KeySnippetModel
 from ra_aid.database.repositories.key_snippet_repository import KeySnippetRepository
 
 
@@ -79,6 +80,9 @@ def test_create_key_snippet(setup_db):
     assert key_snippet.snippet == snippet
     assert key_snippet.description == description
     
+    # Verify the return type is a Pydantic model
+    assert isinstance(key_snippet, KeySnippetModel)
+    
     # Verify we can retrieve it from the database
     snippet_from_db = KeySnippet.get_by_id(key_snippet.id)
     assert snippet_from_db.filepath == filepath
@@ -115,6 +119,9 @@ def test_get_key_snippet(setup_db):
     assert retrieved_snippet.line_number == line_number
     assert retrieved_snippet.snippet == snippet
     assert retrieved_snippet.description == description
+    
+    # Verify the return type is a Pydantic model
+    assert isinstance(retrieved_snippet, KeySnippetModel)
     
     # Try to retrieve a non-existent snippet
     non_existent_snippet = repo.get(999)
@@ -160,6 +167,9 @@ def test_update_key_snippet(setup_db):
     assert updated_snippet.line_number == new_line_number
     assert updated_snippet.snippet == new_snippet
     assert updated_snippet.description == new_description
+    
+    # Verify the return type is a Pydantic model
+    assert isinstance(updated_snippet, KeySnippetModel)
     
     # Verify we can retrieve the updated content from the database
     snippet_from_db = KeySnippet.get_by_id(key_snippet.id)
@@ -250,6 +260,9 @@ def test_get_all_key_snippets(setup_db):
     # Verify we got the correct number of snippets
     assert len(all_snippets) == len(snippets_data)
     
+    # Verify all returned snippets are Pydantic models
+    assert all(isinstance(snippet, KeySnippetModel) for snippet in all_snippets)
+    
     # Verify the content of each snippet
     for i, snippet in enumerate(all_snippets):
         assert snippet.filepath == snippets_data[i]["filepath"]
@@ -302,3 +315,30 @@ def test_get_snippets_dict(setup_db):
         assert snippets_dict[snippet.id]["line_number"] == snippets_data[i]["line_number"]
         assert snippets_dict[snippet.id]["snippet"] == snippets_data[i]["snippet"]
         assert snippets_dict[snippet.id]["description"] == snippets_data[i]["description"]
+
+
+def test_to_model_conversion(setup_db):
+    """Test conversion from Peewee model to Pydantic model."""
+    repo = KeySnippetRepository(db=setup_db)
+    
+    # Create a snippet in the database using Peewee directly
+    peewee_snippet = KeySnippet.create(
+        filepath="conversion_test.py",
+        line_number=100,
+        snippet="def conversion_test():",
+        description="Test model conversion"
+    )
+    
+    # Use the _to_model method to convert it
+    pydantic_snippet = repo._to_model(peewee_snippet)
+    
+    # Verify the conversion was successful
+    assert isinstance(pydantic_snippet, KeySnippetModel)
+    assert pydantic_snippet.id == peewee_snippet.id
+    assert pydantic_snippet.filepath == peewee_snippet.filepath
+    assert pydantic_snippet.line_number == peewee_snippet.line_number
+    assert pydantic_snippet.snippet == peewee_snippet.snippet
+    assert pydantic_snippet.description == peewee_snippet.description
+    
+    # Test conversion of None
+    assert repo._to_model(None) is None

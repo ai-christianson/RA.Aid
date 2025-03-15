@@ -16,6 +16,7 @@ import sys
 import peewee
 
 from ra_aid.database.models import Session
+from ra_aid.database.pydantic_models import SessionModel
 from ra_aid.__version__ import __version__
 from ra_aid.logging_config import get_logger
 
@@ -120,8 +121,23 @@ class SessionRepository:
             raise ValueError("Database connection is required for SessionRepository")
         self.db = db
         self.current_session = None
+        
+    def _to_model(self, session: Optional[Session]) -> Optional[SessionModel]:
+        """
+        Convert a Peewee Session object to a Pydantic SessionModel.
+        
+        Args:
+            session: Peewee Session instance or None
+            
+        Returns:
+            Optional[SessionModel]: Pydantic model representation or None if session is None
+        """
+        if session is None:
+            return None
+        
+        return SessionModel.model_validate(session, from_attributes=True)
 
-    def create_session(self, metadata: Optional[Dict[str, Any]] = None) -> Session:
+    def create_session(self, metadata: Optional[Dict[str, Any]] = None) -> SessionModel:
         """
         Create a new session record in the database.
         
@@ -129,7 +145,7 @@ class SessionRepository:
             metadata: Optional dictionary of additional metadata to store with the session
             
         Returns:
-            Session: The newly created session instance
+            SessionModel: The newly created session instance
             
         Raises:
             peewee.DatabaseError: If there's an error creating the record
@@ -155,12 +171,12 @@ class SessionRepository:
             self.current_session = session
             
             logger.debug(f"Created new session with ID {session.id}")
-            return session
+            return self._to_model(session)
         except peewee.DatabaseError as e:
             logger.error(f"Failed to create session record: {str(e)}")
             raise
 
-    def get_current_session(self) -> Optional[Session]:
+    def get_current_session(self) -> Optional[SessionModel]:
         """
         Get the current active session.
         
@@ -168,17 +184,17 @@ class SessionRepository:
         retrieves the most recent session from the database.
         
         Returns:
-            Optional[Session]: The current session or None if no sessions exist
+            Optional[SessionModel]: The current session or None if no sessions exist
         """
         if self.current_session is not None:
-            return self.current_session
+            return self._to_model(self.current_session)
         
         try:
             # Find the most recent session
             session = Session.select().order_by(Session.created_at.desc()).first()
             if session:
                 self.current_session = session
-            return session
+            return self._to_model(session)
         except peewee.DatabaseError as e:
             logger.error(f"Failed to get current session: {str(e)}")
             return None
@@ -193,7 +209,7 @@ class SessionRepository:
         session = self.get_current_session()
         return session.id if session else None
 
-    def get(self, session_id: int) -> Optional[Session]:
+    def get(self, session_id: int) -> Optional[SessionModel]:
         """
         Get a session by its ID.
         
@@ -201,28 +217,30 @@ class SessionRepository:
             session_id: The ID of the session to retrieve
             
         Returns:
-            Optional[Session]: The session with the given ID or None if not found
+            Optional[SessionModel]: The session with the given ID or None if not found
         """
         try:
-            return Session.get_or_none(Session.id == session_id)
+            session = Session.get_or_none(Session.id == session_id)
+            return self._to_model(session)
         except peewee.DatabaseError as e:
             logger.error(f"Database error getting session {session_id}: {str(e)}")
             return None
 
-    def get_all(self) -> List[Session]:
+    def get_all(self) -> List[SessionModel]:
         """
         Get all sessions from the database.
         
         Returns:
-            List[Session]: List of all sessions
+            List[SessionModel]: List of all sessions
         """
         try:
-            return list(Session.select().order_by(Session.created_at.desc()))
+            sessions = list(Session.select().order_by(Session.created_at.desc()))
+            return [self._to_model(session) for session in sessions]
         except peewee.DatabaseError as e:
             logger.error(f"Failed to get all sessions: {str(e)}")
             return []
 
-    def get_recent(self, limit: int = 10) -> List[Session]:
+    def get_recent(self, limit: int = 10) -> List[SessionModel]:
         """
         Get the most recent sessions from the database.
         
@@ -230,14 +248,15 @@ class SessionRepository:
             limit: Maximum number of sessions to return (default: 10)
             
         Returns:
-            List[Session]: List of the most recent sessions
+            List[SessionModel]: List of the most recent sessions
         """
         try:
-            return list(
+            sessions = list(
                 Session.select()
                 .order_by(Session.created_at.desc())
                 .limit(limit)
             )
+            return [self._to_model(session) for session in sessions]
         except peewee.DatabaseError as e:
             logger.error(f"Failed to get recent sessions: {str(e)}")
             return []
