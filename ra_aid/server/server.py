@@ -255,21 +255,3 @@ async def get_config(request: Request):
 def run_server(host: str = "0.0.0.0", port: int = 1818):
     """Run the FastAPI server."""
     uvicorn.run(app, host=host, port=port)
-
-
-if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser(description="RA.Aid Web Interface Server")
-    parser.add_argument(
-        "--port", type=int, default=1818, help="Port to listen on (default: 1818)"
-    )
-    parser.add_argument(
-        "--host",
-        type=str,
-        default="0.0.0.0",
-        help="Host to listen on (default: 0.0.0.0)",
-    )
-
-    args = parser.parse_args()
-    run_server(host=args.host, port=args.port)
