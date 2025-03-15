@@ -101,7 +101,7 @@ if hasattr(litellm, "_logging") and hasattr(litellm._logging, "_disable_debuggin
 
 def launch_server(host: str, port: int):
     """Launch the RA.Aid web interface."""
-    from ra_aid.webui import run_server
+    from ra_aid.server import run_server
 
     print(f"Starting RA.Aid web interface on http://{host}:{port}")
     run_server(host=host, port=port)
