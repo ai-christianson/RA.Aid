@@ -6,9 +6,13 @@ from contextvars import ContextVar
 from typing import Any, Dict, List, Optional
 
 from langchain_core.callbacks import BaseCallbackHandler
+from playhouse.shortcuts import model_to_dict
 
 from ra_aid.config import DEFAULT_MODEL
+from ra_aid.logging_config import get_logger
 from ra_aid.utils.singleton import Singleton
+
+logger = get_logger(__name__)
 
 # Define cost per 1K tokens for various models
 ANTHROPIC_MODEL_COSTS = {
@@ -121,12 +125,12 @@ def calculate_token_cost(
 ) -> float:
     """
     Calculate the total cost for input and output tokens.
-    
+
     Args:
         model_name: Name of the model
         input_tokens: Number of input/prompt tokens
         output_tokens: Number of output/completion tokens
-        
+
     Returns:
         float: Total cost in USD
     """
@@ -141,7 +145,7 @@ def calculate_token_cost(
 
 class AnthropicCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
     """Callback Handler that tracks Anthropic token usage and costs.
-    
+
     This class uses the Singleton metaclass to ensure only one instance exists.
     """
 
@@ -151,17 +155,27 @@ class AnthropicCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
     successful_requests: int = 0
     total_cost: float = 0.0
     model_name: str = DEFAULT_MODEL
-    
+
     # Track cumulative totals separately from last message
     cumulative_total_tokens: int = 0
     cumulative_prompt_tokens: int = 0
     cumulative_completion_tokens: int = 0
+    
+    # Repositories for callback handling
+    trajectory_repo = None
+    session_repo = None
+    session_totals = None
 
-    def __init__(self, model_name: Optional[str] = None) -> None:
+    def __init__(self, model_name: Optional[str] = None, trajectory_repo=None, session_repo=None, session_totals=None) -> None:
         super().__init__()
         self._lock = threading.Lock()
         if model_name:
             self.model_name = model_name
+            
+        # Store repositories for callback handling
+        self.trajectory_repo = trajectory_repo
+        self.session_repo = session_repo
+        self.session_totals = session_totals
 
         # Default costs for Claude 3.7 Sonnet
         self.input_cost_per_token = 0.003 / 1000  # $3/M input tokens
@@ -202,6 +216,7 @@ class AnthropicCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
     def on_llm_end(self, response: Any, **kwargs: Any) -> None:
         """Collect token usage from response."""
         token_usage = {}
+        logger.info("ON_LLM_END")
 
         if hasattr(response, "llm_output") and response.llm_output:
             llm_output = response.llm_output
@@ -242,12 +257,12 @@ class AnthropicCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
             # Store the current message's tokens directly (non-cumulative)
             prompt_tokens = token_usage.get("prompt_tokens", 0)
             completion_tokens = token_usage.get("completion_tokens", 0)
-            
+
             # Update cumulative totals
             self.cumulative_prompt_tokens += prompt_tokens
             self.cumulative_completion_tokens += completion_tokens
             self.cumulative_total_tokens += prompt_tokens + completion_tokens
-            
+
             # Set the current message tokens (non-cumulative)
             self.prompt_tokens = prompt_tokens
             self.completion_tokens = completion_tokens
@@ -267,6 +282,64 @@ class AnthropicCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
                 self.total_cost += completion_cost
 
             self.successful_requests += 1
+            
+            # Handle callback update if repositories are available
+            self._handle_callback_update()
+            
+    def _handle_callback_update(self) -> None:
+        """
+        Handle callback updates and record trajectory data.
+        """
+        if not self.trajectory_repo or not self.session_repo or not self.session_totals:
+            return
+
+        try:
+            if not self.session_totals["session_id"]:
+                logger.warning("session_id not initialized")
+                return
+
+            updated_session = self.session_repo.update_token_usage(
+                session_id=self.session_totals["session_id"],
+                input_tokens=self.prompt_tokens,
+                output_tokens=self.completion_tokens,
+                model_name=self.model_name,
+            )
+
+            if updated_session:
+                self.session_totals["cost"] = updated_session.total_cost
+                self.session_totals["tokens"] = updated_session.total_tokens
+                self.session_totals["input_tokens"] = updated_session.total_input_tokens
+                self.session_totals["output_tokens"] = updated_session.total_output_tokens
+
+                last_msg_cost = calculate_token_cost(
+                    self.model_name, self.prompt_tokens, self.completion_tokens
+                )
+                created_traj = self.trajectory_repo.create(
+                    record_type="model_usage",
+                    current_cost=last_msg_cost,
+                    current_tokens=self.prompt_tokens + self.completion_tokens,
+                    total_cost=self.session_totals["cost"],  # Running total cost from session
+                    total_tokens=self.session_totals["tokens"],  # Running total tokens from session
+                    input_tokens=self.prompt_tokens,
+                    output_tokens=self.completion_tokens,
+                    session_id=self.session_totals["session_id"],
+                )
+                logger.info(f"updated_session={model_to_dict(updated_session)}")
+                logger.info(f"SESSION_TOTALS={self.session_totals}")
+                
+                # Safe formatting for cost values
+                current_cost_str = f"${float(created_traj.current_cost):.6f}" if created_traj.current_cost is not None else "$0.000000"
+                total_cost_str = f"${float(created_traj.total_cost):.6f}" if created_traj.total_cost is not None else "$0.000000"
+                
+                logger.info(
+                    f"current_cost: {current_cost_str} | current_token: {created_traj.current_tokens} (in: {created_traj.input_tokens}, out: {created_traj.output_tokens})"
+                )
+                logger.info(
+                    f"total_cost: {total_cost_str} | total_tokens: {created_traj.total_tokens}"
+                )
+
+        except Exception as e:
+            logger.error(f"Failed to store token usage data: {e}")
 
     def __copy__(self) -> "AnthropicCallbackHandler":
         """Return a copy of the callback handler."""
