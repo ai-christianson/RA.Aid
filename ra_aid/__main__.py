@@ -99,7 +99,7 @@ if hasattr(litellm, "_logging") and hasattr(litellm._logging, "_disable_debuggin
     litellm._logging._disable_debugging()
 
 
-def launch_webui(host: str, port: int):
+def launch_server(host: str, port: int):
     """Launch the RA.Aid web interface."""
     from ra_aid.webui import run_server
 
@@ -274,18 +274,18 @@ Examples:
         help=f"Timeout in seconds for test command execution (default: {DEFAULT_TEST_CMD_TIMEOUT})",
     )
     parser.add_argument(
-        "--webui",
+        "--server",
         action="store_true",
         help="Launch the web interface",
     )
     parser.add_argument(
-        "--webui-host",
+        "--server-host",
         type=str,
         default="0.0.0.0",
         help="Host to listen on for web interface (default: 0.0.0.0)",
     )
     parser.add_argument(
-        "--webui-port",
+        "--server-port",
         type=int,
         default=8080,
         help="Port to listen on for web interface (default: 8080)",
@@ -520,8 +520,8 @@ def main():
         print(f"📋 {result}")
 
     # Launch web interface if requested
-    if args.webui:
-        launch_webui(args.webui_host, args.webui_port)
+    if args.server:
+        launch_server(args.server_host, args.server_port)
         return
 
     try:

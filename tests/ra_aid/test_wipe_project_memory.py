@@ -121,7 +121,7 @@ def test_main_with_wipe_project_memory_flag():
          patch("ra_aid.__main__.parse_arguments", return_value=mock_args), \
          patch("ra_aid.__main__.setup_logging"), \
          patch("ra_aid.__main__.get_config_repository"), \
-         patch("ra_aid.__main__.launch_webui"), \
+         patch("ra_aid.__main__.launch_server"), \
          patch("ra_aid.__main__.DatabaseManager"):
         
         # Call main() and catch SystemExit since we're raising it
