@@ -102,6 +102,9 @@ def build_agent_kwargs(
     ):
 
         def wrapped_state_modifier(state: AgentState) -> list[BaseMessage]:
+            if not hasattr(model, 'model'):
+                return state_modifier(state, model, max_input_tokens=max_input_tokens)
+
             if any(
                 pattern in model.model
                 for pattern in ["claude-3.5", "claude3.5", "claude-3-5"]
