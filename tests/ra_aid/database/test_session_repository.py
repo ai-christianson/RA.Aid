@@ -231,8 +231,11 @@ def test_get_all(setup_db):
     repo.create_session(metadata=metadata2)
     repo.create_session(metadata=metadata3)
     
-    # Get all sessions
-    sessions = repo.get_all()
+    # Get all sessions with default pagination
+    sessions, total_count = repo.get_all()
+    
+    # Verify total count
+    assert total_count == 3
     
     # Verify we got a list of SessionModel objects
     assert len(sessions) == 3
@@ -249,6 +252,19 @@ def test_get_all(setup_db):
     assert "Linux" in os_values
     assert "Windows" in os_values
     assert "macOS" in os_values
+    
+    # Test pagination with limit
+    sessions_limited, total_count = repo.get_all(limit=2)
+    assert total_count == 3  # Total count should still be 3
+    assert len(sessions_limited) == 2  # But only 2 returned
+    
+    # Test pagination with offset
+    sessions_offset, total_count = repo.get_all(offset=1, limit=2)
+    assert total_count == 3
+    assert len(sessions_offset) == 2
+    
+    # The second item in the full list should be the first item in the offset list
+    assert sessions[1].id == sessions_offset[0].id
 
 
 def test_get_all_empty(setup_db):
@@ -257,11 +273,12 @@ def test_get_all_empty(setup_db):
     repo = SessionRepository(db=setup_db)
     
     # Get all sessions
-    sessions = repo.get_all()
+    sessions, total_count = repo.get_all()
     
-    # Verify we got an empty list
+    # Verify we got an empty list and zero count
     assert isinstance(sessions, list)
     assert len(sessions) == 0
+    assert total_count == 0
 
 
 def test_get_recent(setup_db):

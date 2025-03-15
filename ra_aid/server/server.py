@@ -33,7 +33,13 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-app = FastAPI()
+from ra_aid.server.api_v1_sessions import router as sessions_router
+
+app = FastAPI(
+    title="RA.Aid API",
+    description="API for RA.Aid - AI Programming Assistant",
+    version="1.0.0",
+)
 
 # Add CORS middleware
 app.add_middleware(
@@ -43,6 +49,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include API routers
+app.include_router(sessions_router)
 
 # Setup templates and static files directories
 CURRENT_DIR = Path(__file__).parent

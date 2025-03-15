@@ -226,19 +226,33 @@ class SessionRepository:
             logger.error(f"Database error getting session {session_id}: {str(e)}")
             return None
 
-    def get_all(self) -> List[SessionModel]:
+    def get_all(self, offset: int = 0, limit: int = 10) -> tuple[List[SessionModel], int]:
         """
-        Get all sessions from the database.
+        Get all sessions from the database with pagination support.
         
+        Args:
+            offset: Number of sessions to skip (default: 0)
+            limit: Maximum number of sessions to return (default: 10)
+            
         Returns:
-            List[SessionModel]: List of all sessions
+            tuple: (List[SessionModel], int) containing the list of sessions and the total count
         """
         try:
-            sessions = list(Session.select().order_by(Session.created_at.desc()))
-            return [self._to_model(session) for session in sessions]
+            # Get total count for pagination info
+            total_count = Session.select().count()
+            
+            # Get paginated sessions ordered by created_at in descending order (newest first)
+            sessions = list(
+                Session.select()
+                .order_by(Session.created_at.desc())
+                .offset(offset)
+                .limit(limit)
+            )
+            
+            return [self._to_model(session) for session in sessions], total_count
         except peewee.DatabaseError as e:
-            logger.error(f"Failed to get all sessions: {str(e)}")
-            return []
+            logger.error(f"Failed to get all sessions with pagination: {str(e)}")
+            return [], 0
 
     def get_recent(self, limit: int = 10) -> List[SessionModel]:
         """

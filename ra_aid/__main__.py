@@ -102,9 +102,65 @@ if hasattr(litellm, "_logging") and hasattr(litellm._logging, "_disable_debuggin
 def launch_server(host: str, port: int):
     """Launch the RA.Aid web interface."""
     from ra_aid.server import run_server
-
+    from ra_aid.database.connection import DatabaseManager
+    from ra_aid.database.repositories.session_repository import SessionRepositoryManager
+    from ra_aid.database.repositories.key_fact_repository import KeyFactRepositoryManager
+    from ra_aid.database.repositories.key_snippet_repository import KeySnippetRepositoryManager
+    from ra_aid.database.repositories.human_input_repository import HumanInputRepositoryManager
+    from ra_aid.database.repositories.research_note_repository import ResearchNoteRepositoryManager
+    from ra_aid.database.repositories.related_files_repository import RelatedFilesRepositoryManager
+    from ra_aid.database.repositories.trajectory_repository import TrajectoryRepositoryManager
+    from ra_aid.database.repositories.work_log_repository import WorkLogRepositoryManager
+    from ra_aid.database.repositories.config_repository import ConfigRepositoryManager
+    from ra_aid.env_inv_context import EnvInvManager
+    from ra_aid.env_inv import EnvDiscovery
+    
+    # Apply any pending database migrations
+    from ra_aid.database import ensure_migrations_applied
+    try:
+        migration_result = ensure_migrations_applied()
+        if not migration_result:
+            logger.warning("Database migrations failed but execution will continue")
+    except Exception as e:
+        logger.error(f"Database migration error: {str(e)}")
+    
+    # Initialize empty config dictionary
+    config = {}
+    
+    # Initialize environment discovery
+    env_discovery = EnvDiscovery()
+    env_discovery.discover()
+    env_data = env_discovery.format_markdown()
+    
     print(f"Starting RA.Aid web interface on http://{host}:{port}")
-    run_server(host=host, port=port)
+    
+    # Initialize database connection and repositories
+    with DatabaseManager() as db, \
+         SessionRepositoryManager(db) as session_repo, \
+         KeyFactRepositoryManager(db) as key_fact_repo, \
+         KeySnippetRepositoryManager(db) as key_snippet_repo, \
+         HumanInputRepositoryManager(db) as human_input_repo, \
+         ResearchNoteRepositoryManager(db) as research_note_repo, \
+         RelatedFilesRepositoryManager() as related_files_repo, \
+         TrajectoryRepositoryManager(db) as trajectory_repo, \
+         WorkLogRepositoryManager() as work_log_repo, \
+         ConfigRepositoryManager(config) as config_repo, \
+         EnvInvManager(env_data) as env_inv:
+        
+        # This initializes all repositories and makes them available via their respective get methods
+        logger.debug("Initialized SessionRepository")
+        logger.debug("Initialized KeyFactRepository")
+        logger.debug("Initialized KeySnippetRepository")
+        logger.debug("Initialized HumanInputRepository")
+        logger.debug("Initialized ResearchNoteRepository")
+        logger.debug("Initialized RelatedFilesRepository")
+        logger.debug("Initialized TrajectoryRepository")
+        logger.debug("Initialized WorkLogRepository")
+        logger.debug("Initialized ConfigRepository")
+        logger.debug("Initialized Environment Inventory")
+        
+        # Run the server within the context managers
+        run_server(host=host, port=port)
 
 
 def parse_arguments(args=None):
