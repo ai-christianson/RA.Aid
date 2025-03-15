@@ -343,8 +343,8 @@ Examples:
     parser.add_argument(
         "--server-port",
         type=int,
-        default=8080,
-        help="Port to listen on for web interface (default: 8080)",
+        default=1818,
+        help="Port to listen on for web interface (default: 1818)",
     )
     parser.add_argument(
         "--wipe-project-memory",

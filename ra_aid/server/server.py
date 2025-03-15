@@ -160,7 +160,7 @@ def run_ra_aid(message_content, output_queue):
 async def get_root(request: Request):
     """Serve the index.html file with port parameter."""
     return templates.TemplateResponse(
-        "index.html", {"request": request, "server_port": request.url.port or 8080}
+        "index.html", {"request": request, "server_port": request.url.port or 1818}
     )
 
 
@@ -252,7 +252,7 @@ async def get_config(request: Request):
     return {"host": request.client.host, "port": request.scope.get("server")[1]}
 
 
-def run_server(host: str = "0.0.0.0", port: int = 8080):
+def run_server(host: str = "0.0.0.0", port: int = 1818):
     """Run the FastAPI server."""
     uvicorn.run(app, host=host, port=port)
 
@@ -262,7 +262,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="RA.Aid Web Interface Server")
     parser.add_argument(
-        "--port", type=int, default=8080, help="Port to listen on (default: 8080)"
+        "--port", type=int, default=1818, help="Port to listen on (default: 1818)"
     )
     parser.add_argument(
         "--host",

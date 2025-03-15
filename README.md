@@ -228,7 +228,7 @@ More information is available in our [Usage Examples](https://docs.ra-aid.ai/cat
 - `--version`: Show program version number and exit
 - `--server`: Launch the server with web interface (alpha feature)
 - `--server-host`: Host to listen on for server (default: 0.0.0.0)  (alpha feature)
-- `--server-port`: Port to listen on for server (default: 8080) (alpha feature)
+- `--server-port`: Port to listen on for server (default: 1818) (alpha feature)
 
 ### Example Tasks
 
@@ -316,7 +316,7 @@ RA.Aid includes a modern server with web interface that provides:
 To launch the server with web interface:
 
 ```bash
-# Start with default settings (0.0.0.0:8080)
+# Start with default settings (0.0.0.0:1818)
 ra-aid --server
 
 # Specify custom host and port
@@ -326,9 +326,9 @@ ra-aid --server --server-host 127.0.0.1 --server-port 3000
 Command line options for server with web interface:
 - `--server`: Launch the server with web interface
 - `--server-host`: Host to listen on (default: 0.0.0.0)
-- `--server-port`: Port to listen on (default: 8080)
+- `--server-port`: Port to listen on (default: 1818)
 
-After starting the server, open your web browser to the displayed URL (e.g., http://localhost:8080). The interface provides:
+After starting the server, open your web browser to the displayed URL (e.g., http://localhost:1818). The interface provides:
 - Left sidebar showing request history
 - Main chat area with real-time output
 - Input box for typing requests
