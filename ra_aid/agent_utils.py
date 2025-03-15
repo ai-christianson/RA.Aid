@@ -52,6 +52,7 @@ from ra_aid.database.repositories.human_input_repository import (
 from ra_aid.database.repositories.trajectory_repository import get_trajectory_repository
 from ra_aid.database.repositories.config_repository import get_config_repository
 from ra_aid.anthropic_token_limiter import (
+    get_model_name_from_chat_model,
     sonnet_35_state_modifier,
     state_modifier,
     get_model_token_limit,
@@ -102,11 +103,10 @@ def build_agent_kwargs(
     ):
 
         def wrapped_state_modifier(state: AgentState) -> list[BaseMessage]:
-            if not hasattr(model, 'model'):
-                return state_modifier(state, model, max_input_tokens=max_input_tokens)
+            model_name = get_model_name_from_chat_model(model)
 
             if any(
-                pattern in model.model
+                pattern in model_name
                 for pattern in ["claude-3.5", "claude3.5", "claude-3-5"]
             ):
                 return sonnet_35_state_modifier(
