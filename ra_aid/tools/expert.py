@@ -7,8 +7,6 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 
-logger = logging.getLogger(__name__)
-
 from ..database.repositories.trajectory_repository import get_trajectory_repository
 from ..database.repositories.human_input_repository import get_human_input_repository
 
@@ -23,6 +21,8 @@ from ..model_formatters.key_snippets_formatter import format_key_snippets_dict
 from ..model_formatters.research_notes_formatter import format_research_notes_dict
 from ..models_params import models_params
 from ..text.processing import process_thinking_content
+
+logger = logging.getLogger(__name__)
 
 console = Console()
 _model = None
