@@ -44,6 +44,7 @@ class ConfigRepository:
             "retry_fallback_count": RETRY_FALLBACK_COUNT,
             "test_cmd_timeout": DEFAULT_TEST_CMD_TIMEOUT,
             "show_cost": DEFAULT_SHOW_COST,
+            "track_cost": True,
             "valid_providers": VALID_PROVIDERS,
         }
         

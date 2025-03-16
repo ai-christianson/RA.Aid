@@ -1,6 +1,6 @@
-from typing import Any, Dict, List, Literal, Optional, Sequence
+from typing import Any, Dict, Literal, Optional, Sequence
 
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
+from langchain_core.messages import AIMessage, BaseMessage
 from rich.markdown import Markdown
 from rich.panel import Panel
 
@@ -9,9 +9,7 @@ from ra_aid.callbacks.anthropic_callback_handler import AnthropicCallbackHandler
 from ra_aid.database.repositories.config_repository import get_config_repository
 from ra_aid.config import DEFAULT_SHOW_COST
 
-# Import shared console instance
 from .formatting import console
-
 
 def get_cost_subtitle(cost_cb: Optional[AnthropicCallbackHandler]) -> Optional[str]:
     """Generate a subtitle with cost information if a callback is provided and show_cost is enabled."""

@@ -418,6 +418,11 @@ def _initialize_callback_handler(config, agent: RAgents):
     stream_config = config.copy()
     cb = None
 
+    # Check if cost tracking is enabled
+    if not config.get("track_cost", True):
+        logger.debug("Cost tracking is disabled, skipping callback handler")
+        return cb, stream_config
+
     # Only supporting anthropic ReAct Agent for now
     if not isinstance(agent, CompiledGraph):
         return cb, stream_config

@@ -303,6 +303,18 @@ Examples:
         help="Display cost information as the agent works",
     )
     parser.add_argument(
+        "--track-cost",
+        action="store_true",
+        default=True,
+        help="Track token usage and costs (default: True)",
+    )
+    parser.add_argument(
+        "--no-track-cost",
+        action="store_false",
+        dest="track_cost",
+        help="Disable tracking of token usage and costs",
+    )
+    parser.add_argument(
         "--reasoning-assistance",
         action="store_true",
         help="Force enable reasoning assistance regardless of model defaults",
@@ -626,6 +638,7 @@ def main():
                 config_repo.set("web_research_enabled", web_research_enabled)
                 config_repo.set("show_thoughts", args.show_thoughts)
                 config_repo.set("show_cost", args.show_cost)
+                config_repo.set("track_cost", args.track_cost)
                 config_repo.set("force_reasoning_assistance", args.reasoning_assistance)
                 config_repo.set(
                     "disable_reasoning_assistance", args.no_reasoning_assistance
@@ -740,6 +753,7 @@ def main():
                     config_repo.set("temperature", args.temperature)
                     config_repo.set("show_thoughts", args.show_thoughts)
                     config_repo.set("show_cost", args.show_cost)
+                    config_repo.set("track_cost", args.track_cost)
                     config_repo.set(
                         "force_reasoning_assistance", args.reasoning_assistance
                     )

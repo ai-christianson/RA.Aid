@@ -225,6 +225,9 @@ More information is available in our [Usage Examples](https://docs.ra-aid.ai/cat
 - `--auto-test`: Automatically run tests after each code change
 - `--max-test-cmd-retries`: Maximum number of test command retry attempts (default: 3)
 - `--test-cmd-timeout`: Timeout in seconds for test command execution (default: 300)
+- `--show-cost`: Display cost information as the agent works
+- `--track-cost`: Track token usage and costs (default: True)
+- `--no-track-cost`: Disable tracking of token usage and costs
 - `--version`: Show program version number and exit
 - `--webui`: Launch the web interface (alpha feature)
 - `--webui-host`: Host to listen on for web interface (default: 0.0.0.0)  (alpha feature)
