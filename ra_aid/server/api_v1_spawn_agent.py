@@ -17,10 +17,10 @@ from ra_aid.database.repositories.research_note_repository import ResearchNoteRe
 from ra_aid.database.repositories.related_files_repository import RelatedFilesRepositoryManager
 from ra_aid.database.repositories.trajectory_repository import TrajectoryRepositoryManager
 from ra_aid.database.repositories.work_log_repository import WorkLogRepositoryManager
-from ra_aid.database.repositories.config_repository import ConfigRepositoryManager
+from ra_aid.database.repositories.config_repository import ConfigRepositoryManager, get_config_repository
 from ra_aid.env_inv_context import EnvInvManager
 from ra_aid.env_inv import EnvDiscovery
-from ra_aid.database import ensure_migrations_applied
+from ra_aid.llm import initialize_llm
 
 # Create logger
 logger = logging.getLogger(__name__)
@@ -133,10 +133,18 @@ def run_agent_thread(
             # Import here to avoid circular imports
             from ra_aid.__main__ import run_research_agent
             
+            # Get the provider and model from config repository
+            provider = get_config_repository().get("provider", "anthropic")
+            model_name = get_config_repository().get("model", "claude-3-7-sonnet-20250219")
+            temperature = get_config_repository().get("temperature")
+            
+            # Initialize model with provider and model name from config
+            model = initialize_llm(provider, model_name, temperature=temperature)
+            
             # Run the research agent
             run_research_agent(
                 base_task_or_query=message,
-                model=None,  # Use default model
+                model=model,  # Use the initialized model from config
                 expert_enabled=expert_enabled,
                 research_only=research_only,
                 hil=False,  # No human-in-the-loop for API
