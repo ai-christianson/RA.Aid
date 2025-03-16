@@ -9,6 +9,8 @@ from langchain_core.callbacks import BaseCallbackHandler
 from playhouse.shortcuts import model_to_dict
 
 from ra_aid.config import DEFAULT_MODEL
+from ra_aid.database.repositories.session_repository import SessionRepository
+from ra_aid.database.repositories.trajectory_repository import TrajectoryRepository
 from ra_aid.logging_config import get_logger
 from ra_aid.utils.singleton import Singleton
 
@@ -109,6 +111,9 @@ def get_anthropic_token_cost_for_model(
     model_name = standardize_model_name(model_name, is_completion)
 
     if model_name not in ANTHROPIC_MODEL_COSTS:
+        logger.warning(
+            "Could not find model_name in ANTHROPIC_MODEL_COSTS dictionary, defaulting to claude-3-sonnet."
+        )
         # Default to Claude 3 Sonnet pricing if model not found
         model_name = (
             "claude-3-sonnet" if not is_completion else "claude-3-sonnet-completion"
@@ -175,18 +180,19 @@ class AnthropicCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
     }
 
     def __init__(
-        self, model_name: Optional[str] = None, trajectory_repo=None, session_repo=None
+        self,
+        model_name: str,
+        trajectory_repo: TrajectoryRepository,
+        session_repo: SessionRepository,
     ) -> None:
         super().__init__()
         self._lock = threading.Lock()
         if model_name:
             self.model_name = model_name
 
-        # Store repositories for callback handling
         self.trajectory_repo = trajectory_repo
         self.session_repo = session_repo
 
-        # Initialize session tracking if session_repo is available
         if self.session_repo:
             current_session = self.session_repo.get_current_session()
             if current_session:
@@ -319,15 +325,18 @@ class AnthropicCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
                 logger.warning("session_id not initialized")
                 return
 
-            # First update the session record in the database
+            last_cost = calculate_token_cost(
+                self.model_name, self.prompt_tokens, self.completion_tokens
+            )
+
             updated_session = self.session_repo.update_token_usage(
                 session_id=self.session_totals["session_id"],
                 input_tokens=self.prompt_tokens,
                 output_tokens=self.completion_tokens,
                 model_name=self.model_name,
+                last_cost=last_cost,
             )
 
-            # Then update the session_totals from the updated session record
             if updated_session:
                 self.session_totals["cost"] = updated_session.total_cost
                 self.session_totals["tokens"] = updated_session.total_tokens
@@ -336,19 +345,16 @@ class AnthropicCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
                     updated_session.total_output_tokens
                 )
 
-                last_msg_cost = calculate_token_cost(
-                    self.model_name, self.prompt_tokens, self.completion_tokens
-                )
                 created_traj = self.trajectory_repo.create(
                     record_type="model_usage",
-                    current_cost=last_msg_cost,
+                    current_cost=last_cost,
                     current_tokens=self.prompt_tokens + self.completion_tokens,
                     total_cost=self.session_totals[
                         "cost"
-                    ],  # Running total cost from session
+                    ],  
                     total_tokens=self.session_totals[
                         "tokens"
-                    ],  # Running total tokens from session
+                    ],  
                     input_tokens=self.prompt_tokens,
                     output_tokens=self.completion_tokens,
                     session_id=self.session_totals["session_id"],

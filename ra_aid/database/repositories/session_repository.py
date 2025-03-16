@@ -251,6 +251,7 @@ class SessionRepository:
         input_tokens: int = 0,
         output_tokens: int = 0,
         model_name: str = DEFAULT_MODEL,
+        last_cost: float = 0.0,
     ) -> Optional[Session]:
         """
         Update token usage for a session.
@@ -260,6 +261,7 @@ class SessionRepository:
             input_tokens: Number of input tokens to add
             output_tokens: Number of output tokens to add
             model_name: Model name used for cost calculation
+            last_cost: Pre-calculated cost for this update
 
         Returns:
             Optional[Session]: Updated session or None if not found
@@ -269,9 +271,6 @@ class SessionRepository:
             if not session:
                 logger.warning(f"Attempted to update non-existent session {session_id}")
                 return None
-
-            from ra_aid.callbacks.anthropic_callback_handler import calculate_token_cost
-            last_cost = calculate_token_cost(model_name, input_tokens, output_tokens)
 
             session.total_input_tokens = session.total_input_tokens + input_tokens
             session.total_output_tokens = session.total_output_tokens + output_tokens

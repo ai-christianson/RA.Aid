@@ -412,6 +412,7 @@ def _initialize_callback_handler(config, agent: RAgents):
         model = agent.model
         model_name = get_model_name_from_chat_model(model)
     else:
+        print(f"agent={agent}")
         logger.warning("Agent is None or has no model attribute.")
 
     full_model_name = model_name
@@ -487,8 +488,6 @@ def _run_agent_stream(agent: RAgents, msg_list: list[BaseMessage]):
     human-in-the-loop interruptions using interrupt_after=["tools"].
     """
     config = get_config_repository().get_all()
-    # trajectory_repo = get_trajectory_repository()
-    # session_repo = get_session_repository()
 
     cb, stream_config = _initialize_callback_handler(config, agent)
 
