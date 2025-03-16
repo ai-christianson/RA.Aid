@@ -4,10 +4,9 @@ from typing import List
 
 from langchain_core.tools import tool
 from rich.console import Console
-from rich.markdown import Markdown
-from rich.panel import Panel
 
-from ..console.output import console_panel, cpm
+from ra_aid.console.formatting import console_panel, cpm
+
 from ..database.repositories.trajectory_repository import get_trajectory_repository
 from ..database.repositories.human_input_repository import get_human_input_repository
 

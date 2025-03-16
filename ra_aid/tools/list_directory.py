@@ -11,7 +11,7 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.tree import Tree
 
-from ra_aid.console.output import cpm
+from ra_aid.console.formatting import cpm
 
 console = Console()
 

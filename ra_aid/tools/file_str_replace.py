@@ -5,7 +5,7 @@ from langchain_core.tools import tool
 
 from ra_aid.console import console
 from ra_aid.console.formatting import print_error
-from ra_aid.console.output import console_panel
+from ra_aid.console.formatting import console_panel
 from ra_aid.tools.memory import emit_related_files
 from ra_aid.database.repositories.trajectory_repository import get_trajectory_repository
 from ra_aid.database.repositories.human_input_repository import get_human_input_repository

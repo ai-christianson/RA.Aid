@@ -7,7 +7,7 @@ from langchain_core.tools import tool
 
 from ra_aid.text.processing import truncate_output
 from ra_aid.tools.memory import is_binary_file
-from ra_aid.console.output import console_panel, cpm
+from ra_aid.console.formatting import console_panel, cpm
 
 # Standard buffer size for file reading
 CHUNK_SIZE = 8192

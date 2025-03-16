@@ -9,7 +9,7 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 
-from ra_aid.console.output import console_panel, cpm
+from ra_aid.console.formatting import console_panel, cpm
 from ra_aid.file_listing import get_all_project_files, FileListerError
 
 console = Console()

@@ -6,7 +6,7 @@ from typing import Dict
 from langchain_core.tools import tool
 from rich.console import Console
 from rich.panel import Panel
-from ra_aid.console.output import console_panel
+from ra_aid.console.formatting import console_panel
 from ra_aid.tools.memory import emit_related_files
 
 console = Console()

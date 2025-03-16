@@ -36,7 +36,7 @@ class PrettyHandler(logging.Handler):
             else:
                 title = "🐞 DEBUG"
                 style = "blue"
-            from ra_aid.console.output import cpm
+            from ra_aid.console.formatting import cpm
             cpm(msg.strip(), title=title, border_style=style)
         except Exception:
             self.handleError(record)

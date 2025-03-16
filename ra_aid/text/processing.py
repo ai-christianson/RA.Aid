@@ -143,7 +143,7 @@ def process_thinking_content(
                 if panel_style is not None:
                     panel_kwargs["border_style"] = panel_style
                 
-                from ra_aid.console.output import cpm
+                from ra_aid.console.formatting import cpm
                 cpm(extracted_thinking, **panel_kwargs)
             
             # Return remaining items as processed content
@@ -172,7 +172,7 @@ def process_thinking_content(
                 if panel_style is not None:
                     panel_kwargs["border_style"] = panel_style
                 
-                from ra_aid.console.output import cpm
+                from ra_aid.console.formatting import cpm
                 cpm(think_content, **panel_kwargs)
             
             # Return remaining text as processed content

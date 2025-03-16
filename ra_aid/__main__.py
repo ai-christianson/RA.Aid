@@ -60,7 +60,7 @@ from ra_aid.env_inv import EnvDiscovery
 from ra_aid.env_inv_context import EnvInvManager, get_env_inv
 from ra_aid.model_formatters import format_key_facts_dict
 from ra_aid.model_formatters.key_snippets_formatter import format_key_snippets_dict
-from ra_aid.console.output import cpm
+from ra_aid.console.formatting import cpm
 from ra_aid.database import (
     DatabaseManager,
     ensure_migrations_applied,

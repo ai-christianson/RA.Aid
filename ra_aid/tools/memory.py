@@ -7,7 +7,7 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 from typing_extensions import TypedDict
-from ra_aid.console.output import console_panel, cpm
+from ra_aid.console.formatting import console_panel, cpm
 
 from ra_aid.agent_context import (
     mark_plan_completed,

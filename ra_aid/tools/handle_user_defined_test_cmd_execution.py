@@ -7,7 +7,7 @@ from typing import Any, Dict, Tuple
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
-from ra_aid.console.output import console_panel, cpm
+from ra_aid.console.formatting import console_panel, cpm
 
 from ra_aid.config import DEFAULT_TEST_CMD_TIMEOUT
 from ra_aid.logging_config import get_logger

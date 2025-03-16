@@ -6,7 +6,7 @@ from rich.panel import Panel
 from rich.prompt import Prompt
 
 from ra_aid.console.cowboy_messages import get_cowboy_message
-from ra_aid.console.output import console_panel, cpm
+from ra_aid.console.formatting import console_panel, cpm
 from ra_aid.proc.interactive import run_interactive_command
 from ra_aid.text.processing import truncate_output
 from ra_aid.tools.memory import log_work_event

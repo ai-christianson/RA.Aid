@@ -26,10 +26,10 @@ def get_cost_subtitle() -> Optional[str]:
     if hasattr(callback, "session_totals") and callback.session_totals:
         cost = callback.session_totals.get("cost", 0.0)
         tokens = callback.session_totals.get("tokens", 0)
-        return f"Cost: ${cost:.6f} | Tokens: {tokens}"
+        return f"Cost: ${cost:.2f} | Tokens: {tokens}"
 
     # Fallback to direct values if session_totals not available
-    return f"Cost: ${callback.total_cost:.6f} | Tokens: {callback.total_tokens}"
+    return f"Cost: ${callback.total_cost:.2f} | Tokens: {callback.total_tokens}"
 
 
 def print_agent_output(

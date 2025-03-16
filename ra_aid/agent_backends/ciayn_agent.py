@@ -17,7 +17,7 @@ from ra_aid.models_params import DEFAULT_TOKEN_LIMIT, models_params
 from ra_aid.prompts.ciayn_prompts import CIAYN_AGENT_SYSTEM_PROMPT, CIAYN_AGENT_HUMAN_PROMPT, EXTRACT_TOOL_CALL_PROMPT, NO_TOOL_CALL_PROMPT
 from ra_aid.tools.expert import get_model
 from ra_aid.tools.reflection import get_function_info
-from ra_aid.console.output import cpm
+from ra_aid.console.formatting import cpm
 from ra_aid.console.formatting import print_warning, print_error, console
 from ra_aid.agent_context import should_exit
 from ra_aid.text.processing import extract_think_tag, process_thinking_content
