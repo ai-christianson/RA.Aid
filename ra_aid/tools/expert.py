@@ -7,6 +7,7 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 
+from ..console.output import console_panel, cpm
 from ..database.repositories.trajectory_repository import get_trajectory_repository
 from ..database.repositories.human_input_repository import get_human_input_repository
 
@@ -38,12 +39,10 @@ def get_model():
             _model = initialize_expert_llm(provider, model)
     except Exception as e:
         _model = None
-        console.print(
-            Panel(
-                f"Failed to initialize expert model: {e}",
-                title="Error",
-                border_style="red",
-            )
+        console_panel(
+            f"Failed to initialize expert model: {e}",
+            title="Error",
+            border_style="red"
         )
         raise
     return _model
@@ -94,7 +93,7 @@ def emit_expert_context(context: str) -> str:
 
     # Create and display status panel
     panel_content = f"Added expert context ({len(context)} characters)"
-    console.print(Panel(panel_content, title="Expert Context", border_style="blue"))
+    console_panel(panel_content, title="Expert Context", border_style="blue")
 
     return "Context added."
 
@@ -222,8 +221,8 @@ def ask_expert(question: str) -> str:
         logger.error(f"Failed to record trajectory: {e}")
 
     # Show only question in panel
-    console.print(
-        Panel(Markdown(display_query), title="🤔 Expert Query", border_style="yellow")
+    cpm(
+        display_query, title="🤔 Expert Query", border_style="yellow"
     )
 
     # Clear context after panel display
@@ -318,8 +317,8 @@ def ask_expert(question: str) -> str:
         logger.error(f"Failed to record trajectory: {e}")
 
     # Format and display response
-    console.print(
-        Panel(Markdown(content), title="Expert Response", border_style="blue")
+    cpm(
+        content, title="Expert Response", border_style="blue"
     )
 
     return content

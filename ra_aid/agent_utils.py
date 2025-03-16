@@ -96,7 +96,7 @@ logger = get_logger(__name__)
 @tool
 def output_markdown_message(message: str) -> str:
     """Outputs a message to the user, optionally prompting for input."""
-    console.print(Panel(Markdown(message.strip()), title="🤖 Assistant"))
+    cpm(message.strip(), title="🤖 Assistant")
     return "Message output."
 
 

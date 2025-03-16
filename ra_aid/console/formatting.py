@@ -36,7 +36,7 @@ def print_stage_header(stage: str) -> None:
 
     # Create styled panel with icon
     panel_content = f" {icon} {stage_title}"
-    console.print(Panel(panel_content, style="green bold", padding=0))
+    console_panel(panel_content, border_style="green bold", padding=(0, 1))
 
 
 def print_task_header(task: str) -> None:
@@ -45,7 +45,7 @@ def print_task_header(task: str) -> None:
     Args:
         task: The task text to print (supports Markdown formatting)
     """
-    console.print(Panel(Markdown(task), title="🔧 Task", border_style="yellow bold"))
+    cpm(task, title="🔧 Task", border_style="yellow bold")
 
 
 def print_error(message: str) -> None:
@@ -54,7 +54,7 @@ def print_error(message: str) -> None:
     Args:
         message: The error message to display (supports Markdown formatting)
     """
-    console.print(Panel(Markdown(message), title="Error", border_style="red bold"))
+    cpm(message, title="Error", border_style="red bold")
 
 
 def print_warning(message: str, title: str = "Warning") -> None:
@@ -66,7 +66,7 @@ def print_warning(message: str, title: str = "Warning") -> None:
         message: The warning message to display (supports Markdown formatting)
         title: The title for the panel, defaults to "Warning"
     """
-    console.print(Panel(Markdown(message), title=title, border_style="yellow bold"))
+    cpm(message, title=title, border_style="yellow bold")
 
 
 def print_interrupt(message: str) -> None:
@@ -76,6 +76,4 @@ def print_interrupt(message: str) -> None:
         message: The interrupt message to display (supports Markdown formatting)
     """
     print()  # Add spacing for ^C
-    console.print(
-        Panel(Markdown(message), title="⛔ Interrupt", border_style="yellow bold")
-    )
+    cpm(message, title="⛔ Interrupt", border_style="yellow bold")

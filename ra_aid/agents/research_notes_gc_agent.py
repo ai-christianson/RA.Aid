@@ -177,7 +177,7 @@ def run_research_notes_gc_agent(threshold: int = 30) -> None:
         except Exception:
             pass  # Continue if trajectory recording fails
             
-        console.print(Panel(f"Error: {str(e)}", title="🗑 GC Error", border_style="red"))
+        console_panel(f"Error: {str(e)}", title="🗑 GC Error", border_style="red")
         return  # Exit the function if we can't access the repository
     
     # Display status panel with note count included
@@ -196,7 +196,7 @@ def run_research_notes_gc_agent(threshold: int = 30) -> None:
     except Exception:
         pass  # Continue if trajectory recording fails
         
-    console.print(Panel(f"Gathering my thoughts...\nCurrent number of research notes: {note_count}", title="🗑 Garbage Collection"))
+    console_panel(f"Gathering my thoughts...\nCurrent number of research notes: {note_count}", title="🗑 Garbage Collection")
     
     # Only run the agent if we actually have notes to clean and we're over the threshold
     if note_count > threshold:
@@ -320,11 +320,9 @@ Remember: Your goal is to maintain a concise, high-value collection of research 
                 except Exception:
                     pass  # Continue if trajectory recording fails
                 
-                console.print(
-                    Panel(
-                        f"Cleaned research notes: {note_count} → {updated_count}\nProtected notes (associated with current request): {protected_count}",
-                        title="🗑 GC Complete"
-                    )
+                console_panel(
+                    f"Cleaned research notes: {note_count} → {updated_count}\nProtected notes (associated with current request): {protected_count}",
+                    title="🗑 GC Complete"
                 )
             else:
                 # Record GC completion in trajectory
@@ -345,11 +343,9 @@ Remember: Your goal is to maintain a concise, high-value collection of research 
                 except Exception:
                     pass  # Continue if trajectory recording fails
                 
-                console.print(
-                    Panel(
-                        f"Cleaned research notes: {note_count} → {updated_count}",
-                        title="🗑 GC Complete"
-                    )
+                console_panel(
+                    f"Cleaned research notes: {note_count} → {updated_count}",
+                    title="🗑 GC Complete"
                 )
         else:
             # Record GC info in trajectory
@@ -369,7 +365,7 @@ Remember: Your goal is to maintain a concise, high-value collection of research 
             except Exception:
                 pass  # Continue if trajectory recording fails
                 
-            console.print(Panel(f"All {len(protected_notes)} research notes are associated with the current request and protected from deletion.", title="🗑 GC Info"))
+            console_panel(f"All {len(protected_notes)} research notes are associated with the current request and protected from deletion.", title="🗑 GC Info")
     else:
         # Record GC info in trajectory
         try:
@@ -389,4 +385,4 @@ Remember: Your goal is to maintain a concise, high-value collection of research 
         except Exception:
             pass  # Continue if trajectory recording fails
             
-        console.print(Panel(f"Research notes count ({note_count}) is below threshold ({threshold}). No cleanup needed.", title="🗑 GC Info"))
+        console_panel(f"Research notes count ({note_count}) is below threshold ({threshold}). No cleanup needed.", title="🗑 GC Info")

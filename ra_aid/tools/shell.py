@@ -6,6 +6,7 @@ from rich.panel import Panel
 from rich.prompt import Prompt
 
 from ra_aid.console.cowboy_messages import get_cowboy_message
+from ra_aid.console.output import console_panel, cpm
 from ra_aid.proc.interactive import run_interactive_command
 from ra_aid.text.processing import truncate_output
 from ra_aid.tools.memory import log_work_event
@@ -71,7 +72,7 @@ def run_shell_command(
     )
 
     # Show just the command in a simple panel
-    console.print(Panel(command, title="🐚 Shell", border_style="bright_yellow"))
+    console_panel(command, title="🐚 Shell", border_style="bright_yellow")
 
     if not cowboy_mode:
         choices = ["y", "n", "c"]
@@ -130,5 +131,5 @@ def run_shell_command(
             human_input_id=human_input_id
         )
         
-        console.print(Panel(str(e), title="❌ Error", border_style="red"))
+        console_panel(str(e), title="❌ Error", border_style="red")
         return {"output": str(e), "return_code": 1, "success": False}

@@ -152,4 +152,4 @@ def display_project_status(info: ProjectInfo) -> None:
 
     # Create and display panel
     console = Console()
-    console.print(Panel(Markdown(status_text.strip()), title="📊 Project Status"))
+    cpm(status_text.strip(), title="📊 Project Status")

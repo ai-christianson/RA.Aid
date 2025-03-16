@@ -9,6 +9,7 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 
+from ra_aid.console.output import console_panel, cpm
 from ra_aid.file_listing import get_all_project_files, FileListerError
 
 console = Console()
@@ -217,12 +218,10 @@ def fuzzy_find_project_files(
         )
         
         # Display the panel
-        console.print(
-            Panel(
-                Markdown("\n\n".join(info_sections)),
-                title="🔍 Fuzzy Find Results",
-                border_style="bright_blue",
-            )
+        cpm(
+            "\n\n".join(info_sections),
+            title="🔍 Fuzzy Find Results",
+            border_style="bright_blue"
         )
 
         return filtered_matches

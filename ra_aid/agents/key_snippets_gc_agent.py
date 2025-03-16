@@ -165,7 +165,7 @@ def run_key_snippets_gc_agent() -> None:
     except Exception:
         pass  # Continue if trajectory recording fails
         
-    console.print(Panel(f"Gathering my thoughts...\nCurrent number of key snippets: {snippet_count}", title="🗑 Garbage Collection"))
+    console_panel(f"Gathering my thoughts...\nCurrent number of key snippets: {snippet_count}", title="🗑 Garbage Collection")
     
     # Only run the agent if we actually have snippets to clean
     if snippet_count > 0:
@@ -252,11 +252,9 @@ def run_key_snippets_gc_agent() -> None:
                 except Exception:
                     pass  # Continue if trajectory recording fails
                 
-                console.print(
-                    Panel(
-                        f"Cleaned key snippets: {snippet_count} → {updated_count}\nProtected snippets (associated with current request): {protected_count}",
-                        title="🗑 GC Complete"
-                    )
+                console_panel(
+                    f"Cleaned key snippets: {snippet_count} → {updated_count}\nProtected snippets (associated with current request): {protected_count}",
+                    title="🗑 GC Complete"
                 )
             else:
                 # Record GC completion in trajectory
@@ -277,11 +275,9 @@ def run_key_snippets_gc_agent() -> None:
                 except Exception:
                     pass  # Continue if trajectory recording fails
                 
-                console.print(
-                    Panel(
-                        f"Cleaned key snippets: {snippet_count} → {updated_count}",
-                        title="🗑 GC Complete"
-                    )
+                console_panel(
+                    f"Cleaned key snippets: {snippet_count} → {updated_count}",
+                    title="🗑 GC Complete"
                 )
         else:
             # Record GC info in trajectory
@@ -301,7 +297,7 @@ def run_key_snippets_gc_agent() -> None:
             except Exception:
                 pass  # Continue if trajectory recording fails
                 
-            console.print(Panel(f"All {len(protected_snippets)} snippets are associated with the current request and protected from deletion.", title="🗑 GC Info"))
+            console_panel(f"All {len(protected_snippets)} snippets are associated with the current request and protected from deletion.", title="🗑 GC Info")
     else:
         # Record GC info in trajectory
         try:
@@ -320,4 +316,4 @@ def run_key_snippets_gc_agent() -> None:
         except Exception:
             pass  # Continue if trajectory recording fails
             
-        console.print(Panel("No key snippets to clean.", title="🗑 GC Info"))
+        console_panel("No key snippets to clean.", title="🗑 GC Info")

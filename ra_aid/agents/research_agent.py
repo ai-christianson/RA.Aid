@@ -222,14 +222,10 @@ def run_research_agent(
             )
 
             # Show the reasoning assist query in a panel
-            console.print(
-                Panel(
-                    Markdown(
-                        "Consulting with the reasoning model on the best research approach."
-                    ),
-                    title="📝 Thinking about research strategy...",
-                    border_style="yellow",
-                )
+            cpm(
+                "Consulting with the reasoning model on the best research approach.",
+                title="📝 Thinking about research strategy...",
+                border_style="yellow"
             )
 
             logger.debug("Invoking expert model for reasoning assist")
@@ -274,12 +270,10 @@ def run_research_agent(
                     logger.debug(
                         f"Displaying structured thinking content ({len(thinking_content)} chars)"
                     )
-                    console.print(
-                        Panel(
-                            Markdown(thinking_content),
-                            title="💭 Expert Thinking",
-                            border_style="yellow",
-                        )
+                    cpm(
+                        thinking_content,
+                        title="💭 Expert Thinking",
+                        border_style="yellow"
                     )
 
                 # Use response_text if available, otherwise fall back to joining
@@ -303,12 +297,10 @@ def run_research_agent(
                 )
 
             # Display the expert guidance in a panel
-            console.print(
-                Panel(
-                    Markdown(content),
-                    title="Research Strategy Guidance",
-                    border_style="blue",
-                )
+            cpm(
+                content,
+                title="Research Strategy Guidance",
+                border_style="blue"
             )
 
             # Use the content as expert guidance
@@ -377,9 +369,7 @@ YOU MUST FOLLOW THE EXPERT'S GUIDANCE OR ELSE BE TERMINATED!
 
     try:
         if console_message:
-            console.print(
-                Panel(Markdown(console_message), title="🔬 Looking into it...")
-            )
+            cpm(console_message, title="🔬 Looking into it...")
 
         if project_info:
             display_project_status(project_info)
@@ -511,7 +501,7 @@ def run_web_research_agent(
 
     try:
         if console_message:
-            console.print(Panel(Markdown(console_message), title="🔬 Researching..."))
+            cpm(console_message, title="🔬 Researching...")
 
         logger.debug("Web research agent completed successfully")
         none_or_fallback_handler = agent_utils.init_fallback_handler(agent, tools)
