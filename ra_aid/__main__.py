@@ -99,7 +99,7 @@ if hasattr(litellm, "_logging") and hasattr(litellm._logging, "_disable_debuggin
     litellm._logging._disable_debugging()
 
 
-def launch_server(host: str, port: int):
+def launch_server(host: str, port: int, args):
     """Launch the RA.Aid web interface."""
     from ra_aid.server import run_server
     from ra_aid.database.connection import DatabaseManager
@@ -124,8 +124,62 @@ def launch_server(host: str, port: int):
     except Exception as e:
         logger.error(f"Database migration error: {str(e)}")
     
-    # Initialize empty config dictionary
-    config = {}
+    # Check dependencies before proceeding
+    check_dependencies()
+
+    # Validate environment (expert_enabled, web_research_enabled)
+    (
+        expert_enabled,
+        expert_missing,
+        web_research_enabled,
+        web_research_missing,
+    ) = validate_environment(
+        args
+    )  # Will exit if main env vars missing
+    logger.debug("Environment validation successful")
+
+    # Validate model configuration early
+    model_config = models_params.get(args.provider, {}).get(
+        args.model or "", {}
+    )
+    supports_temperature = model_config.get(
+        "supports_temperature",
+        args.provider
+        in [
+            "anthropic",
+            "openai",
+            "openrouter",
+            "openai-compatible",
+            "deepseek",
+        ],
+    )
+
+    if supports_temperature and args.temperature is None:
+        args.temperature = model_config.get("default_temperature")
+        if args.temperature is None:
+            cpm(
+                f"This model supports temperature argument but none was given. Setting default temperature to {DEFAULT_TEMPERATURE}."
+            )
+            args.temperature = DEFAULT_TEMPERATURE
+        logger.debug(
+            f"Using default temperature {args.temperature} for model {args.model}"
+        )
+    
+    # Initialize config dictionary with values from args and environment validation
+    config = {
+        "provider": args.provider,
+        "model": args.model,
+        "expert_provider": args.expert_provider,
+        "expert_model": args.expert_model,
+        "temperature": args.temperature,
+        "experimental_fallback_handler": args.experimental_fallback_handler,
+        "expert_enabled": expert_enabled,
+        "web_research_enabled": web_research_enabled,
+        "show_thoughts": args.show_thoughts,
+        "show_cost": args.show_cost,
+        "force_reasoning_assistance": args.reasoning_assistance,
+        "disable_reasoning_assistance": args.no_reasoning_assistance
+    }
     
     # Initialize environment discovery
     env_discovery = EnvDiscovery()
@@ -577,7 +631,7 @@ def main():
 
     # Launch web interface if requested
     if args.server:
-        launch_server(args.server_host, args.server_port)
+        launch_server(args.server_host, args.server_port, args)
         return
 
     try:
