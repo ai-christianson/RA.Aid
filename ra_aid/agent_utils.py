@@ -95,10 +95,13 @@ def build_agent_kwargs(
     if checkpointer is not None:
         agent_kwargs["checkpointer"] = checkpointer
 
-    config = get_config_repository().get_all()
+    # Use repository method to check if token limiting is enabled
+    limit_tokens = get_config_repository().get("limit_tokens", True)
+    
+    # Use repository method to check if we're using an Anthropic Claude model
     if (
-        config.get("limit_tokens", True)
-        and is_anthropic_claude(config)
+        limit_tokens
+        and is_anthropic_claude(get_config_repository().get_all())
         and model is not None
     ):
 
@@ -136,28 +139,24 @@ def create_agent(
         model: The LLM model to use
         tools: List of tools to provide to the agent
         checkpointer: Optional memory checkpointer
-        config: Optional configuration dictionary containing settings like:
-            - limit_tokens (bool): Whether to apply token limiting (default: True)
-            - provider (str): The LLM provider name
-            - model (str): The model name
+        agent_type: Type of agent to create (default: "default")
 
     Returns:
         The created agent instance
 
     Token limiting helps prevent context window overflow by trimming older messages
     while preserving system messages. It can be disabled by setting
-    config['limit_tokens'] = False.
+    limit_tokens config value to False using get_config_repository().set('limit_tokens', False).
     """
     try:
         # Try to get config from repository for production use
         try:
-            config_from_repo = get_config_repository().get_all()
-            # If we succeeded, use the repository config instead of passed config
-            config = config_from_repo
+            config = get_config_repository().get_all()
         except RuntimeError:
             # In tests, this may fail because the repository isn't set up
-            # So we'll use the passed config directly
-            pass
+            # So we'll use default values
+            config = {}
+            
         max_input_tokens = (
             get_model_token_limit(config, agent_type, model) or DEFAULT_TOKEN_LIMIT
         )
@@ -177,8 +176,11 @@ def create_agent(
     except Exception as e:
         # Default to REACT agent if provider/model detection fails
         logger.warning(f"Failed to detect model type: {e}. Defaulting to REACT agent.")
-        config = get_config_repository().get_all()
-        max_input_tokens = get_model_token_limit(config, agent_type, model)
+        max_input_tokens = get_model_token_limit(
+            get_config_repository().get_all(), 
+            agent_type, 
+            model
+        )
         agent_kwargs = build_agent_kwargs(checkpointer, model, max_input_tokens)
         return create_react_agent(
             model, tools, interrupt_after=["tools"], **agent_kwargs
@@ -356,17 +358,22 @@ def _run_agent_stream(agent: RAgents, msg_list: list[BaseMessage]):
     This function adheres to the latest LangGraph best practices (as of March 2025) for handling
     human-in-the-loop interruptions using interrupt_after=["tools"].
     """
-    config = get_config_repository().get_all()
-    stream_config = config.copy()
+    # Get config using repository method
+    config_dict = get_config_repository().get_all()
+    stream_config = config_dict.copy()
 
     cb = None
-    if is_anthropic_claude(config):
-        model_name = config.get("model", "")
+    if is_anthropic_claude(config_dict):
+        model_name = get_config_repository().get("model", "")
         full_model_name = model_name
         cb = AnthropicCallbackHandler(full_model_name)
 
-        if "callbacks" not in stream_config:
+        # Use proper dict methods for modifying the copy instead of direct access
+        callbacks = stream_config.get("callbacks", [])
+        if not callbacks:
+            # Create a new list in the copy dictionary
             stream_config["callbacks"] = []
+        # Add the callback to the list
         stream_config["callbacks"].append(cb)
 
     while True:
@@ -384,12 +391,15 @@ def _run_agent_stream(agent: RAgents, msg_list: list[BaseMessage]):
 
         logger.debug("Stream iteration ended; checking agent state for continuation.")
 
-        # Prepare state configuration, ensuring 'configurable' is present.
+        # Prepare state configuration, ensuring 'configurable' is present
         state_config = get_config_repository().get_all().copy()
+        
+        # Use proper dict methods for the copy instead of direct access
         if "configurable" not in state_config:
             logger.debug(
                 "Key 'configurable' not found in config; adding it as an empty dict."
             )
+            # Create an empty dict for the "configurable" key in the copy
             state_config["configurable"] = {}
         logger.debug("Using state_config for agent.get_state(): %s", state_config)
 
@@ -429,10 +439,13 @@ def run_agent_with_retry(
     max_retries = 20
     base_delay = 1
     test_attempts = 0
+    
+    # Use repository methods to get configuration values
     _max_test_retries = get_config_repository().get(
         "max_test_cmd_retries", DEFAULT_MAX_TEST_CMD_RETRIES
     )
     auto_test = get_config_repository().get("auto_test", False)
+    
     original_prompt = prompt
     msg_list = [HumanMessage(content=prompt)]
     run_config = get_config_repository().get_all()

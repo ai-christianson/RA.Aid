@@ -37,6 +37,11 @@ def mock_config_repository():
             "cowboy_mode": False
         }
         
+        # Setup get_all method to return a reference to the config dict
+        # This is important for tests where we want the dictionary returned
+        # by get_all() to be affected by updates to the config
+        mock_repo.get_all.return_value = config
+        
         # Setup get method to return config values
         def get_config(key, default=None):
             return config.get(key, default)

@@ -11,7 +11,8 @@ from unittest.mock import MagicMock
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from ra_aid.server.api_v1_spawn_agent import router, get_repository
+from ra_aid.server.api_v1_spawn_agent import router
+from ra_aid.database.repositories.session_repository import get_session_repository
 from ra_aid.database.pydantic_models import SessionModel
 import datetime
 import ra_aid.server.api_v1_spawn_agent
@@ -51,12 +52,21 @@ def mock_repository(mock_session):
 def mock_config_repository():
     """Create a mock config repository for testing."""
     mock_config = MagicMock()
-    mock_config.get.side_effect = lambda key, default=None: {
+    # Create a dictionary to simulate config
+    config = {
         "expert_enabled": True,
         "web_research_enabled": False,
         "provider": "anthropic",
         "model": "claude-3-7-sonnet-20250219",
-    }.get(key, default)
+    }
+    
+    # Setup get method to return config values
+    mock_config.get.side_effect = lambda key, default=None: config.get(key, default)
+    
+    # Setup get_all method to return a reference to the config dict
+    # This is important for tests where we want the dictionary returned
+    # by get_all() to be affected by updates to the config
+    mock_config.get_all.return_value = config
     return mock_config
 
 @pytest.fixture
@@ -67,7 +77,7 @@ def client(mock_repository, mock_thread, mock_config_repository, monkeypatch):
     app.include_router(router)
     
     # Override the dependency to use our mock repository
-    app.dependency_overrides[get_repository] = lambda: mock_repository
+    app.dependency_overrides[get_session_repository] = lambda: mock_repository
     
     # Mock run_agent_thread to be a no-op
     monkeypatch.setattr(

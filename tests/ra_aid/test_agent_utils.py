@@ -52,7 +52,9 @@ def mock_config_repository():
 
         mock_repo.get.side_effect = get_config
 
-        # Setup get_all method to return all config values
+        # Setup get_all method to return a reference to config
+        # This is important for tests where we want the dictionary returned
+        # by get_all() to be affected by updates to the config
         mock_repo.get_all.return_value = config
 
         # Setup set method to update config values

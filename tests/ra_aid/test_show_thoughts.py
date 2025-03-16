@@ -40,7 +40,7 @@ def mock_config_repository():
         config.update(config_dict)
     mock_repo.update.side_effect = update_config
     
-    # Setup get_all method to return the config dict
+    # Setup get_all method to return a copy of the config dict
     def get_all_config():
         return config.copy()
     mock_repo.get_all.side_effect = get_all_config
