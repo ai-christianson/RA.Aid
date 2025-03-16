@@ -34,6 +34,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from ra_aid.server.api_v1_sessions import router as sessions_router
+from ra_aid.server.api_v1_spawn_agent import router as spawn_agent_router
 
 app = FastAPI(
     title="RA.Aid API",
@@ -52,6 +53,7 @@ app.add_middleware(
 
 # Include API routers
 app.include_router(sessions_router)
+app.include_router(spawn_agent_router)
 
 # Setup templates and static files directories
 CURRENT_DIR = Path(__file__).parent
