@@ -11,19 +11,31 @@ from ra_aid.config import DEFAULT_SHOW_COST
 
 from .formatting import console
 
-def get_cost_subtitle(cost_cb: Optional[AnthropicCallbackHandler]) -> Optional[str]:
-    """Generate a subtitle with cost information if a callback is provided and show_cost is enabled."""
-    # Only show cost information if both cost_cb is provided AND show_cost is True
-    show_cost = get_config_repository().get("show_cost", DEFAULT_SHOW_COST)
-    if cost_cb and show_cost:
-        return f"Cost: ${cost_cb.total_cost:.6f} | Tokens: {cost_cb.total_tokens}"
-    return None
+
+def get_cost_subtitle() -> Optional[str]:
+    """Generate a subtitle with cost information if cost tracking is enabled and show_cost is enabled."""
+
+    if not get_config_repository().get("show_cost", DEFAULT_SHOW_COST):
+        return None
+
+    # Get the current singleton instance
+    callback = AnthropicCallbackHandler._instances.get(AnthropicCallbackHandler, None)
+
+    if not callback:
+        return None
+
+    if hasattr(callback, "session_totals") and callback.session_totals:
+        cost = callback.session_totals.get("cost", 0.0)
+        tokens = callback.session_totals.get("tokens", 0)
+        return f"Cost: ${cost:.6f} | Tokens: {tokens}"
+
+    # Fallback to direct values if session_totals not available
+    return f"Cost: ${callback.total_cost:.6f} | Tokens: {callback.total_tokens}"
 
 
 def print_agent_output(
     chunk: Dict[str, Any],
     agent_type: Literal["CiaynAgent", "React"],
-    cost_cb: Optional[AnthropicCallbackHandler] = None,
 ) -> None:
     """Print only the agent's message content, not tool calls.
 
@@ -39,7 +51,7 @@ def print_agent_output(
                 if isinstance(msg.content, list):
                     for content in msg.content:
                         if content["type"] == "text" and content["text"].strip():
-                            subtitle = get_cost_subtitle(cost_cb)
+                            subtitle = get_cost_subtitle()
 
                             console.print(
                                 Panel(
@@ -51,7 +63,7 @@ def print_agent_output(
                             )
                 else:
                     if msg.content.strip():
-                        subtitle = get_cost_subtitle(cost_cb)
+                        subtitle = get_cost_subtitle()
 
                         console.print(
                             Panel(
@@ -65,7 +77,7 @@ def print_agent_output(
         for msg in chunk["tools"]["messages"]:
             if msg.status == "error" and msg.content:
                 err_msg = msg.content.strip()
-                subtitle = get_cost_subtitle(cost_cb)
+                subtitle = get_cost_subtitle()
 
                 console.print(
                     Panel(
@@ -114,7 +126,7 @@ def print_messages_compact(messages: Sequence[BaseMessage]) -> None:
     for i, msg in enumerate(messages):
         msg_type = msg.__class__.__name__
         content = msg.content
-        
+
         # Process content based on its type
         if isinstance(content, str):
             display_content = f"{content[:30]}..." if len(content) > 30 else content
@@ -125,19 +137,25 @@ def print_messages_compact(messages: Sequence[BaseMessage]) -> None:
                 if isinstance(item, dict):
                     if item.get("type") == "text":
                         text = item.get("text", "")
-                        content_preview.append(f"text: {text[:20]}..." if len(text) > 20 else f"text: {text}")
+                        content_preview.append(
+                            f"text: {text[:20]}..."
+                            if len(text) > 20
+                            else f"text: {text}"
+                        )
                     elif item.get("type") == "tool_call":
                         tool_name = item.get("tool_call", {}).get("name", "unknown")
                         content_preview.append(f"tool_call: {tool_name}")
                     else:
                         content_preview.append(f"{item.get('type', 'unknown')}")
-            
+
             if len(content) > 2:
                 content_preview.append(f"...({len(content)-2} more)")
-                
+
             display_content = ", ".join(content_preview)
         else:
-            display_content = str(content)[:30] + "..." if len(str(content)) > 30 else str(content)
+            display_content = (
+                str(content)[:30] + "..." if len(str(content)) > 30 else str(content)
+            )
 
         # Add additional tool message info if available
         additional_info = []
@@ -147,6 +165,6 @@ def print_messages_compact(messages: Sequence[BaseMessage]) -> None:
             additional_info.append(f"name: {msg.name}")
         if hasattr(msg, "status") and msg.status:
             additional_info.append(f"status: {msg.status}")
-            
+
         info_str = f" ({', '.join(additional_info)})" if additional_info else ""
         console.print(f"[{i}] [bold]{msg_type}{info_str}[/bold]: {display_content}")
