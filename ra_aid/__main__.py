@@ -115,6 +115,16 @@ def launch_server(host: str, port: int, args):
     from ra_aid.env_inv_context import EnvInvManager
     from ra_aid.env_inv import EnvDiscovery
     
+    # Set the console handler level to INFO for server mode
+    # Get the root logger and modify the console handler
+    root_logger = logging.getLogger()
+    for handler in root_logger.handlers:
+        # Check if this is a console handler (outputs to stdout/stderr)
+        if isinstance(handler, logging.StreamHandler) and handler.stream in [sys.stdout, sys.stderr]:
+            # Set console handler to INFO level for better visibility in server mode
+            handler.setLevel(logging.INFO)
+            logger.debug("Modified console logging level to INFO for server mode")
+    
     # Apply any pending database migrations
     from ra_aid.database import ensure_migrations_applied
     try:
