@@ -4,13 +4,10 @@ import time
 from typing import Dict, Optional
 
 from langchain_core.tools import tool
-from rich.console import Console
-from rich.panel import Panel
 
 from ra_aid.text.processing import truncate_output
 from ra_aid.tools.memory import is_binary_file
-
-console = Console()
+from ra_aid.console.output import console_panel, cpm
 
 # Standard buffer size for file reading
 CHUNK_SIZE = 8192
@@ -109,12 +106,10 @@ def read_file_tool(filepath: str, encoding: str = "utf-8") -> Dict[str, str]:
                 error_type="BinaryFileError"
             )
             
-            console.print(
-                Panel(
-                    f"Cannot read binary file: {filepath}",
-                    title="⚠ Binary File Detected",
-                    border_style="bright_red",
-                )
+            console_panel(
+                f"Cannot read binary file: {filepath}",
+                title="⚠ Binary File Detected",
+                border_style="bright_red",
             )
             return {"error": "read_file failed because we cannot read binary files"}
 
@@ -159,12 +154,10 @@ def read_file_tool(filepath: str, encoding: str = "utf-8") -> Dict[str, str]:
             }
         )
 
-        console.print(
-            Panel(
-                f"Read {line_count} lines ({total_bytes} bytes) from {filepath} in {elapsed:.2f}s",
-                title="📄 File Read",
-                border_style="bright_blue",
-            )
+        console_panel(
+            f"Read {line_count} lines ({total_bytes} bytes) from {filepath} in {elapsed:.2f}s",
+            title="📄 File Read",
+            border_style="bright_blue",
         )
 
         # Truncate if needed

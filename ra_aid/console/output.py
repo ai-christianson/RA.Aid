@@ -97,7 +97,7 @@ def print_agent_output(
                     )
 
 
-def cpm(message: str, title: Optional[str] = None, border_style: str = "blue") -> None:
+def cpm(message: str, title: Optional[str] = None, border_style: str = "blue", subtitle: Optional[str] = None) -> None:
     """
     Print a message using a Panel with Markdown formatting.
 
@@ -105,9 +105,64 @@ def cpm(message: str, title: Optional[str] = None, border_style: str = "blue") -
         message (str): The message content to display.
         title (Optional[str]): An optional title for the panel.
         border_style (str): Border style for the panel.
+        subtitle (Optional[str]): An optional subtitle for the panel. If None, will try to get cost subtitle.
     """
+    if subtitle is None:
+        subtitle = get_cost_subtitle()
+        
+    console.print(Panel(
+        Markdown(message), 
+        title=title, 
+        border_style=border_style,
+        subtitle=subtitle,
+        subtitle_align="right" if subtitle else None
+    ))
 
-    console.print(Panel(Markdown(message), title=title, border_style=border_style))
+
+def console_panel(
+    message: str, 
+    title: Optional[str] = None, 
+    border_style: str = "blue",
+    subtitle: Optional[str] = None,
+    subtitle_align: str = "right",
+    padding: tuple = (1, 1),
+    expand: bool = True,
+    safe_box: bool = True,
+    width: Optional[int] = None,
+    height: Optional[int] = None,
+) -> None:
+    """
+    Print a message using a Panel without Markdown formatting, with all panel options available.
+
+    Args:
+        message (str): The message content to display.
+        title (Optional[str]): An optional title for the panel.
+        border_style (str): Border style for the panel.
+        subtitle (Optional[str]): An optional subtitle for the panel. If None, will try to get cost subtitle.
+        subtitle_align (str): Alignment for the subtitle ("left", "center", or "right").
+        padding (tuple): Padding for the panel content (vertical, horizontal).
+        expand (bool): Whether the panel should expand to fill available width.
+        safe_box (bool): Whether to use ASCII characters instead of Unicode for the box.
+        width (Optional[int]): Optional fixed width for the panel.
+        height (Optional[int]): Optional fixed height for the panel.
+    """
+    if subtitle is None:
+        subtitle = get_cost_subtitle()
+        
+    console.print(
+        Panel(
+            message,
+            title=title,
+            border_style=border_style,
+            subtitle=subtitle,
+            subtitle_align=subtitle_align if subtitle else None,
+            padding=padding,
+            expand=expand,
+            safe_box=safe_box,
+            width=width,
+            height=height,
+        )
+    )
 
 
 def print_messages_compact(messages: Sequence[BaseMessage]) -> None:
