@@ -10,15 +10,12 @@ from langchain_anthropic import ChatAnthropic
 from langgraph.graph.graph import CompiledGraph
 from ra_aid.callbacks.anthropic_callback_handler import (
     AnthropicCallbackHandler,
-    calculate_token_cost,
 )
 from ra_aid.anthropic_token_limiter import get_model_name_from_chat_model
 
 
-from playhouse.shortcuts import model_to_dict
 from anthropic import APIError, APITimeoutError, InternalServerError, RateLimitError
 from ra_aid.database.repositories.session_repository import (
-    SessionRepository,
     get_session_repository,
 )
 from openai import RateLimitError as OpenAIRateLimitError
@@ -30,12 +27,9 @@ from langchain_core.messages import (
     HumanMessage,
     SystemMessage,
 )
-from langchain_core.tools import tool
 from langgraph.prebuilt import create_react_agent
 from langgraph.prebuilt.chat_agent_executor import AgentState
 from rich.console import Console
-from rich.markdown import Markdown
-from rich.panel import Panel
 
 from ra_aid.agent_context import (
     agent_context,
@@ -61,16 +55,15 @@ from ra_aid.database.repositories.human_input_repository import (
     get_human_input_repository,
 )
 from ra_aid.database.repositories.trajectory_repository import (
-    TrajectoryRepository,
     get_trajectory_repository,
 )
 from ra_aid.database.repositories.config_repository import get_config_repository
 from ra_aid.anthropic_token_limiter import (
-    get_model_name_from_chat_model,
     sonnet_35_state_modifier,
     state_modifier,
     get_model_token_limit,
 )
+from ra_aid.model_detection import is_anthropic_claude
 
 
 def initialize_session_tracking():
@@ -86,20 +79,8 @@ def initialize_session_tracking():
 
     return current_session_id, current_session
 
-from ra_aid.model_detection import is_anthropic_claude
-
-console = Console()
 
 logger = get_logger(__name__)
-
-# Import repositories using get_* functions
-
-
-@tool
-def output_markdown_message(message: str) -> str:
-    """Outputs a message to the user, optionally prompting for input."""
-    cpm(message.strip(), title="🤖 Assistant")
-    return "Message output."
 
 
 def build_agent_kwargs(
