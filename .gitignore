@@ -16,3 +16,6 @@ appmap.log
 *.swp
 /vsc/node_modules
 /vsc/dist
+node_modules/
+/frontend/common/dist
+/frontend/web/dist/

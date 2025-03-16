@@ -229,9 +229,9 @@ More information is available in our [Usage Examples](https://docs.ra-aid.ai/cat
 - `--track-cost`: Track token usage and costs (default: True)
 - `--no-track-cost`: Disable tracking of token usage and costs
 - `--version`: Show program version number and exit
-- `--webui`: Launch the web interface (alpha feature)
-- `--webui-host`: Host to listen on for web interface (default: 0.0.0.0)  (alpha feature)
-- `--webui-port`: Port to listen on for web interface (default: 8080) (alpha feature)
+- `--server`: Launch the server with web interface (alpha feature)
+- `--server-host`: Host to listen on for server (default: 0.0.0.0)  (alpha feature)
+- `--server-port`: Port to listen on for server (default: 1818) (alpha feature)
 
 ### Example Tasks
 
@@ -308,30 +308,30 @@ Make sure to set your TAVILY_API_KEY environment variable to enable this feature
 
 Enable with `--chat` to transform ra-aid into an interactive assistant that guides you through research and implementation tasks. Have a natural conversation about what you want to build, explore options together, and dispatch work - all while maintaining context of your discussion. Perfect for when you want to think through problems collaboratively rather than just executing commands.
 
-### Web Interface
+### Server with Web Interface
 
-RA.Aid includes a modern web interface that provides:
+RA.Aid includes a modern server with web interface that provides:
 - Beautiful dark-themed chat interface
 - Real-time streaming of command output
 - Request history with quick resubmission
 - Responsive design that works on all devices
 
-To launch the web interface:
+To launch the server with web interface:
 
 ```bash
-# Start with default settings (0.0.0.0:8080)
-ra-aid --webui
+# Start with default settings (0.0.0.0:1818)
+ra-aid --server
 
 # Specify custom host and port
-ra-aid --webui --webui-host 127.0.0.1 --webui-port 3000
+ra-aid --server --server-host 127.0.0.1 --server-port 3000
 ```
 
-Command line options for web interface:
-- `--webui`: Launch the web interface
-- `--webui-host`: Host to listen on (default: 0.0.0.0)
-- `--webui-port`: Port to listen on (default: 8080)
+Command line options for server with web interface:
+- `--server`: Launch the server with web interface
+- `--server-host`: Host to listen on (default: 0.0.0.0)
+- `--server-port`: Port to listen on (default: 1818)
 
-After starting the server, open your web browser to the displayed URL (e.g., http://localhost:8080). The interface provides:
+After starting the server, open your web browser to the displayed URL (e.g., http://localhost:1818). The interface provides:
 - Left sidebar showing request history
 - Main chat area with real-time output
 - Input box for typing requests
@@ -544,7 +544,7 @@ source venv/bin/activate  # On Windows use `venv\Scripts\activate`
 
 3. Install development dependencies:
 ```bash
-pip install -r requirements-dev.txt
+pip install -e ".[dev]"
 ```
 
 4. Run tests:

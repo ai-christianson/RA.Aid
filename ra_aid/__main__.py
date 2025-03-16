@@ -95,13 +95,148 @@ if hasattr(litellm, "_logging") and hasattr(litellm._logging, "_disable_debuggin
 
 logger = get_logger(__name__)
 
+# Configure litellm to suppress debug logs
+os.environ["LITELLM_LOG"] = "ERROR"
+litellm.suppress_debug_info = True
+litellm.set_verbose = False
 
-def launch_webui(host: str, port: int):
+# Explicitly configure LiteLLM's loggers
+for logger_name in ["litellm", "LiteLLM"]:
+    litellm_logger = logging.getLogger(logger_name)
+    litellm_logger.setLevel(logging.WARNING)
+    litellm_logger.propagate = True
+
+# Use litellm's internal method to disable debugging
+if hasattr(litellm, "_logging") and hasattr(litellm._logging, "_disable_debugging"):
+    litellm._logging._disable_debugging()
+
+
+def launch_server(host: str, port: int, args):
     """Launch the RA.Aid web interface."""
-    from ra_aid.webui import run_server
+    from ra_aid.server import run_server
+    from ra_aid.database.connection import DatabaseManager
+    from ra_aid.database.repositories.session_repository import SessionRepositoryManager
+    from ra_aid.database.repositories.key_fact_repository import KeyFactRepositoryManager
+    from ra_aid.database.repositories.key_snippet_repository import KeySnippetRepositoryManager
+    from ra_aid.database.repositories.human_input_repository import HumanInputRepositoryManager
+    from ra_aid.database.repositories.research_note_repository import ResearchNoteRepositoryManager
+    from ra_aid.database.repositories.related_files_repository import RelatedFilesRepositoryManager
+    from ra_aid.database.repositories.trajectory_repository import TrajectoryRepositoryManager
+    from ra_aid.database.repositories.work_log_repository import WorkLogRepositoryManager
+    from ra_aid.database.repositories.config_repository import ConfigRepositoryManager
+    from ra_aid.env_inv_context import EnvInvManager
+    from ra_aid.env_inv import EnvDiscovery
+    
+    # Set the console handler level to INFO for server mode
+    # Get the root logger and modify the console handler
+    root_logger = logging.getLogger()
+    for handler in root_logger.handlers:
+        # Check if this is a console handler (outputs to stdout/stderr)
+        if isinstance(handler, logging.StreamHandler) and handler.stream in [sys.stdout, sys.stderr]:
+            # Set console handler to INFO level for better visibility in server mode
+            handler.setLevel(logging.INFO)
+            logger.debug("Modified console logging level to INFO for server mode")
+    
+    # Apply any pending database migrations
+    from ra_aid.database import ensure_migrations_applied
+    try:
+        migration_result = ensure_migrations_applied()
+        if not migration_result:
+            logger.warning("Database migrations failed but execution will continue")
+    except Exception as e:
+        logger.error(f"Database migration error: {str(e)}")
+    
+    # Check dependencies before proceeding
+    check_dependencies()
 
+    # Validate environment (expert_enabled, web_research_enabled)
+    (
+        expert_enabled,
+        expert_missing,
+        web_research_enabled,
+        web_research_missing,
+    ) = validate_environment(
+        args
+    )  # Will exit if main env vars missing
+    logger.debug("Environment validation successful")
+
+    # Validate model configuration early
+    model_config = models_params.get(args.provider, {}).get(
+        args.model or "", {}
+    )
+    supports_temperature = model_config.get(
+        "supports_temperature",
+        args.provider
+        in [
+            "anthropic",
+            "openai",
+            "openrouter",
+            "openai-compatible",
+            "deepseek",
+        ],
+    )
+
+    if supports_temperature and args.temperature is None:
+        args.temperature = model_config.get("default_temperature")
+        if args.temperature is None:
+            cpm(
+                f"This model supports temperature argument but none was given. Setting default temperature to {DEFAULT_TEMPERATURE}."
+            )
+            args.temperature = DEFAULT_TEMPERATURE
+        logger.debug(
+            f"Using default temperature {args.temperature} for model {args.model}"
+        )
+    
+    # Initialize config dictionary with values from args and environment validation
+    config = {
+        "provider": args.provider,
+        "model": args.model,
+        "expert_provider": args.expert_provider,
+        "expert_model": args.expert_model,
+        "temperature": args.temperature,
+        "experimental_fallback_handler": args.experimental_fallback_handler,
+        "expert_enabled": expert_enabled,
+        "web_research_enabled": web_research_enabled,
+        "show_thoughts": args.show_thoughts,
+        "show_cost": args.show_cost,
+        "force_reasoning_assistance": args.reasoning_assistance,
+        "disable_reasoning_assistance": args.no_reasoning_assistance
+    }
+    
+    # Initialize environment discovery
+    env_discovery = EnvDiscovery()
+    env_discovery.discover()
+    env_data = env_discovery.format_markdown()
+    
     print(f"Starting RA.Aid web interface on http://{host}:{port}")
-    run_server(host=host, port=port)
+    
+    # Initialize database connection and repositories
+    with DatabaseManager() as db, \
+         SessionRepositoryManager(db) as session_repo, \
+         KeyFactRepositoryManager(db) as key_fact_repo, \
+         KeySnippetRepositoryManager(db) as key_snippet_repo, \
+         HumanInputRepositoryManager(db) as human_input_repo, \
+         ResearchNoteRepositoryManager(db) as research_note_repo, \
+         RelatedFilesRepositoryManager() as related_files_repo, \
+         TrajectoryRepositoryManager(db) as trajectory_repo, \
+         WorkLogRepositoryManager() as work_log_repo, \
+         ConfigRepositoryManager(config) as config_repo, \
+         EnvInvManager(env_data) as env_inv:
+        
+        # This initializes all repositories and makes them available via their respective get methods
+        logger.debug("Initialized SessionRepository")
+        logger.debug("Initialized KeyFactRepository")
+        logger.debug("Initialized KeySnippetRepository")
+        logger.debug("Initialized HumanInputRepository")
+        logger.debug("Initialized ResearchNoteRepository")
+        logger.debug("Initialized RelatedFilesRepository")
+        logger.debug("Initialized TrajectoryRepository")
+        logger.debug("Initialized WorkLogRepository")
+        logger.debug("Initialized ConfigRepository")
+        logger.debug("Initialized Environment Inventory")
+        
+        # Run the server within the context managers
+        run_server(host=host, port=port)
 
 
 def parse_arguments(args=None):
@@ -271,21 +406,21 @@ Examples:
         help=f"Timeout in seconds for test command execution (default: {DEFAULT_TEST_CMD_TIMEOUT})",
     )
     parser.add_argument(
-        "--webui",
+        "--server",
         action="store_true",
         help="Launch the web interface",
     )
     parser.add_argument(
-        "--webui-host",
+        "--server-host",
         type=str,
         default="0.0.0.0",
         help="Host to listen on for web interface (default: 0.0.0.0)",
     )
     parser.add_argument(
-        "--webui-port",
+        "--server-port",
         type=int,
-        default=8080,
-        help="Port to listen on for web interface (default: 8080)",
+        default=1818,
+        help="Port to listen on for web interface (default: 1818)",
     )
     parser.add_argument(
         "--wipe-project-memory",
@@ -529,8 +664,8 @@ def main():
         print(f"📋 {result}")
 
     # Launch web interface if requested
-    if args.webui:
-        launch_webui(args.webui_host, args.webui_port)
+    if args.server:
+        launch_server(args.server_host, args.server_port, args)
         return
 
     try:

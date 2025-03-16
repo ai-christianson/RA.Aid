@@ -66,6 +66,7 @@ from ra_aid.database.repositories.trajectory_repository import (
 )
 from ra_aid.database.repositories.config_repository import get_config_repository
 from ra_aid.anthropic_token_limiter import (
+    get_model_name_from_chat_model,
     sonnet_35_state_modifier,
     state_modifier,
     get_model_token_limit,
@@ -85,6 +86,7 @@ def initialize_session_tracking():
 
     return current_session_id, current_session
 
+from ra_aid.model_detection import is_anthropic_claude
 
 console = Console()
 
@@ -130,8 +132,10 @@ def build_agent_kwargs(
     ):
 
         def wrapped_state_modifier(state: AgentState) -> list[BaseMessage]:
+            model_name = get_model_name_from_chat_model(model)
+
             if any(
-                pattern in model.model
+                pattern in model_name
                 for pattern in ["claude-3.5", "claude3.5", "claude-3-5"]
             ):
                 return sonnet_35_state_modifier(
@@ -220,7 +224,7 @@ def create_agent(
             # So we'll use the passed config directly
             pass
         max_input_tokens = (
-            get_model_token_limit(config, agent_type) or DEFAULT_TOKEN_LIMIT
+            get_model_token_limit(config, agent_type, model) or DEFAULT_TOKEN_LIMIT
         )
 
         # Use REACT agent for Anthropic Claude models, otherwise use CIAYN
@@ -239,7 +243,7 @@ def create_agent(
         # Default to REACT agent if provider/model detection fails
         logger.warning(f"Failed to detect model type: {e}. Defaulting to REACT agent.")
         config = get_config_repository().get_all()
-        max_input_tokens = get_model_token_limit(config, agent_type)
+        max_input_tokens = get_model_token_limit(config, agent_type, model)
         agent_kwargs = build_agent_kwargs(checkpointer, model, max_input_tokens)
         return create_react_agent(
             model, tools, interrupt_after=["tools"], **agent_kwargs
@@ -588,7 +592,9 @@ def run_agent_with_retry(
 
                 try:
                     _run_agent_stream(agent, msg_list)
-                    if fallback_handler:
+                    if fallback_handler and hasattr(
+                        fallback_handler, "reset_fallback_handler"
+                    ):
                         fallback_handler.reset_fallback_handler()
                     should_break, prompt, auto_test, test_attempts = (
                         _execute_test_command_wrapper(

@@ -11,6 +11,7 @@ import contextvars
 import peewee
 
 from ra_aid.database.models import KeySnippet
+from ra_aid.database.pydantic_models import KeySnippetModel
 from ra_aid.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -129,10 +130,25 @@ class KeySnippetRepository:
             raise ValueError("Database connection is required for KeySnippetRepository")
         self.db = db
     
+    def _to_model(self, snippet: Optional[KeySnippet]) -> Optional[KeySnippetModel]:
+        """
+        Convert a Peewee KeySnippet object to a Pydantic KeySnippetModel.
+        
+        Args:
+            snippet: Peewee KeySnippet instance or None
+            
+        Returns:
+            Optional[KeySnippetModel]: Pydantic model representation or None if snippet is None
+        """
+        if snippet is None:
+            return None
+        
+        return KeySnippetModel.model_validate(snippet, from_attributes=True)
+    
     def create(
         self, filepath: str, line_number: int, snippet: str, description: Optional[str] = None,
         human_input_id: Optional[int] = None
-    ) -> KeySnippet:
+    ) -> KeySnippetModel:
         """
         Create a new key snippet in the database.
         
@@ -144,7 +160,7 @@ class KeySnippetRepository:
             human_input_id: Optional ID of the associated human input
             
         Returns:
-            KeySnippet: The newly created key snippet instance
+            KeySnippetModel: The newly created key snippet instance
             
         Raises:
             peewee.DatabaseError: If there's an error creating the snippet
@@ -158,12 +174,12 @@ class KeySnippetRepository:
                 human_input_id=human_input_id
             )
             logger.debug(f"Created key snippet ID {key_snippet.id}: {filepath}:{line_number}")
-            return key_snippet
+            return self._to_model(key_snippet)
         except peewee.DatabaseError as e:
             logger.error(f"Failed to create key snippet: {str(e)}")
             raise
     
-    def get(self, snippet_id: int) -> Optional[KeySnippet]:
+    def get(self, snippet_id: int) -> Optional[KeySnippetModel]:
         """
         Retrieve a key snippet by its ID.
         
@@ -171,13 +187,14 @@ class KeySnippetRepository:
             snippet_id: The ID of the key snippet to retrieve
             
         Returns:
-            Optional[KeySnippet]: The key snippet instance if found, None otherwise
+            Optional[KeySnippetModel]: The key snippet instance if found, None otherwise
             
         Raises:
             peewee.DatabaseError: If there's an error accessing the database
         """
         try:
-            return KeySnippet.get_or_none(KeySnippet.id == snippet_id)
+            snippet = KeySnippet.get_or_none(KeySnippet.id == snippet_id)
+            return self._to_model(snippet)
         except peewee.DatabaseError as e:
             logger.error(f"Failed to fetch key snippet {snippet_id}: {str(e)}")
             raise
@@ -189,7 +206,7 @@ class KeySnippetRepository:
         line_number: int, 
         snippet: str, 
         description: Optional[str] = None
-    ) -> Optional[KeySnippet]:
+    ) -> Optional[KeySnippetModel]:
         """
         Update an existing key snippet.
         
@@ -201,14 +218,14 @@ class KeySnippetRepository:
             description: Optional description of the significance
             
         Returns:
-            Optional[KeySnippet]: The updated key snippet if found, None otherwise
+            Optional[KeySnippetModel]: The updated key snippet if found, None otherwise
             
         Raises:
             peewee.DatabaseError: If there's an error updating the snippet
         """
         try:
             # First check if the snippet exists
-            key_snippet = self.get(snippet_id)
+            key_snippet = KeySnippet.get_or_none(KeySnippet.id == snippet_id)
             if not key_snippet:
                 logger.warning(f"Attempted to update non-existent key snippet {snippet_id}")
                 return None
@@ -220,7 +237,7 @@ class KeySnippetRepository:
             key_snippet.description = description
             key_snippet.save()
             logger.debug(f"Updated key snippet ID {snippet_id}: {filepath}:{line_number}")
-            return key_snippet
+            return self._to_model(key_snippet)
         except peewee.DatabaseError as e:
             logger.error(f"Failed to update key snippet {snippet_id}: {str(e)}")
             raise
@@ -240,7 +257,7 @@ class KeySnippetRepository:
         """
         try:
             # First check if the snippet exists
-            key_snippet = self.get(snippet_id)
+            key_snippet = KeySnippet.get_or_none(KeySnippet.id == snippet_id)
             if not key_snippet:
                 logger.warning(f"Attempted to delete non-existent key snippet {snippet_id}")
                 return False
@@ -253,18 +270,19 @@ class KeySnippetRepository:
             logger.error(f"Failed to delete key snippet {snippet_id}: {str(e)}")
             raise
     
-    def get_all(self) -> List[KeySnippet]:
+    def get_all(self) -> List[KeySnippetModel]:
         """
         Retrieve all key snippets from the database.
         
         Returns:
-            List[KeySnippet]: List of all key snippet instances
+            List[KeySnippetModel]: List of all key snippet instances
             
         Raises:
             peewee.DatabaseError: If there's an error accessing the database
         """
         try:
-            return list(KeySnippet.select().order_by(KeySnippet.id))
+            snippets = list(KeySnippet.select().order_by(KeySnippet.id))
+            return [self._to_model(snippet) for snippet in snippets]
         except peewee.DatabaseError as e:
             logger.error(f"Failed to fetch all key snippets: {str(e)}")
             raise

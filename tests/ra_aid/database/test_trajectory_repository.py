@@ -3,18 +3,21 @@ Tests for the TrajectoryRepository class.
 """
 
 import pytest
+import datetime
+import json
 from unittest.mock import patch
 
 import peewee
 
 from ra_aid.database.connection import DatabaseManager, db_var
-from ra_aid.database.models import Trajectory, BaseModel, HumanInput
+from ra_aid.database.models import Trajectory, HumanInput, Session, BaseModel
 from ra_aid.database.repositories.trajectory_repository import (
     TrajectoryRepository,
     TrajectoryRepositoryManager,
     get_trajectory_repository,
     trajectory_repo_var
 )
+from ra_aid.database.pydantic_models import TrajectoryModel
 
 
 @pytest.fixture
@@ -61,15 +64,14 @@ def cleanup_repo():
 
 @pytest.fixture
 def setup_db(cleanup_db):
-    """Set up an in-memory database with the Trajectory table and patch the BaseModel.Meta.database."""
+    """Set up an in-memory database with the necessary tables and patch the BaseModel.Meta.database."""
     # Initialize an in-memory database connection
     with DatabaseManager(in_memory=True) as db:
         # Patch the BaseModel.Meta.database to use our in-memory database
-        # This ensures that model operations like Trajectory.create() use our test database
         with patch.object(BaseModel._meta, 'database', db):
-            # Create the necessary tables
+            # Create the required tables
             with db.atomic():
-                db.create_tables([Trajectory, HumanInput], safe=True)
+                db.create_tables([Trajectory, HumanInput, Session], safe=True)
             
             yield db
             

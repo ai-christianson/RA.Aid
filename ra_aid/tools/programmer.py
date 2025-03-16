@@ -20,31 +20,6 @@ from ra_aid.database.repositories.related_files_repository import get_related_fi
 console = Console()
 logger = get_logger(__name__)
 
-
-def get_aider_executable() -> str:
-    """Get the path to the aider executable in the same bin/Scripts directory as Python.
-
-    Returns:
-        str: Full path to aider executable
-    """
-    # Get directory containing Python executable
-    bin_dir = Path(sys.executable).parent
-
-    # Check for platform-specific executable name
-    if sys.platform == "win32":
-        aider_exe = bin_dir / "aider.exe"
-    else:
-        aider_exe = bin_dir / "aider"
-
-    if not aider_exe.exists():
-        raise RuntimeError(f"Could not find aider executable at {aider_exe}")
-
-    if not os.access(aider_exe, os.X_OK):
-        raise RuntimeError(f"Aider executable at {aider_exe} is not executable")
-
-    return str(aider_exe)
-
-
 def _truncate_for_log(text: str, max_length: int = 300) -> str:
     """Truncate text for logging, adding [truncated] if necessary."""
     if len(text) <= max_length:
@@ -79,9 +54,8 @@ def run_programming_task(
      files: Optional; if not provided, uses related_files
     """
     # Build command
-    aider_exe = get_aider_executable()
     command = [
-        aider_exe,
+        "aider",
         "--yes-always",
         "--no-git",
         "--no-auto-commits",
@@ -234,4 +208,4 @@ def parse_aider_flags(aider_flags: str) -> List[str]:
 
 
 # Export the functions
-__all__ = ["run_programming_task", "get_aider_executable"]
+__all__ = ["run_programming_task"]

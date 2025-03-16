@@ -9,6 +9,7 @@ import peewee
 
 from ra_aid.database.connection import DatabaseManager, db_var
 from ra_aid.database.models import ResearchNote, BaseModel
+from ra_aid.database.pydantic_models import ResearchNoteModel
 from ra_aid.database.repositories.research_note_repository import (
     ResearchNoteRepository, 
     ResearchNoteRepositoryManager,
@@ -90,10 +91,12 @@ def test_create_research_note(setup_db):
     # Verify the note was created correctly
     assert note.id is not None
     assert note.content == content
+    assert isinstance(note, ResearchNoteModel)
     
     # Verify we can retrieve it from the database using the repository
     note_from_db = repo.get(note.id)
     assert note_from_db.content == content
+    assert isinstance(note_from_db, ResearchNoteModel)
 
 
 def test_get_research_note(setup_db):
@@ -112,6 +115,7 @@ def test_get_research_note(setup_db):
     assert retrieved_note is not None
     assert retrieved_note.id == note.id
     assert retrieved_note.content == content
+    assert isinstance(retrieved_note, ResearchNoteModel)
     
     # Try to retrieve a non-existent note
     non_existent_note = repo.get(999)
@@ -135,10 +139,12 @@ def test_update_research_note(setup_db):
     assert updated_note is not None
     assert updated_note.id == note.id
     assert updated_note.content == new_content
+    assert isinstance(updated_note, ResearchNoteModel)
     
     # Verify we can retrieve the updated content from the database using the repository
     note_from_db = repo.get(note.id)
     assert note_from_db.content == new_content
+    assert isinstance(note_from_db, ResearchNoteModel)
     
     # Try to update a non-existent note
     non_existent_update = repo.update(999, "This shouldn't work")
@@ -187,8 +193,11 @@ def test_get_all_research_notes(setup_db):
     # Verify we got the correct number of notes
     assert len(all_notes) == len(contents)
     
-    # Verify the content of each note
+    # Verify the content of each note and that they are Pydantic models
     note_contents = [note.content for note in all_notes]
+    for note in all_notes:
+        assert isinstance(note, ResearchNoteModel)
+    
     for content in contents:
         assert content in note_contents
 
@@ -239,6 +248,7 @@ def test_research_note_repository_manager(setup_db, cleanup_repo):
         note = repo.create(content)
         assert note.id is not None
         assert note.content == content
+        assert isinstance(note, ResearchNoteModel)
         
         # Verify we can get the repository using get_research_note_repository
         repo_from_var = get_research_note_repository()
@@ -259,3 +269,25 @@ def test_get_research_note_repository_when_not_set(cleanup_repo):
     
     # Verify the correct error message
     assert "No ResearchNoteRepository available" in str(excinfo.value)
+
+
+def test_to_model_method(setup_db):
+    """Test the _to_model method converts Peewee models to Pydantic models correctly."""
+    # Set up repository
+    repo = ResearchNoteRepository(db=setup_db)
+    
+    # Create a Peewee ResearchNote directly
+    peewee_note = ResearchNote.create(content="Test note for conversion")
+    
+    # Convert it using _to_model
+    pydantic_note = repo._to_model(peewee_note)
+    
+    # Verify the conversion
+    assert isinstance(pydantic_note, ResearchNoteModel)
+    assert pydantic_note.id == peewee_note.id
+    assert pydantic_note.content == peewee_note.content
+    assert pydantic_note.created_at == peewee_note.created_at
+    assert pydantic_note.updated_at == peewee_note.updated_at
+    
+    # Test with None
+    assert repo._to_model(None) is None

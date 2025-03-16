@@ -63,7 +63,7 @@ def test_show_thoughts_config(mock_config_repository):
         # Set message to a default value to avoid sys.exit(1) for missing message
         mock_args.message = "test message"
         mock_args.wipe_project_memory = False
-        mock_args.webui = False
+        mock_args.server = False
         return mock_args
     
     # Test with --show-thoughts flag
@@ -81,6 +81,7 @@ def test_show_thoughts_config(mock_config_repository):
                      patch("ra_aid.__main__.build_status"), \
                      patch("ra_aid.__main__.console.print"), \
                      patch("ra_aid.__main__.initialize_llm"), \
+                     patch("ra_aid.__main__.get_session_repository", return_value=MagicMock(create_session=MagicMock())), \
                      patch("ra_aid.__main__.run_research_agent"):
                     
                     # Run the main function
@@ -108,6 +109,7 @@ def test_show_thoughts_config(mock_config_repository):
                      patch("ra_aid.__main__.build_status"), \
                      patch("ra_aid.__main__.console.print"), \
                      patch("ra_aid.__main__.initialize_llm"), \
+                     patch("ra_aid.__main__.get_session_repository", return_value=MagicMock(create_session=MagicMock())), \
                      patch("ra_aid.__main__.run_research_agent"):
                     
                     # Run the main function

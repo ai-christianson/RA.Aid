@@ -1,3 +1,5 @@
+import platform
+import shutil
 from typing import Dict, Union
 
 from langchain_core.tools import tool
@@ -16,6 +18,16 @@ from ra_aid.database.repositories.human_input_repository import get_human_input_
 
 console = Console()
 
+def _detect_shell():
+    """Detect the appropriate shell to use based on the environment."""
+    if platform.system().lower().startswith("win"):
+        # Check if pwsh is available, otherwise fall back to powershell
+        if shutil.which("pwsh"):
+            return ["pwsh", "-c"]
+        else:
+            return ["powershell", "-c"]
+    else:
+        return ["/bin/bash", "-c"]
 
 def _truncate_for_log(text: str, max_length: int = 300) -> str:
     """Truncate text for logging, adding [truncated] if necessary."""
@@ -99,8 +111,9 @@ def run_shell_command(
 
     try:
         print()
+        shell_cmd = _detect_shell()
         output, return_code = run_interactive_command(
-            ["/bin/bash", "-c", command],
+            shell_cmd + [command],
             expected_runtime_seconds=timeout,
         )
         print()

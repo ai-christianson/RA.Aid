@@ -3,7 +3,6 @@ import pytest
 from unittest.mock import patch, MagicMock
 
 from ra_aid.tools.programmer import (
-    get_aider_executable,
     parse_aider_flags,
     run_programming_task,
 )
@@ -179,12 +178,6 @@ def test_path_normalization_and_deduplication(monkeypatch, tmp_path, mock_config
     test_file.write_text("")
     new_file = tmp_path / "new.py"
 
-    # Config is mocked by mock_config_repository fixture
-    monkeypatch.setattr(
-        "ra_aid.tools.programmer.get_aider_executable", 
-        lambda: "/path/to/aider"
-    )
-    
     mock_run = MagicMock(return_value=(b"", 0))
     monkeypatch.setattr("ra_aid.tools.programmer.run_interactive_command", mock_run)
 
@@ -219,51 +212,3 @@ def test_path_normalization_and_deduplication(monkeypatch, tmp_path, mock_config
     assert (
         sum(1 for arg in cmd_args if arg == str(new_file)) == 1
     ), "Expected one instance of new_file"
-
-
-def test_get_aider_executable(monkeypatch):
-    """Test the get_aider_executable function."""
-    # Create mock objects using standard unittest.mock.MagicMock
-    mock_path_instance = MagicMock()
-    mock_parent = MagicMock()
-    mock_aider = MagicMock()
-    
-    # Setup sys mock
-    mock_sys_attrs = {
-        "executable": "/path/to/venv/bin/python",
-        "platform": "linux"
-    }
-    monkeypatch.setattr("ra_aid.tools.programmer.sys", MagicMock(**mock_sys_attrs))
-    
-    # Setup Path mock
-    monkeypatch.setattr("ra_aid.tools.programmer.Path", lambda x: mock_path_instance)
-    mock_path_instance.parent = mock_parent
-    mock_parent.__truediv__.return_value = mock_aider
-    mock_aider.exists.return_value = True
-    
-    # Setup os mock
-    mock_os = MagicMock()
-    mock_os.access.return_value = True
-    mock_os.X_OK = 1
-    monkeypatch.setattr("ra_aid.tools.programmer.os", mock_os)
-
-    # Test happy path on Linux
-    aider_path = get_aider_executable()
-    assert aider_path == str(mock_aider)
-    mock_parent.__truediv__.assert_called_with("aider")
-
-    # Test Windows path
-    monkeypatch.setattr("ra_aid.tools.programmer.sys.platform", "win32")
-    aider_path = get_aider_executable()
-    mock_parent.__truediv__.assert_called_with("aider.exe")
-
-    # Test executable not found
-    mock_aider.exists.return_value = False
-    with pytest.raises(RuntimeError, match="Could not find aider executable"):
-        get_aider_executable()
-
-    # Test not executable
-    mock_aider.exists.return_value = True
-    mock_os.access.return_value = False
-    with pytest.raises(RuntimeError, match="is not executable"):
-        get_aider_executable()

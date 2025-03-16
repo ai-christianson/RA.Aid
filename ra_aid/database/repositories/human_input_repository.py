@@ -11,6 +11,7 @@ import contextvars
 import peewee
 
 from ra_aid.database.models import HumanInput
+from ra_aid.database.pydantic_models import HumanInputModel
 from ra_aid.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -118,8 +119,23 @@ class HumanInputRepository:
         if db is None:
             raise ValueError("Database connection is required for HumanInputRepository")
         self.db = db
+        
+    def _to_model(self, human_input: Optional[HumanInput]) -> Optional[HumanInputModel]:
+        """
+        Convert a Peewee HumanInput object to a Pydantic HumanInputModel.
+        
+        Args:
+            human_input: Peewee HumanInput instance or None
+            
+        Returns:
+            Optional[HumanInputModel]: Pydantic model representation or None if human_input is None
+        """
+        if human_input is None:
+            return None
+        
+        return HumanInputModel.model_validate(human_input, from_attributes=True)
     
-    def create(self, content: str, source: str) -> HumanInput:
+    def create(self, content: str, source: str) -> HumanInputModel:
         """
         Create a new human input record in the database.
         
@@ -128,7 +144,7 @@ class HumanInputRepository:
             source: The source of the input (e.g., "cli", "chat", "hil")
             
         Returns:
-            HumanInput: The newly created human input instance
+            HumanInputModel: The newly created human input instance
             
         Raises:
             peewee.DatabaseError: If there's an error creating the record
@@ -136,12 +152,12 @@ class HumanInputRepository:
         try:
             input_record = HumanInput.create(content=content, source=source)
             logger.debug(f"Created human input ID {input_record.id} from {source}")
-            return input_record
+            return self._to_model(input_record)
         except peewee.DatabaseError as e:
             logger.error(f"Failed to create human input record: {str(e)}")
             raise
     
-    def get(self, input_id: int) -> Optional[HumanInput]:
+    def get(self, input_id: int) -> Optional[HumanInputModel]:
         """
         Retrieve a human input record by its ID.
         
@@ -149,18 +165,19 @@ class HumanInputRepository:
             input_id: The ID of the human input to retrieve
             
         Returns:
-            Optional[HumanInput]: The human input instance if found, None otherwise
+            Optional[HumanInputModel]: The human input instance if found, None otherwise
             
         Raises:
             peewee.DatabaseError: If there's an error accessing the database
         """
         try:
-            return HumanInput.get_or_none(HumanInput.id == input_id)
+            human_input = HumanInput.get_or_none(HumanInput.id == input_id)
+            return self._to_model(human_input)
         except peewee.DatabaseError as e:
             logger.error(f"Failed to fetch human input {input_id}: {str(e)}")
             raise
     
-    def update(self, input_id: int, content: str = None, source: str = None) -> Optional[HumanInput]:
+    def update(self, input_id: int, content: str = None, source: str = None) -> Optional[HumanInputModel]:
         """
         Update an existing human input record.
         
@@ -170,14 +187,14 @@ class HumanInputRepository:
             source: The new source for the human input
             
         Returns:
-            Optional[HumanInput]: The updated human input if found, None otherwise
+            Optional[HumanInputModel]: The updated human input if found, None otherwise
             
         Raises:
             peewee.DatabaseError: If there's an error updating the record
         """
         try:
-            # First check if the record exists
-            input_record = self.get(input_id)
+            # We need to get the raw Peewee object for updating
+            input_record = HumanInput.get_or_none(HumanInput.id == input_id)
             if not input_record:
                 logger.warning(f"Attempted to update non-existent human input {input_id}")
                 return None
@@ -190,7 +207,7 @@ class HumanInputRepository:
                 
             input_record.save()
             logger.debug(f"Updated human input ID {input_id}")
-            return input_record
+            return self._to_model(input_record)
         except peewee.DatabaseError as e:
             logger.error(f"Failed to update human input {input_id}: {str(e)}")
             raise
@@ -223,23 +240,24 @@ class HumanInputRepository:
             logger.error(f"Failed to delete human input {input_id}: {str(e)}")
             raise
     
-    def get_all(self) -> List[HumanInput]:
+    def get_all(self) -> List[HumanInputModel]:
         """
         Retrieve all human input records from the database.
         
         Returns:
-            List[HumanInput]: List of all human input instances
+            List[HumanInputModel]: List of all human input instances
             
         Raises:
             peewee.DatabaseError: If there's an error accessing the database
         """
         try:
-            return list(HumanInput.select().order_by(HumanInput.created_at.desc()))
+            human_inputs = list(HumanInput.select().order_by(HumanInput.created_at.desc()))
+            return [self._to_model(input) for input in human_inputs]
         except peewee.DatabaseError as e:
             logger.error(f"Failed to fetch all human inputs: {str(e)}")
             raise
     
-    def get_recent(self, limit: int = 10) -> List[HumanInput]:
+    def get_recent(self, limit: int = 10) -> List[HumanInputModel]:
         """
         Retrieve the most recent human input records.
         
@@ -247,13 +265,14 @@ class HumanInputRepository:
             limit: Maximum number of records to retrieve (default: 10)
             
         Returns:
-            List[HumanInput]: List of the most recent human input records
+            List[HumanInputModel]: List of the most recent human input records
             
         Raises:
             peewee.DatabaseError: If there's an error accessing the database
         """
         try:
-            return list(HumanInput.select().order_by(HumanInput.created_at.desc()).limit(limit))
+            human_inputs = list(HumanInput.select().order_by(HumanInput.created_at.desc()).limit(limit))
+            return [self._to_model(input) for input in human_inputs]
         except peewee.DatabaseError as e:
             logger.error(f"Failed to fetch recent human inputs: {str(e)}")
             raise
@@ -277,7 +296,7 @@ class HumanInputRepository:
             logger.error(f"Failed to fetch most recent human input ID: {str(e)}")
             raise
     
-    def get_by_source(self, source: str) -> List[HumanInput]:
+    def get_by_source(self, source: str) -> List[HumanInputModel]:
         """
         Retrieve human input records by source.
         
@@ -285,13 +304,14 @@ class HumanInputRepository:
             source: The source to filter by (e.g., "cli", "chat", "hil")
             
         Returns:
-            List[HumanInput]: List of human input records from the specified source
+            List[HumanInputModel]: List of human input records from the specified source
             
         Raises:
             peewee.DatabaseError: If there's an error accessing the database
         """
         try:
-            return list(HumanInput.select().where(HumanInput.source == source).order_by(HumanInput.created_at.desc()))
+            human_inputs = list(HumanInput.select().where(HumanInput.source == source).order_by(HumanInput.created_at.desc()))
+            return [self._to_model(input) for input in human_inputs]
         except peewee.DatabaseError as e:
             logger.error(f"Failed to fetch human inputs by source {source}: {str(e)}")
             raise

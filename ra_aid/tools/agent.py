@@ -116,7 +116,6 @@ def request_research(query: str) -> ResearchResult:
             research_only=True,
             hil=config.get("hil", False),
             console_message=query,
-            config=config,
         )
     except AgentInterrupt:
         print()
@@ -312,7 +311,6 @@ def request_research_and_implementation(query: str) -> Dict[str, Any]:
             research_only=False,
             hil=config.get("hil", False),
             console_message=query,
-            config=config,
         )
 
         success = True

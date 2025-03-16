@@ -5,6 +5,11 @@ from typing import Any, Dict, List, Optional, Sequence
 
 from langchain.chat_models.base import BaseChatModel
 from langchain_anthropic import ChatAnthropic
+from typing import Any, Dict, List, Optional, Sequence, Tuple
+from langchain_core.language_models import BaseChatModel
+from ra_aid.config import DEFAULT_MODEL
+from ra_aid.model_detection import is_claude_37
+
 from langchain_core.messages import (
     BaseMessage,
     trim_messages,
@@ -15,7 +20,7 @@ from ra_aid.anthropic_message_utils import (
     anthropic_trim_messages,
 )
 from langgraph.prebuilt.chat_agent_executor import AgentState
-from litellm import token_counter
+from litellm import token_counter, get_model_info
 
 from ra_aid.agent_backends.ciayn_agent import CiaynAgent
 from ra_aid.database.repositories.config_repository import get_config_repository
@@ -112,7 +117,7 @@ def create_token_counter_wrapper(model: str):
 
 
 def state_modifier(
-    state: AgentState, model: ChatAnthropic, max_input_tokens: int = DEFAULT_TOKEN_LIMIT
+    state: AgentState, model: BaseChatModel, max_input_tokens: int = DEFAULT_TOKEN_LIMIT
 ) -> list[BaseMessage]:
     """Given the agent state and max_tokens, return a trimmed list of messages.
 
@@ -131,7 +136,8 @@ def state_modifier(
     if not messages:
         return []
 
-    wrapped_token_counter = create_token_counter_wrapper(model.model)
+    model_name = get_model_name_from_chat_model(model)
+    wrapped_token_counter = create_token_counter_wrapper(model_name)
 
     result = anthropic_trim_messages(
         messages,
@@ -191,14 +197,89 @@ def sonnet_35_state_modifier(
     return result
 
 
+def get_provider_and_model_for_agent_type(
+    config: Dict[str, Any], agent_type: str
+) -> Tuple[str, str]:
+    """Get the provider and model name for the specified agent type.
+
+    Args:
+        config: Configuration dictionary containing provider and model information
+        agent_type: Type of agent ("default", "research", or "planner")
+
+    Returns:
+        Tuple[str, str]: A tuple containing (provider, model_name)
+    """
+    if agent_type == "research":
+        provider = config.get("research_provider", "") or config.get("provider", "")
+        model_name = config.get("research_model", "") or config.get("model", "")
+    elif agent_type == "planner":
+        provider = config.get("planner_provider", "") or config.get("provider", "")
+        model_name = config.get("planner_model", "") or config.get("model", "")
+    else:
+        provider = config.get("provider", "")
+        model_name = config.get("model", "")
+
+    return provider, model_name
+
+
+def get_model_name_from_chat_model(model: Optional[BaseChatModel]) -> str:
+    """Extract the model name from a BaseChatModel instance.
+
+    Args:
+        model: The BaseChatModel instance
+
+    Returns:
+        str: The model name extracted from the instance, or DEFAULT_MODEL if not found
+    """
+    if model is None:
+        return DEFAULT_MODEL
+
+    if hasattr(model, "model"):
+        return model.model
+    elif hasattr(model, "model_name"):
+        return model.model_name
+    else:
+        logger.debug(f"Could not extract model name from {model}, using DEFAULT_MODEL")
+        return DEFAULT_MODEL
+
+
+def adjust_claude_37_token_limit(
+    max_input_tokens: int, model: Optional[BaseChatModel]
+) -> Optional[int]:
+    """Adjust token limit for Claude 3.7 models by subtracting max_tokens.
+
+    Args:
+        max_input_tokens: The original token limit
+        model: The model instance to check
+
+    Returns:
+        Optional[int]: Adjusted token limit if model is Claude 3.7, otherwise original limit
+    """
+    if not max_input_tokens:
+        return max_input_tokens
+
+    if model and hasattr(model, "model") and is_claude_37(model.model):
+        if hasattr(model, "max_tokens") and model.max_tokens:
+            effective_max_input_tokens = max_input_tokens - model.max_tokens
+            logger.debug(
+                f"Adjusting token limit for Claude 3.7 model: {max_input_tokens} - {model.max_tokens} = {effective_max_input_tokens}"
+            )
+            return effective_max_input_tokens
+
+    return max_input_tokens
+
+
 def get_model_token_limit(
-    config: Dict[str, Any], agent_type: str = "default"
+    config: Dict[str, Any],
+    agent_type: str = "default",
+    model: Optional[BaseChatModel] = None,
 ) -> Optional[int]:
     """Get the token limit for the current model configuration based on agent type.
 
     Args:
         config: Configuration dictionary containing provider and model information
         agent_type: Type of agent ("default", "research", or "planner")
+        model: Optional BaseChatModel instance to check for model-specific attributes
 
     Returns:
         Optional[int]: The token limit if found, None otherwise
@@ -213,27 +294,20 @@ def get_model_token_limit(
             # In tests, this may fail because the repository isn't set up
             # So we'll use the passed config directly
             pass
-        if agent_type == "research":
-            provider = config.get("research_provider", "") or config.get("provider", "")
-            model_name = config.get("research_model", "") or config.get("model", "")
-        elif agent_type == "planner":
-            provider = config.get("planner_provider", "") or config.get("provider", "")
-            model_name = config.get("planner_model", "") or config.get("model", "")
-        else:
-            provider = config.get("provider", "")
-            model_name = config.get("model", "")
+
+        provider, model_name = get_provider_and_model_for_agent_type(config, agent_type)
+
+        # Always attempt to get model info from litellm first
+        provider_model = model_name if not provider else f"{provider}/{model_name}"
 
         try:
-            from litellm import get_model_info
-
-            provider_model = model_name if not provider else f"{provider}/{model_name}"
             model_info = get_model_info(provider_model)
             max_input_tokens = model_info.get("max_input_tokens")
             if max_input_tokens:
                 logger.debug(
                     f"Using litellm token limit for {model_name}: {max_input_tokens}"
                 )
-                return max_input_tokens
+                return adjust_claude_37_token_limit(max_input_tokens, model)
         except Exception as e:
             logger.debug(
                 f"Error getting model info from litellm: {e}, falling back to models_params"
@@ -252,7 +326,7 @@ def get_model_token_limit(
             max_input_tokens = None
             logger.debug(f"Could not find token limit for {provider}/{model_name}")
 
-        return max_input_tokens
+        return adjust_claude_37_token_limit(max_input_tokens, model)
 
     except Exception as e:
         logger.warning(f"Failed to get model token limit: {e}")

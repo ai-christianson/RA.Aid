@@ -33,7 +33,14 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-app = FastAPI()
+from ra_aid.server.api_v1_sessions import router as sessions_router
+from ra_aid.server.api_v1_spawn_agent import router as spawn_agent_router
+
+app = FastAPI(
+    title="RA.Aid API",
+    description="API for RA.Aid - AI Programming Assistant",
+    version="1.0.0",
+)
 
 # Add CORS middleware
 app.add_middleware(
@@ -43,6 +50,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include API routers
+app.include_router(sessions_router)
+app.include_router(spawn_agent_router)
 
 # Setup templates and static files directories
 CURRENT_DIR = Path(__file__).parent
@@ -151,7 +162,7 @@ def run_ra_aid(message_content, output_queue):
 async def get_root(request: Request):
     """Serve the index.html file with port parameter."""
     return templates.TemplateResponse(
-        "index.html", {"request": request, "server_port": request.url.port or 8080}
+        "index.html", {"request": request, "server_port": request.url.port or 1818}
     )
 
 
@@ -243,24 +254,6 @@ async def get_config(request: Request):
     return {"host": request.client.host, "port": request.scope.get("server")[1]}
 
 
-def run_server(host: str = "0.0.0.0", port: int = 8080):
+def run_server(host: str = "0.0.0.0", port: int = 1818):
     """Run the FastAPI server."""
     uvicorn.run(app, host=host, port=port)
-
-
-if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser(description="RA.Aid Web Interface Server")
-    parser.add_argument(
-        "--port", type=int, default=8080, help="Port to listen on (default: 8080)"
-    )
-    parser.add_argument(
-        "--host",
-        type=str,
-        default="0.0.0.0",
-        help="Host to listen on (default: 0.0.0.0)",
-    )
-
-    args = parser.parse_args()
-    run_server(host=args.host, port=args.port)

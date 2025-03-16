@@ -5,7 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.17.1] 2025-03-13
+
+### Fixed
+- Fixed bug with `process_thinking_content` function by moving it from `agent_utils` to `ra_aid.text.processing` module
+- Fixed config parameter handling in research request functions
+- Updated development setup instructions in README to use `pip install -e ".[dev]"` instead of `pip install -r requirements-dev.txt`
+
+## [0.17.0] 2025-03-12
 
 ### Added
 - Added support for think tags in models with the new extract_think_tag function
@@ -13,9 +20,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added model parameters for think tag support
 - Added comprehensive testing for think tag functionality
 - Added `--show-thoughts` flag to show thoughts of thinking models
+- Added `--show-cost` flag to display cost information during agent operations
+- Enhanced cost tracking with AnthropicCallbackHandler for monitoring token usage and costs
+- Added Session and Trajectory models to track application state and agent actions
+- Added comprehensive environment inventory system for collecting and providing system information to agents
+- Added repository implementations for Session and Trajectory models
+- Added support for reasoning assistance in research phase
+- Added new config parameters for managing cost display and reasoning assistance
 
 ### Changed
 - Updated langchain/langgraph deps
+- Improved trajectory tracking for better debugging and analysis
+- Enhanced prompts throughout the system for better performance
+- Improved token management with better handling of thinking tokens in Claude models
+- Updated project information inclusion in prompts
+- Reorganized agent code with better extraction of core functionality
+- Refactored anthropic token limiting for better control over token usage
+
+### Fixed
+- Fixed binary file detection
+- Fixed environment inventory sorting
+- Fixed token limiter functionality
+- Various test improvements and fixes
 
 ## [0.16.1] 2025-03-07
 

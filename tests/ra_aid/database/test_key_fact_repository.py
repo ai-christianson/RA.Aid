@@ -15,6 +15,7 @@ from ra_aid.database.repositories.key_fact_repository import (
     get_key_fact_repository,
     key_fact_repo_var
 )
+from ra_aid.database.pydantic_models import KeyFactModel
 
 
 @pytest.fixture
@@ -87,7 +88,8 @@ def test_create_key_fact(setup_db):
     content = "Test key fact"
     fact = repo.create(content)
     
-    # Verify the fact was created correctly
+    # Verify the fact was created correctly and is a KeyFactModel
+    assert isinstance(fact, KeyFactModel)
     assert fact.id is not None
     assert fact.content == content
     
@@ -108,7 +110,8 @@ def test_get_key_fact(setup_db):
     # Retrieve the fact by ID
     retrieved_fact = repo.get(fact.id)
     
-    # Verify the retrieved fact matches the original
+    # Verify the retrieved fact matches the original and is a KeyFactModel
+    assert isinstance(retrieved_fact, KeyFactModel)
     assert retrieved_fact is not None
     assert retrieved_fact.id == fact.id
     assert retrieved_fact.content == content
@@ -131,7 +134,8 @@ def test_update_key_fact(setup_db):
     new_content = "Updated content"
     updated_fact = repo.update(fact.id, new_content)
     
-    # Verify the fact was updated correctly
+    # Verify the fact was updated correctly and is a KeyFactModel
+    assert isinstance(updated_fact, KeyFactModel)
     assert updated_fact is not None
     assert updated_fact.id == fact.id
     assert updated_fact.content == new_content
@@ -184,8 +188,10 @@ def test_get_all_key_facts(setup_db):
     # Retrieve all facts
     all_facts = repo.get_all()
     
-    # Verify we got the correct number of facts
+    # Verify we got the correct number of facts and they are KeyFactModel instances
     assert len(all_facts) == len(contents)
+    for fact in all_facts:
+        assert isinstance(fact, KeyFactModel)
     
     # Verify the content of each fact
     fact_contents = [fact.content for fact in all_facts]
@@ -237,6 +243,7 @@ def test_key_fact_repository_manager(setup_db, cleanup_repo):
         # Verify we can use the repository
         content = "Test fact via context manager"
         fact = repo.create(content)
+        assert isinstance(fact, KeyFactModel)
         assert fact.id is not None
         assert fact.content == content
         
@@ -259,3 +266,25 @@ def test_get_key_fact_repository_when_not_set(cleanup_repo):
     
     # Verify the correct error message
     assert "No KeyFactRepository available" in str(excinfo.value)
+
+
+def test_to_model_method(setup_db):
+    """Test the _to_model method converts KeyFact to KeyFactModel correctly."""
+    # Set up repository
+    repo = KeyFactRepository(db=setup_db)
+    
+    # Create a Peewee KeyFact directly
+    peewee_fact = KeyFact.create(content="Test fact for conversion")
+    
+    # Convert to Pydantic model
+    pydantic_fact = repo._to_model(peewee_fact)
+    
+    # Verify conversion was correct
+    assert isinstance(pydantic_fact, KeyFactModel)
+    assert pydantic_fact.id == peewee_fact.id
+    assert pydantic_fact.content == peewee_fact.content
+    assert pydantic_fact.created_at == peewee_fact.created_at
+    assert pydantic_fact.updated_at == peewee_fact.updated_at
+    
+    # Test with None input
+    assert repo._to_model(None) is None
