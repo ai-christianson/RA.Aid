@@ -310,7 +310,6 @@ class AnthropicCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
 
             self.successful_requests += 1
 
-            # Handle callback update if repositories are available
             self._handle_callback_update()
 
     def _handle_callback_update(self) -> None:
@@ -345,7 +344,7 @@ class AnthropicCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
                     updated_session.total_output_tokens
                 )
 
-                created_traj = self.trajectory_repo.create(
+                self.trajectory_repo.create(
                     record_type="model_usage",
                     current_cost=last_cost,
                     current_tokens=self.prompt_tokens + self.completion_tokens,
@@ -358,27 +357,6 @@ class AnthropicCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
                     input_tokens=self.prompt_tokens,
                     output_tokens=self.completion_tokens,
                     session_id=self.session_totals["session_id"],
-                )
-                logger.info(f"updated_session={model_to_dict(updated_session)}")
-                logger.info(f"session_totals={self.session_totals}")
-
-                # Safe formatting for cost values
-                current_cost_str = (
-                    f"${float(created_traj.current_cost):.6f}"
-                    if created_traj.current_cost is not None
-                    else "$0.000000"
-                )
-                total_cost_str = (
-                    f"${float(created_traj.total_cost):.6f}"
-                    if created_traj.total_cost is not None
-                    else "$0.000000"
-                )
-
-                logger.info(
-                    f"current_cost: {current_cost_str} | current_token: {created_traj.current_tokens} (in: {created_traj.input_tokens}, out: {created_traj.output_tokens})"
-                )
-                logger.info(
-                    f"total_cost: {total_cost_str} | total_tokens: {created_traj.total_tokens}"
                 )
 
         except Exception as e:
