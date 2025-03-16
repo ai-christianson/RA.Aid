@@ -2,32 +2,49 @@
 
 from functools import partial
 from typing import Any, Dict, List, Optional, Sequence
-from dataclasses import dataclass
 
+from langchain.chat_models.base import BaseChatModel
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import (
-    AIMessage,
     BaseMessage,
-    RemoveMessage,
-    ToolMessage,
     trim_messages,
 )
 from langchain_core.messages.base import message_to_dict
 
 from ra_aid.anthropic_message_utils import (
     anthropic_trim_messages,
-    has_tool_use,
 )
 from langgraph.prebuilt.chat_agent_executor import AgentState
 from litellm import token_counter
 
 from ra_aid.agent_backends.ciayn_agent import CiaynAgent
 from ra_aid.database.repositories.config_repository import get_config_repository
+from ra_aid.config import DEFAULT_MODEL
 from ra_aid.logging_config import get_logger
 from ra_aid.models_params import DEFAULT_TOKEN_LIMIT, models_params
-from ra_aid.console.output import cpm, print_messages_compact
 
 logger = get_logger(__name__)
+
+
+def get_model_name_from_chat_model(model: Optional[BaseChatModel]) -> str:
+    """Extract the model name from a BaseChatModel instance.
+
+    Args:
+        model: The BaseChatModel instance
+
+    Returns:
+        str: The model name extracted from the instance, or DEFAULT_MODEL if not found
+    """
+    if model is None:
+        return DEFAULT_MODEL
+
+    if hasattr(model, "model"):
+        return model.model
+    elif hasattr(model, "model_name"):
+        return model.model_name
+    else:
+        logger.debug(f"Could not extract model name from {model}, using DEFAULT_MODEL")
+        return DEFAULT_MODEL
 
 
 def estimate_messages_tokens(messages: Sequence[BaseMessage]) -> int:
@@ -126,10 +143,14 @@ def state_modifier(
         num_messages_to_keep=2,
     )
     logger.info(f"wrapped_token_counter messages={wrapped_token_counter(messages)}")
-    logger.info(f"wrapped_token_counter last message={wrapped_token_counter([messages[-1]])}")
+    logger.info(
+        f"wrapped_token_counter last message={wrapped_token_counter([messages[-1]])}"
+    )
 
     if len(result) < len(messages):
-        logger.info(f"Anthropic Token Limiter Trimmed: {len(messages)} messages → {len(result)} messages")
+        logger.info(
+            f"Anthropic Token Limiter Trimmed: {len(messages)} messages → {len(result)} messages"
+        )
 
     return result
 

@@ -7,10 +7,12 @@ import time
 from typing import Any, Dict, List, Literal, Optional
 
 from langchain_anthropic import ChatAnthropic
+from langgraph.graph.graph import CompiledGraph
 from ra_aid.callbacks.anthropic_callback_handler import (
     AnthropicCallbackHandler,
     calculate_token_cost,
 )
+from ra_aid.anthropic_token_limiter import get_model_name_from_chat_model
 
 
 from playhouse.shortcuts import model_to_dict
@@ -43,7 +45,7 @@ from ra_aid.agent_context import (
 )
 from ra_aid.agent_backends.ciayn_agent import CiaynAgent
 from ra_aid.agents_alias import RAgents
-from ra_aid.config import DEFAULT_MAX_TEST_CMD_RETRIES
+from ra_aid.config import DEFAULT_MAX_TEST_CMD_RETRIES, DEFAULT_MODEL
 from ra_aid.console.formatting import print_error
 from ra_aid.console.output import print_agent_output
 from ra_aid.exceptions import (
@@ -69,36 +71,16 @@ from ra_aid.anthropic_token_limiter import (
     get_model_token_limit,
 )
 
-# Global session totals object to maintain consistency across agent switches
-SESSION_TOTALS = {
-    "cost": 0.0,
-    "tokens": 0,
-    "input_tokens": 0,
-    "output_tokens": 0,
-    "session_id": None,
-}
-
-
 def initialize_session_tracking():
     """
-    Initialize session tracking by getting the current session and updating SESSION_TOTALS.
+    Initialize session tracking by getting the current session.
 
     Returns:
         tuple: (session_id, session) - The current session ID and session object
     """
-
     session_repo = get_session_repository()
     current_session = session_repo.get_current_session()
     current_session_id = current_session.id if current_session else None
-
-    # Initialize global SESSION_TOTALS with current session data
-    global SESSION_TOTALS
-    if current_session:
-        SESSION_TOTALS["cost"] = current_session.total_cost
-        SESSION_TOTALS["tokens"] = current_session.total_tokens
-        SESSION_TOTALS["input_tokens"] = current_session.total_input_tokens
-        SESSION_TOTALS["output_tokens"] = current_session.total_output_tokens
-        SESSION_TOTALS["session_id"] = current_session_id
 
     return current_session_id, current_session
 
@@ -345,6 +327,7 @@ def _handle_api_error(e, attempt, max_retries, base_delay):
 
     trajectory_repo = get_trajectory_repository()
     human_input_id = get_human_input_repository().get_most_recent_id()
+    
     trajectory_repo.create(
         step_data={
             "error_message": error_message,
@@ -352,11 +335,6 @@ def _handle_api_error(e, attempt, max_retries, base_delay):
         },
         record_type="error",
         human_input_id=human_input_id,
-        session_id=SESSION_TOTALS["session_id"],
-        current_cost=0.0,
-        current_tokens=0,
-        total_cost=SESSION_TOTALS["cost"],
-        total_tokens=SESSION_TOTALS["tokens"],
         is_error=True,
         error_message=error_message,
     )
@@ -392,9 +370,6 @@ def init_fallback_handler(agent: RAgents, tools: List[Any]):
     return None
 
 
-# Function removed as it's now part of AnthropicCallbackHandler
-
-
 def _handle_fallback_response(
     error: ToolExecutionError,
     fallback_handler: Optional[FallbackHandler],
@@ -413,12 +388,13 @@ def _handle_fallback_response(
         msg_list.extend(msg_list_response)
 
 
-def _initialize_callback_handler(config):
+def _initialize_callback_handler(config, agent: RAgents):
     """
     Initialize the callback handler for token tracking.
 
     Args:
         config: Configuration dictionary containing provider and model information
+        agent: The agent instance to extract model information from
 
     Returns:
         tuple: (callback_handler, stream_config) - The callback handler and updated stream config
@@ -426,26 +402,32 @@ def _initialize_callback_handler(config):
     stream_config = config.copy()
     cb = None
 
-    if is_anthropic_claude(config):
-        # TODO FIX: This is incorrect, need to get it from ChatBaseModel
-        model_name = config.get("model", "")
-        full_model_name = model_name
+    # Only supporting anthropic ReAct Agent for now
+    if not isinstance(agent, CompiledGraph) or not is_anthropic_claude(config):
+        return cb, stream_config
 
-        # Get repositories for callback handling
-        trajectory_repo = get_trajectory_repository()
-        session_repo = get_session_repository()
+    model_name = DEFAULT_MODEL
 
-        # Initialize callback handler with repositories and session totals
-        cb = AnthropicCallbackHandler(
-            full_model_name,
-            trajectory_repo=trajectory_repo,
-            session_repo=session_repo,
-            session_totals=SESSION_TOTALS,
-        )
+    if agent is not None and hasattr(agent, "model"):
+        model = agent.model
+        model_name = get_model_name_from_chat_model(model)
+    else:
+        logger.warning("Agent is None or has no model attribute.")
 
-        if "callbacks" not in stream_config:
-            stream_config["callbacks"] = []
-        stream_config["callbacks"].append(cb)
+    full_model_name = model_name
+
+    trajectory_repo = get_trajectory_repository()
+    session_repo = get_session_repository()
+
+    cb = AnthropicCallbackHandler(
+        full_model_name,
+        trajectory_repo=trajectory_repo,
+        session_repo=session_repo,
+    )
+
+    if "callbacks" not in stream_config:
+        stream_config["callbacks"] = []
+    stream_config["callbacks"].append(cb)
 
     return cb, stream_config
 
@@ -508,7 +490,7 @@ def _run_agent_stream(agent: RAgents, msg_list: list[BaseMessage]):
     # trajectory_repo = get_trajectory_repository()
     # session_repo = get_session_repository()
 
-    cb, stream_config = _initialize_callback_handler(config)
+    cb, stream_config = _initialize_callback_handler(config, agent)
 
     while True:
         for chunk in agent.stream({"messages": msg_list}, stream_config):
@@ -559,8 +541,9 @@ def run_agent_with_retry(
     base_delay = 1
     test_attempts = 0
 
-    # Get session ID from global SESSION_TOTALS
-    current_session_id = SESSION_TOTALS["session_id"]
+    # Get current session ID
+    # current_session_id, current_session = initialize_session_tracking()
+    
     _max_test_retries = get_config_repository().get(
         "max_test_cmd_retries", DEFAULT_MAX_TEST_CMD_RETRIES
     )

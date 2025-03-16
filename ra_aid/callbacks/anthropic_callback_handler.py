@@ -160,22 +160,43 @@ class AnthropicCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
     cumulative_total_tokens: int = 0
     cumulative_prompt_tokens: int = 0
     cumulative_completion_tokens: int = 0
-    
+
     # Repositories for callback handling
     trajectory_repo = None
     session_repo = None
-    session_totals = None
 
-    def __init__(self, model_name: Optional[str] = None, trajectory_repo=None, session_repo=None, session_totals=None) -> None:
+    # Session totals to maintain consistency across agent switches
+    session_totals = {
+        "cost": 0.0,
+        "tokens": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "session_id": None,
+    }
+
+    def __init__(
+        self, model_name: Optional[str] = None, trajectory_repo=None, session_repo=None
+    ) -> None:
         super().__init__()
         self._lock = threading.Lock()
         if model_name:
             self.model_name = model_name
-            
+
         # Store repositories for callback handling
         self.trajectory_repo = trajectory_repo
         self.session_repo = session_repo
-        self.session_totals = session_totals
+
+        # Initialize session tracking if session_repo is available
+        if self.session_repo:
+            current_session = self.session_repo.get_current_session()
+            if current_session:
+                self.session_totals["cost"] = current_session.total_cost
+                self.session_totals["tokens"] = current_session.total_tokens
+                self.session_totals["input_tokens"] = current_session.total_input_tokens
+                self.session_totals["output_tokens"] = (
+                    current_session.total_output_tokens
+                )
+                self.session_totals["session_id"] = current_session.id
 
         # Default costs for Claude 3.7 Sonnet
         self.input_cost_per_token = 0.003 / 1000  # $3/M input tokens
@@ -282,15 +303,15 @@ class AnthropicCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
                 self.total_cost += completion_cost
 
             self.successful_requests += 1
-            
+
             # Handle callback update if repositories are available
             self._handle_callback_update()
-            
+
     def _handle_callback_update(self) -> None:
         """
         Handle callback updates and record trajectory data.
         """
-        if not self.trajectory_repo or not self.session_repo or not self.session_totals:
+        if not self.trajectory_repo or not self.session_repo:
             return
 
         try:
@@ -298,6 +319,7 @@ class AnthropicCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
                 logger.warning("session_id not initialized")
                 return
 
+            # First update the session record in the database
             updated_session = self.session_repo.update_token_usage(
                 session_id=self.session_totals["session_id"],
                 input_tokens=self.prompt_tokens,
@@ -305,11 +327,14 @@ class AnthropicCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
                 model_name=self.model_name,
             )
 
+            # Then update the session_totals from the updated session record
             if updated_session:
                 self.session_totals["cost"] = updated_session.total_cost
                 self.session_totals["tokens"] = updated_session.total_tokens
                 self.session_totals["input_tokens"] = updated_session.total_input_tokens
-                self.session_totals["output_tokens"] = updated_session.total_output_tokens
+                self.session_totals["output_tokens"] = (
+                    updated_session.total_output_tokens
+                )
 
                 last_msg_cost = calculate_token_cost(
                     self.model_name, self.prompt_tokens, self.completion_tokens
@@ -318,19 +343,31 @@ class AnthropicCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
                     record_type="model_usage",
                     current_cost=last_msg_cost,
                     current_tokens=self.prompt_tokens + self.completion_tokens,
-                    total_cost=self.session_totals["cost"],  # Running total cost from session
-                    total_tokens=self.session_totals["tokens"],  # Running total tokens from session
+                    total_cost=self.session_totals[
+                        "cost"
+                    ],  # Running total cost from session
+                    total_tokens=self.session_totals[
+                        "tokens"
+                    ],  # Running total tokens from session
                     input_tokens=self.prompt_tokens,
                     output_tokens=self.completion_tokens,
                     session_id=self.session_totals["session_id"],
                 )
                 logger.info(f"updated_session={model_to_dict(updated_session)}")
-                logger.info(f"SESSION_TOTALS={self.session_totals}")
-                
+                logger.info(f"session_totals={self.session_totals}")
+
                 # Safe formatting for cost values
-                current_cost_str = f"${float(created_traj.current_cost):.6f}" if created_traj.current_cost is not None else "$0.000000"
-                total_cost_str = f"${float(created_traj.total_cost):.6f}" if created_traj.total_cost is not None else "$0.000000"
-                
+                current_cost_str = (
+                    f"${float(created_traj.current_cost):.6f}"
+                    if created_traj.current_cost is not None
+                    else "$0.000000"
+                )
+                total_cost_str = (
+                    f"${float(created_traj.total_cost):.6f}"
+                    if created_traj.total_cost is not None
+                    else "$0.000000"
+                )
+
                 logger.info(
                     f"current_cost: {current_cost_str} | current_token: {created_traj.current_tokens} (in: {created_traj.input_tokens}, out: {created_traj.output_tokens})"
                 )
