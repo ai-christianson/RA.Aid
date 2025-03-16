@@ -48,7 +48,19 @@ def mock_repository(mock_session):
 
 
 @pytest.fixture
-def client(mock_repository, mock_thread, monkeypatch):
+def mock_config_repository():
+    """Create a mock config repository for testing."""
+    mock_config = MagicMock()
+    mock_config.get.side_effect = lambda key, default=None: {
+        "expert_enabled": True,
+        "web_research_enabled": False,
+        "provider": "anthropic",
+        "model": "claude-3-7-sonnet-20250219",
+    }.get(key, default)
+    return mock_config
+
+@pytest.fixture
+def client(mock_repository, mock_thread, mock_config_repository, monkeypatch):
     """Set up a test client with mocked dependencies."""
     # Create FastAPI app with router
     app = FastAPI()
@@ -61,6 +73,12 @@ def client(mock_repository, mock_thread, monkeypatch):
     monkeypatch.setattr(
         "ra_aid.server.api_v1_spawn_agent.run_agent_thread", 
         lambda *args, **kwargs: None
+    )
+    
+    # Mock get_config_repository to use our mock
+    monkeypatch.setattr(
+        "ra_aid.server.api_v1_spawn_agent.get_config_repository",
+        lambda: mock_config_repository
     )
     
     # Mock threading.Thread to return our mock thread
@@ -81,6 +99,7 @@ def client(mock_repository, mock_thread, monkeypatch):
     # Add mocks to client for test access
     client.mock_repo = mock_repository
     client.mock_thread = mock_thread
+    client.mock_config = mock_config_repository
     
     yield client
     
@@ -109,7 +128,7 @@ def test_spawn_agent(client, mock_repository, mock_thread):
     mock_repository.create_session.assert_called_once()
     
     # Verify thread was created with correct args
-    assert mock_thread.args == ("Test task for the agent", "123", False, True, False)
+    assert mock_thread.args == ("Test task for the agent", "123", False)
     assert mock_thread.daemon is True
     
     # Verify thread.start was called
