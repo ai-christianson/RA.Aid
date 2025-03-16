@@ -520,12 +520,9 @@ def _run_agent_stream(agent: RAgents, msg_list: list[BaseMessage]):
 
             if is_completed() or should_exit():
                 reset_completion_flags()
-                # _handle_callback_update is now called in the callback handler
                 return True
 
         logger.debug("Stream iteration ended; checking agent state for continuation.")
-        logger.info(f"cb1={cb}")
-        # _handle_callback_update is now called in the callback handler
 
         state_config = _prepare_state_config()
         logger.debug("Using state_config for agent.get_state(): %s", state_config)
@@ -538,8 +535,6 @@ def _run_agent_stream(agent: RAgents, msg_list: list[BaseMessage]):
                 state.next,
             )
             agent.invoke(None, stream_config)
-            logger.info(f"cb2={cb}")
-            # _handle_callback_update is now called in the callback handler
             continue
         else:
             logger.debug("No continuation indicated in state; exiting stream loop.")
