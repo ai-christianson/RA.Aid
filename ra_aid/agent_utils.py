@@ -71,6 +71,7 @@ from ra_aid.anthropic_token_limiter import (
     get_model_token_limit,
 )
 
+
 def initialize_session_tracking():
     """
     Initialize session tracking by getting the current session.
@@ -140,9 +141,24 @@ def build_agent_kwargs(
             return state_modifier(state, model, max_input_tokens=max_input_tokens)
 
         agent_kwargs["state_modifier"] = wrapped_state_modifier
-    agent_kwargs["name"] = "React"
+
+    model_name = get_model_name_from_chat_model(model)
+    # Important for anthropic callback handler to determine the correct model name given the agent
+    agent_kwargs["name"] = model_name
 
     return agent_kwargs
+
+
+def model_name_has_claude(model_name: str) -> bool:
+    """Check if a model name contains 'claude'.
+
+    Args:
+        model_name: The model name to check
+
+    Returns:
+        bool: True if the model name contains 'claude'
+    """
+    return model_name and "claude" in model_name.lower()
 
 
 def is_anthropic_claude(config: Dict[str, Any]) -> bool:
@@ -327,7 +343,7 @@ def _handle_api_error(e, attempt, max_retries, base_delay):
 
     trajectory_repo = get_trajectory_repository()
     human_input_id = get_human_input_repository().get_most_recent_id()
-    
+
     trajectory_repo.create(
         step_data={
             "error_message": error_message,
@@ -403,25 +419,29 @@ def _initialize_callback_handler(config, agent: RAgents):
     cb = None
 
     # Only supporting anthropic ReAct Agent for now
-    if not isinstance(agent, CompiledGraph) or not is_anthropic_claude(config):
+    if not isinstance(agent, CompiledGraph):
         return cb, stream_config
 
     model_name = DEFAULT_MODEL
 
-    if agent is not None and hasattr(agent, "model"):
-        model = agent.model
-        model_name = get_model_name_from_chat_model(model)
+    if agent is not None and hasattr(agent, "name"):
+        model_name = agent.name
     else:
-        print(f"agent={agent}")
-        logger.warning("Agent is None or has no model attribute.")
+        logger.warning(
+            "Agent is None or has no name attribute - the agent name is needed to determine enablement of callback handler."
+        )
 
-    full_model_name = model_name
+    if not model_name_has_claude(model_name):
+        logger.debug(
+            f"Model {model_name} is not a Claude model, skipping callback handler"
+        )
+        return cb, stream_config
 
     trajectory_repo = get_trajectory_repository()
     session_repo = get_session_repository()
 
     cb = AnthropicCallbackHandler(
-        full_model_name,
+        model_name,
         trajectory_repo=trajectory_repo,
         session_repo=session_repo,
     )
@@ -542,7 +562,7 @@ def run_agent_with_retry(
 
     # Get current session ID
     # current_session_id, current_session = initialize_session_tracking()
-    
+
     _max_test_retries = get_config_repository().get(
         "max_test_cmd_retries", DEFAULT_MAX_TEST_CMD_RETRIES
     )
