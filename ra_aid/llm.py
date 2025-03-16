@@ -8,7 +8,7 @@ from langchain_openai import ChatOpenAI
 from openai import OpenAI
 
 from ra_aid.chat_models.deepseek_chat import ChatDeepseekReasoner
-from ra_aid.console.output import cpm
+from ra_aid.console.formatting import cpm
 from ra_aid.logging_config import get_logger
 
 from .models_params import models_params
