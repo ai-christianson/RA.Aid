@@ -114,14 +114,6 @@ def run_agent_thread(
         env_discovery.discover()
         env_data = env_discovery.format_markdown()
         
-        # Apply any pending database migrations
-        try:
-            migration_result = ensure_migrations_applied()
-            if not migration_result:
-                logger.warning("Database migrations failed but execution will continue")
-        except Exception as e:
-            logger.error(f"Database migration error: {str(e)}")
-        
         # Initialize empty config dictionary
         config = {}
         
