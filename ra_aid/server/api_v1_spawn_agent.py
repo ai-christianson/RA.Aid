@@ -67,18 +67,6 @@ class SpawnAgentResponse(BaseModel):
     )
     
     
-def get_repository() -> SessionRepository:
-    """
-    Get the SessionRepository instance.
-    
-    This function is used as a FastAPI dependency and can be overridden
-    in tests using dependency_overrides.
-    
-    Returns:
-        SessionRepository: The repository instance
-    """
-    return get_session_repository()
-
 def run_agent_thread(
     message: str,
     session_id: str,
@@ -159,7 +147,7 @@ def run_agent_thread(
 )
 async def spawn_agent(
     request: SpawnAgentRequest,
-    repo: SessionRepository = Depends(get_repository),
+    repo: SessionRepository = Depends(get_session_repository),
 ) -> SpawnAgentResponse:
     """
     Spawn a new RA.Aid agent to process a message or task.
