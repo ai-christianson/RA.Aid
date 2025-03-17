@@ -217,14 +217,11 @@ def run_key_facts_gc_agent() -> None:
             facts_dict = {fact.id: fact.content for fact in eligible_facts}
             formatted_facts = "\n".join([f"Fact #{k}: {v}" for k, v in facts_dict.items()])
             
-            # Retrieve configuration
-            llm_config = get_config_repository().get_all()
-
             # Initialize the LLM model
             model = initialize_llm(
-                llm_config.get("provider", "anthropic"),
-                llm_config.get("model", "claude-3-7-sonnet-20250219"),
-                temperature=llm_config.get("temperature")
+                get_config_repository().get("provider", "anthropic"),
+                get_config_repository().get("model", "claude-3-7-sonnet-20250219"),
+                temperature=get_config_repository().get("temperature")
             )
             
             # Create the agent with the delete_key_facts tool

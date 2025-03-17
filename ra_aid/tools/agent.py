@@ -53,11 +53,10 @@ def request_research(query: str) -> ResearchResult:
         query: The research question or project description
     """
     # Initialize model from config
-    config = get_config_repository().get_all()
     model = initialize_llm(
-        config.get("provider", "anthropic"),
-        config.get("model", "claude-3-7-sonnet-20250219"),
-        temperature=config.get("temperature"),
+        get_config_repository().get("provider", "anthropic"),
+        get_config_repository().get("model", "claude-3-7-sonnet-20250219"),
+        temperature=get_config_repository().get("temperature"),
     )
 
     # Check recursion depth
@@ -114,7 +113,7 @@ def request_research(query: str) -> ResearchResult:
             model,
             expert_enabled=True,
             research_only=True,
-            hil=config.get("hil", False),
+            hil=get_config_repository().get("hil", False),
             console_message=query,
         )
     except AgentInterrupt:
@@ -197,11 +196,10 @@ def request_web_research(query: str) -> ResearchResult:
         query: The research question or project description
     """
     # Initialize model from config
-    config = get_config_repository().get_all()
     model = initialize_llm(
-        config.get("provider", "anthropic"),
-        config.get("model", "claude-3-7-sonnet-20250219"),
-        temperature=config.get("temperature"),
+        get_config_repository().get("provider", "anthropic"),
+        get_config_repository().get("model", "claude-3-7-sonnet-20250219"),
+        temperature=get_config_repository().get("temperature"),
     )
 
     success = True
@@ -215,7 +213,7 @@ def request_web_research(query: str) -> ResearchResult:
             query,
             model,
             expert_enabled=True,
-            hil=config.get("hil", False),
+            hil=get_config_repository().get("hil", False),
             console_message=query,
         )
     except AgentInterrupt:
@@ -293,11 +291,10 @@ def request_research_and_implementation(query: str) -> Dict[str, Any]:
         query: The research question or project description
     """
     # Initialize model from config
-    config = get_config_repository().get_all()
     model = initialize_llm(
-        config.get("provider", "anthropic"),
-        config.get("model", "claude-3-7-sonnet-20250219"),
-        temperature=config.get("temperature"),
+        get_config_repository().get("provider", "anthropic"),
+        get_config_repository().get("model", "claude-3-7-sonnet-20250219"),
+        temperature=get_config_repository().get("temperature"),
     )
 
     try:
@@ -309,7 +306,7 @@ def request_research_and_implementation(query: str) -> Dict[str, Any]:
             model,
             expert_enabled=True,
             research_only=False,
-            hil=config.get("hil", False),
+            hil=get_config_repository().get("hil", False),
             console_message=query,
         )
 
@@ -381,11 +378,10 @@ def request_task_implementation(task_spec: str) -> str:
         task_spec: REQUIRED The full task specification (markdown format, typically one part of the overall plan)
     """
     # Initialize model from config
-    config = get_config_repository().get_all()
     model = initialize_llm(
-        config.get("provider", "anthropic"),
-        config.get("model",DEFAULT_MODEL),
-        temperature=config.get("temperature"),
+        get_config_repository().get("provider", "anthropic"),
+        get_config_repository().get("model",DEFAULT_MODEL),
+        temperature=get_config_repository().get("temperature"),
     )
 
     # Get required parameters
@@ -548,11 +544,10 @@ def request_implementation(task_spec: str) -> str:
         task_spec: The task specification to plan implementation for
     """
     # Initialize model from config
-    config = get_config_repository().get_all()
     model = initialize_llm(
-        config.get("provider", "anthropic"),
-        config.get("model", DEFAULT_MODEL),
-        temperature=config.get("temperature"),
+        get_config_repository().get("provider", "anthropic"),
+        get_config_repository().get("model", DEFAULT_MODEL),
+        temperature=get_config_repository().get("temperature"),
     )
 
     try:
@@ -565,7 +560,7 @@ def request_implementation(task_spec: str) -> str:
             task_spec,
             model,
             expert_enabled=True,
-            hil=config.get("hil", False),
+            hil=get_config_repository().get("hil", False),
         )
 
         success = True

@@ -18,6 +18,13 @@ def client():
     """Return a TestClient for the FastAPI app."""
     # Mock the session repository to avoid database dependency
     mock_repo = MagicMock()
+    
+    # Mock get method for session repository
+    def mock_get(session_id):
+        return None  # No session found 
+    mock_repo.get.side_effect = mock_get
+    
+    # Note: get_all is deprecated, but kept for backward compatibility
     mock_repo.get_all.return_value = ([], 0)
     
     # Set the repository in the contextvar

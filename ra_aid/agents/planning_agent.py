@@ -352,7 +352,6 @@ def run_planning_agent(
         expert_guidance_section=expert_guidance_section,
     )
 
-    config_values = get_config_repository().get_all()
     recursion_limit = get_config_repository().get(
         "recursion_limit", 100
     )
@@ -360,7 +359,9 @@ def run_planning_agent(
         "configurable": {"thread_id": thread_id},
         "recursion_limit": recursion_limit,
     }
-    run_config.update(config_values)
+    # Update with necessary config values
+    run_config["show_cost"] = get_config_repository().get("show_cost", False)
+    run_config["valid_providers"] = get_config_repository().get("valid_providers", [])
 
     try:
         logger.debug("Planning agent completed successfully")

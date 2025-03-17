@@ -214,7 +214,7 @@ class TestAnthropicTokenLimiter(unittest.TestCase):
         
         # Setup mocks
         mock_config = {"provider": "anthropic", "model": model_name}
-        mock_get_config_repo.return_value.get_all.return_value = mock_config
+        mock_get_config_repo.return_value.get.side_effect = lambda key, default=None: mock_config.get(key, default)
         
         # Mock litellm's get_model_info to return a token limit
         mock_get_model_info.return_value = {"max_input_tokens": 100000}
@@ -247,7 +247,7 @@ class TestAnthropicTokenLimiter(unittest.TestCase):
         with patch("ra_aid.anthropic_token_limiter.get_config_repository") as mock_get_config_repo, \
              patch("ra_aid.anthropic_token_limiter.get_model_info") as mock_get_info, \
              patch("ra_aid.anthropic_token_limiter.adjust_claude_37_token_limit") as mock_adjust:
-            mock_get_config_repo.return_value.get_all.return_value = config
+            mock_get_config_repo.return_value.get.side_effect = lambda key, default=None: config.get(key, default)
             mock_get_info.return_value = {"max_input_tokens": 150000}
             mock_adjust.return_value = 150000
             
@@ -272,7 +272,7 @@ class TestAnthropicTokenLimiter(unittest.TestCase):
         with patch("ra_aid.anthropic_token_limiter.get_config_repository") as mock_get_config_repo, \
              patch("ra_aid.anthropic_token_limiter.get_model_info") as mock_get_info, \
              patch("ra_aid.anthropic_token_limiter.adjust_claude_37_token_limit") as mock_adjust:
-            mock_get_config_repo.return_value.get_all.return_value = config
+            mock_get_config_repo.return_value.get.side_effect = lambda key, default=None: config.get(key, default)
             mock_get_info.return_value = {"max_input_tokens": 120000}
             mock_adjust.return_value = 120000
             
@@ -290,7 +290,7 @@ class TestAnthropicTokenLimiter(unittest.TestCase):
     def test_get_model_token_limit_fallback(self, mock_get_model_info, mock_get_config_repo):
         # Setup mocks
         mock_config = {"provider": "anthropic", "model": "claude-2"}
-        mock_get_config_repo.return_value.get_all.return_value = mock_config
+        mock_get_config_repo.return_value.get.side_effect = lambda key, default=None: mock_config.get(key, default)
         
         # Make litellm's get_model_info raise an exception to test fallback
         mock_get_model_info.side_effect = Exception("Model not found")
@@ -320,7 +320,7 @@ class TestAnthropicTokenLimiter(unittest.TestCase):
             "planner_provider": "anthropic",
             "planner_model": "claude-3-7-opus-20250301"
         }
-        mock_get_config_repo.return_value.get_all.return_value = mock_config
+        mock_get_config_repo.return_value.get.side_effect = lambda key, default=None: mock_config.get(key, default)
         
         # Mock different returns for different models
         def model_info_side_effect(model_name):
@@ -369,7 +369,7 @@ class TestAnthropicTokenLimiter(unittest.TestCase):
              patch("ra_aid.anthropic_token_limiter.adjust_claude_37_token_limit") as mock_adjust:
             
             # Setup mocks
-            mock_get_config_repo.return_value.get_all.return_value = config
+            mock_get_config_repo.return_value.get.side_effect = lambda key, default=None: config.get(key, default)
             mock_get_info.side_effect = Exception("Model not found")
             
             # Create a mock models_params with claude-3-7
@@ -392,7 +392,7 @@ class TestAnthropicTokenLimiter(unittest.TestCase):
         config = {"provider": "openai", "model": "gpt-4"}
         
         with patch("ra_aid.anthropic_token_limiter.get_config_repository") as mock_get_config_repo:
-            mock_get_config_repo.return_value.get_all.return_value = config
+            mock_get_config_repo.return_value.get.side_effect = lambda key, default=None: config.get(key, default)
             token_limit = get_model_token_limit(config, "default")
             self.assertEqual(token_limit, models_params["openai"]["gpt-4"]["token_limit"])
 
@@ -401,7 +401,7 @@ class TestAnthropicTokenLimiter(unittest.TestCase):
         config = {"provider": "unknown", "model": "unknown-model"}
         
         with patch("ra_aid.anthropic_token_limiter.get_config_repository") as mock_get_config_repo:
-            mock_get_config_repo.return_value.get_all.return_value = config
+            mock_get_config_repo.return_value.get.side_effect = lambda key, default=None: config.get(key, default)
             token_limit = get_model_token_limit(config, "default")
             self.assertIsNone(token_limit)
 
@@ -410,7 +410,7 @@ class TestAnthropicTokenLimiter(unittest.TestCase):
         config = {}
         
         with patch("ra_aid.anthropic_token_limiter.get_config_repository") as mock_get_config_repo:
-            mock_get_config_repo.return_value.get_all.return_value = config
+            mock_get_config_repo.return_value.get.side_effect = lambda key, default=None: config.get(key, default)
             token_limit = get_model_token_limit(config, "default")
             self.assertIsNone(token_limit)
 
@@ -421,7 +421,7 @@ class TestAnthropicTokenLimiter(unittest.TestCase):
         with patch("ra_aid.anthropic_token_limiter.get_config_repository") as mock_get_config_repo, \
              patch("ra_aid.anthropic_token_limiter.get_model_info") as mock_get_info, \
              patch("ra_aid.anthropic_token_limiter.adjust_claude_37_token_limit") as mock_adjust:
-            mock_get_config_repo.return_value.get_all.return_value = config
+            mock_get_config_repo.return_value.get.side_effect = lambda key, default=None: config.get(key, default)
             mock_get_info.return_value = {"max_input_tokens": 100000}
             mock_adjust.return_value = 100000
             
@@ -442,7 +442,7 @@ class TestAnthropicTokenLimiter(unittest.TestCase):
              patch("ra_aid.anthropic_token_limiter.models_params") as mock_models_params, \
              patch("ra_aid.anthropic_token_limiter.adjust_claude_37_token_limit") as mock_adjust:
             
-            mock_get_config_repo.return_value.get_all.return_value = config
+            mock_get_config_repo.return_value.get.side_effect = lambda key, default=None: config.get(key, default)
             mock_get_info.side_effect = litellm.exceptions.NotFoundError(
                 message="Model not found", model="claude-3-7-sonnet-20250219", llm_provider="anthropic"
             )
@@ -468,7 +468,7 @@ class TestAnthropicTokenLimiter(unittest.TestCase):
 
         with patch("ra_aid.anthropic_token_limiter.get_config_repository") as mock_get_config_repo, \
              patch("litellm.get_model_info") as mock_get_info:
-            mock_get_config_repo.return_value.get_all.return_value = config
+            mock_get_config_repo.return_value.get.side_effect = lambda key, default=None: config.get(key, default)
             mock_get_info.side_effect = Exception("Unknown error")
             token_limit = get_model_token_limit(config, "default")
             self.assertEqual(token_limit, models_params["anthropic"]["claude2"]["token_limit"])

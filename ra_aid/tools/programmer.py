@@ -82,9 +82,8 @@ def run_programming_task(
     )
 
     # Add config file if specified
-    config = get_config_repository().get_all()
-    if config.get("aider_config"):
-        command.extend(["--config", config["aider_config"]])
+    if aider_config := get_config_repository().get("aider_config"):
+        command.extend(["--config", aider_config])
 
     # if environment variable AIDER_FLAGS exists then parse
     if "AIDER_FLAGS" in os.environ:
@@ -123,9 +122,8 @@ def run_programming_task(
         # Run the command interactively
         print()
         # Get provider/model specific latency coefficient
-        config = get_config_repository().get_all()
-        provider = config.get("provider", "")
-        model = config.get("model", "")
+        provider = get_config_repository().get("provider", "")
+        model = get_config_repository().get("model", "")
         latency = (
             models_params.get(provider, {})
             .get(model, {})

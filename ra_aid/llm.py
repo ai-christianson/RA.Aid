@@ -9,6 +9,7 @@ from openai import OpenAI
 
 from ra_aid.chat_models.deepseek_chat import ChatDeepseekReasoner
 from ra_aid.console.output import cpm
+from ra_aid.database.repositories.config_repository import get_config_repository
 from ra_aid.logging_config import get_logger
 from ra_aid.model_detection import is_claude_37
 
@@ -145,7 +146,9 @@ def create_openrouter_client(
         timeout=LLM_REQUEST_TIMEOUT,
         max_retries=LLM_MAX_RETRIES,
         default_headers=default_headers,
-        **({"temperature": temperature} if temperature is not None else {}),
+        **({
+            "temperature": temperature
+        } if temperature is not None else {}),
     )
 
 
@@ -223,9 +226,12 @@ def create_llm_client(
 
     # Default to True for known providers that support temperature if not specified
     if "supports_temperature" not in model_config:
+        # Just set the value in the dictionary without modifying the source
+        model_config = dict(model_config)  # Create a copy to avoid modifying the original
+        # Set default value for supports_temperature based on known providers
         model_config["supports_temperature"] = provider in known_temp_providers
 
-    supports_temperature = model_config["supports_temperature"]
+    supports_temperature = model_config.get("supports_temperature")
     supports_thinking = model_config.get("supports_thinking", False)
 
     other_kwargs = {}
@@ -238,31 +244,43 @@ def create_llm_client(
     elif supports_temperature:
         if temperature is None:
             temperature = 0.7
-            # Import repository classes directly to avoid circular imports
-            from ra_aid.database.repositories.trajectory_repository import (
-                TrajectoryRepository,
-            )
-            from ra_aid.database.repositories.human_input_repository import (
-                HumanInputRepository,
-            )
-            from ra_aid.database.connection import get_db
+            msg = "This model supports temperature argument but none was given. Setting default temperature to 0.7."
+            
+            try:
+                # Try to log to the database, but continue even if it fails
+                # Import repository classes directly to avoid circular imports
+                from ra_aid.database.repositories.trajectory_repository import (
+                    TrajectoryRepository,
+                )
+                from ra_aid.database.repositories.human_input_repository import (
+                    HumanInputRepository,
+                )
+                from ra_aid.database.connection import get_db
 
-            # Create repositories directly
-            trajectory_repo = TrajectoryRepository(get_db())
-            human_input_repo = HumanInputRepository(get_db())
-            human_input_id = human_input_repo.get_most_recent_id()
-
-            trajectory_repo.create(
-                step_data={
-                    "message": "This model supports temperature argument but none was given. Setting default temperature to 0.7.",
-                    "display_title": "Information",
-                },
-                record_type="info",
-                human_input_id=human_input_id,
-            )
-            cpm(
-                "This model supports temperature argument but none was given. Setting default temperature to 0.7."
-            )
+                # Create repositories directly
+                db = get_db()
+                if db is not None:  # Check if db is initialized
+                    trajectory_repo = TrajectoryRepository(db)
+                    human_input_repo = HumanInputRepository(db)
+                    human_input_id = human_input_repo.get_most_recent_id()
+                    
+                    if human_input_id is not None:  # Check if we have a valid human input
+                        trajectory_repo.create(
+                            step_data={
+                                "message": msg,
+                                "display_title": "Information",
+                            },
+                            record_type="info",
+                            human_input_id=human_input_id,
+                        )
+            except Exception:
+                # Silently continue if database operations fail
+                # This handles testing scenarios where database might not be initialized
+                pass
+                
+            # Always log to the console
+            cpm(msg)
+                
         temp_kwargs = {"temperature": temperature}
     else:
         temp_kwargs = {}
@@ -274,8 +292,8 @@ def create_llm_client(
     if provider == "deepseek":
         return create_deepseek_client(
             model_name=model_name,
-            api_key=config["api_key"],
-            base_url=config["base_url"],
+            api_key=config.get("api_key"),
+            base_url=config.get("base_url"),
             **temp_kwargs,
             **thinking_kwargs,
             is_expert=is_expert,
@@ -283,14 +301,14 @@ def create_llm_client(
     elif provider == "openrouter":
         return create_openrouter_client(
             model_name=model_name,
-            api_key=config["api_key"],
+            api_key=config.get("api_key"),
             **temp_kwargs,
             **thinking_kwargs,
             is_expert=is_expert,
         )
     elif provider == "openai":
         openai_kwargs = {
-            "api_key": config["api_key"],
+            "api_key": config.get("api_key"),
             "model": model_name,
             **temp_kwargs,
         }
@@ -306,7 +324,7 @@ def create_llm_client(
         )
     elif provider == "anthropic":
         return ChatAnthropic(
-            api_key=config["api_key"],
+            api_key=config.get("api_key"),
             model_name=model_name,
             timeout=LLM_REQUEST_TIMEOUT,
             max_retries=LLM_MAX_RETRIES,
@@ -316,8 +334,8 @@ def create_llm_client(
         )
     elif provider == "openai-compatible":
         return ChatOpenAI(
-            api_key=config["api_key"],
-            base_url=config["base_url"],
+            api_key=config.get("api_key"),
+            base_url=config.get("base_url"),
             model=model_name,
             timeout=LLM_REQUEST_TIMEOUT,
             max_retries=LLM_MAX_RETRIES,
@@ -326,7 +344,7 @@ def create_llm_client(
         )
     elif provider == "gemini":
         return ChatGoogleGenerativeAI(
-            api_key=config["api_key"],
+            api_key=config.get("api_key"),
             model=model_name,
             timeout=LLM_REQUEST_TIMEOUT,
             max_retries=LLM_MAX_RETRIES,

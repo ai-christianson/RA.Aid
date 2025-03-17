@@ -34,7 +34,12 @@ def mock_config_repository():
             config.update(config_dict)
         mock_repo.update.side_effect = update_config
         
-        # Setup get_all method to return the config dict
+        # Setup get method to return config values
+        def get_config(key, default=None):
+            return config.get(key, default)
+        mock_repo.get.side_effect = get_config
+        
+        # Note: get_all is deprecated, but kept for backward compatibility
         def get_all_config():
             return config.copy()
         mock_repo.get_all.side_effect = get_all_config

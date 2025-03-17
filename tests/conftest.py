@@ -20,6 +20,7 @@ def mock_config_repository():
     repo = MagicMock()
     # Default config values
     config_values = {"recursion_limit": 2}
+    # Return a reference to the actual config dict, not a copy
     repo.get_all.return_value = config_values
     repo.get.side_effect = lambda key, default=None: config_values.get(key, default)
     get_config_repository.return_value = repo

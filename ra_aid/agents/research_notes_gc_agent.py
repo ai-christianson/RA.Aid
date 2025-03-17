@@ -222,14 +222,11 @@ def run_research_notes_gc_agent(threshold: int = 30) -> None:
             notes_dict = {note.id: note.content for note in eligible_notes}
             formatted_notes = "\n".join([f"Note #{k}: {v}" for k, v in notes_dict.items()])
             
-            # Retrieve configuration
-            llm_config = get_config_repository().get_all()
-
             # Initialize the LLM model
             model = initialize_llm(
-                llm_config.get("provider", "anthropic"),
-                llm_config.get("model", "claude-3-7-sonnet-20250219"),
-                temperature=llm_config.get("temperature")
+                get_config_repository().get("provider", "anthropic"),
+                get_config_repository().get("model", "claude-3-7-sonnet-20250219"),
+                temperature=get_config_repository().get("temperature")
             )
             
             # Create the agent with the delete_research_notes tool

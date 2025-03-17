@@ -46,7 +46,12 @@ def mock_related_files_repository():
             return file_id
         mock_repo.return_value.add_file.side_effect = mock_add_file
         
-        # Mock get_all method
+        # Mock get method for individual files
+        def mock_get(file_id):
+            return related_files.get(file_id)
+        mock_repo.return_value.get.side_effect = mock_get
+        
+        # Note: get_all is deprecated, but kept for backward compatibility
         def mock_get_all():
             return related_files.copy()
         mock_repo.return_value.get_all.side_effect = mock_get_all

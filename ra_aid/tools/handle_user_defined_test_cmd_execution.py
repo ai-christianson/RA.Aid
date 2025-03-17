@@ -173,7 +173,7 @@ class TestCommandExecutor:
                 self.state.test_attempts,
             )
 
-        cmd = self.config["test_cmd"]
+        cmd = self.config.get("test_cmd")
 
         if not self.state.auto_test:
             print()
