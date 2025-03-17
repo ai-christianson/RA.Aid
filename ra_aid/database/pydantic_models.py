@@ -28,10 +28,6 @@ class SessionModel(BaseModel):
         command_line: Command line arguments used to start the program
         program_version: Version of the program
         machine_info: Dictionary containing machine-specific metadata
-        total_input_tokens: Total number of input tokens used in this session
-        total_output_tokens: Total number of output tokens used in this session
-        total_tokens: Total number of tokens (input + output) used in this session
-        total_cost: Total cost of token usage in this session
     """
     id: Optional[int] = None
     created_at: datetime.datetime
