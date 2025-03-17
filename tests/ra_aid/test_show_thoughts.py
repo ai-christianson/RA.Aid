@@ -81,7 +81,7 @@ def test_show_thoughts_config(mock_config_repository):
                      patch("ra_aid.__main__.build_status"), \
                      patch("ra_aid.__main__.console.print"), \
                      patch("ra_aid.__main__.initialize_llm"), \
-                     patch("ra_aid.__main__.get_session_repository", return_value=MagicMock(create_session=MagicMock())), \
+                     patch("ra_aid.database.repositories.session_repository.get_session_repository", return_value=MagicMock(create_session=MagicMock())), \
                      patch("ra_aid.__main__.run_research_agent"), \
                      patch("ra_aid.__main__.main", return_value=None):  # Prevent actual main execution
                     
@@ -109,7 +109,7 @@ def test_show_thoughts_config(mock_config_repository):
                      patch("ra_aid.__main__.build_status"), \
                      patch("ra_aid.__main__.console.print"), \
                      patch("ra_aid.__main__.initialize_llm"), \
-                     patch("ra_aid.__main__.get_session_repository", return_value=MagicMock(create_session=MagicMock())), \
+                     patch("ra_aid.database.repositories.session_repository.get_session_repository", return_value=MagicMock(create_session=MagicMock())), \
                      patch("ra_aid.__main__.run_research_agent"), \
                      patch("ra_aid.__main__.main", return_value=None):  # Prevent actual main execution
                     

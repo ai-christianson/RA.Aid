@@ -105,30 +105,20 @@ class TestProcessThinkingContent:
         """Test custom panel title and style are applied."""
         content = "<think>Custom thinking</think>Response"
         
-        # Mock the imported modules
-        with patch("rich.panel.Panel") as mock_panel:
-            with patch("rich.markdown.Markdown") as mock_markdown:
-                with patch("rich.console.Console") as mock_console:
-                    # Setup mock
-                    mock_console_instance = MagicMock()
-                    mock_console.return_value = mock_console_instance
-                    mock_markdown.return_value = "Formatted markdown"
-                    mock_panel.return_value = "Styled panel"
-                    
-                    # Call the function
-                    process_thinking_content(
-                        content, 
-                        supports_think_tag=True,
-                        show_thoughts=True,
-                        panel_title="Custom Title",
-                        panel_style="red"
-                    )
-                    
-                    # Check that Panel was called
-                    assert mock_panel.called
-                    
-                    # If Panel was called, check the arguments
-                    if mock_panel.call_args:
-                        _, kwargs = mock_panel.call_args
-                        assert kwargs["title"] == "Custom Title"
-                        assert kwargs["border_style"] == "red"
+        # Mock the cpm function since it's now used instead of Panel directly
+        with patch("ra_aid.text.processing.cpm") as mock_cpm:
+            # Call the function
+            process_thinking_content(
+                content, 
+                supports_think_tag=True,
+                show_thoughts=True,
+                panel_title="Custom Title",
+                panel_style="red"
+            )
+            
+            # Check that cpm was called with the right parameters
+            mock_cpm.assert_called_once()
+            # Verify the title and style were passed correctly
+            args, kwargs = mock_cpm.call_args
+            assert kwargs.get('title') == "Custom Title"
+            assert kwargs.get('border_style') == "red"
