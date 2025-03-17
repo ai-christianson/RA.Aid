@@ -71,27 +71,12 @@ from ra_aid.exceptions import AgentInterrupt
 from ra_aid.fallback_handler import FallbackHandler
 from ra_aid.llm import initialize_llm, get_model_default_temperature
 from ra_aid.logging_config import get_logger, setup_logging
-from ra_aid.models_params import DEFAULT_TEMPERATURE, models_params
+from ra_aid.models_params import models_params
 from ra_aid.project_info import format_project_info, get_project_info
 from ra_aid.prompts.chat_prompts import CHAT_PROMPT
 from ra_aid.prompts.web_research_prompts import WEB_RESEARCH_PROMPT_SECTION_CHAT
 from ra_aid.tool_configs import get_chat_tools, set_modification_tools
 from ra_aid.tools.human import ask_human
-
-# Configure litellm to suppress debug logs
-os.environ["LITELLM_LOG"] = "ERROR"
-litellm.suppress_debug_info = True
-litellm.set_verbose = False
-
-# Explicitly configure LiteLLM's loggers
-for logger_name in ["litellm", "LiteLLM"]:
-    litellm_logger = logging.getLogger(logger_name)
-    litellm_logger.setLevel(logging.WARNING)
-    litellm_logger.propagate = True
-
-# Use litellm's internal method to disable debugging
-if hasattr(litellm, "_logging") and hasattr(litellm._logging, "_disable_debugging"):
-    litellm._logging._disable_debugging()
 
 logger = get_logger(__name__)
 
