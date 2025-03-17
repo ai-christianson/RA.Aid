@@ -14,7 +14,7 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 
-logger = logging.getLogger(__name__)
+from ra_aid.console.formatting import console_panel
 
 from ra_aid.agent_context import mark_should_exit
 
@@ -24,8 +24,9 @@ from ra_aid.database.repositories.human_input_repository import get_human_input_
 from ra_aid.database.repositories.config_repository import get_config_repository
 from ra_aid.database.repositories.trajectory_repository import get_trajectory_repository
 from ra_aid.llm import initialize_llm
-from ra_aid.model_formatters.research_notes_formatter import format_research_note
 from ra_aid.tools.memory import log_work_event
+
+logger = logging.getLogger(__name__)
 
 
 console = Console()

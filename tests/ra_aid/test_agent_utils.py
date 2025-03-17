@@ -15,18 +15,7 @@ from ra_aid.agent_utils import (
     create_agent
 )
 from ra_aid.models_params import DEFAULT_TOKEN_LIMIT, models_params
-from ra_aid.anthropic_token_limiter import (
-    get_model_token_limit,
-    state_modifier,
-)
-from ra_aid.models_params import models_params, AgentBackendType, DEFAULT_TOKEN_LIMIT
-from ra_aid.database.repositories.config_repository import (
-    ConfigRepositoryManager,
-    get_config_repository,
-    config_repo_var,
-)
-from ra_aid.agent_backends.ciayn_agent import CiaynAgent
-from langgraph.prebuilt import create_react_agent
+from ra_aid.models_params import AgentBackendType
 
 
 @pytest.fixture
@@ -42,13 +31,10 @@ def mock_config_repository():
     with patch(
         "ra_aid.database.repositories.config_repository.config_repo_var"
     ) as mock_repo_var:
-        # Setup a mock repository
         mock_repo = MagicMock()
 
-        # Create a dictionary to simulate config
         config = {}
 
-        # Setup get method to return config values
         def get_config(key, default=None):
             return copy.deepcopy(config.get(key, default))
         mock_repo.get.side_effect = get_config
@@ -148,7 +134,6 @@ def test_create_agent_anthropic(mock_model, mock_config_repository):
     mock_config_repository.update({"provider": "anthropic", "model": "claude-2"})
 
     # Create a mock for anthropic model config
-    from ra_aid.models_params import AgentBackendType
     mock_anthropic_model_config = {
         "claude-2": {
             "default_backend": AgentBackendType.CREATE_REACT_AGENT
@@ -272,7 +257,6 @@ def test_create_agent_anthropic_token_limiting_enabled(
     )
 
     # Create a mock for anthropic model config
-    from ra_aid.models_params import AgentBackendType
     mock_anthropic_model_config = {
         "claude-2": {
             "default_backend": AgentBackendType.CREATE_REACT_AGENT
@@ -306,7 +290,6 @@ def test_create_agent_anthropic_token_limiting_disabled(
     )
 
     # Create a mock for anthropic model config
-    from ra_aid.models_params import AgentBackendType
     mock_anthropic_model_config = {
         "claude-2": {
             "default_backend": AgentBackendType.CREATE_REACT_AGENT

@@ -14,11 +14,11 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 
-logger = logging.getLogger(__name__)
 
 from ra_aid.agent_context import mark_should_exit
 # Import agent_utils functions at runtime to avoid circular imports
 from ra_aid import agent_utils
+from ra_aid.console.formatting import console_panel
 from ra_aid.database.repositories.key_fact_repository import get_key_fact_repository
 from ra_aid.database.repositories.human_input_repository import get_human_input_repository
 from ra_aid.database.repositories.config_repository import get_config_repository
@@ -27,7 +27,7 @@ from ra_aid.llm import initialize_llm
 from ra_aid.prompts.key_facts_gc_prompts import KEY_FACTS_GC_PROMPT
 from ra_aid.tools.memory import log_work_event
 
-
+logger = logging.getLogger(__name__)
 console = Console()
 
 

@@ -15,6 +15,7 @@ from rich.panel import Panel
 
 # Import agent_utils functions at runtime to avoid circular imports
 from ra_aid import agent_utils
+from ra_aid.console.formatting import console_panel
 from ra_aid.database.repositories.key_snippet_repository import get_key_snippet_repository
 from ra_aid.database.repositories.human_input_repository import get_human_input_repository
 from ra_aid.database.repositories.config_repository import get_config_repository

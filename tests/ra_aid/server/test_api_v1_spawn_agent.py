@@ -10,6 +10,7 @@ from unittest.mock import MagicMock
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from ra_aid.database.repositories.session_repository import get_session_repository
 from ra_aid.server.api_v1_sessions import get_repository
 from ra_aid.server.api_v1_spawn_agent import router
 from ra_aid.database.pydantic_models import SessionModel
