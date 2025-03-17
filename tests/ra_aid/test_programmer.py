@@ -25,8 +25,13 @@ def mock_config_repository():
             "aider_config": "/path/to/config.yml"
         }
         
+        # Setup get method to return config values
+        def get_config(key, default=None):
+            return config.get(key, default)
+        mock_repo.get.side_effect = get_config
+        
+        # Note: get_all is deprecated, but kept for backward compatibility
         # Setup get_all method to return a reference to the config dict
-        # Return the actual dict for tests that expect to modify it
         mock_repo.get_all.return_value = config
         
         # Setup get method to return config values

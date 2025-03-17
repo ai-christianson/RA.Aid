@@ -100,17 +100,17 @@ def get_all_tools() -> list[BaseTool]:
 
 # Define constant tool groups
 # Get config from repository for use_aider value
-_config = {}
+use_aider = False
 try:
-    _config = get_config_repository().get_all()
+    use_aider = get_config_repository().get("use_aider", False)
 except (ImportError, RuntimeError):
     pass
 
-READ_ONLY_TOOLS = get_read_only_tools(use_aider=_config.get("use_aider", False))
+READ_ONLY_TOOLS = get_read_only_tools(use_aider=use_aider)
 
 # MODIFICATION_TOOLS will be set dynamically based on config, default defined here
 MODIFICATION_TOOLS = [file_str_replace, put_complete_file_contents]
-COMMON_TOOLS = get_read_only_tools(use_aider=_config.get("use_aider", False))
+COMMON_TOOLS = get_read_only_tools(use_aider=use_aider)
 EXPERT_TOOLS = [emit_expert_context, ask_expert]
 RESEARCH_TOOLS = [
     emit_research_notes,

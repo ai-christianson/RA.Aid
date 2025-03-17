@@ -63,9 +63,8 @@ def mock_config_repository():
     # Setup get method to return config values
     mock_config.get.side_effect = lambda key, default=None: config.get(key, default)
     
+    # Note: get_all is deprecated, but kept for backward compatibility
     # Setup get_all method to return a reference to the config dict
-    # This is important for tests where we want the dictionary returned
-    # by get_all() to be affected by updates to the config
     mock_config.get_all.return_value = config
     return mock_config
 

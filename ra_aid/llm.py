@@ -9,6 +9,7 @@ from openai import OpenAI
 
 from ra_aid.chat_models.deepseek_chat import ChatDeepseekReasoner
 from ra_aid.console.output import cpm
+from ra_aid.database.repositories.config_repository import get_config_repository
 from ra_aid.logging_config import get_logger
 from ra_aid.model_detection import is_claude_37
 
@@ -145,7 +146,9 @@ def create_openrouter_client(
         timeout=LLM_REQUEST_TIMEOUT,
         max_retries=LLM_MAX_RETRIES,
         default_headers=default_headers,
-        **({"temperature": temperature} if temperature is not None else {}),
+        **({
+            "temperature": temperature
+        } if temperature is not None else {}),
     )
 
 
