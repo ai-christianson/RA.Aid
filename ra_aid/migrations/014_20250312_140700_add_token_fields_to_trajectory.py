@@ -1,8 +1,10 @@
 """Peewee migrations -- 014_20250312_140700_add_token_fields_to_trajectory.py.
 
-This migration adds input_tokens and output_tokens fields to the Trajectory model.
+This migration adds input_tokens, output_tokens, and current_cost fields to the Trajectory model.
 These fields allow tracking token usage separately for input (prompt tokens) and output 
 (completion tokens) to provide more detailed cost and usage analytics.
+
+This migration also removes the legacy cost and tokens fields that are no longer needed.
 
 Some examples (model - class or model name)::
 
@@ -40,11 +42,13 @@ with suppress(ImportError):
 
 def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
     """
-    Add input_tokens and output_tokens fields to the Trajectory model.
+    Add input_tokens, output_tokens, and current_cost fields to the Trajectory model.
+    Remove legacy cost and tokens fields.
     
     These fields provide a more detailed breakdown of token usage:
-    - input_tokens: Number of tokens in the prompt/input (previously only tracked as total tokens)
-    - output_tokens: Number of tokens in the completion/output (previously only tracked as total tokens)
+    - input_tokens: Number of tokens in the prompt/input
+    - output_tokens: Number of tokens in the completion/output
+    - current_cost: Cost of the current operation
     
     This allows for more accurate cost tracking and usage analytics since different models
     may charge different rates for input vs. output tokens.
@@ -57,24 +61,58 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
         # Table doesn't exist, nothing to do
         return
     
-    # Check if the columns already exist
+    # Add the new fields to the trajectory table if they don't exist
     try:
-        database.execute_sql("SELECT input_tokens, output_tokens FROM trajectory LIMIT 1")
-        # If we reach here, the columns exist
-        return
+        database.execute_sql("SELECT input_tokens FROM trajectory LIMIT 1")
     except pw.OperationalError:
-        # Columns don't exist, safe to add
-        pass
+        migrator.add_fields(
+            'trajectory',
+            input_tokens=pw.IntegerField(null=True),  # Track input/prompt tokens
+        )
     
-    # Add the new fields to the trajectory table
-    migrator.add_fields(
-        'trajectory',
-        input_tokens=pw.IntegerField(null=True),  # Track input/prompt tokens
-        output_tokens=pw.IntegerField(null=True)  # Track output/completion tokens
-    )
+    try:
+        database.execute_sql("SELECT output_tokens FROM trajectory LIMIT 1")
+    except pw.OperationalError:
+        migrator.add_fields(
+            'trajectory',
+            output_tokens=pw.IntegerField(null=True),  # Track output/completion tokens
+        )
+    
+    try:
+        database.execute_sql("SELECT current_cost FROM trajectory LIMIT 1")
+    except pw.OperationalError:
+        migrator.add_fields(
+            'trajectory',
+            current_cost=pw.FloatField(null=True),  # Cost of the current operation
+        )
+    
+    # Remove legacy fields if they exist
+    try:
+        # Check if the cost field exists
+        Trajectory = migrator.orm.get('trajectory', None)
+        if Trajectory and hasattr(Trajectory, 'cost'):
+            migrator.remove_fields('trajectory', 'cost')
+    except Exception as e:
+        # Log the error but continue with the migration
+        print(f"Error removing cost field: {e}")
+    
+    try:
+        # Check if the tokens field exists
+        Trajectory = migrator.orm.get('trajectory', None)
+        if Trajectory and hasattr(Trajectory, 'tokens'):
+            migrator.remove_fields('trajectory', 'tokens')
+    except Exception as e:
+        # Log the error but continue with the migration
+        print(f"Error removing tokens field: {e}")
 
 
 def rollback(migrator: Migrator, database: pw.Database, *, fake=False):
-    """Remove the input_tokens and output_tokens fields from the Trajectory model."""
+    """Remove the new fields and restore the legacy fields."""
     
-    migrator.remove_fields('trajectory', 'input_tokens', 'output_tokens')
+    migrator.remove_fields('trajectory', 'input_tokens', 'output_tokens', 'current_cost')
+    
+    migrator.add_fields(
+        'trajectory',
+        cost=pw.FloatField(null=True),
+        tokens=pw.IntegerField(null=True)
+    )

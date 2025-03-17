@@ -186,7 +186,7 @@ def test_create_trajectory(
     assert trajectory.human_input_id == sample_human_input.id
 
 
-def test_create_trajectory_minimal(setup_db, mock_session_repository):
+def test_create_trajectory_minimal(setup_db):
     """Test creating a trajectory with minimal fields."""
     # Set up repository
     repo = TrajectoryRepository(db=setup_db)
@@ -206,8 +206,9 @@ def test_create_trajectory_minimal(setup_db, mock_session_repository):
     assert trajectory.tool_result is None
     assert trajectory.step_data is None
     assert trajectory.human_input_id is None
-    assert trajectory.cost is None
-    assert trajectory.tokens is None
+    assert trajectory.current_cost is None
+    assert trajectory.output_tokens is None
+    assert trajectory.input_tokens is None
     assert trajectory.is_error is False
 
 
@@ -267,7 +268,8 @@ def test_update_trajectory(setup_db, sample_trajectory):
         tool_result=new_tool_result,
         step_data=new_step_data,
         current_cost=0.002,
-        current_tokens=200,
+        input_tokens=2000,
+        output_tokens=300,
         is_error=True,
         error_message="Test error",
         error_type="TestErrorType",
@@ -281,7 +283,8 @@ def test_update_trajectory(setup_db, sample_trajectory):
     assert updated_trajectory.tool_result == new_tool_result
     assert updated_trajectory.step_data == new_step_data
     assert updated_trajectory.current_cost == 0.002
-    assert updated_trajectory.current_tokens == 200
+    assert updated_trajectory.input_tokens == 2000
+    assert updated_trajectory.output_tokens == 300
     assert updated_trajectory.is_error is True
     assert updated_trajectory.error_message == "Test error"
     assert updated_trajectory.error_type == "TestErrorType"

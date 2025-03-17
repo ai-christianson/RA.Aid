@@ -47,7 +47,11 @@ from ra_aid.exceptions import (
 from ra_aid.fallback_handler import FallbackHandler
 from ra_aid.logging_config import get_logger
 from ra_aid.model_detection import model_name_has_claude
-from ra_aid.models_params import DEFAULT_TOKEN_LIMIT, DEFAULT_AGENT_BACKEND, AgentBackendType
+from ra_aid.models_params import (
+    DEFAULT_TOKEN_LIMIT,
+    DEFAULT_AGENT_BACKEND,
+    AgentBackendType,
+)
 from ra_aid.tools.handle_user_defined_test_cmd_execution import execute_test_command
 from ra_aid.database.repositories.human_input_repository import (
     get_human_input_repository,
@@ -90,24 +94,25 @@ def build_agent_kwargs(
 
     # Use repository method to check if token limiting is enabled
     limit_tokens = get_config_repository().get("limit_tokens", True)
-    
+
     # Get model config to check if this is a model that needs token limiting
     provider = get_config_repository().get("provider", "anthropic")
     model_name = get_config_repository().get("model", "")
-    
+
     # Get the model parameters from models_params
     from ra_aid.models_params import models_params, AgentBackendType
+
     provider_config = models_params.get(provider, {})
     model_config = provider_config.get(model_name, {})
-    
+
     # Check if this model uses the REACT backend (which is what we're configuring kwargs for)
-    uses_react_backend = model_config.get("default_backend", DEFAULT_AGENT_BACKEND) == AgentBackendType.CREATE_REACT_AGENT
-    
-    if (
-        limit_tokens
-        and uses_react_backend
-        and model is not None
-    ):
+    uses_react_backend = (
+        model_config.get("default_backend", DEFAULT_AGENT_BACKEND)
+        == AgentBackendType.CREATE_REACT_AGENT
+    )
+
+    if limit_tokens and uses_react_backend and model is not None:
+
         def wrapped_state_modifier(state: AgentState) -> list[BaseMessage]:
             model_name = get_model_name_from_chat_model(model)
 
@@ -158,10 +163,13 @@ def create_agent(
             # Get only the necessary config values
             provider = get_config_repository().get("provider", "anthropic")
             model_name = get_config_repository().get("model", "")
-            
-            logger.debug("Creating agent with config values: provider='%s', model='%s'", 
-                provider, model_name)
-            
+
+            logger.debug(
+                "Creating agent with config values: provider='%s', model='%s'",
+                provider,
+                model_name,
+            )
+
             # Create minimal config dict with only needed values
             config = {
                 "provider": provider,
@@ -173,21 +181,24 @@ def create_agent(
             # In tests, this may fail because the repository isn't set up
             # So we'll use default values
             config = {}
-            
+
         max_input_tokens = (
             get_model_token_limit(config, agent_type, model) or DEFAULT_TOKEN_LIMIT
         )
 
         # Get the model parameters from models_params
         from ra_aid.models_params import models_params
+
         provider_config = models_params.get(config.get("provider", ""), {})
         model_config = provider_config.get(config.get("model", ""), {})
-        
+
         # Determine which agent backend to use
         agent_backend = model_config.get("default_backend", DEFAULT_AGENT_BACKEND)
-        
+
         if agent_backend == AgentBackendType.CREATE_REACT_AGENT:
-            logger.debug("Using create_react_agent to instantiate agent based on model config.")
+            logger.debug(
+                "Using create_react_agent to instantiate agent based on model config."
+            )
             agent_kwargs = build_agent_kwargs(checkpointer, model, max_input_tokens)
             return create_react_agent(
                 model, tools, interrupt_after=["tools"], **agent_kwargs
@@ -199,16 +210,16 @@ def create_agent(
     except Exception as e:
         # Default to REACT agent if provider/model detection fails
         logger.warning(f"Failed to detect model type: {e}. Defaulting to REACT agent.")
-        
+
         # Get only needed values for get_model_token_limit
         provider = get_config_repository().get("provider", "anthropic")
         model_name = get_config_repository().get("model", "")
-        
+
         # Create config with only needed keys
         config = {"provider": provider}
         if model_name:
             config["model"] = model_name
-        
+
         max_input_tokens = get_model_token_limit(config, agent_type, model)
         agent_kwargs = build_agent_kwargs(checkpointer, model, max_input_tokens)
         return create_react_agent(
@@ -359,14 +370,14 @@ def init_fallback_handler(agent: RAgents, tools: List[Any]):
         retry_fallback_count = get_config_repository().get("retry_fallback_count", None)
         provider = get_config_repository().get("provider", "anthropic")
         model = get_config_repository().get("model", "")
-        
+
         config_for_fallback = {
             "fallback_tool_model_limit": fallback_tool_model_limit,
             "retry_fallback_count": retry_fallback_count,
             "provider": provider,
             "model": model,
         }
-        
+
         return FallbackHandler(config_for_fallback, tools)
     return None
 
@@ -389,7 +400,7 @@ def _handle_fallback_response(
         msg_list.extend(msg_list_response)
 
 
-def initialize_callback_handler(config, agent: RAgents):
+def initialize_callback_handler(agent: RAgents):
     """
     Initialize the callback handler for token tracking.
 
@@ -400,16 +411,17 @@ def initialize_callback_handler(config, agent: RAgents):
     Returns:
         tuple: (callback_handler, stream_config) - The callback handler and updated stream config
     """
-    stream_config = config.copy()
+    config = get_config_repository()
+    stream_config_dict = config.deep_copy().to_dict()
     cb = None
 
     if not config.get("track_cost", True):
         logger.debug("Cost tracking is disabled, skipping callback handler")
-        return cb, stream_config
+        return cb, stream_config_dict
 
     # Only supporting anthropic ReAct Agent for now
     if not isinstance(agent, CompiledGraph):
-        return cb, stream_config
+        return cb, stream_config_dict
 
     model_name = DEFAULT_MODEL
 
@@ -425,25 +437,32 @@ def initialize_callback_handler(config, agent: RAgents):
 
     cb = AnthropicCallbackHandler(model_name)
 
-    if "callbacks" not in stream_config:
-        stream_config["callbacks"] = []
-    stream_config["callbacks"].append(cb)
+    # Add callback to callbacks list in the dictionary
+    if "callbacks" not in stream_config_dict:
+        stream_config_dict["callbacks"] = []
+    stream_config_dict["callbacks"].append(cb)
 
-    return cb, stream_config
+    return cb, stream_config_dict
 
 
-def _prepare_state_config():
+def _prepare_state_config(config: Dict[str, Any]):
     """
     Prepare the state configuration for agent.get_state().
 
+    Args:
+        config: The configuration dictionary to update
+
     Returns:
-        dict: The prepared state configuration
+        dict: The updated configuration dictionary
     """
     config_repo = get_config_repository()
-    state_config = config_repo.get_all().copy()
     thread_id = config_repo.get("thread_id", str(uuid.uuid4()))
-    state_config = {"configurable": {"thread_id": thread_id}}
-    return state_config
+
+    if "configurable" not in config:
+        config["configurable"] = {}
+
+    config["configurable"]["thread_id"] = thread_id
+    return config
 
 
 def _get_agent_state(agent: RAgents, state_config: Dict[str, Any]):
@@ -484,9 +503,8 @@ def _run_agent_stream(agent: RAgents, msg_list: list[BaseMessage]):
     This function adheres to the latest LangGraph best practices (as of March 2025) for handling
     human-in-the-loop interruptions using interrupt_after=["tools"].
     """
-    config = get_config_repository().get_all()
-
-    _cb, stream_config = initialize_callback_handler(config, agent)
+    _cb, stream_config = initialize_callback_handler(agent)
+    stream_config = _prepare_state_config(stream_config)
 
     while True:
         logger.debug("Using stream_config for agent.stream(): %s", stream_config)
@@ -502,17 +520,11 @@ def _run_agent_stream(agent: RAgents, msg_list: list[BaseMessage]):
 
         logger.debug("Stream iteration ended; checking agent state for continuation.")
 
-        state_config = _prepare_state_config()
-        logger.debug("Using state_config for agent.get_state(): %s", state_config)
-
-        state = _get_agent_state(agent, state_config)
+        state = _get_agent_state(agent, stream_config)
 
         if state.next:
-            logger.debug(
-                "State indicates continuation (state.next: %s); resuming execution.",
-                state.next,
-            )
-            agent.invoke(None, stream_config)  # Modified to use stream_config
+            logger.debug(f"Continuing execution with state.next: {state.next}")
+            agent.invoke(None, stream_config)
             continue
         else:
             logger.debug("No continuation indicated in state; exiting stream loop.")
@@ -533,23 +545,22 @@ def run_agent_with_retry(
     base_delay = 1
     test_attempts = 0
 
-
     _max_test_retries = get_config_repository().get(
         "max_test_cmd_retries", DEFAULT_MAX_TEST_CMD_RETRIES
     )
     auto_test = get_config_repository().get("auto_test", False)
-    
+
     # Create run_config with only the values needed by execute_test_command
     original_prompt = prompt
     msg_list = [HumanMessage(content=prompt)]
-    
+
     # Get all values needed for run_config
     test_cmd = get_config_repository().get("test_cmd", None)
     max_test_cmd_retries = get_config_repository().get(
         "max_test_cmd_retries", DEFAULT_MAX_TEST_CMD_RETRIES
     )
     test_cmd_timeout = get_config_repository().get("test_cmd_timeout", None)
-    
+
     run_config = {
         "test_cmd": test_cmd,
         "max_test_cmd_retries": max_test_cmd_retries,

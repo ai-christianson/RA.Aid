@@ -101,6 +101,18 @@ class ConfigRepository:
         for key in self.get_keys():
             new_repo.set(key, self.get(key))
         return new_repo
+        
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        Convert the repository configuration to a dictionary.
+        
+        Returns:
+            Dict[str, Any]: A dictionary containing all configuration values
+        """
+        result = {}
+        for key in self.get_keys():
+            result[key] = self.get(key)
+        return result
 
 
 class ConfigRepositoryManager:

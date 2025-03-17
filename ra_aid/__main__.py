@@ -204,7 +204,7 @@ def launch_server(host: str, port: int, args):
         RelatedFilesRepositoryManager() as related_files_repo,
         TrajectoryRepositoryManager(db) as trajectory_repo,
         WorkLogRepositoryManager() as work_log_repo,
-        ConfigRepositoryManager(config) as config_repo,
+        ConfigRepositoryManager() as config_repo,
         EnvInvManager(env_data) as env_inv,
     ):
         # This initializes all repositories and makes them available via their respective get methods
@@ -702,7 +702,7 @@ def main():
                 RelatedFilesRepositoryManager() as related_files_repo,
                 TrajectoryRepositoryManager(db) as trajectory_repo,
                 WorkLogRepositoryManager() as work_log_repo,
-                ConfigRepositoryManager(config) as config_repo,
+                ConfigRepositoryManager() as config_repo,
                 EnvInvManager(env_data) as env_inv,
             ):
                 # This initializes all repositories and makes them available via their respective get methods
