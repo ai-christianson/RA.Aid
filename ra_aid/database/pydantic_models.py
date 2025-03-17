@@ -223,10 +223,6 @@ class TrajectoryModel(BaseModel):
         error_type: The type/class of the error if is_error is True
         error_details: Additional error details if is_error is True
         session_id: Optional reference to the associated session
-        
-        # Legacy fields (kept for backward compatibility)
-        cost: Alias for current_cost
-        tokens: Alias for current_tokens
     """
     id: Optional[int] = None
     created_at: datetime.datetime
