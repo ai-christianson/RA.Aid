@@ -157,15 +157,6 @@ class TrajectoryRepository:
         human_input_id: Optional[int] = None,
         session_id: Optional[int] = None,
         current_cost: Optional[float] = None,  # Cost of the last LLM message
-        current_tokens: Optional[
-            int
-        ] = None,  # Tokens (input + output) for the last message
-        total_cost: Optional[
-            float
-        ] = None,  # Running total cost across all AI agents in this session
-        total_tokens: Optional[
-            int
-        ] = None,  # Running total tokens across all AI agents in this session
         input_tokens: Optional[int] = None,
         output_tokens: Optional[int] = None,
         is_error: bool = False,
@@ -191,6 +182,7 @@ class TrajectoryRepository:
             error_message: The error message (if is_error is True)
             error_type: The type/class of the error (if is_error is True)
             error_details: Additional error details like stack traces (if is_error is True)
+            session_id: Specify session_id or fetches current session id by default
 
         Returns:
             TrajectoryModel: The newly created trajectory instance as a Pydantic model
@@ -216,21 +208,22 @@ class TrajectoryRepository:
                 except peewee.DoesNotExist:
                     logger.warning(f"Human input with ID {human_input_id} not found")
 
-            session_repo = get_session_repository()
-            session_record = session_repo.get_current_session_record()
+            new_session_id = session_id
+            if not session_id:
+                session_repo = get_session_repository()
+                session_record = session_repo.get_current_session_record()
+                new_session_id = session_record.get_id()
+                
 
             trajectory = Trajectory.create(
                 human_input=human_input,
-                session=session_record.get_id(),
+                session=new_session_id,
                 tool_name=tool_name or "",  # Use empty string if tool_name is None
                 tool_parameters=tool_parameters_json,
                 tool_result=tool_result_json,
                 step_data=step_data_json,
                 record_type=record_type,
                 current_cost=current_cost,
-                current_tokens=current_tokens,
-                total_cost=total_cost,
-                total_tokens=total_tokens,
                 input_tokens=input_tokens,
                 output_tokens=output_tokens,
                 is_error=is_error,
@@ -277,9 +270,6 @@ class TrajectoryRepository:
         tool_result: Optional[Dict[str, Any]] = None,
         step_data: Optional[Dict[str, Any]] = None,
         current_cost: Optional[float] = None,
-        current_tokens: Optional[int] = None,
-        total_cost: Optional[float] = None,
-        total_tokens: Optional[int] = None,
         input_tokens: Optional[int] = None,
         output_tokens: Optional[int] = None,
         is_error: Optional[bool] = None,
@@ -331,15 +321,6 @@ class TrajectoryRepository:
 
             if current_cost is not None:
                 update_data["current_cost"] = current_cost
-
-            if current_tokens is not None:
-                update_data["current_tokens"] = current_tokens
-
-            if total_cost is not None:
-                update_data["total_cost"] = total_cost
-
-            if total_tokens is not None:
-                update_data["total_tokens"] = total_tokens
 
             if input_tokens is not None:
                 update_data["input_tokens"] = input_tokens
@@ -461,17 +442,17 @@ class TrajectoryRepository:
                                       or None if not found
         """
         return self.get(trajectory_id)
-        
+
     def get_session_usage_totals(self, session_id: int) -> Dict[str, Any]:
         """
         Calculate total usage metrics for a session by summing all trajectory records.
-        
+
         Args:
             session_id: The ID of the session to calculate totals for
-            
+
         Returns:
             Dict[str, Any]: Dictionary containing total cost, tokens, input tokens, and output tokens
-            
+
         Raises:
             peewee.DatabaseError: If there's an error accessing the database
         """
@@ -481,12 +462,12 @@ class TrajectoryRepository:
                 "total_input_tokens": 0,
                 "total_output_tokens": 0,
             }
-            
+
             trajectories = Trajectory.select().where(
-                (Trajectory.session == session_id) & 
-                (Trajectory.record_type == "model_usage")
+                (Trajectory.session == session_id)
+                & (Trajectory.record_type == "model_usage")
             )
-            
+
             for traj in trajectories:
                 if traj.current_cost is not None:
                     totals["total_cost"] += traj.current_cost
@@ -494,10 +475,12 @@ class TrajectoryRepository:
                     totals["total_input_tokens"] += traj.input_tokens
                 if traj.output_tokens is not None:
                     totals["total_output_tokens"] += traj.output_tokens
-            
+
             # Calculate total tokens from input and output tokens
-            totals["total_tokens"] = totals["total_input_tokens"] + totals["total_output_tokens"]
-            
+            totals["total_tokens"] = (
+                totals["total_input_tokens"] + totals["total_output_tokens"]
+            )
+
             logger.debug(
                 f"Calculated session {session_id} totals: "
                 f"cost=${totals['total_cost']:.6f}, "
@@ -505,7 +488,7 @@ class TrajectoryRepository:
                 f"input={totals['total_input_tokens']}, "
                 f"output={totals['total_output_tokens']}"
             )
-            
+
             return totals
         except peewee.DatabaseError as e:
             logger.error(f"Failed to calculate session usage totals: {str(e)}")
