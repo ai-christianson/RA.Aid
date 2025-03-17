@@ -41,10 +41,8 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
     try:
         # Try to execute a query that selects the columns
         database.execute_sql("SELECT total_output_tokens, total_tokens, total_input_tokens, total_cost FROM session LIMIT 1")
-        print("Session token tracking columns already exist, skipping...")
     except Exception as e:
         # If the query fails, the columns don't exist, so add them
-        print(f"Adding session token tracking columns: {e}")
         migrator.add_fields(
             'session',
             total_output_tokens=pw.IntegerField(default=0),
@@ -55,9 +53,7 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
     # Check if the session foreign key already exists in human_input
     try:
         database.execute_sql("SELECT session_id FROM human_input LIMIT 1")
-        print("Human input session foreign key already exists, skipping...")
     except Exception as e:
-        print(f"Adding human_input session foreign key: {e}")
         migrator.add_fields(
             'human_input',
             session=pw.ForeignKeyField(column_name='session_id', field='id', model=migrator.orm['session'], null=True))
@@ -65,9 +61,7 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
     # Check if the foreign keys already exist in key_fact
     try:
         database.execute_sql("SELECT human_input_id, session_id FROM key_fact LIMIT 1")
-        print("Key fact foreign keys already exist, skipping...")
     except Exception as e:
-        print(f"Adding key_fact foreign keys: {e}")
         migrator.add_fields(
             'key_fact',
             human_input=pw.ForeignKeyField(column_name='human_input_id', field='id', model=migrator.orm['human_input'], null=True),
@@ -76,9 +70,7 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
     # Check if the foreign keys already exist in key_snippet
     try:
         database.execute_sql("SELECT human_input_id, session_id FROM key_snippet LIMIT 1")
-        print("Key snippet foreign keys already exist, skipping...")
     except Exception as e:
-        print(f"Adding key_snippet foreign keys: {e}")
         migrator.add_fields(
             'key_snippet',
             human_input=pw.ForeignKeyField(column_name='human_input_id', field='id', model=migrator.orm['human_input'], null=True),
@@ -87,9 +79,7 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
     # Check if basemodel table already exists
     try:
         database.execute_sql("SELECT id FROM basemodel LIMIT 1")
-        print("BaseModel table already exists, skipping...")
     except Exception as e:
-        print(f"Creating BaseModel table: {e}")
         @migrator.create_model
         class BaseModel(pw.Model):
             id = pw.AutoField()
@@ -102,9 +92,7 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
     # Check if research_note table already exists
     try:
         database.execute_sql("SELECT id FROM research_note LIMIT 1")
-        print("ResearchNote table already exists, skipping...")
     except Exception as e:
-        print(f"Creating ResearchNote table: {e}")
         @migrator.create_model
         class ResearchNote(pw.Model):
             id = pw.AutoField()
@@ -120,9 +108,7 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
     # Check if trajectory table already exists
     try:
         database.execute_sql("SELECT id FROM trajectory LIMIT 1")
-        print("Trajectory table already exists, skipping...")
     except Exception as e:
-        print(f"Creating Trajectory table: {e}")
         @migrator.create_model
         class Trajectory(pw.Model):
             id = pw.AutoField()
