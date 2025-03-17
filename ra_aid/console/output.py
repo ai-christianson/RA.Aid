@@ -95,10 +95,6 @@ def print_agent_output(
                         err_msg, tool_name=tool_name, base_message=msg
                     )
 
-
-# The cpm and console_panel functions have been moved to formatting.py to resolve circular imports
-
-
 def print_messages_compact(messages: Sequence[BaseMessage]) -> None:
     """Print a compact representation of a list of messages.
 
