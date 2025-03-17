@@ -228,10 +228,11 @@ class TrajectoryRepository:
             #         logger.warning("Could not import Session model")
             session_repo = get_session_repository()
             session_record = session_repo.get_current_session_record()
+            # session_record.get_id()
 
             trajectory = Trajectory.create(
                 human_input=human_input,
-                session=session_record,
+                session=session_record.get_id(),
                 tool_name=tool_name or "",  # Use empty string if tool_name is None
                 tool_parameters=tool_parameters_json,
                 tool_result=tool_result_json,
@@ -341,11 +342,9 @@ class TrajectoryRepository:
 
             if current_cost is not None:
                 update_data["current_cost"] = current_cost
-                update_data["cost"] = current_cost  # For backward compatibility
 
             if current_tokens is not None:
                 update_data["current_tokens"] = current_tokens
-                update_data["tokens"] = current_tokens  # For backward compatibility
 
             if total_cost is not None:
                 update_data["total_cost"] = total_cost

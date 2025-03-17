@@ -55,13 +55,37 @@ def mock_human_input_repository():
 
 
 @pytest.fixture()
-def mock_repository_access(mock_trajectory_repository, mock_human_input_repository):
+def mock_session_repository():
+    """Mock the SessionRepository to avoid database operations during tests."""
+    with patch('ra_aid.database.repositories.session_repository.SessionRepository') as mock:
+        # Setup a mock repository
+        mock_repo = MagicMock()
+        session_record = MagicMock()
+        session_record.id = 1
+        session_record.get_id.return_value = 1
+        mock_repo.get_current_session_record.return_value = session_record
+        mock.return_value = mock_repo
+        
+        # Set the contextvar
+        from ra_aid.database.repositories.session_repository import session_repo_var
+        token = session_repo_var.set(mock_repo)
+        
+        yield mock_repo
+        
+        # Reset the contextvar
+        session_repo_var.reset(token)
+
+
+@pytest.fixture()
+def mock_repository_access(mock_trajectory_repository, mock_human_input_repository, mock_session_repository):
     """Mock all repository accessor functions."""
     with patch('ra_aid.database.repositories.trajectory_repository.get_trajectory_repository', 
               return_value=mock_trajectory_repository):
         with patch('ra_aid.database.repositories.human_input_repository.get_human_input_repository',
                   return_value=mock_human_input_repository):
-            yield
+            with patch('ra_aid.database.repositories.session_repository.get_session_repository',
+                      return_value=mock_session_repository):
+                yield
 
 
 @pytest.fixture(autouse=True)

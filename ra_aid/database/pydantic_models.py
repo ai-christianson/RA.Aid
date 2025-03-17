@@ -223,13 +223,21 @@ class TrajectoryModel(BaseModel):
         tool_result: Dictionary containing the result returned by the tool
         step_data: Dictionary containing UI rendering data
         record_type: Type of trajectory record
-        cost: Optional cost of the tool execution
-        tokens: Optional token usage of the tool execution
+        current_cost: Optional cost of the last LLM message
+        current_tokens: Optional tokens (input + output) for the last message
+        total_cost: Optional running total cost across all AI agents in this session
+        total_tokens: Optional running total tokens across all AI agents in this session
+        input_tokens: Optional input/prompt token usage
+        output_tokens: Optional output/completion token usage
         is_error: Flag indicating if this record represents an error
         error_message: The error message if is_error is True
         error_type: The type/class of the error if is_error is True
         error_details: Additional error details if is_error is True
         session_id: Optional reference to the associated session
+        
+        # Legacy fields (kept for backward compatibility)
+        cost: Alias for current_cost
+        tokens: Alias for current_tokens
     """
     id: Optional[int] = None
     created_at: datetime.datetime
@@ -240,8 +248,14 @@ class TrajectoryModel(BaseModel):
     tool_result: Optional[Any] = None
     step_data: Optional[Dict[str, Any]] = None
     record_type: Optional[str] = None
-    cost: Optional[float] = None
-    tokens: Optional[int] = None
+    current_cost: Optional[float] = None
+    current_tokens: Optional[int] = None
+    total_cost: Optional[float] = None
+    total_tokens: Optional[int] = None
+    input_tokens: Optional[int] = None
+    output_tokens: Optional[int] = None
+    cost: Optional[float] = None  # Legacy field
+    tokens: Optional[int] = None  # Legacy field
     is_error: bool = False
     error_message: Optional[str] = None
     error_type: Optional[str] = None
