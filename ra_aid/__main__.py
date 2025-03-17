@@ -895,7 +895,7 @@ def main():
                     return
 
                 # Validate message is provided
-                if not args.message:
+                if not args.message and not args.wipe_project_memory:  # Add check for wipe_project_memory flag
                     try:
                         trajectory_repo = get_trajectory_repository()
                         human_input_id = get_human_input_repository().get_most_recent_id()
@@ -917,7 +917,8 @@ def main():
                     print_error("--message is required")
                     sys.exit(1)
 
-                base_task = args.message
+                if args.message:  # Only set base_task if message exists
+                    base_task = args.message
 
                 # Record CLI input in database
                 try:
