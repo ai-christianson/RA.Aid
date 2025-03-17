@@ -228,27 +228,6 @@ def get_provider_and_model_for_agent_type(
     return provider, model_name
 
 
-def get_model_name_from_chat_model(model: Optional[BaseChatModel]) -> str:
-    """Extract the model name from a BaseChatModel instance.
-
-    Args:
-        model: The BaseChatModel instance
-
-    Returns:
-        str: The model name extracted from the instance, or DEFAULT_MODEL if not found
-    """
-    if model is None:
-        return DEFAULT_MODEL
-
-    if hasattr(model, "model"):
-        return model.model
-    elif hasattr(model, "model_name"):
-        return model.model_name
-    else:
-        logger.debug(f"Could not extract model name from {model}, using DEFAULT_MODEL")
-        return DEFAULT_MODEL
-
-
 def adjust_claude_37_token_limit(
     max_input_tokens: int, model: Optional[BaseChatModel]
 ) -> Optional[int]:
