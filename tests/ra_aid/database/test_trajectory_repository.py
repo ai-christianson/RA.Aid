@@ -135,8 +135,9 @@ def sample_trajectory(
         tool_result=json.dumps(test_tool_result),
         step_data=json.dumps(test_step_data),
         record_type="tool_execution",
-        current_cost=0.001,
-        current_tokens=100,
+        current_cost=0,
+        input_tokens=0,
+        output_tokens=0,
         is_error=False,
     )
 
@@ -475,7 +476,7 @@ def test_get_session_usage_totals(setup_db):
 
     # Create a second session
     Session.create(id=2, name="Test Session 2")
-    
+
     # Create a record for a different session that should be ignored
     Trajectory.create(
         session=2,
@@ -493,10 +494,10 @@ def test_get_session_usage_totals(setup_db):
     assert totals["total_input_tokens"] == 600  # 100 + 200 + 300
     assert totals["total_output_tokens"] == 300  # 50 + 100 + 150
     assert totals["total_tokens"] == 900  # 600 + 300
-    
+
     # Get totals for session 2
     totals_session2 = repo.get_session_usage_totals(2)
-    
+
     # Verify the totals for session 2
     assert totals_session2["total_cost"] == 0.999  # Just the one record
     assert totals_session2["total_input_tokens"] == 999
