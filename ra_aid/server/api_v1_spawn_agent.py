@@ -20,7 +20,7 @@ from ra_aid.database.repositories.work_log_repository import WorkLogRepositoryMa
 from ra_aid.database.repositories.config_repository import ConfigRepositoryManager, get_config_repository
 from ra_aid.env_inv_context import EnvInvManager
 from ra_aid.env_inv import EnvDiscovery
-from ra_aid.llm import initialize_llm
+from ra_aid.llm import initialize_llm, get_model_default_temperature
 
 # Create logger
 logger = logging.getLogger(__name__)
@@ -71,6 +71,7 @@ def run_agent_thread(
     message: str,
     session_id: str,
     research_only: bool = False,
+    **kwargs
 ):
     """
     Run a research agent in a separate thread with proper repository initialization.
@@ -114,7 +115,11 @@ def run_agent_thread(
             # Get configuration values from config repository
             provider = get_config_repository().get("provider", "anthropic")
             model_name = get_config_repository().get("model", "claude-3-7-sonnet-20250219")
-            temperature = get_config_repository().get("temperature")
+            temperature = kwargs.get("temperature")
+            
+            # If temperature is None but model supports it, use the default from model_config
+            if temperature is None:
+                temperature = get_model_default_temperature(provider, model_name)
             
             # Get expert_enabled and web_research_enabled from config repository
             expert_enabled = get_config_repository().get("expert_enabled", True)
@@ -167,6 +172,14 @@ async def spawn_agent(
         config_repo = get_config_repository()
         expert_enabled = config_repo.get("expert_enabled", True)
         web_research_enabled = config_repo.get("web_research_enabled", False)
+        provider = config_repo.get("provider", "anthropic")
+        model = config_repo.get("model", "claude-3-7-sonnet-20250219")
+        # Get temperature value (or None if not provided)
+        temperature = config_repo.get("temperature")
+        
+        # If temperature is None, use the model's default temperature
+        if temperature is None:
+            temperature = get_model_default_temperature(provider, model)
         
         # Create a new session with config values (not request parameters)
         metadata = {
@@ -183,7 +196,10 @@ async def spawn_agent(
                 request.message,
                 str(session.id),
                 request.research_only,
-            )
+            ),
+            kwargs={
+                "temperature": temperature
+            }
         )
         thread.daemon = True  # Thread will terminate when main process exits
         thread.start()

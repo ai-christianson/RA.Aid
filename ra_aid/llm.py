@@ -188,6 +188,26 @@ def get_provider_config(provider: str, is_expert: bool = False) -> Dict[str, Any
     return config
 
 
+def get_model_default_temperature(provider: str, model_name: str) -> float:
+    """Get the default temperature for a given model.
+    
+    Args:
+        provider: The LLM provider
+        model_name: Name of the model
+        
+    Returns:
+        The default temperature value from models_params, or DEFAULT_TEMPERATURE if not specified
+    """
+    from ra_aid.models_params import models_params, DEFAULT_TEMPERATURE
+    
+    # Extract the model_config directly from models_params
+    model_config = models_params.get(provider, {}).get(model_name, {})
+    default_temp = model_config.get("default_temperature")
+    
+    # Return the model's default_temperature if it exists, otherwise DEFAULT_TEMPERATURE
+    return default_temp if default_temp is not None else DEFAULT_TEMPERATURE
+
+
 def create_llm_client(
     provider: str,
     model_name: str,
@@ -243,8 +263,9 @@ def create_llm_client(
         temp_kwargs = {"temperature": 0} if supports_temperature else {}
     elif supports_temperature:
         if temperature is None:
-            temperature = 0.7
-            msg = "This model supports temperature argument but none was given. Setting default temperature to 0.7."
+            # Use the model's default temperature from models_params
+            temperature = get_model_default_temperature(provider, model_name)
+            msg = f"This model supports temperature argument but none was given. Using model default temperature: {temperature}."
             
             try:
                 # Try to log to the database, but continue even if it fails

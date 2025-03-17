@@ -72,7 +72,7 @@ from ra_aid.dependencies import check_dependencies
 from ra_aid.env import validate_environment
 from ra_aid.exceptions import AgentInterrupt
 from ra_aid.fallback_handler import FallbackHandler
-from ra_aid.llm import initialize_llm
+from ra_aid.llm import initialize_llm, get_model_default_temperature
 from ra_aid.logging_config import get_logger, setup_logging
 from ra_aid.models_params import DEFAULT_TEMPERATURE, models_params
 from ra_aid.project_info import format_project_info, get_project_info
@@ -167,10 +167,10 @@ def launch_server(host: str, port: int, args):
     if supports_temperature and args.temperature is None:
         args.temperature = model_config.get("default_temperature")
         if args.temperature is None:
+            args.temperature = get_model_default_temperature(args.provider, args.model)
             cpm(
-                f"This model supports temperature argument but none was given. Setting default temperature to {DEFAULT_TEMPERATURE}."
+                f"This model supports temperature argument but none was given. Using model default temperature: {args.temperature}."
             )
-            args.temperature = DEFAULT_TEMPERATURE
         logger.debug(
             f"Using default temperature {args.temperature} for model {args.model}"
         )
@@ -723,10 +723,10 @@ def main():
                 if supports_temperature and args.temperature is None:
                     args.temperature = model_config.get("default_temperature")
                     if args.temperature is None:
+                        args.temperature = get_model_default_temperature(args.provider, args.model)
                         cpm(
-                            f"This model supports temperature argument but none was given. Setting default temperature to {DEFAULT_TEMPERATURE}."
+                            f"This model supports temperature argument but none was given. Using model default temperature: {args.temperature}."
                         )
-                        args.temperature = DEFAULT_TEMPERATURE
                     logger.debug(
                         f"Using default temperature {args.temperature} for model {args.model}"
                     )
@@ -838,7 +838,6 @@ def main():
                         "recursion_limit": args.recursion_limit,
                         "chat_mode": True,
                         "cowboy_mode": args.cowboy_mode,
-                        "hil": True,  # Always true in chat mode
                         "web_research_enabled": web_research_enabled,
                         "initial_request": initial_request,
                         "limit_tokens": args.disable_limit_tokens,
