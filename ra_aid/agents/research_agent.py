@@ -12,19 +12,21 @@ import uuid
 from datetime import datetime
 from typing import Any, Optional
 
-from langchain_core.messages import SystemMessage
 from rich.console import Console
-from rich.markdown import Markdown
-from rich.panel import Panel
 
-from ra_aid.agent_context import agent_context, is_completed, reset_completion_flags, should_exit
 # Import agent_utils functions at runtime to avoid circular imports
 from ra_aid import agent_utils
-from ra_aid.console.formatting import print_error
+from ra_aid.console.formatting import cpm
 from ra_aid.database.repositories.key_fact_repository import get_key_fact_repository
-from ra_aid.database.repositories.key_snippet_repository import get_key_snippet_repository
-from ra_aid.database.repositories.human_input_repository import get_human_input_repository
-from ra_aid.database.repositories.research_note_repository import get_research_note_repository
+from ra_aid.database.repositories.key_snippet_repository import (
+    get_key_snippet_repository,
+)
+from ra_aid.database.repositories.human_input_repository import (
+    get_human_input_repository,
+)
+from ra_aid.database.repositories.research_note_repository import (
+    get_research_note_repository,
+)
 from ra_aid.database.repositories.config_repository import get_config_repository
 from ra_aid.database.repositories.work_log_repository import get_work_log_repository
 from ra_aid.env_inv_context import get_env_inv
@@ -36,7 +38,11 @@ from ra_aid.model_formatters.key_snippets_formatter import format_key_snippets_d
 from ra_aid.model_formatters.research_notes_formatter import format_research_notes_dict
 from ra_aid.text.processing import process_thinking_content
 from ra_aid.models_params import models_params
-from ra_aid.project_info import display_project_status, format_project_info, get_project_info
+from ra_aid.project_info import (
+    display_project_status,
+    format_project_info,
+    get_project_info,
+)
 from ra_aid.prompts.expert_prompts import EXPERT_PROMPT_SECTION_RESEARCH
 from ra_aid.prompts.human_prompts import HUMAN_PROMPT_SECTION_RESEARCH
 from ra_aid.prompts.research_prompts import RESEARCH_ONLY_PROMPT, RESEARCH_PROMPT
@@ -101,6 +107,7 @@ def run_research_agent(
 
     if memory is None:
         from langgraph.checkpoint.memory import MemorySaver
+
         memory = MemorySaver()
 
     current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -115,9 +122,7 @@ def run_research_agent(
             recent_input = human_input_repository.get(most_recent_id)
             if recent_input and recent_input.content != base_task_or_query:
                 last_human_input = recent_input.content
-                base_task = (
-                    f"<last human input>{last_human_input}</last human input>\n{base_task}"
-                )
+                base_task = f"<last human input>{last_human_input}</last human input>\n{base_task}"
     except RuntimeError as e:
         logger.error(f"Failed to access human input repository: {str(e)}")
         # Continue without appending last human input
@@ -198,7 +203,9 @@ def run_research_agent(
                     tool_info = get_tool_info(tool.func)
                     name = tool.func.__name__
                     description = inspect.getdoc(tool.func)
-                    tool_metadata.append(f"Tool: {tool_info}\nDescription: {description}\n")
+                    tool_metadata.append(
+                        f"Tool: {tool_info}\nDescription: {description}\n"
+                    )
                 except Exception as e:
                     logger.warning(f"Error getting tool info for {tool}: {e}")
 
@@ -226,7 +233,7 @@ def run_research_agent(
             cpm(
                 "Consulting with the reasoning model on the best research approach.",
                 title="📝 Thinking about research strategy...",
-                border_style="yellow"
+                border_style="yellow",
             )
 
             logger.debug("Invoking expert model for reasoning assist")
@@ -274,7 +281,7 @@ def run_research_agent(
                     cpm(
                         thinking_content,
                         title="💭 Expert Thinking",
-                        border_style="yellow"
+                        border_style="yellow",
                     )
 
                 # Use response_text if available, otherwise fall back to joining
@@ -298,11 +305,7 @@ def run_research_agent(
                 )
 
             # Display the expert guidance in a panel
-            cpm(
-                content,
-                title="Research Strategy Guidance",
-                border_style="blue"
-            )
+            cpm(content, title="Research Strategy Guidance", border_style="blue")
 
             # Use the content as expert guidance
             expert_guidance = (
@@ -314,7 +317,9 @@ def run_research_agent(
             logger.error("Error getting expert guidance for research: %s", e)
             expert_guidance = ""
 
-    agent = agent_utils.create_agent(model, tools, checkpointer=memory, agent_type="research")
+    agent = agent_utils.create_agent(
+        model, tools, checkpointer=memory, agent_type="research"
+    )
 
     expert_section = EXPERT_PROMPT_SECTION_RESEARCH if expert_enabled else ""
     human_section = HUMAN_PROMPT_SECTION_RESEARCH if hil else ""
@@ -379,7 +384,9 @@ YOU MUST FOLLOW THE EXPERT'S GUIDANCE OR ELSE BE TERMINATED!
         if agent is not None:
             logger.debug("Research agent created successfully")
             none_or_fallback_handler = agent_utils.init_fallback_handler(agent, tools)
-            _result = agent_utils.run_agent_with_retry(agent, prompt, none_or_fallback_handler)
+            _result = agent_utils.run_agent_with_retry(
+                agent, prompt, none_or_fallback_handler
+            )
             if _result:
                 # Log research completion
                 log_work_event(f"Completed research phase for: {base_task_or_query}")
@@ -447,6 +454,7 @@ def run_web_research_agent(
 
     if memory is None:
         from langgraph.checkpoint.memory import MemorySaver
+
         memory = MemorySaver()
 
     if thread_id is None:
@@ -454,7 +462,9 @@ def run_web_research_agent(
 
     tools = get_web_research_tools(expert_enabled=expert_enabled)
 
-    agent = agent_utils.create_agent(model, tools, checkpointer=memory, agent_type="research")
+    agent = agent_utils.create_agent(
+        model, tools, checkpointer=memory, agent_type="research"
+    )
 
     expert_section = EXPERT_PROMPT_SECTION_RESEARCH if expert_enabled else ""
     human_section = HUMAN_PROMPT_SECTION_RESEARCH if hil else ""
@@ -506,7 +516,9 @@ def run_web_research_agent(
 
         logger.debug("Web research agent completed successfully")
         none_or_fallback_handler = agent_utils.init_fallback_handler(agent, tools)
-        _result = agent_utils.run_agent_with_retry(agent, prompt, none_or_fallback_handler)
+        _result = agent_utils.run_agent_with_retry(
+            agent, prompt, none_or_fallback_handler
+        )
         if _result:
             # Log web research completion
             log_work_event(f"Completed web research phase for: {query}")
