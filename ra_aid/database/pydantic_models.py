@@ -7,7 +7,7 @@ providing validation, serialization, and deserialization capabilities.
 
 import datetime
 import json
-from typing import Dict, List, Any, Optional
+from typing import Dict, Any, Optional
 
 from pydantic import BaseModel, ConfigDict, field_serializer, field_validator
 

@@ -6,12 +6,12 @@ It tests the creation of agent threads and session handling for the spawn-agent 
 """
 
 import pytest
-import threading
 from unittest.mock import MagicMock
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from ra_aid.server.api_v1_spawn_agent import router, get_repository
+from ra_aid.server.api_v1_sessions import get_repository
+from ra_aid.server.api_v1_spawn_agent import router
 from ra_aid.database.pydantic_models import SessionModel
 import datetime
 import ra_aid.server.api_v1_spawn_agent
