@@ -325,7 +325,6 @@ class SessionRepository:
             session.save()
 
             session_id = session.get_id()
-            print(f"session_id={session_id}")
             logger.debug(
                 f"Updated session {session_id} with {input_tokens} input tokens, "
                 f"{output_tokens} output tokens, ${session.total_cost:.6f} cost"

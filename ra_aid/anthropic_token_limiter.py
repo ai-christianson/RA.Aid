@@ -148,13 +148,9 @@ def state_modifier(
         include_system=True,
         num_messages_to_keep=2,
     )
-    logger.info(f"wrapped_token_counter messages={wrapped_token_counter(messages)}")
-    logger.info(
-        f"wrapped_token_counter last message={wrapped_token_counter([messages[-1]])}"
-    )
 
     if len(result) < len(messages):
-        logger.info(
+        logger.debug(
             f"Anthropic Token Limiter Trimmed: {len(messages)} messages → {len(result)} messages"
         )
 

@@ -199,6 +199,7 @@ def launch_server(host: str, port: int, args):
         "web_research_enabled": web_research_enabled,
         "show_thoughts": args.show_thoughts,
         "show_cost": args.show_cost,
+        "track_cost": args.track_cost,
         "force_reasoning_assistance": args.reasoning_assistance,
         "disable_reasoning_assistance": args.no_reasoning_assistance
     }
@@ -440,8 +441,8 @@ Examples:
     parser.add_argument(
         "--track-cost",
         action="store_true",
-        default=True,
-        help="Track token usage and costs (default: True)",
+        default=False,
+        help="Track token usage and costs (default: False)",
     )
     parser.add_argument(
         "--no-track-cost",
@@ -511,6 +512,10 @@ Examples:
     # if auto-test command is provided, validate test-cmd is also provided
     if parsed_args.auto_test and not parsed_args.test_cmd:
         parser.error("Test command is required when using --auto-test")
+        
+    # If show_cost is true, we must also enable track_cost
+    if parsed_args.show_cost:
+        parsed_args.track_cost = True
 
     return parsed_args
 
