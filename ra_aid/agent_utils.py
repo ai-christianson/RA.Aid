@@ -4,7 +4,6 @@ import signal
 import sys
 import threading
 import time
-import uuid
 from typing import Any, Dict, List, Literal, Optional
 
 from langchain_anthropic import ChatAnthropic
@@ -16,9 +15,6 @@ from ra_aid.anthropic_token_limiter import get_model_name_from_chat_model
 
 
 from anthropic import APIError, APITimeoutError, InternalServerError, RateLimitError
-from ra_aid.database.repositories.session_repository import (
-    get_session_repository,
-)
 from openai import RateLimitError as OpenAIRateLimitError
 from litellm.exceptions import RateLimitError as LiteLLMRateLimitError
 from google.api_core.exceptions import ResourceExhausted
@@ -30,7 +26,6 @@ from langchain_core.messages import (
 )
 from langgraph.prebuilt import create_react_agent
 from langgraph.prebuilt.chat_agent_executor import AgentState
-from rich.console import Console
 
 from ra_aid.agent_context import (
     agent_context,
@@ -50,7 +45,7 @@ from ra_aid.exceptions import (
 )
 from ra_aid.fallback_handler import FallbackHandler
 from ra_aid.logging_config import get_logger
-from ra_aid.model_detection import is_claude_37
+from ra_aid.model_detection import model_name_has_claude
 from ra_aid.models_params import DEFAULT_TOKEN_LIMIT, DEFAULT_AGENT_BACKEND, AgentBackendType
 from ra_aid.tools.handle_user_defined_test_cmd_execution import execute_test_command
 from ra_aid.database.repositories.human_input_repository import (
@@ -132,41 +127,6 @@ def build_agent_kwargs(
     agent_kwargs["name"] = model_name
 
     return agent_kwargs
-
-
-def model_name_has_claude(model_name: str) -> bool:
-    """Check if a model name contains 'claude'.
-
-    Args:
-        model_name: The model name to check
-
-    Returns:
-        bool: True if the model name contains 'claude'
-    """
-    return model_name and "claude" in model_name.lower()
-
-
-def is_anthropic_claude(config: Dict[str, Any]) -> bool:
-    """Check if the provider and model name indicate an Anthropic Claude model.
-
-    Args:
-        config: Configuration dictionary containing provider and model information
-
-    Returns:
-        bool: True if this is an Anthropic Claude model
-    """
-    # For backwards compatibility, allow passing of config directly
-    provider = config.get("provider", "")
-    model_name = config.get("model", "")
-    result = (
-        provider.lower() == "anthropic"
-        and model_name
-        and "claude" in model_name.lower()
-    ) or (
-        provider.lower() == "openrouter"
-        and model_name.lower().startswith("anthropic/claude-")
-    )
-    return result
 
 
 def create_agent(
