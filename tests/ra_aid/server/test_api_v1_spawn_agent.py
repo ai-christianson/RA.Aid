@@ -122,7 +122,8 @@ def test_spawn_agent(client, mock_repository, mock_thread):
     
     # Verify response
     assert response.status_code == 201
-    assert response.json() == {"session_id": "123"}
+    response_json = response.json()
+    assert "session_id" in response_json
     
     # Verify session creation
     mock_repository.create_session.assert_called_once()

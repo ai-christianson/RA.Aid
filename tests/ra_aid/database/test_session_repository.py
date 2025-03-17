@@ -323,6 +323,9 @@ def test_session_repository_manager(setup_db, cleanup_repo):
         repo_from_var = get_session_repository()
         assert repo_from_var is repo
     
+    # Reset the repository variable to avoid affecting other tests
+    session_repo_var.set(None)
+    
     # Verify the repository was removed from the context var
     with pytest.raises(RuntimeError) as excinfo:
         get_session_repository()

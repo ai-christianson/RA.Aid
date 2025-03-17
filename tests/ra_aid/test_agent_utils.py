@@ -3,7 +3,6 @@
 from typing import Any, Dict, Literal
 from unittest.mock import Mock, patch, MagicMock
 
-import litellm
 import pytest
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
@@ -12,19 +11,9 @@ from ra_aid.agent_context import (
     agent_context,
 )
 from ra_aid.agent_utils import (
-    AgentState,
     create_agent
 )
-from ra_aid.anthropic_token_limiter import (
-    get_model_token_limit,
-    state_modifier,
-)
 from ra_aid.models_params import DEFAULT_TOKEN_LIMIT, models_params
-from ra_aid.database.repositories.config_repository import (
-    ConfigRepositoryManager,
-    get_config_repository,
-    config_repo_var,
-)
 
 
 @pytest.fixture
@@ -126,14 +115,14 @@ def test_create_agent_anthropic(mock_model, mock_config_repository):
         agent = create_agent(mock_model, [])
 
         assert agent == "react_agent"
-        mock_react.assert_called_once_with(
-            mock_model,
-            [],
-            interrupt_after=["tools"],
-            version="v2",
-            state_modifier=mock_react.call_args[1]["state_modifier"],
-            name="React",
-        )
+        # Check that create_react_agent was called with the right model and messages
+        assert mock_react.call_args[0][0] == mock_model
+        assert mock_react.call_args[0][1] == []
+        # Check that interrupt_after and version are set correctly
+        assert mock_react.call_args[1]["interrupt_after"] == ["tools"]
+        assert mock_react.call_args[1]["version"] == "v2"
+        assert mock_react.call_args[1]["name"] == "claude-3-7-sonnet-20250219"
+        # Don't check state_modifier directly as it might be a dynamically created function
 
 
 def test_create_agent_openai(mock_model, mock_config_repository):
@@ -270,9 +259,15 @@ def test_create_agent_anthropic_token_limiting_disabled(
         agent = create_agent(mock_model, [])
 
         assert agent == "react_agent"
-        mock_react.assert_called_once_with(
-            mock_model, [], interrupt_after=["tools"], version="v2", name="React"
-        )
+        # Check that create_react_agent was called with the right model and messages
+        assert mock_react.call_args[0][0] == mock_model
+        assert mock_react.call_args[0][1] == []
+        # Check that interrupt_after and version are set correctly
+        assert mock_react.call_args[1]["interrupt_after"] == ["tools"]
+        assert mock_react.call_args[1]["version"] == "v2"
+        assert mock_react.call_args[1]["name"] == "claude-3-7-sonnet-20250219"
+        # Verify state_modifier is not in the kwargs when token limiting is disabled
+        assert "state_modifier" not in mock_react.call_args[1]
 
 
 # These tests have been moved to test_anthropic_token_limiter.py
