@@ -46,7 +46,7 @@ Key sections:
 - [License](#license)
 - [Contact](#contact)
 
-> 👋 **Pull requests are very welcome!** Have ideas for how to impove RA.Aid? Don't be shy - your help makes a real difference!
+> 👋 **Pull requests are very welcome!** Have ideas for how to improve RA.Aid? Don't be shy - your help makes a real difference!
 >
 > 💬 **Join our Discord community:** [Click here to join](https://discord.gg/f6wYbzHYxV)
 
