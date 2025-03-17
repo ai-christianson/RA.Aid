@@ -182,16 +182,17 @@ class AnthropicCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
     def __init__(
         self,
         model_name: str,
-        trajectory_repo: TrajectoryRepository,
-        session_repo: SessionRepository,
     ) -> None:
         super().__init__()
         self._lock = threading.Lock()
         if model_name:
             self.model_name = model_name
 
-        self.trajectory_repo = trajectory_repo
-        self.session_repo = session_repo
+        from ra_aid.database.repositories.trajectory_repository import get_trajectory_repository
+        from ra_aid.database.repositories.session_repository import get_session_repository
+        
+        self.trajectory_repo = get_trajectory_repository()
+        self.session_repo = get_session_repository()
 
         if self.session_repo:
             current_session = self.session_repo.get_current_session_record()

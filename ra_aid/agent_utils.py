@@ -412,14 +412,7 @@ def initialize_callback_handler(config, agent: RAgents):
         )
         return cb, stream_config
 
-    trajectory_repo = get_trajectory_repository()
-    session_repo = get_session_repository()
-
-    cb = AnthropicCallbackHandler(
-        model_name,
-        trajectory_repo=trajectory_repo,
-        session_repo=session_repo,
-    )
+    cb = AnthropicCallbackHandler(model_name)
 
     if "callbacks" not in stream_config:
         stream_config["callbacks"] = []
