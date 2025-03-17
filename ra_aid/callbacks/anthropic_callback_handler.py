@@ -321,13 +321,11 @@ class AnthropicCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
                 self.model_name, self.prompt_tokens, self.completion_tokens
             )
             
-            # Update our local totals
             self.session_totals["cost"] += last_cost
             self.session_totals["tokens"] += self.prompt_tokens + self.completion_tokens
             self.session_totals["input_tokens"] += self.prompt_tokens
             self.session_totals["output_tokens"] += self.completion_tokens
 
-            # Record the usage in trajectory
             self.trajectory_repo.create(
                 record_type="model_usage",
                 current_cost=last_cost,
@@ -335,9 +333,6 @@ class AnthropicCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
                 output_tokens=self.completion_tokens,
                 session_id=self.session_totals["session_id"],
             )
-            
-            # We no longer need to update session totals in the database
-            # as we're now calculating them on-demand from trajectory records
 
         except Exception as e:
             logger.error(f"Failed to store token usage data: {e}")

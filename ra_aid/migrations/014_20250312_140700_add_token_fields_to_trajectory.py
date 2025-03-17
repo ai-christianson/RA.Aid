@@ -86,24 +86,26 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
             current_cost=pw.FloatField(null=True),  # Cost of the current operation
         )
     
-    # Remove legacy fields if they exist
+    # Check if the table exists before trying to remove fields
     try:
-        # Check if the cost field exists
-        Trajectory = migrator.orm.get('trajectory', None)
-        if Trajectory and hasattr(Trajectory, 'cost'):
+        database.execute_sql("SELECT id FROM trajectory LIMIT 1")
+        # Only attempt to remove fields if the table exists
+        try:
             migrator.remove_fields('trajectory', 'cost')
-    except Exception as e:
-        # Log the error but continue with the migration
-        print(f"Error removing cost field: {e}")
-    
-    try:
-        # Check if the tokens field exists
-        Trajectory = migrator.orm.get('trajectory', None)
-        if Trajectory and hasattr(Trajectory, 'tokens'):
+        except Exception as e:
+            # print(f"Error removing cost field: {e}")
+            pass
+        
+        try:
             migrator.remove_fields('trajectory', 'tokens')
-    except Exception as e:
-        # Log the error but continue with the migration
-        print(f"Error removing tokens field: {e}")
+        except Exception as e:
+            # print(f"Error removing tokens field: {e}")
+            pass
+            
+    except pw.OperationalError:
+        # Table doesn't exist, nothing to remove
+        # print("Trajectory table doesn't exist, skipping field removal")
+        pass
 
 
 def rollback(migrator: Migrator, database: pw.Database, *, fake=False):
