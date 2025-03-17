@@ -45,7 +45,8 @@ from ra_aid.exceptions import (
 )
 from ra_aid.fallback_handler import FallbackHandler
 from ra_aid.logging_config import get_logger
-from ra_aid.models_params import DEFAULT_TOKEN_LIMIT
+from ra_aid.model_detection import is_claude_37
+from ra_aid.models_params import DEFAULT_TOKEN_LIMIT, DEFAULT_AGENT_BACKEND, AgentBackendType
 from ra_aid.tools.handle_user_defined_test_cmd_execution import execute_test_command
 from ra_aid.database.repositories.human_input_repository import (
     get_human_input_repository,
@@ -58,7 +59,6 @@ from ra_aid.anthropic_token_limiter import (
     state_modifier,
     get_model_token_limit,
 )
-from ra_aid.model_detection import is_anthropic_claude
 
 console = Console()
 
@@ -99,16 +99,23 @@ def build_agent_kwargs(
     # Use repository method to check if token limiting is enabled
     limit_tokens = get_config_repository().get("limit_tokens", True)
     
-    # Pass provider, model, and other required values directly to is_anthropic_claude
+    # Get model config to check if this is a model that needs token limiting
     provider = get_config_repository().get("provider", "anthropic")
     model_name = get_config_repository().get("model", "")
     
+    # Get the model parameters from models_params
+    from ra_aid.models_params import models_params, AgentBackendType
+    provider_config = models_params.get(provider, {})
+    model_config = provider_config.get(model_name, {})
+    
+    # Check if this model uses the REACT backend (which is what we're configuring kwargs for)
+    uses_react_backend = model_config.get("default_backend", DEFAULT_AGENT_BACKEND) == AgentBackendType.CREATE_REACT_AGENT
+    
     if (
         limit_tokens
-        and is_anthropic_claude({"provider": provider, "model": model_name})
+        and uses_react_backend
         and model is not None
     ):
-
         def wrapped_state_modifier(state: AgentState) -> list[BaseMessage]:
             model_name = get_model_name_from_chat_model(model)
 
@@ -159,6 +166,9 @@ def create_agent(
             provider = get_config_repository().get("provider", "anthropic")
             model_name = get_config_repository().get("model", "")
             
+            logger.debug("Creating agent with config values: provider='%s', model='%s'", 
+                provider, model_name)
+            
             # Create minimal config dict with only needed values
             config = {
                 "provider": provider,
@@ -175,16 +185,22 @@ def create_agent(
             get_model_token_limit(config, agent_type, model) or DEFAULT_TOKEN_LIMIT
         )
 
-        # Use REACT agent for Anthropic Claude models, otherwise use CIAYN
-        if is_anthropic_claude(config):
-            logger.debug("Using create_react_agent to instantiate agent.")
-
+        # Get the model parameters from models_params
+        from ra_aid.models_params import models_params
+        provider_config = models_params.get(config.get("provider", ""), {})
+        model_config = provider_config.get(config.get("model", ""), {})
+        
+        # Determine which agent backend to use
+        agent_backend = model_config.get("default_backend", DEFAULT_AGENT_BACKEND)
+        
+        if agent_backend == AgentBackendType.CREATE_REACT_AGENT:
+            logger.debug("Using create_react_agent to instantiate agent based on model config.")
             agent_kwargs = build_agent_kwargs(checkpointer, model, max_input_tokens)
             return create_react_agent(
                 model, tools, interrupt_after=["tools"], **agent_kwargs
             )
         else:
-            logger.debug("Using CiaynAgent agent instance")
+            logger.debug("Using CiaynAgent agent instance based on model config.")
             return CiaynAgent(model, tools, max_tokens=max_input_tokens, config=config)
 
     except Exception as e:
@@ -407,8 +423,21 @@ def _run_agent_stream(agent: RAgents, msg_list: list[BaseMessage]):
     model_name = get_config_repository().get("model", "")
     provider = get_config_repository().get("provider", "anthropic")
     
+    logger.debug("Agent config values: provider='%s', model='%s', thread_id='%s'", 
+                provider, model_name, get_config_repository().get("thread_id", "unknown"))
+    
+    # Get the model parameters from models_params
+    from ra_aid.models_params import models_params, AgentBackendType
+    provider_config = models_params.get(provider, {})
+    model_config = provider_config.get(model_name, {})
+    
+    # Check if this model uses the REACT backend
+    uses_react_backend = model_config.get("default_backend", DEFAULT_AGENT_BACKEND) == AgentBackendType.CREATE_REACT_AGENT
+    
     cb = None
-    if is_anthropic_claude({"provider": provider, "model": model_name}):
+
+    logger.debug("Model configuration: %s", model_config)
+    if uses_react_backend:
         full_model_name = model_name
         cb = AnthropicCallbackHandler(full_model_name)
         

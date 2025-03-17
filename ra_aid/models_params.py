@@ -1,10 +1,16 @@
 """
 List of model parameters
 """
+from enum import Enum
+
+class AgentBackendType(Enum):
+    CREATE_REACT_AGENT = 1
+    CIAYN = 2
 
 DEFAULT_TOKEN_LIMIT = 100000
 DEFAULT_TEMPERATURE = 0.7
 DEFAULT_BASE_LATENCY = 240
+DEFAULT_AGENT_BACKEND = AgentBackendType.CIAYN
 
 models_params = {
     "openai": {
@@ -954,6 +960,7 @@ models_params = {
             "supports_temperature": True,
             "default_temperature": 1.0,
             "latency_coefficient": DEFAULT_BASE_LATENCY,
+            "default_backend": AgentBackendType.CREATE_REACT_AGENT
         },
         "claude-3-7-sonnet-20250219": {
             "token_limit": 200000,
@@ -962,6 +969,7 @@ models_params = {
             "max_tokens": 64000,
             "default_temperature": 1.0,
             "latency_coefficient": DEFAULT_BASE_LATENCY,
+            "default_backend": AgentBackendType.CREATE_REACT_AGENT
         },
         "claude-3-5-haiku-latest": {
             "token_limit": 200000,

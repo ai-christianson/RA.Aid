@@ -174,23 +174,7 @@ def launch_server(host: str, port: int, args):
         logger.debug(
             f"Using default temperature {args.temperature} for model {args.model}"
         )
-    
-    # Initialize config dictionary with values from args and environment validation
-    config = {
-        "provider": args.provider,
-        "model": args.model,
-        "expert_provider": args.expert_provider,
-        "expert_model": args.expert_model,
-        "temperature": args.temperature,
-        "experimental_fallback_handler": args.experimental_fallback_handler,
-        "expert_enabled": expert_enabled,
-        "web_research_enabled": web_research_enabled,
-        "show_thoughts": args.show_thoughts,
-        "show_cost": args.show_cost,
-        "force_reasoning_assistance": args.reasoning_assistance,
-        "disable_reasoning_assistance": args.no_reasoning_assistance
-    }
-    
+
     # Initialize environment discovery
     env_discovery = EnvDiscovery()
     env_discovery.discover()
@@ -208,7 +192,7 @@ def launch_server(host: str, port: int, args):
          RelatedFilesRepositoryManager() as related_files_repo, \
          TrajectoryRepositoryManager(db) as trajectory_repo, \
          WorkLogRepositoryManager() as work_log_repo, \
-         ConfigRepositoryManager(config) as config_repo, \
+         ConfigRepositoryManager() as config_repo, \
          EnvInvManager(env_data) as env_inv:
         
         # This initializes all repositories and makes them available via their respective get methods
@@ -222,6 +206,22 @@ def launch_server(host: str, port: int, args):
         logger.debug("Initialized WorkLogRepository")
         logger.debug("Initialized ConfigRepository")
         logger.debug("Initialized Environment Inventory")
+        
+        # Update config repo with values from args and environment validation
+        config_repo.update({
+            "provider": args.provider,
+            "model": args.model,
+            "expert_provider": args.expert_provider,
+            "expert_model": args.expert_model,
+            "temperature": args.temperature,
+            "experimental_fallback_handler": args.experimental_fallback_handler,
+            "expert_enabled": expert_enabled,
+            "web_research_enabled": web_research_enabled,
+            "show_thoughts": args.show_thoughts,
+            "show_cost": args.show_cost,
+            "force_reasoning_assistance": args.reasoning_assistance,
+            "disable_reasoning_assistance": args.no_reasoning_assistance
+        })
         
         # Run the server within the context managers
         run_server(host=host, port=port)
@@ -673,7 +673,7 @@ def main():
                  RelatedFilesRepositoryManager() as related_files_repo, \
                  TrajectoryRepositoryManager(db) as trajectory_repo, \
                  WorkLogRepositoryManager() as work_log_repo, \
-                 ConfigRepositoryManager(config) as config_repo, \
+                 ConfigRepositoryManager() as config_repo, \
                  EnvInvManager(env_data) as env_inv:
                 # This initializes all repositories and makes them available via their respective get methods
                 logger.debug("Initialized SessionRepository")
@@ -731,7 +731,8 @@ def main():
                         f"Using default temperature {args.temperature} for model {args.model}"
                     )
 
-                # Store all the configuration in the config repository
+                # Update config repo with values from CLI arguments
+                config_repo.update(config)
                 config_repo.set("provider", args.provider)
                 config_repo.set("model", args.model)
                 config_repo.set("expert_provider", args.expert_provider)

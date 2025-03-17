@@ -14,26 +14,3 @@ def is_claude_37(model: str) -> bool:
     """
     patterns = ["claude-3.7", "claude3.7", "claude-3-7"]
     return any(pattern in model for pattern in patterns)
-
-
-def is_anthropic_claude(config: Dict[str, Any]) -> bool:
-    """Check if the provider and model name indicate an Anthropic Claude model.
-
-    Args:
-        config: Configuration dictionary containing provider and model information
-
-    Returns:
-        bool: True if this is an Anthropic Claude model
-    """
-    # For backwards compatibility, allow passing of config directly
-    provider = config.get("provider", "")
-    model_name = config.get("model", "")
-    result = (
-        provider.lower() == "anthropic"
-        and model_name
-        and "claude" in model_name.lower()
-    ) or (
-        provider.lower() == "openrouter"
-        and model_name.lower().startswith("anthropic/claude-")
-    )
-    return result
