@@ -419,6 +419,120 @@ def test_get_parsed_trajectory(
     assert non_existent_trajectory is None
 
 
+def test_get_session_usage_totals_empty(setup_db):
+    """Test calculating session usage totals with no records."""
+    # Set up repository
+    repo = TrajectoryRepository(db=setup_db)
+
+    # Get totals for a session with no records
+    totals = repo.get_session_usage_totals(1)
+
+    # Verify the totals are all zero
+    assert totals["total_cost"] == 0.0
+    assert totals["total_input_tokens"] == 0
+    assert totals["total_output_tokens"] == 0
+    assert totals["total_tokens"] == 0
+
+
+def test_get_session_usage_totals(setup_db):
+    """Test calculating session usage totals with multiple records."""
+    # Set up repository
+    repo = TrajectoryRepository(db=setup_db)
+
+    # Create some model usage records for a session
+    Trajectory.create(
+        session=1,
+        record_type="model_usage",
+        current_cost=0.001,
+        input_tokens=100,
+        output_tokens=50,
+    )
+    Trajectory.create(
+        session=1,
+        record_type="model_usage",
+        current_cost=0.002,
+        input_tokens=200,
+        output_tokens=100,
+    )
+    Trajectory.create(
+        session=1,
+        record_type="model_usage",
+        current_cost=0.003,
+        input_tokens=300,
+        output_tokens=150,
+    )
+
+    # Create a record with a different record_type that should be ignored
+    Trajectory.create(
+        session=1,
+        record_type="tool_execution",
+        current_cost=0.999,
+        input_tokens=999,
+        output_tokens=999,
+    )
+
+    # Create a second session
+    Session.create(id=2, name="Test Session 2")
+    
+    # Create a record for a different session that should be ignored
+    Trajectory.create(
+        session=2,
+        record_type="model_usage",
+        current_cost=0.999,
+        input_tokens=999,
+        output_tokens=999,
+    )
+
+    # Get totals for session 1
+    totals = repo.get_session_usage_totals(1)
+
+    # Verify the totals are calculated correctly
+    assert totals["total_cost"] == 0.006  # 0.001 + 0.002 + 0.003
+    assert totals["total_input_tokens"] == 600  # 100 + 200 + 300
+    assert totals["total_output_tokens"] == 300  # 50 + 100 + 150
+    assert totals["total_tokens"] == 900  # 600 + 300
+    
+    # Get totals for session 2
+    totals_session2 = repo.get_session_usage_totals(2)
+    
+    # Verify the totals for session 2
+    assert totals_session2["total_cost"] == 0.999  # Just the one record
+    assert totals_session2["total_input_tokens"] == 999
+    assert totals_session2["total_output_tokens"] == 999
+    assert totals_session2["total_tokens"] == 1998  # 999 + 999
+
+
+def test_get_session_usage_totals_with_nulls(setup_db):
+    """Test calculating session usage totals with null values."""
+    # Set up repository
+    repo = TrajectoryRepository(db=setup_db)
+
+    # Create records with some null values
+    Trajectory.create(
+        session=1,
+        record_type="model_usage",
+        current_cost=0.001,
+        input_tokens=None,  # Null input tokens
+        output_tokens=50,
+    )
+    Trajectory.create(
+        session=1,
+        record_type="model_usage",
+        current_cost=None,  # Null cost
+        input_tokens=200,
+        output_tokens=None,  # Null output tokens
+    )
+
+    # Get totals for session 1
+    totals = repo.get_session_usage_totals(1)
+
+    # Verify the totals handle null values correctly
+    assert totals["total_cost"] == 0.001  # Only the non-null cost
+    assert totals["total_input_tokens"] == 200  # Only the non-null input tokens
+    assert totals["total_output_tokens"] == 50  # Only the non-null output tokens
+    assert totals["total_tokens"] == 250  # 200 + 50
+
+
 def test_trajectory_repository_manager(setup_db, cleanup_repo, mock_session_repository):
     """Test the TrajectoryRepositoryManager context manager."""
     # Use the context manager to create a repository
