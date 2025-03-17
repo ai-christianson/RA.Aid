@@ -4,9 +4,7 @@ from functools import partial
 from typing import Any, Dict, List, Optional, Sequence
 
 from langchain.chat_models.base import BaseChatModel
-from langchain_anthropic import ChatAnthropic
-from typing import Any, Dict, List, Optional, Sequence, Tuple
-from langchain_core.language_models import BaseChatModel
+from typing import Tuple
 from ra_aid.config import DEFAULT_MODEL
 from ra_aid.model_detection import is_claude_37
 
@@ -24,7 +22,6 @@ from litellm import token_counter, get_model_info
 
 from ra_aid.agent_backends.ciayn_agent import CiaynAgent
 from ra_aid.database.repositories.config_repository import get_config_repository
-from ra_aid.config import DEFAULT_MODEL
 from ra_aid.logging_config import get_logger
 from ra_aid.models_params import DEFAULT_TOKEN_LIMIT, models_params
 
