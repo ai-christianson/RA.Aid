@@ -27,7 +27,7 @@ const config: Config = {
         docsPluginId: "classic",
         config: {
           "ra-aid": {  // Make sure this matches the sidebar ID
-            specPath: "./ra-aid.openapi.json", // Ensure correct path
+            specPath: "./ra-aid.openapi.yml", // Ensure correct path
             outputDir: "docs/api", // This must match sidebars.ts
             sidebarOptions: {
               groupPathsBy: "tag",

@@ -1,0 +1,159 @@
+openapi: 3.0.0
+info:
+  title: RA.Aid API
+  description: API for RA.Aid - AI Programming Assistant
+  version: 1.0.0
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+servers:
+  - url: 'http://localhost:1818'
+    description: Local development server
+paths:
+  /:
+    get:
+      summary: Serve index page
+      description: Serve the `index.html` file with port parameter.
+      responses:
+        '200':
+          description: HTML response with the index page
+          content:
+            text/html:
+              schema:
+                type: string
+  /ws:
+    description: WebSocket endpoint for real-time communication.
+    get:
+      summary: Connect to WebSocket
+      description: Establishes a WebSocket connection for real-time messaging.
+      responses:
+        '101':
+          description: WebSocket connection established
+        '400':
+          description: WebSocket connection error
+  /config:
+    get:
+      summary: Get server configuration
+      description: Returns the server configuration including host and port.
+      responses:
+        '200':
+          description: Server configuration details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  host:
+                    type: string
+                  port:
+                    type: integer
+  /v1/sessions:
+    get:
+      summary: List sessions
+      description: Get a paginated list of sessions.
+      parameters:
+        - name: offset
+          in: query
+          description: Number of sessions to skip
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+        - name: limit
+          in: query
+          description: Maximum number of sessions to return
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: Paginated list of sessions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SessionModel'
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+        '500':
+          description: Database error
+    post:
+      summary: Create session
+      description: Create a new session with optional metadata.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                metadata:
+                  type: object
+                  additionalProperties: true
+                  description: Optional dictionary of additional metadata
+      responses:
+        '201':
+          description: Session created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionModel'
+        '500':
+          description: Database error
+  '/v1/sessions/{session_id}':
+    get:
+      summary: Get session
+      description: Get a specific session by ID.
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          description: The ID of the session to retrieve
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Session details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionModel'
+        '404':
+          description: Session not found
+        '500':
+          description: Database error
+components:
+  schemas:
+    SessionModel:
+      type: object
+      properties:
+        id:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        start_time:
+          type: string
+          format: date-time
+        command_line:
+          type: array
+          items:
+            type: string
+        program_version:
+          type: string
+        machine_info:
+          type: object
+          additionalProperties: true
