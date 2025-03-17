@@ -203,14 +203,11 @@ def run_key_snippets_gc_agent() -> None:
                 for k, v in snippets_dict.items()
             ])
             
-            # Retrieve configuration
-            llm_config = get_config_repository().get_all()
-
             # Initialize the LLM model
             model = initialize_llm(
-                llm_config.get("provider", "anthropic"),
-                llm_config.get("model", "claude-3-7-sonnet-20250219"),
-                temperature=llm_config.get("temperature")
+                get_config_repository().get("provider", "anthropic"),
+                get_config_repository().get("model", "claude-3-7-sonnet-20250219"),
+                temperature=get_config_repository().get("temperature")
             )
             
             # Create the agent with the delete_key_snippets tool

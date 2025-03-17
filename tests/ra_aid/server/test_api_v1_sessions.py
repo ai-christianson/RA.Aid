@@ -58,8 +58,13 @@ def mock_sessions():
 def mock_repo(mock_session, mock_sessions):
     """Mock the SessionRepository for testing."""
     repo = MagicMock()
+    
+    # Mock individual get method
     repo.get.return_value = mock_session
+    
+    # Note: get_all is deprecated, but kept for backward compatibility
     repo.get_all.return_value = (mock_sessions, len(mock_sessions))
+    
     repo.create_session.return_value = mock_session
     return repo
 

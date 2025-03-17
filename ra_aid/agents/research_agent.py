@@ -360,13 +360,14 @@ YOU MUST FOLLOW THE EXPERT'S GUIDANCE OR ELSE BE TERMINATED!
         expert_guidance_section=expert_guidance_section,
     )
 
-    config = get_config_repository().get_all()
-    recursion_limit = config.get("recursion_limit", 100)
+    recursion_limit = get_config_repository().get("recursion_limit", 100)
     run_config = {
         "configurable": {"thread_id": thread_id},
         "recursion_limit": recursion_limit,
     }
-    run_config.update(config)
+    # Update with necessary config values
+    run_config["show_cost"] = get_config_repository().get("show_cost", False)
+    run_config["valid_providers"] = get_config_repository().get("valid_providers", [])
 
     try:
         if console_message:
@@ -490,15 +491,14 @@ def run_web_research_agent(
         env_inv=get_env_inv(),
     )
 
-    config = get_config_repository().get_all()
-
-    recursion_limit = config.get("recursion_limit", 100)
+    recursion_limit = get_config_repository().get("recursion_limit", 100)
     run_config = {
         "configurable": {"thread_id": thread_id},
         "recursion_limit": recursion_limit,
     }
-    if config:
-        run_config.update(config)
+    # Update with necessary config values
+    run_config["show_cost"] = get_config_repository().get("show_cost", False)
+    run_config["valid_providers"] = get_config_repository().get("valid_providers", [])
 
     try:
         if console_message:

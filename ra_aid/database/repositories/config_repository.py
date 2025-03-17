@@ -1,7 +1,8 @@
 """Repository for managing configuration values."""
 
 import contextvars
-from typing import Any, Dict, Optional
+import copy
+from typing import Any, Dict, Optional, List
 
 # Create contextvar to hold the ConfigRepository instance
 config_repo_var = contextvars.ContextVar("config_repo", default=None)
@@ -15,15 +16,10 @@ class ConfigRepository:
     It does not require database models and operates entirely in memory.
     """
     
-    def __init__(self, initial_config: Optional[Dict[str, Any]] = None):
+    def __init__(self):
         """
-        Initialize the ConfigRepository.
-        
-        Args:
-            initial_config: Optional dictionary of initial configuration values
+        Initialize a new ConfigRepository with default values.
         """
-        self._config: Dict[str, Any] = {}
-        
         # Initialize with default values from config.py
         from ra_aid.config import (
             DEFAULT_RECURSION_LIMIT,
@@ -48,10 +44,6 @@ class ConfigRepository:
             "valid_providers": VALID_PROVIDERS,
         }
         
-        # Update with any provided initial configuration
-        if initial_config:
-            self._config.update(initial_config)
-    
     def get(self, key: str, default: Any = None) -> Any:
         """
         Get a configuration value by key.
@@ -63,7 +55,9 @@ class ConfigRepository:
         Returns:
             The configuration value or default if not found
         """
-        return self._config.get(key, default)
+        value = self._config.get(key, default)
+        # Return a deep copy to prevent external modifications
+        return copy.deepcopy(value)
     
     def set(self, key: str, value: Any) -> None:
         """
@@ -73,7 +67,8 @@ class ConfigRepository:
             key: Configuration key to set
             value: Value to set for the key
         """
-        self._config[key] = value
+        # Store a deep copy to prevent external modifications
+        self._config[key] = copy.deepcopy(value)
     
     def update(self, config_dict: Dict[str, Any]) -> None:
         """
@@ -82,16 +77,30 @@ class ConfigRepository:
         Args:
             config_dict: Dictionary of configuration key-value pairs to update
         """
-        self._config.update(config_dict)
+        # Store deep copies of values to prevent external modifications
+        for key, value in config_dict.items():
+            self.set(key, value)
     
-    def get_all(self) -> Dict[str, Any]:
+    def get_keys(self) -> List[str]:
         """
-        Get all configuration values.
+        Get all configuration keys.
         
         Returns:
-            Dictionary containing all configuration values
+            List of all configuration keys
         """
-        return self._config.copy()
+        return list(self._config.keys())
+    
+    def deep_copy(self) -> 'ConfigRepository':
+        """
+        Create a deep copy of this ConfigRepository.
+        
+        Returns:
+            A new ConfigRepository with the same configuration values
+        """
+        new_repo = ConfigRepository()
+        for key in self.get_keys():
+            new_repo.set(key, self.get(key))
+        return new_repo
 
 
 class ConfigRepositoryManager:
@@ -108,23 +117,29 @@ class ConfigRepositoryManager:
             repo.set("key", new_value)
     """
     
-    def __init__(self, initial_config: Optional[Dict[str, Any]] = None):
+    def __init__(self, source_repo: Optional[ConfigRepository] = None):
         """
         Initialize the ConfigRepositoryManager.
         
         Args:
-            initial_config: Optional dictionary of initial configuration values
+            source_repo: Optional ConfigRepository to copy configuration from.
+                         If None, a new ConfigRepository with default values is created.
         """
-        self.initial_config = initial_config
+        self.source_repo = source_repo
         
-    def __enter__(self) -> 'ConfigRepository':
+    def __enter__(self) -> ConfigRepository:
         """
         Initialize the ConfigRepository and return it.
         
         Returns:
             ConfigRepository: The initialized repository
         """
-        repo = ConfigRepository(self.initial_config)
+        if self.source_repo is None:
+            repo = ConfigRepository()
+        else:
+            # Create a deep copy of the source repository
+            repo = self.source_repo.deep_copy()
+            
         config_repo_var.set(repo)
         return repo
         

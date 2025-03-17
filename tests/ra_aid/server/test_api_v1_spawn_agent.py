@@ -15,6 +15,7 @@ from ra_aid.server.api_v1_spawn_agent import router
 from ra_aid.database.pydantic_models import SessionModel
 import datetime
 import ra_aid.server.api_v1_spawn_agent
+from ra_aid.llm import get_model_default_temperature
 
 
 @pytest.fixture
@@ -51,13 +52,22 @@ def mock_repository(mock_session):
 def mock_config_repository():
     """Create a mock config repository for testing."""
     mock_config = MagicMock()
-    mock_config.get.side_effect = lambda key, default=None: {
+    # Create a dictionary to simulate config
+    config = {
         "expert_enabled": True,
         "web_research_enabled": False,
         "provider": "anthropic",
         "model": "claude-3-7-sonnet-20250219",
-    }.get(key, default)
+    }
+    
+    # Setup get method to return config values
+    mock_config.get.side_effect = lambda key, default=None: config.get(key, default)
+    
+    # Note: get_all is deprecated, but kept for backward compatibility
+    # Setup get_all method to return a reference to the config dict
+    mock_config.get_all.return_value = config
     return mock_config
+
 
 @pytest.fixture
 def client(mock_repository, mock_thread, mock_config_repository, monkeypatch):
@@ -67,7 +77,7 @@ def client(mock_repository, mock_thread, mock_config_repository, monkeypatch):
     app.include_router(router)
     
     # Override the dependency to use our mock repository
-    app.dependency_overrides[get_repository] = lambda: mock_repository
+    app.dependency_overrides[get_session_repository] = lambda: mock_repository
     
     # Mock run_agent_thread to be a no-op
     monkeypatch.setattr(
@@ -155,3 +165,57 @@ def test_spawn_agent_missing_message(client):
     assert response.status_code == 422
     error_detail = response.json().get("detail", [])
     assert any("message" in error.get("loc", []) for error in error_detail)
+
+
+def test_temperature_handling_in_agent_spawn(client, mock_repository, mock_thread, mock_config_repository, monkeypatch):
+    """
+    Test that the temperature handling logic in the spawn agent endpoint
+    correctly uses the model's default temperature when none is provided.
+    """
+    # Patch the get_model_default_temperature function to return a specific value for testing
+    monkeypatch.setattr(
+        ra_aid.server.api_v1_spawn_agent, 
+        "get_model_default_temperature", 
+        lambda p, m: 0.9
+    )
+    
+    # Mock config repository to return None for temperature
+    mock_config_repository.get.side_effect = lambda key, default=None: {
+        "provider": "anthropic",
+        "model": "claude-3-7-sonnet-20250219",
+        "temperature": None,  # No temperature provided
+        "expert_enabled": True,
+        "web_research_enabled": False
+    }.get(key, default)
+    
+    # Create a spy for threading.Thread
+    thread_spy = MagicMock()
+    
+    # Store the original Thread constructor
+    original_Thread = ra_aid.server.api_v1_spawn_agent.threading.Thread
+    
+    # Create a new Thread constructor that records the kwargs
+    def spy_Thread(*args, **kwargs):
+        thread_spy(*args, **kwargs)
+        return mock_thread
+    
+    # Replace the Thread constructor with our spy version
+    monkeypatch.setattr(
+        ra_aid.server.api_v1_spawn_agent.threading,
+        "Thread",
+        spy_Thread
+    )
+    
+    # Make the API request
+    response = client.post(
+        "/v1/spawn-agent",
+        json={"message": "Test message"}
+    )
+    
+    # Check that the response is successful
+    assert response.status_code == 201
+    
+    # Verify that Thread was called with the right temperature in kwargs
+    _, kwargs = thread_spy.call_args
+    assert kwargs.get('kwargs', {}).get('temperature') == 0.9, \
+        f"Expected temperature 0.9, got {kwargs.get('kwargs', {}).get('temperature')}"

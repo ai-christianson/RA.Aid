@@ -69,7 +69,7 @@ from ra_aid.dependencies import check_dependencies
 from ra_aid.env import validate_environment
 from ra_aid.exceptions import AgentInterrupt
 from ra_aid.fallback_handler import FallbackHandler
-from ra_aid.llm import initialize_llm
+from ra_aid.llm import initialize_llm, get_model_default_temperature
 from ra_aid.logging_config import get_logger, setup_logging
 from ra_aid.models_params import DEFAULT_TEMPERATURE, models_params
 from ra_aid.project_info import format_project_info, get_project_info
@@ -193,30 +193,13 @@ def launch_server(host: str, port: int, args):
     if supports_temperature and args.temperature is None:
         args.temperature = model_config.get("default_temperature")
         if args.temperature is None:
+            args.temperature = get_model_default_temperature(args.provider, args.model)
             cpm(
-                f"This model supports temperature argument but none was given. Setting default temperature to {DEFAULT_TEMPERATURE}."
+                f"This model supports temperature argument but none was given. Using model default temperature: {args.temperature}."
             )
-            args.temperature = DEFAULT_TEMPERATURE
         logger.debug(
             f"Using default temperature {args.temperature} for model {args.model}"
         )
-
-    # Initialize config dictionary with values from args and environment validation
-    config = {
-        "provider": args.provider,
-        "model": args.model,
-        "expert_provider": args.expert_provider,
-        "expert_model": args.expert_model,
-        "temperature": args.temperature,
-        "experimental_fallback_handler": args.experimental_fallback_handler,
-        "expert_enabled": expert_enabled,
-        "web_research_enabled": web_research_enabled,
-        "show_thoughts": args.show_thoughts,
-        "show_cost": args.show_cost,
-        "track_cost": args.track_cost,
-        "force_reasoning_assistance": args.reasoning_assistance,
-        "disable_reasoning_assistance": args.no_reasoning_assistance,
-    }
 
     # Initialize environment discovery
     env_discovery = EnvDiscovery()
@@ -250,7 +233,23 @@ def launch_server(host: str, port: int, args):
         logger.debug("Initialized WorkLogRepository")
         logger.debug("Initialized ConfigRepository")
         logger.debug("Initialized Environment Inventory")
-
+        
+        # Update config repo with values from args and environment validation
+        config_repo.update({
+            "provider": args.provider,
+            "model": args.model,
+            "expert_provider": args.expert_provider,
+            "expert_model": args.expert_model,
+            "temperature": args.temperature,
+            "experimental_fallback_handler": args.experimental_fallback_handler,
+            "expert_enabled": expert_enabled,
+            "web_research_enabled": web_research_enabled,
+            "show_thoughts": args.show_thoughts,
+            "show_cost": args.show_cost,
+            "force_reasoning_assistance": args.reasoning_assistance,
+            "disable_reasoning_assistance": args.no_reasoning_assistance
+        })
+        
         # Run the server within the context managers
         run_server(host=host, port=port)
 
@@ -765,15 +764,16 @@ def main():
                 if supports_temperature and args.temperature is None:
                     args.temperature = model_config.get("default_temperature")
                     if args.temperature is None:
+                        args.temperature = get_model_default_temperature(args.provider, args.model)
                         cpm(
-                            f"This model supports temperature argument but none was given. Setting default temperature to {DEFAULT_TEMPERATURE}."
+                            f"This model supports temperature argument but none was given. Using model default temperature: {args.temperature}."
                         )
-                        args.temperature = DEFAULT_TEMPERATURE
                     logger.debug(
                         f"Using default temperature {args.temperature} for model {args.model}"
                     )
 
-                # Store all the configuration in the config repository
+                # Update config repo with values from CLI arguments
+                config_repo.update(config)
                 config_repo.set("provider", args.provider)
                 config_repo.set("model", args.model)
                 config_repo.set("expert_provider", args.expert_provider)
@@ -885,7 +885,6 @@ def main():
                         "recursion_limit": args.recursion_limit,
                         "chat_mode": True,
                         "cowboy_mode": args.cowboy_mode,
-                        "hil": True,  # Always true in chat mode
                         "web_research_enabled": web_research_enabled,
                         "initial_request": initial_request,
                         "limit_tokens": args.disable_limit_tokens,

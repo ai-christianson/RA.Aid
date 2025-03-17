@@ -46,7 +46,7 @@ Key sections:
 - [License](#license)
 - [Contact](#contact)
 
-> 👋 **Pull requests are very welcome!** Have ideas for how to impove RA.Aid? Don't be shy - your help makes a real difference!
+> 👋 **Pull requests are very welcome!** Have ideas for how to improve RA.Aid? Don't be shy - your help makes a real difference!
 >
 > 💬 **Join our Discord community:** [Click here to join](https://discord.gg/f6wYbzHYxV)
 
@@ -133,6 +133,15 @@ RA.Aid can be installed directly using pip:
 ```bash
 pip install ra-aid
 ```
+### macOS Installation with Homebrew
+
+```bash
+brew tap ai-christianson/homebrew-ra-aid
+brew install ra-aid
+```
+
+**NOTE:** macOS may also be installed with pip as shown above.
+
 
 ### Prerequisites
 

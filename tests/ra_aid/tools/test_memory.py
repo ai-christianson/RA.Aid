@@ -171,7 +171,14 @@ def mock_work_log_repository():
             entries.append(entry)
         mock_repo.return_value.add_entry.side_effect = mock_add_entry
         
-        # Mock get_all method
+        # Mock get method for individual entries
+        def mock_get(entry_id):
+            if 0 <= entry_id < len(entries):
+                return entries[entry_id]
+            return None
+        mock_repo.return_value.get.side_effect = mock_get
+        
+        # Note: get_all is deprecated, but kept for backward compatibility
         def mock_get_all():
             return entries.copy()
         mock_repo.return_value.get_all.side_effect = mock_get_all

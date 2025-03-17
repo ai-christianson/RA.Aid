@@ -194,26 +194,39 @@ def sonnet_35_state_modifier(
 
 
 def get_provider_and_model_for_agent_type(
-    config: Dict[str, Any], agent_type: str
+    config: Dict[str, Any], agent_type: str, use_repository: bool = False
 ) -> Tuple[str, str]:
     """Get the provider and model name for the specified agent type.
 
     Args:
-        config: Configuration dictionary containing provider and model information
+        config: Configuration dictionary containing provider and model information (used if use_repository is False)
         agent_type: Type of agent ("default", "research", or "planner")
+        use_repository: Whether to use direct repository calls instead of the config dict
 
     Returns:
         Tuple[str, str]: A tuple containing (provider, model_name)
     """
-    if agent_type == "research":
-        provider = config.get("research_provider", "") or config.get("provider", "")
-        model_name = config.get("research_model", "") or config.get("model", "")
-    elif agent_type == "planner":
-        provider = config.get("planner_provider", "") or config.get("provider", "")
-        model_name = config.get("planner_model", "") or config.get("model", "")
+    if use_repository:
+        repo = get_config_repository()
+        if agent_type == "research":
+            provider = repo.get("research_provider", "") or repo.get("provider", "")
+            model_name = repo.get("research_model", "") or repo.get("model", "")
+        elif agent_type == "planner":
+            provider = repo.get("planner_provider", "") or repo.get("provider", "")
+            model_name = repo.get("planner_model", "") or repo.get("model", "")
+        else:
+            provider = repo.get("provider", "")
+            model_name = repo.get("model", "")
     else:
-        provider = config.get("provider", "")
-        model_name = config.get("model", "")
+        if agent_type == "research":
+            provider = config.get("research_provider", "") or config.get("provider", "")
+            model_name = config.get("research_model", "") or config.get("model", "")
+        elif agent_type == "planner":
+            provider = config.get("planner_provider", "") or config.get("provider", "")
+            model_name = config.get("planner_model", "") or config.get("model", "")
+        else:
+            provider = config.get("provider", "")
+            model_name = config.get("model", "")
 
     return provider, model_name
 
@@ -281,17 +294,18 @@ def get_model_token_limit(
         Optional[int]: The token limit if found, None otherwise
     """
     try:
-        # Try to get config from repository for production use
+        # Try to use repository config for production use
         try:
-            config_from_repo = get_config_repository().get_all()
-            # If we succeeded, use the repository config instead of passed config
-            config = config_from_repo
+            # Test if repository is available by accessing it
+            # This will raise RuntimeError if not initialized
+            get_config_repository()
+            repository_available = True
         except RuntimeError:
             # In tests, this may fail because the repository isn't set up
             # So we'll use the passed config directly
-            pass
+            repository_available = False
 
-        provider, model_name = get_provider_and_model_for_agent_type(config, agent_type)
+        provider, model_name = get_provider_and_model_for_agent_type(config, agent_type, use_repository=repository_available)
 
         # Always attempt to get model info from litellm first
         provider_model = model_name if not provider else f"{provider}/{model_name}"

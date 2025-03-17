@@ -246,6 +246,12 @@ def test_list_sessions_empty(client, mock_repo):
     mock_repo.reset_mock()
     
     # Configure the mock to return empty results
+    # Both get and get_all should be set up to handle pagination
+    def mock_get_empty(session_id):
+        return None
+    mock_repo.get.side_effect = mock_get_empty
+    
+    # Note: get_all is deprecated, but kept for backward compatibility
     mock_repo.get_all.side_effect = None  # Clear any previous side effects
     mock_repo.get_all.return_value = ([], 0)
     
@@ -483,7 +489,13 @@ def test_integration_workflow(client, mock_repo):
     
     mock_repo.get.side_effect = get_session_for_workflow
     
-    # Configure mock for get_all
+    # Configure mock for get
+    def get_pagination_for_workflow(offset=0, limit=10):
+        if create_calls == 1:
+            return first_session
+        return second_session
+    
+    # Configure mock for get_all (deprecated but needed for backward compatibility)
     def get_all_for_workflow(offset=0, limit=10):
         if create_calls == 1:
             return [first_session], 1
