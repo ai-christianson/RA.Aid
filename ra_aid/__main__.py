@@ -116,36 +116,54 @@ def launch_server(host: str, port: int, args):
     from ra_aid.server import run_server
     from ra_aid.database.connection import DatabaseManager
     from ra_aid.database.repositories.session_repository import SessionRepositoryManager
-    from ra_aid.database.repositories.key_fact_repository import KeyFactRepositoryManager
-    from ra_aid.database.repositories.key_snippet_repository import KeySnippetRepositoryManager
-    from ra_aid.database.repositories.human_input_repository import HumanInputRepositoryManager
-    from ra_aid.database.repositories.research_note_repository import ResearchNoteRepositoryManager
-    from ra_aid.database.repositories.related_files_repository import RelatedFilesRepositoryManager
-    from ra_aid.database.repositories.trajectory_repository import TrajectoryRepositoryManager
-    from ra_aid.database.repositories.work_log_repository import WorkLogRepositoryManager
+    from ra_aid.database.repositories.key_fact_repository import (
+        KeyFactRepositoryManager,
+    )
+    from ra_aid.database.repositories.key_snippet_repository import (
+        KeySnippetRepositoryManager,
+    )
+    from ra_aid.database.repositories.human_input_repository import (
+        HumanInputRepositoryManager,
+    )
+    from ra_aid.database.repositories.research_note_repository import (
+        ResearchNoteRepositoryManager,
+    )
+    from ra_aid.database.repositories.related_files_repository import (
+        RelatedFilesRepositoryManager,
+    )
+    from ra_aid.database.repositories.trajectory_repository import (
+        TrajectoryRepositoryManager,
+    )
+    from ra_aid.database.repositories.work_log_repository import (
+        WorkLogRepositoryManager,
+    )
     from ra_aid.database.repositories.config_repository import ConfigRepositoryManager
     from ra_aid.env_inv_context import EnvInvManager
     from ra_aid.env_inv import EnvDiscovery
-    
+
     # Set the console handler level to INFO for server mode
     # Get the root logger and modify the console handler
     root_logger = logging.getLogger()
     for handler in root_logger.handlers:
         # Check if this is a console handler (outputs to stdout/stderr)
-        if isinstance(handler, logging.StreamHandler) and handler.stream in [sys.stdout, sys.stderr]:
+        if isinstance(handler, logging.StreamHandler) and handler.stream in [
+            sys.stdout,
+            sys.stderr,
+        ]:
             # Set console handler to INFO level for better visibility in server mode
             handler.setLevel(logging.INFO)
             logger.debug("Modified console logging level to INFO for server mode")
-    
+
     # Apply any pending database migrations
     from ra_aid.database import ensure_migrations_applied
+
     try:
         migration_result = ensure_migrations_applied()
         if not migration_result:
             logger.warning("Database migrations failed but execution will continue")
     except Exception as e:
         logger.error(f"Database migration error: {str(e)}")
-    
+
     # Check dependencies before proceeding
     check_dependencies()
 
@@ -155,15 +173,11 @@ def launch_server(host: str, port: int, args):
         expert_missing,
         web_research_enabled,
         web_research_missing,
-    ) = validate_environment(
-        args
-    )  # Will exit if main env vars missing
+    ) = validate_environment(args)  # Will exit if main env vars missing
     logger.debug("Environment validation successful")
 
     # Validate model configuration early
-    model_config = models_params.get(args.provider, {}).get(
-        args.model or "", {}
-    )
+    model_config = models_params.get(args.provider, {}).get(args.model or "", {})
     supports_temperature = model_config.get(
         "supports_temperature",
         args.provider
@@ -186,7 +200,7 @@ def launch_server(host: str, port: int, args):
         logger.debug(
             f"Using default temperature {args.temperature} for model {args.model}"
         )
-    
+
     # Initialize config dictionary with values from args and environment validation
     config = {
         "provider": args.provider,
@@ -201,29 +215,30 @@ def launch_server(host: str, port: int, args):
         "show_cost": args.show_cost,
         "track_cost": args.track_cost,
         "force_reasoning_assistance": args.reasoning_assistance,
-        "disable_reasoning_assistance": args.no_reasoning_assistance
+        "disable_reasoning_assistance": args.no_reasoning_assistance,
     }
-    
+
     # Initialize environment discovery
     env_discovery = EnvDiscovery()
     env_discovery.discover()
     env_data = env_discovery.format_markdown()
-    
+
     print(f"Starting RA.Aid web interface on http://{host}:{port}")
-    
+
     # Initialize database connection and repositories
-    with DatabaseManager() as db, \
-         SessionRepositoryManager(db) as session_repo, \
-         KeyFactRepositoryManager(db) as key_fact_repo, \
-         KeySnippetRepositoryManager(db) as key_snippet_repo, \
-         HumanInputRepositoryManager(db) as human_input_repo, \
-         ResearchNoteRepositoryManager(db) as research_note_repo, \
-         RelatedFilesRepositoryManager() as related_files_repo, \
-         TrajectoryRepositoryManager(db) as trajectory_repo, \
-         WorkLogRepositoryManager() as work_log_repo, \
-         ConfigRepositoryManager(config) as config_repo, \
-         EnvInvManager(env_data) as env_inv:
-        
+    with (
+        DatabaseManager() as db,
+        SessionRepositoryManager(db) as session_repo,
+        KeyFactRepositoryManager(db) as key_fact_repo,
+        KeySnippetRepositoryManager(db) as key_snippet_repo,
+        HumanInputRepositoryManager(db) as human_input_repo,
+        ResearchNoteRepositoryManager(db) as research_note_repo,
+        RelatedFilesRepositoryManager() as related_files_repo,
+        TrajectoryRepositoryManager(db) as trajectory_repo,
+        WorkLogRepositoryManager() as work_log_repo,
+        ConfigRepositoryManager(config) as config_repo,
+        EnvInvManager(env_data) as env_inv,
+    ):
         # This initializes all repositories and makes them available via their respective get methods
         logger.debug("Initialized SessionRepository")
         logger.debug("Initialized KeyFactRepository")
@@ -235,7 +250,7 @@ def launch_server(host: str, port: int, args):
         logger.debug("Initialized WorkLogRepository")
         logger.debug("Initialized ConfigRepository")
         logger.debug("Initialized Environment Inventory")
-        
+
         # Run the server within the context managers
         run_server(host=host, port=port)
 
@@ -512,7 +527,7 @@ Examples:
     # if auto-test command is provided, validate test-cmd is also provided
     if parsed_args.auto_test and not parsed_args.test_cmd:
         parser.error("Test command is required when using --auto-test")
-        
+
     # If show_cost is true, we must also enable track_cost
     if parsed_args.show_cost:
         parsed_args.track_cost = True
@@ -718,15 +733,9 @@ def main():
                 logger.debug("Initialized ConfigRepository")
                 logger.debug("Initialized Environment Inventory")
 
-                # Create a new session for this program run
                 logger.debug("Initializing new session")
                 session_repo.create_session()
-                
-                # Initialize session tracking for token usage
-                from ra_aid.agent_utils import initialize_session_tracking
-                initialize_session_tracking()
 
-                # Check dependencies before proceeding
                 check_dependencies()
 
                 (
@@ -734,9 +743,7 @@ def main():
                     expert_missing,
                     web_research_enabled,
                     web_research_missing,
-                ) = validate_environment(
-                    args
-                )  # Will exit if main env vars missing
+                ) = validate_environment(args)  # Will exit if main env vars missing
                 logger.debug("Environment validation successful")
 
                 # Validate model configuration early

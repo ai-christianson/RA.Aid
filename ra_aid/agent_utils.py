@@ -66,20 +66,6 @@ from ra_aid.anthropic_token_limiter import (
 from ra_aid.model_detection import is_anthropic_claude
 
 
-def initialize_session_tracking():
-    """
-    Initialize session tracking by getting the current session.
-
-    Returns:
-        tuple: (session_id, session) - The current session ID and session object
-    """
-    session_repo = get_session_repository()
-    current_session = session_repo.get_current_session()
-    current_session_id = current_session.id if current_session else None
-
-    return current_session_id, current_session
-
-
 logger = get_logger(__name__)
 
 
@@ -389,7 +375,7 @@ def _handle_fallback_response(
         msg_list.extend(msg_list_response)
 
 
-def _initialize_callback_handler(config, agent: RAgents):
+def initialize_callback_handler(config, agent: RAgents):
     """
     Initialize the callback handler for token tracking.
 
@@ -403,7 +389,6 @@ def _initialize_callback_handler(config, agent: RAgents):
     stream_config = config.copy()
     cb = None
 
-    # Check if cost tracking is enabled
     if not config.get("track_cost", True):
         logger.debug("Cost tracking is disabled, skipping callback handler")
         return cb, stream_config
@@ -499,7 +484,7 @@ def _run_agent_stream(agent: RAgents, msg_list: list[BaseMessage]):
     """
     config = get_config_repository().get_all()
 
-    cb, stream_config = _initialize_callback_handler(config, agent)
+    _cb, stream_config = initialize_callback_handler(config, agent)
 
     while True:
         for chunk in agent.stream({"messages": msg_list}, stream_config):
@@ -545,8 +530,6 @@ def run_agent_with_retry(
     base_delay = 1
     test_attempts = 0
 
-    # Get current session ID
-    # current_session_id, current_session = initialize_session_tracking()
 
     _max_test_retries = get_config_repository().get(
         "max_test_cmd_retries", DEFAULT_MAX_TEST_CMD_RETRIES
