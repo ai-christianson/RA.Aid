@@ -133,6 +133,15 @@ RA.Aid can be installed directly using pip:
 ```bash
 pip install ra-aid
 ```
+### macOS Installation with Homebrew
+
+```bash
+brew tap ai-christianson/homebrew-ra-aid
+brew install ra-aid
+```
+
+**NOTE:** macOS may also be installed with pip as shown above.
+
 
 ### Prerequisites
 
