@@ -2,7 +2,6 @@
 
 import threading
 import logging
-from typing import Dict, Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
@@ -88,7 +87,6 @@ def run_agent_thread(
     try:
         logger.info(f"Starting agent thread for session {session_id}")
         
-        # Initialize environment discovery
         env_discovery = EnvDiscovery()
         env_discovery.discover()
         env_data = env_discovery.format_markdown()
@@ -96,7 +94,6 @@ def run_agent_thread(
         # Get the thread configuration from kwargs
         thread_config = kwargs.get("thread_config", {})
         
-        # Initialize database connection and repositories
         with DatabaseManager() as db, \
              SessionRepositoryManager(db) as session_repo, \
              KeyFactRepositoryManager(db) as key_fact_repo, \

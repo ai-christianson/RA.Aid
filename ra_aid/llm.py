@@ -8,8 +8,7 @@ from langchain_openai import ChatOpenAI
 from openai import OpenAI
 
 from ra_aid.chat_models.deepseek_chat import ChatDeepseekReasoner
-from ra_aid.console.output import cpm
-from ra_aid.database.repositories.config_repository import get_config_repository
+from ra_aid.console.formatting import cpm
 from ra_aid.logging_config import get_logger
 from ra_aid.model_detection import is_claude_37
 

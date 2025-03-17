@@ -12,7 +12,7 @@ from ra_aid.config import (
     FALLBACK_TOOL_MODEL_LIMIT,
     RETRY_FALLBACK_COUNT,
 )
-from ra_aid.console.output import cpm
+from ra_aid.console.formatting import cpm
 from ra_aid.exceptions import FallbackToolExecutionError, ToolExecutionError
 from ra_aid.llm import initialize_llm, validate_provider_env
 from ra_aid.logging_config import get_logger

@@ -15,6 +15,7 @@ import sys
 
 import peewee
 
+from ra_aid.config import DEFAULT_MODEL
 from ra_aid.database.models import Session
 from ra_aid.database.pydantic_models import SessionModel
 from ra_aid.__version__ import __version__
@@ -50,7 +51,7 @@ class SessionRepositoryManager:
         """
         self.db = db
 
-    def __enter__(self) -> 'SessionRepository':
+    def __enter__(self) -> "SessionRepository":
         """
         Initialize the SessionRepository and return it.
 
@@ -82,13 +83,13 @@ class SessionRepositoryManager:
         return False
 
 
-def get_session_repository() -> 'SessionRepository':
+def get_session_repository() -> "SessionRepository":
     """
     Get the current SessionRepository instance.
 
     Returns:
         SessionRepository: The current repository instance
-        
+
     Raises:
         RuntimeError: If no repository has been initialized with SessionRepositoryManager
     """
@@ -121,55 +122,55 @@ class SessionRepository:
             raise ValueError("Database connection is required for SessionRepository")
         self.db = db
         self.current_session = None
-        
+
     def _to_model(self, session: Optional[Session]) -> Optional[SessionModel]:
         """
         Convert a Peewee Session object to a Pydantic SessionModel.
-        
+
         Args:
             session: Peewee Session instance or None
-            
+
         Returns:
             Optional[SessionModel]: Pydantic model representation or None if session is None
         """
         if session is None:
             return None
-        
+
         return SessionModel.model_validate(session, from_attributes=True)
 
     def create_session(self, metadata: Optional[Dict[str, Any]] = None) -> SessionModel:
         """
         Create a new session record in the database.
-        
+
         Args:
             metadata: Optional dictionary of additional metadata to store with the session
-            
+
         Returns:
             SessionModel: The newly created session instance
-            
+
         Raises:
             peewee.DatabaseError: If there's an error creating the record
         """
         try:
             # Get command line arguments
             command_line = " ".join(sys.argv)
-            
+
             # Get program version
             program_version = __version__
-            
+
             # JSON encode metadata if provided
             machine_info = json.dumps(metadata) if metadata is not None else None
-            
+
             session = Session.create(
                 start_time=datetime.datetime.now(),
                 command_line=command_line,
                 program_version=program_version,
-                machine_info=machine_info
+                machine_info=machine_info,
             )
-            
+
             # Store the current session
             self.current_session = session
-            
+
             logger.debug(f"Created new session with ID {session.id}")
             return self._to_model(session)
         except peewee.DatabaseError as e:
@@ -178,31 +179,44 @@ class SessionRepository:
 
     def get_current_session(self) -> Optional[SessionModel]:
         """
-        Get the current active session.
-        
+        Get the current active session as a Pydantic model.
+
         If no session has been created in this repository instance,
         retrieves the most recent session from the database.
-        
+
         Returns:
             Optional[SessionModel]: The current session or None if no sessions exist
         """
+        session_record = self.get_current_session_record()
+        return self._to_model(session_record)
+
+    def get_current_session_record(self) -> Optional[Session]:
+        """
+        Get the current active session as a Peewee model.
+
+        If no session has been created in this repository instance,
+        retrieves the most recent session from the database.
+
+        Returns:
+            Optional[Session]: The current session Peewee record or None if no sessions exist
+        """
         if self.current_session is not None:
-            return self._to_model(self.current_session)
-        
+            return self.current_session
+
         try:
             # Find the most recent session
             session = Session.select().order_by(Session.created_at.desc()).first()
             if session:
                 self.current_session = session
-            return self._to_model(session)
+            return session
         except peewee.DatabaseError as e:
-            logger.error(f"Failed to get current session: {str(e)}")
+            logger.error(f"Failed to get current session record: {str(e)}")
             return None
 
     def get_current_session_id(self) -> Optional[int]:
         """
         Get the ID of the current active session.
-        
+
         Returns:
             Optional[int]: The ID of the current session or None if no session exists
         """
@@ -212,10 +226,10 @@ class SessionRepository:
     def get(self, session_id: int) -> Optional[SessionModel]:
         """
         Get a session by its ID.
-        
+
         Args:
             session_id: The ID of the session to retrieve
-            
+
         Returns:
             Optional[SessionModel]: The session with the given ID or None if not found
         """
@@ -226,21 +240,23 @@ class SessionRepository:
             logger.error(f"Database error getting session {session_id}: {str(e)}")
             return None
 
-    def get_all(self, offset: int = 0, limit: int = 10) -> tuple[List[SessionModel], int]:
+    def get_all(
+        self, offset: int = 0, limit: int = 10
+    ) -> tuple[List[SessionModel], int]:
         """
         Get all sessions from the database with pagination support.
-        
+
         Args:
             offset: Number of sessions to skip (default: 0)
             limit: Maximum number of sessions to return (default: 10)
-            
+
         Returns:
             tuple: (List[SessionModel], int) containing the list of sessions and the total count
         """
         try:
             # Get total count for pagination info
             total_count = Session.select().count()
-            
+
             # Get paginated sessions ordered by created_at in descending order (newest first)
             sessions = list(
                 Session.select()
@@ -248,7 +264,7 @@ class SessionRepository:
                 .offset(offset)
                 .limit(limit)
             )
-            
+
             return [self._to_model(session) for session in sessions], total_count
         except peewee.DatabaseError as e:
             logger.error(f"Failed to get all sessions with pagination: {str(e)}")
@@ -257,20 +273,19 @@ class SessionRepository:
     def get_recent(self, limit: int = 10) -> List[SessionModel]:
         """
         Get the most recent sessions from the database.
-        
+
         Args:
             limit: Maximum number of sessions to return (default: 10)
-            
+
         Returns:
             List[SessionModel]: List of the most recent sessions
         """
         try:
             sessions = list(
-                Session.select()
-                .order_by(Session.created_at.desc())
-                .limit(limit)
+                Session.select().order_by(Session.created_at.desc()).limit(limit)
             )
             return [self._to_model(session) for session in sessions]
         except peewee.DatabaseError as e:
             logger.error(f"Failed to get recent sessions: {str(e)}")
             return []
+

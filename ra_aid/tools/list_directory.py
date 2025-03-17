@@ -11,6 +11,8 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.tree import Tree
 
+from ra_aid.console.formatting import cpm
+
 console = Console()
 
 
@@ -240,12 +242,10 @@ def list_directory_tree(
     tree_str = capture.get()
 
     # Display panel
-    console.print(
-        Panel(
-            Markdown(f"```\n{tree_str}\n```"),
-            title="📂 Directory Tree",
-            border_style="bright_blue",
-        )
+    cpm(
+        f"```\n{tree_str}\n```",
+        title="📂 Directory Tree",
+        border_style="bright_blue"
     )
 
     return tree_str

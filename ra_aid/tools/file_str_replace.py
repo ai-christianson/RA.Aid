@@ -2,10 +2,10 @@ from pathlib import Path
 from typing import Dict
 
 from langchain_core.tools import tool
-from rich.panel import Panel
 
 from ra_aid.console import console
 from ra_aid.console.formatting import print_error
+from ra_aid.console.formatting import console_panel
 from ra_aid.tools.memory import emit_related_files
 from ra_aid.database.repositories.trajectory_repository import get_trajectory_repository
 from ra_aid.database.repositories.human_input_repository import get_human_input_repository
@@ -156,12 +156,10 @@ def file_str_replace(filepath: str, old_str: str, new_str: str, *, replace_all: 
         if count > 1 and replace_all:
             replacement_msg = f"Replaced {count} occurrences in {filepath}:"
             
-        console.print(
-            Panel(
-                f"{replacement_msg}\n{format_string_for_display(old_str)} → {format_string_for_display(new_str)}",
-                title="✓ String Replaced",
-                border_style="bright_blue",
-            )
+        console_panel(
+            f"{replacement_msg}\n{format_string_for_display(old_str)} → {format_string_for_display(new_str)}",
+            title="✓ String Replaced",
+            border_style="bright_blue"
         )
         
         success_msg = f"Successfully replaced '{old_str}' with '{new_str}' in {filepath}"

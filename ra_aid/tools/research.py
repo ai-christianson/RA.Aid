@@ -2,6 +2,7 @@ from langchain_core.tools import tool
 from rich.console import Console
 from rich.panel import Panel
 
+from ra_aid.console.formatting import console_panel
 from ra_aid.database.repositories.trajectory_repository import get_trajectory_repository
 from ra_aid.database.repositories.human_input_repository import get_human_input_repository
 
@@ -31,7 +32,7 @@ def existing_project_detected() -> dict:
         # Continue even if trajectory recording fails
         console.print(f"Warning: Could not record trajectory: {str(e)}")
 
-    console.print(Panel("📁 Existing Project Detected", style="bright_blue", padding=0))
+    console_panel("📁 Existing Project Detected", border_style="bright_blue", padding=0)
     return {
         "hint": (
             "You are working within an existing codebase that already has established patterns and standards. "
@@ -69,7 +70,7 @@ def monorepo_detected() -> dict:
         # Continue even if trajectory recording fails
         console.print(f"Warning: Could not record trajectory: {str(e)}")
 
-    console.print(Panel("📦 Monorepo Detected", style="bright_blue", padding=0))
+    console_panel("📦 Monorepo Detected", border_style="bright_blue", padding=0)
     return {
         "hint": (
             "You are researching in a monorepo environment that manages multiple packages or services under one roof. "
@@ -110,7 +111,7 @@ def ui_detected() -> dict:
         # Continue even if trajectory recording fails
         console.print(f"Warning: Could not record trajectory: {str(e)}")
 
-    console.print(Panel("🎯 UI Detected", style="bright_blue", padding=0))
+    console_panel("🎯 UI Detected", border_style="bright_blue", padding=0)
     return {
         "hint": (
             "You are working with a user interface component where established UI conventions, styles, and frameworks are likely in place. "

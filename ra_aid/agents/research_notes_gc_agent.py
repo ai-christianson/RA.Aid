@@ -14,7 +14,7 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 
-logger = logging.getLogger(__name__)
+from ra_aid.console.formatting import console_panel
 
 from ra_aid.agent_context import mark_should_exit
 
@@ -24,8 +24,9 @@ from ra_aid.database.repositories.human_input_repository import get_human_input_
 from ra_aid.database.repositories.config_repository import get_config_repository
 from ra_aid.database.repositories.trajectory_repository import get_trajectory_repository
 from ra_aid.llm import initialize_llm
-from ra_aid.model_formatters.research_notes_formatter import format_research_note
 from ra_aid.tools.memory import log_work_event
+
+logger = logging.getLogger(__name__)
 
 
 console = Console()
@@ -177,7 +178,7 @@ def run_research_notes_gc_agent(threshold: int = 30) -> None:
         except Exception:
             pass  # Continue if trajectory recording fails
             
-        console.print(Panel(f"Error: {str(e)}", title="🗑 GC Error", border_style="red"))
+        console_panel(f"Error: {str(e)}", title="🗑 GC Error", border_style="red")
         return  # Exit the function if we can't access the repository
     
     # Display status panel with note count included
@@ -196,7 +197,7 @@ def run_research_notes_gc_agent(threshold: int = 30) -> None:
     except Exception:
         pass  # Continue if trajectory recording fails
         
-    console.print(Panel(f"Gathering my thoughts...\nCurrent number of research notes: {note_count}", title="🗑 Garbage Collection"))
+    console_panel(f"Gathering my thoughts...\nCurrent number of research notes: {note_count}", title="🗑 Garbage Collection")
     
     # Only run the agent if we actually have notes to clean and we're over the threshold
     if note_count > threshold:
@@ -317,11 +318,9 @@ Remember: Your goal is to maintain a concise, high-value collection of research 
                 except Exception:
                     pass  # Continue if trajectory recording fails
                 
-                console.print(
-                    Panel(
-                        f"Cleaned research notes: {note_count} → {updated_count}\nProtected notes (associated with current request): {protected_count}",
-                        title="🗑 GC Complete"
-                    )
+                console_panel(
+                    f"Cleaned research notes: {note_count} → {updated_count}\nProtected notes (associated with current request): {protected_count}",
+                    title="🗑 GC Complete"
                 )
             else:
                 # Record GC completion in trajectory
@@ -342,11 +341,9 @@ Remember: Your goal is to maintain a concise, high-value collection of research 
                 except Exception:
                     pass  # Continue if trajectory recording fails
                 
-                console.print(
-                    Panel(
-                        f"Cleaned research notes: {note_count} → {updated_count}",
-                        title="🗑 GC Complete"
-                    )
+                console_panel(
+                    f"Cleaned research notes: {note_count} → {updated_count}",
+                    title="🗑 GC Complete"
                 )
         else:
             # Record GC info in trajectory
@@ -366,7 +363,7 @@ Remember: Your goal is to maintain a concise, high-value collection of research 
             except Exception:
                 pass  # Continue if trajectory recording fails
                 
-            console.print(Panel(f"All {len(protected_notes)} research notes are associated with the current request and protected from deletion.", title="🗑 GC Info"))
+            console_panel(f"All {len(protected_notes)} research notes are associated with the current request and protected from deletion.", title="🗑 GC Info")
     else:
         # Record GC info in trajectory
         try:
@@ -386,4 +383,4 @@ Remember: Your goal is to maintain a concise, high-value collection of research 
         except Exception:
             pass  # Continue if trajectory recording fails
             
-        console.print(Panel(f"Research notes count ({note_count}) is below threshold ({threshold}). No cleanup needed.", title="🗑 GC Info"))
+        console_panel(f"Research notes count ({note_count}) is below threshold ({threshold}). No cleanup needed.", title="🗑 GC Info")

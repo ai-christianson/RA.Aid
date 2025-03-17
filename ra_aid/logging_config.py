@@ -36,7 +36,8 @@ class PrettyHandler(logging.Handler):
             else:
                 title = "🐞 DEBUG"
                 style = "blue"
-            self.console.print(Panel(Markdown(msg.strip()), title=title, style=style))
+            from ra_aid.console.formatting import cpm
+            cpm(msg.strip(), title=title, border_style=style)
         except Exception:
             self.handleError(record)
 

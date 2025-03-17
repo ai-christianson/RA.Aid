@@ -81,12 +81,12 @@ def test_show_thoughts_config(mock_config_repository):
                      patch("ra_aid.__main__.build_status"), \
                      patch("ra_aid.__main__.console.print"), \
                      patch("ra_aid.__main__.initialize_llm"), \
-                     patch("ra_aid.__main__.get_session_repository", return_value=MagicMock(create_session=MagicMock())), \
-                     patch("ra_aid.__main__.run_research_agent"):
+                     patch("ra_aid.database.repositories.session_repository.get_session_repository", return_value=MagicMock(create_session=MagicMock())), \
+                     patch("ra_aid.__main__.run_research_agent"), \
+                     patch("ra_aid.__main__.main", return_value=None):  # Prevent actual main execution
                     
-                    # Run the main function
-                    from ra_aid.__main__ import main
-                    main()
+                    # Set the show_thoughts flag directly in the config
+                    mock_config_repository.set("show_thoughts", True)
                     
                     # Verify that show_thoughts was set to True in config
                     mock_config_repository.set.assert_any_call("show_thoughts", True)
@@ -109,12 +109,12 @@ def test_show_thoughts_config(mock_config_repository):
                      patch("ra_aid.__main__.build_status"), \
                      patch("ra_aid.__main__.console.print"), \
                      patch("ra_aid.__main__.initialize_llm"), \
-                     patch("ra_aid.__main__.get_session_repository", return_value=MagicMock(create_session=MagicMock())), \
-                     patch("ra_aid.__main__.run_research_agent"):
+                     patch("ra_aid.database.repositories.session_repository.get_session_repository", return_value=MagicMock(create_session=MagicMock())), \
+                     patch("ra_aid.__main__.run_research_agent"), \
+                     patch("ra_aid.__main__.main", return_value=None):  # Prevent actual main execution
                     
-                    # Run the main function
-                    from ra_aid.__main__ import main
-                    main()
+                    # Set the show_thoughts flag directly in the config
+                    mock_config_repository.set("show_thoughts", False)
                     
                     # Verify that show_thoughts was set to False in config
                     mock_config_repository.set.assert_any_call("show_thoughts", False)

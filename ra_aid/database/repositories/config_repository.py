@@ -40,6 +40,7 @@ class ConfigRepository:
             "retry_fallback_count": RETRY_FALLBACK_COUNT,
             "test_cmd_timeout": DEFAULT_TEST_CMD_TIMEOUT,
             "show_cost": DEFAULT_SHOW_COST,
+            "track_cost": True,
             "valid_providers": VALID_PROVIDERS,
         }
         
@@ -100,6 +101,18 @@ class ConfigRepository:
         for key in self.get_keys():
             new_repo.set(key, self.get(key))
         return new_repo
+        
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        Convert the repository configuration to a dictionary.
+        
+        Returns:
+            Dict[str, Any]: A dictionary containing all configuration values
+        """
+        result = {}
+        for key in self.get_keys():
+            result[key] = self.get(key)
+        return result
 
 
 class ConfigRepositoryManager:
@@ -136,7 +149,6 @@ class ConfigRepositoryManager:
         if self.source_repo is None:
             repo = ConfigRepository()
         else:
-            # Create a deep copy of the source repository
             repo = self.source_repo.deep_copy()
             
         config_repo_var.set(repo)
