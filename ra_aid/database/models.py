@@ -239,15 +239,6 @@ class Trajectory(BaseModel):
     current_cost = peewee.FloatField(
         null=True, help_text="Cost of the last LLM message"
     )
-    current_tokens = peewee.IntegerField(
-        null=True, help_text="Tokens (input + output) for the last message"
-    )
-    total_cost = peewee.FloatField(
-        null=True, help_text="Running total cost across all AI agents in this session"
-    )
-    total_tokens = peewee.IntegerField(
-        null=True, help_text="Running total tokens across all AI agents in this session"
-    )
     input_tokens = peewee.IntegerField(
         null=True, help_text="Prompt/input token usage for last message"
     )

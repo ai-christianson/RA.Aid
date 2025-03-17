@@ -137,7 +137,6 @@ class ConfigRepositoryManager:
         if self.source_repo is None:
             repo = ConfigRepository()
         else:
-            # Create a deep copy of the source repository
             repo = self.source_repo.deep_copy()
             
         config_repo_var.set(repo)

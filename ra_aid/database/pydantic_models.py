@@ -40,10 +40,6 @@ class SessionModel(BaseModel):
     command_line: Optional[str] = None
     program_version: Optional[str] = None
     machine_info: Optional[Dict[str, Any]] = None
-    total_input_tokens: int = 0
-    total_output_tokens: int = 0
-    total_tokens: int = 0
-    total_cost: float = 0.0
     
     # Configure the model to work with ORM objects
     model_config = ConfigDict(from_attributes=True)
@@ -224,9 +220,6 @@ class TrajectoryModel(BaseModel):
         step_data: Dictionary containing UI rendering data
         record_type: Type of trajectory record
         current_cost: Optional cost of the last LLM message
-        current_tokens: Optional tokens (input + output) for the last message
-        total_cost: Optional running total cost across all AI agents in this session
-        total_tokens: Optional running total tokens across all AI agents in this session
         input_tokens: Optional input/prompt token usage
         output_tokens: Optional output/completion token usage
         is_error: Flag indicating if this record represents an error
@@ -249,13 +242,8 @@ class TrajectoryModel(BaseModel):
     step_data: Optional[Dict[str, Any]] = None
     record_type: Optional[str] = None
     current_cost: Optional[float] = None
-    current_tokens: Optional[int] = None
-    total_cost: Optional[float] = None
-    total_tokens: Optional[int] = None
     input_tokens: Optional[int] = None
     output_tokens: Optional[int] = None
-    cost: Optional[float] = None  # Legacy field
-    tokens: Optional[int] = None  # Legacy field
     is_error: bool = False
     error_message: Optional[str] = None
     error_type: Optional[str] = None

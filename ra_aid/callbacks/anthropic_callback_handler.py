@@ -188,22 +188,23 @@ class AnthropicCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
         if model_name:
             self.model_name = model_name
 
-        from ra_aid.database.repositories.trajectory_repository import get_trajectory_repository
-        from ra_aid.database.repositories.session_repository import get_session_repository
-        
-        self.trajectory_repo = get_trajectory_repository()
-        self.session_repo = get_session_repository()
+        from ra_aid.database.repositories.trajectory_repository import (
+            get_trajectory_repository,
+        )
+        from ra_aid.database.repositories.session_repository import (
+            get_session_repository,
+        )
 
-        if self.session_repo:
-            current_session = self.session_repo.get_current_session_record()
+        self.trajectory_repo = get_trajectory_repository()
+
+        try:
+            session_repo = get_session_repository()
+            current_session = session_repo.get_current_session_record()
             if current_session:
-                self.session_totals["cost"] = current_session.total_cost
-                self.session_totals["tokens"] = current_session.total_tokens
-                self.session_totals["input_tokens"] = current_session.total_input_tokens
-                self.session_totals["output_tokens"] = (
-                    current_session.total_output_tokens
-                )
-                self.session_totals["session_id"] = current_session.id
+                self.session_totals["session_id"] = current_session.get_id()
+
+        except Exception as e:
+            logger.warning(f"Failed to get current session: {e}")
 
         # Default costs for Claude 3.7 Sonnet
         self.input_cost_per_token = 0.003 / 1000  # $3/M input tokens
@@ -308,7 +309,7 @@ class AnthropicCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
         """
         Handle callback updates and record trajectory data.
         """
-        if not self.trajectory_repo or not self.session_repo:
+        if not self.trajectory_repo:
             return
 
         try:
@@ -319,35 +320,24 @@ class AnthropicCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
             last_cost = calculate_token_cost(
                 self.model_name, self.prompt_tokens, self.completion_tokens
             )
+            
+            # Update our local totals
+            self.session_totals["cost"] += last_cost
+            self.session_totals["tokens"] += self.prompt_tokens + self.completion_tokens
+            self.session_totals["input_tokens"] += self.prompt_tokens
+            self.session_totals["output_tokens"] += self.completion_tokens
 
-            updated_session = self.session_repo.update_token_usage(
+            # Record the usage in trajectory
+            self.trajectory_repo.create(
+                record_type="model_usage",
+                current_cost=last_cost,
                 input_tokens=self.prompt_tokens,
                 output_tokens=self.completion_tokens,
-                last_cost=last_cost,
+                session_id=self.session_totals["session_id"],
             )
-
-            if updated_session:
-                self.session_totals["cost"] = updated_session.total_cost
-                self.session_totals["tokens"] = updated_session.total_tokens
-                self.session_totals["input_tokens"] = updated_session.total_input_tokens
-                self.session_totals["output_tokens"] = (
-                    updated_session.total_output_tokens
-                )
-
-                self.trajectory_repo.create(
-                    record_type="model_usage",
-                    current_cost=last_cost,
-                    current_tokens=self.prompt_tokens + self.completion_tokens,
-                    total_cost=self.session_totals[
-                        "cost"
-                    ],  
-                    total_tokens=self.session_totals[
-                        "tokens"
-                    ],  
-                    input_tokens=self.prompt_tokens,
-                    output_tokens=self.completion_tokens,
-                    session_id=self.session_totals["session_id"],
-                )
+            
+            # We no longer need to update session totals in the database
+            # as we're now calculating them on-demand from trajectory records
 
         except Exception as e:
             logger.error(f"Failed to store token usage data: {e}")

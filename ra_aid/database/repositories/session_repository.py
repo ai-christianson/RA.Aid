@@ -166,10 +166,6 @@ class SessionRepository:
                 command_line=command_line,
                 program_version=program_version,
                 machine_info=machine_info,
-                total_input_tokens=0,
-                total_output_tokens=0,
-                total_tokens=0,
-                total_cost=0.0,
             )
 
             # Store the current session
@@ -293,46 +289,3 @@ class SessionRepository:
             logger.error(f"Failed to get recent sessions: {str(e)}")
             return []
 
-    def update_token_usage(
-        self,
-        input_tokens: int = 0,
-        output_tokens: int = 0,
-        last_cost: float = 0.0,
-    ) -> Optional[Session]:
-        """
-        Update token usage for a session.
-
-        Args:
-            input_tokens: Number of input tokens to add
-            output_tokens: Number of output tokens to add
-            last_cost: Pre-calculated cost for this update
-
-        Returns:
-            Optional[Session]: Updated session or None if not found
-        """
-        try:
-            session = self.get_current_session_record()
-            if not session:
-                logger.warning("Attempted to update non-existent session.")
-                return None
-
-            session.total_input_tokens = session.total_input_tokens + input_tokens
-            session.total_output_tokens = session.total_output_tokens + output_tokens
-            session.total_tokens = (
-                session.total_input_tokens + session.total_output_tokens
-            )
-            session.total_cost = session.total_cost + last_cost
-            session.save()
-
-            session_id = session.get_id()
-            logger.debug(
-                f"Updated session {session_id} with {input_tokens} input tokens, "
-                f"{output_tokens} output tokens, ${session.total_cost:.6f} cost"
-            )
-
-            return self.get(session_id)
-        except peewee.DatabaseError as e:
-            logger.error(
-                f"Failed to update token usage for session {session_id}: {str(e)}"
-            )
-            return None

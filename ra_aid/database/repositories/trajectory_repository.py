@@ -461,3 +461,52 @@ class TrajectoryRepository:
                                       or None if not found
         """
         return self.get(trajectory_id)
+        
+    def get_session_usage_totals(self, session_id: int) -> Dict[str, Any]:
+        """
+        Calculate total usage metrics for a session by summing all trajectory records.
+        
+        Args:
+            session_id: The ID of the session to calculate totals for
+            
+        Returns:
+            Dict[str, Any]: Dictionary containing total cost, tokens, input tokens, and output tokens
+            
+        Raises:
+            peewee.DatabaseError: If there's an error accessing the database
+        """
+        try:
+            totals = {
+                "total_cost": 0.0,
+                "total_input_tokens": 0,
+                "total_output_tokens": 0,
+            }
+            
+            trajectories = Trajectory.select().where(
+                (Trajectory.session == session_id) & 
+                (Trajectory.record_type == "model_usage")
+            )
+            
+            for traj in trajectories:
+                if traj.current_cost is not None:
+                    totals["total_cost"] += traj.current_cost
+                if traj.input_tokens is not None:
+                    totals["total_input_tokens"] += traj.input_tokens
+                if traj.output_tokens is not None:
+                    totals["total_output_tokens"] += traj.output_tokens
+            
+            # Calculate total tokens from input and output tokens
+            totals["total_tokens"] = totals["total_input_tokens"] + totals["total_output_tokens"]
+            
+            logger.debug(
+                f"Calculated session {session_id} totals: "
+                f"cost=${totals['total_cost']:.6f}, "
+                f"tokens={totals['total_tokens']}, "
+                f"input={totals['total_input_tokens']}, "
+                f"output={totals['total_output_tokens']}"
+            )
+            
+            return totals
+        except peewee.DatabaseError as e:
+            logger.error(f"Failed to calculate session usage totals: {str(e)}")
+            raise
