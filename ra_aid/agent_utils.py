@@ -46,7 +46,6 @@ from ra_aid.exceptions import (
 )
 from ra_aid.fallback_handler import FallbackHandler
 from ra_aid.logging_config import get_logger
-from ra_aid.model_detection import model_name_has_claude
 from ra_aid.models_params import (
     DEFAULT_TOKEN_LIMIT,
     DEFAULT_AGENT_BACKEND,
@@ -186,13 +185,11 @@ def create_agent(
             get_model_token_limit(config, agent_type, model) or DEFAULT_TOKEN_LIMIT
         )
 
-        # Get the model parameters from models_params
         from ra_aid.models_params import models_params
 
         provider_config = models_params.get(config.get("provider", ""), {})
         model_config = provider_config.get(config.get("model", ""), {})
 
-        # Determine which agent backend to use
         agent_backend = model_config.get("default_backend", DEFAULT_AGENT_BACKEND)
 
         if agent_backend == AgentBackendType.CREATE_REACT_AGENT:
