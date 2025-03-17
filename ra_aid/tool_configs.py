@@ -1,5 +1,11 @@
-from langchain_core.tools import BaseTool
+import importlib.util
+import sys
+from typing import List, Optional
 
+from langchain_core.tools import BaseTool
+from ra_aid.console.output import console, cpm
+from rich.markdown import Markdown
+from rich.panel import Panel
 from ra_aid.tools import (
     ask_expert,
     ask_human,
@@ -45,6 +51,74 @@ def set_modification_tools(use_aider=False):
         MODIFICATION_TOOLS.extend([file_str_replace, put_complete_file_contents])
 
 
+def get_custom_tools() -> List[BaseTool]:
+    """Dynamically import and return custom tools from the configured module.
+    
+    The custom tools module must export a 'tools' attribute that is a list of
+    langchain Tool objects (e.g. StructuredTool or other tool classes).
+    
+    Tools must return a Dict with keys:
+    - success: bool
+    - can_retry: bool  
+    - return_code: int
+    - output: str
+    
+    If can_retry=True, the tool may be retried with the previous output appended
+    to the prompt, up to max_retries times.
+    
+    Returns:
+        List[BaseTool]: List of custom tools, or empty list if no custom tools configured
+    """
+    global CUSTOM_TOOLS
+
+    if CUSTOM_TOOLS:
+        # Custom tools were previously loaded
+        return CUSTOM_TOOLS
+    
+    try:
+        config = get_config_repository().get_all()
+        custom_tools_path = config.get("custom_tools")
+        
+        if not custom_tools_path:
+            return []
+            
+        # Convert module path to system path
+        module_path = custom_tools_path.replace(".", "/") + ".py"
+        
+        # Import the module
+        spec = importlib.util.spec_from_file_location(custom_tools_path, module_path)
+        if not spec or not spec.loader:
+            raise Exception(f"Could not load custom tools module: {custom_tools_path}")
+            
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[custom_tools_path] = module
+        spec.loader.exec_module(module)
+        
+        # Get the tools list
+        if not hasattr(module, "tools"):
+            raise Exception(f"Custom tools module {custom_tools_path} does not export 'tools' attribute")
+            
+        tools = module.tools
+        if not isinstance(tools, list):
+            raise Exception(f"Custom tools module {custom_tools_path} 'tools' attribute must be a list")
+                
+        # Log which tools were loaded (only during startup)
+        if len(tools) > 0:
+            custom_tool_output = f"""These custom tools are available to the agent:\n"""
+            for tool in tools:
+                custom_tool_output += f"* {tool.name}: {tool.description}\n"
+            console.print(Panel(Markdown(custom_tool_output.strip()), title="⚙️ Custom Tools Available", border_style="magenta"))
+
+        # Set global
+        CUSTOM_TOOLS.clear()
+        CUSTOM_TOOLS.extend(tools)
+
+        return tools
+
+    except Exception as e:
+        raise
+
+
 # Read-only tools that don't modify system state
 def get_read_only_tools(
     human_interaction: bool = False,
@@ -77,6 +151,8 @@ def get_read_only_tools(
         run_shell_command,  # can modify files, but we still need it for read-only tasks.
     ]
 
+    tools.extend(get_custom_tools())
+
     if web_research_enabled:
         tools.append(request_web_research)
 
@@ -95,6 +171,7 @@ def get_all_tools() -> list[BaseTool]:
     all_tools.extend(RESEARCH_TOOLS)
     all_tools.extend(get_web_research_tools())
     all_tools.extend(get_chat_tools())
+    all_tools.extend(get_custom_tools())
     return all_tools
 
 
@@ -111,6 +188,8 @@ READ_ONLY_TOOLS = get_read_only_tools(use_aider=use_aider)
 # MODIFICATION_TOOLS will be set dynamically based on config, default defined here
 MODIFICATION_TOOLS = [file_str_replace, put_complete_file_contents]
 COMMON_TOOLS = get_read_only_tools(use_aider=use_aider)
+# CUSTOM TOOLS will be set dynamically based on config, default defined here
+CUSTOM_TOOLS = []
 EXPERT_TOOLS = [emit_expert_context, ask_expert]
 RESEARCH_TOOLS = [
     emit_research_notes,

@@ -79,6 +79,19 @@ When processing request_* tool responses:
     - If you see implementation confirmation in the response, inform the user that changes have been completed
     - If you accidentally ask about implementing already-completed changes, acknowledge your error and correct yourself
 
+Custom Tools:
+    - When custom tools are provided (e.g. compile_firmware, generate_docs), use them directly instead of researching or using other tools
+    - Custom tools are pre-configured callables that handle their specific tasks
+    - Custom tools return a Dict with:
+        - success: bool - Whether the operation succeeded
+        - retriable: bool - Whether the operation can be retried on failure
+        - return_code: int - Operation return code
+        - output: str - Operation output/error message
+    - If a custom tool fails and is retriable, you can retry with previous output appended
+    - NEVER print messages about custom tool operations - always call the actual tool
+    - Do not use request_research or other tools when a custom tool exists for the task
+    - Custom tools take precedence over all other tools for their specific tasks
+
 Remember:
     - Always process provided request or call ask_human if none provided
     - Always ask_human before finalizing or exiting.
