@@ -402,7 +402,6 @@ def initialize_callback_handler(agent: RAgents):
     Initialize the callback handler for token tracking.
 
     Args:
-        config: Configuration dictionary containing provider and model information
         agent: The agent instance to extract model information from
 
     Returns:
