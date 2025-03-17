@@ -420,11 +420,8 @@ def initialize_callback_handler(config, agent: RAgents):
             "Agent is None or has no name attribute - the agent name is needed to determine enablement of callback handler."
         )
 
-    if not model_name_has_claude(model_name):
-        logger.debug(
-            f"Model {model_name} is not a Claude model, skipping callback handler"
-        )
-        return cb, stream_config
+    # Always use the callback handler regardless of model name
+    logger.debug(f"Using callback handler for model {model_name}")
 
     cb = AnthropicCallbackHandler(model_name)
 
