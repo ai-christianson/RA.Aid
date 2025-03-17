@@ -28,6 +28,10 @@ class SessionModel(BaseModel):
         command_line: Command line arguments used to start the program
         program_version: Version of the program
         machine_info: Dictionary containing machine-specific metadata
+        total_input_tokens: Total number of input tokens used in this session
+        total_output_tokens: Total number of output tokens used in this session
+        total_tokens: Total number of tokens (input + output) used in this session
+        total_cost: Total cost of token usage in this session
     """
     id: Optional[int] = None
     created_at: datetime.datetime
@@ -36,6 +40,10 @@ class SessionModel(BaseModel):
     command_line: Optional[str] = None
     program_version: Optional[str] = None
     machine_info: Optional[Dict[str, Any]] = None
+    total_input_tokens: int = 0
+    total_output_tokens: int = 0
+    total_tokens: int = 0
+    total_cost: float = 0.0
     
     # Configure the model to work with ORM objects
     model_config = ConfigDict(from_attributes=True)

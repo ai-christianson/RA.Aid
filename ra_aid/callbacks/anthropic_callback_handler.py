@@ -194,7 +194,7 @@ class AnthropicCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
         self.session_repo = session_repo
 
         if self.session_repo:
-            current_session = self.session_repo.get_current_session()
+            current_session = self.session_repo.get_current_session_record()
             if current_session:
                 self.session_totals["cost"] = current_session.total_cost
                 self.session_totals["tokens"] = current_session.total_tokens
@@ -329,10 +329,8 @@ class AnthropicCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
             )
 
             updated_session = self.session_repo.update_token_usage(
-                session_id=self.session_totals["session_id"],
                 input_tokens=self.prompt_tokens,
                 output_tokens=self.completion_tokens,
-                model_name=self.model_name,
                 last_cost=last_cost,
             )
 

@@ -122,20 +122,20 @@ class SessionRepository:
             raise ValueError("Database connection is required for SessionRepository")
         self.db = db
         self.current_session = None
-        
+
     def _to_model(self, session: Optional[Session]) -> Optional[SessionModel]:
         """
         Convert a Peewee Session object to a Pydantic SessionModel.
-        
+
         Args:
             session: Peewee Session instance or None
-            
+
         Returns:
             Optional[SessionModel]: Pydantic model representation or None if session is None
         """
         if session is None:
             return None
-        
+
         return SessionModel.model_validate(session, from_attributes=True)
 
     def create_session(self, metadata: Optional[Dict[str, Any]] = None) -> SessionModel:
@@ -147,7 +147,7 @@ class SessionRepository:
 
         Returns:
             SessionModel: The newly created session instance
-            
+
         Raises:
             peewee.DatabaseError: If there's an error creating the record
         """
@@ -183,7 +183,7 @@ class SessionRepository:
 
     def get_current_session(self) -> Optional[SessionModel]:
         """
-        Get the current active session.
+        Get the current active session as a Pydantic model.
 
         If no session has been created in this repository instance,
         retrieves the most recent session from the database.
@@ -191,17 +191,30 @@ class SessionRepository:
         Returns:
             Optional[SessionModel]: The current session or None if no sessions exist
         """
+        session_record = self.get_current_session_record()
+        return self._to_model(session_record)
+
+    def get_current_session_record(self) -> Optional[Session]:
+        """
+        Get the current active session as a Peewee model.
+
+        If no session has been created in this repository instance,
+        retrieves the most recent session from the database.
+
+        Returns:
+            Optional[Session]: The current session Peewee record or None if no sessions exist
+        """
         if self.current_session is not None:
-            return self._to_model(self.current_session)
-        
+            return self.current_session
+
         try:
             # Find the most recent session
             session = Session.select().order_by(Session.created_at.desc()).first()
             if session:
                 self.current_session = session
-            return self._to_model(session)
+            return session
         except peewee.DatabaseError as e:
-            logger.error(f"Failed to get current session: {str(e)}")
+            logger.error(f"Failed to get current session record: {str(e)}")
             return None
 
     def get_current_session_id(self) -> Optional[int]:
@@ -231,21 +244,23 @@ class SessionRepository:
             logger.error(f"Database error getting session {session_id}: {str(e)}")
             return None
 
-    def get_all(self, offset: int = 0, limit: int = 10) -> tuple[List[SessionModel], int]:
+    def get_all(
+        self, offset: int = 0, limit: int = 10
+    ) -> tuple[List[SessionModel], int]:
         """
         Get all sessions from the database with pagination support.
-        
+
         Args:
             offset: Number of sessions to skip (default: 0)
             limit: Maximum number of sessions to return (default: 10)
-            
+
         Returns:
             tuple: (List[SessionModel], int) containing the list of sessions and the total count
         """
         try:
             # Get total count for pagination info
             total_count = Session.select().count()
-            
+
             # Get paginated sessions ordered by created_at in descending order (newest first)
             sessions = list(
                 Session.select()
@@ -253,7 +268,7 @@ class SessionRepository:
                 .offset(offset)
                 .limit(limit)
             )
-            
+
             return [self._to_model(session) for session in sessions], total_count
         except peewee.DatabaseError as e:
             logger.error(f"Failed to get all sessions with pagination: {str(e)}")
@@ -271,9 +286,7 @@ class SessionRepository:
         """
         try:
             sessions = list(
-                Session.select()
-                .order_by(Session.created_at.desc())
-                .limit(limit)
+                Session.select().order_by(Session.created_at.desc()).limit(limit)
             )
             return [self._to_model(session) for session in sessions]
         except peewee.DatabaseError as e:
@@ -282,40 +295,37 @@ class SessionRepository:
 
     def update_token_usage(
         self,
-        session_id: int,
         input_tokens: int = 0,
         output_tokens: int = 0,
-        model_name: str = DEFAULT_MODEL,
         last_cost: float = 0.0,
     ) -> Optional[Session]:
         """
         Update token usage for a session.
 
         Args:
-            session_id: ID of the session to update
             input_tokens: Number of input tokens to add
             output_tokens: Number of output tokens to add
-            model_name: Model name used for cost calculation
             last_cost: Pre-calculated cost for this update
 
         Returns:
             Optional[Session]: Updated session or None if not found
         """
         try:
-            session = self.get(session_id)
+            session = self.get_current_session_record()
             if not session:
-                logger.warning(f"Attempted to update non-existent session {session_id}")
+                logger.warning("Attempted to update non-existent session.")
                 return None
 
             session.total_input_tokens = session.total_input_tokens + input_tokens
             session.total_output_tokens = session.total_output_tokens + output_tokens
-            session.total_tokens = session.total_input_tokens + session.total_output_tokens
+            session.total_tokens = (
+                session.total_input_tokens + session.total_output_tokens
+            )
             session.total_cost = session.total_cost + last_cost
             session.save()
 
-            if self.current_session and self.current_session.id == session_id:
-                self.current_session = self.get(session_id)
-
+            session_id = session.get_id()
+            print(f"session_id={session_id}")
             logger.debug(
                 f"Updated session {session_id} with {input_tokens} input tokens, "
                 f"{output_tokens} output tokens, ${session.total_cost:.6f} cost"
