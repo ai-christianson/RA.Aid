@@ -235,7 +235,7 @@ More information is available in our [Usage Examples](https://docs.ra-aid.ai/cat
 - `--max-test-cmd-retries`: Maximum number of test command retry attempts (default: 3)
 - `--test-cmd-timeout`: Timeout in seconds for test command execution (default: 300)
 - `--show-cost`: Display cost information as the agent works - currently only supported on claude model agents
-- `--track-cost`: Track token usage and costs (default: True)
+- `--track-cost`: Track token usage and costs (default: False)
 - `--no-track-cost`: Disable tracking of token usage and costs
 - `--version`: Show program version number and exit
 - `--server`: Launch the server with web interface (alpha feature)
