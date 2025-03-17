@@ -127,10 +127,6 @@ class Session(BaseModel):
     machine_info = peewee.TextField(
         null=True, help_text="JSON-encoded machine information"
     )
-    total_input_tokens = peewee.IntegerField(default=0)
-    total_output_tokens = peewee.IntegerField(default=0)
-    total_tokens = peewee.IntegerField(default=0)
-    total_cost = peewee.FloatField(default=0.0)
 
     class Meta:
         table_name = "session"
