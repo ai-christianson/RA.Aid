@@ -6,24 +6,29 @@ ensuring consistent test environments and proper isolation.
 """
 
 import os
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 
-@pytest.fixture()
+@pytest.fixture(autouse=True)
 def mock_config_repository():
     """Mock the config repository."""
-    from ra_aid.database.repositories.config_repository import get_config_repository
+    from ra_aid.database.repositories.config_repository import config_repo_var, ConfigRepository
 
-    repo = MagicMock()
-    # Default config values
-    config_values = {"recursion_limit": 2}
-    repo.get_all.return_value = config_values
-    repo.get.side_effect = lambda key, default=None: config_values.get(key, default)
-    get_config_repository.return_value = repo
+    # Create a real ConfigRepository instance
+    repo = ConfigRepository()
+    # Set default config values
+    repo._config["recursion_limit"] = 2
+    repo._config["show_cost"] = False
+    
+    # Set the contextvar to use our repository
+    token = config_repo_var.set(repo)
+    
     yield repo
+    
+    # Reset the contextvar when done
+    config_repo_var.reset(token)
 
 
 @pytest.fixture()
