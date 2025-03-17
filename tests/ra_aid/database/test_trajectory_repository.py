@@ -150,10 +150,8 @@ def test_create_trajectory(
     mock_session_repository,
 ):
     """Test creating a trajectory with all fields."""
-    # Set up repository
     repo = TrajectoryRepository(db=setup_db)
 
-    # Create a trajectory
     trajectory = repo.create(
         tool_name="ripgrep_search",
         tool_parameters=test_tool_parameters,
@@ -162,7 +160,8 @@ def test_create_trajectory(
         record_type="tool_execution",
         human_input_id=sample_human_input.id,
         current_cost=0.001,
-        current_tokens=100,
+        input_tokens=200,
+        output_tokens=100,
     )
 
     # Verify type is TrajectoryModel, not Trajectory
@@ -181,6 +180,9 @@ def test_create_trajectory(
     assert trajectory.tool_parameters["options"]["case_sensitive"] == True
     assert trajectory.tool_result["total_matches"] == 2
     assert trajectory.step_data["highlights"][0]["color"] == "red"
+    assert trajectory.current_cost == 0.001
+    assert trajectory.input_tokens == 200
+    assert trajectory.output_tokens == 100
 
     # Verify foreign key reference
     assert trajectory.human_input_id == sample_human_input.id
@@ -296,7 +298,7 @@ def test_update_trajectory(setup_db, sample_trajectory):
     assert updated_trajectory.tool_parameters == original_params
 
     # Verify updating a non-existent trajectory returns None
-    non_existent_update = repo.update(trajectory_id=999, total_cost=0.005)
+    non_existent_update = repo.update(trajectory_id=999, current_cost=0.005)
     assert non_existent_update is None
 
 

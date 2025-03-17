@@ -174,8 +174,7 @@ class TrajectoryRepository:
             step_data: UI rendering data (will be JSON encoded)
             record_type: Type of trajectory record
             human_input_id: Optional ID of the associated human input
-            cost: Optional cost of the operation
-            tokens: Optional total token usage (kept for backward compatibility)
+            current_cost: cost of last llm message
             input_tokens: Optional input/prompt token usage
             output_tokens: Optional output/completion token usage
             is_error: Flag indicating if this record represents an error (default: False)
@@ -286,8 +285,7 @@ class TrajectoryRepository:
             trajectory_id: The ID of the trajectory record to update
             tool_result: Updated tool result (will be JSON encoded)
             step_data: Updated UI rendering data (will be JSON encoded)
-            cost: Updated cost information
-            tokens: Updated total token usage information (kept for backward compatibility)
+            current_cost: Cost of last llm message
             input_tokens: Updated input/prompt token usage
             output_tokens: Updated output/completion token usage
             is_error: Flag indicating if this record represents an error
