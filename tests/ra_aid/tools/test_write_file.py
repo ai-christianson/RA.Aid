@@ -7,7 +7,7 @@ from ra_aid.tools.write_file import put_complete_file_contents
 
 
 @pytest.fixture(autouse=True)
-def mock_related_files_repository(mock_config_repository):
+def mock_related_files_repository():
     """Mock the RelatedFilesRepository to avoid database operations during tests"""
     with patch('ra_aid.tools.memory.get_related_files_repository') as mock_repo:
         # Setup the mock repository to behave like the original, but using memory
