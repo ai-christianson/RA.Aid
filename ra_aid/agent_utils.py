@@ -5,6 +5,7 @@ import sys
 import threading
 import time
 from typing import Any, Dict, List, Literal, Optional
+import uuid
 
 from langchain_anthropic import ChatAnthropic
 from langgraph.graph.graph import CompiledGraph
@@ -441,7 +442,9 @@ def _prepare_state_config():
     Returns:
         dict: The prepared state configuration
     """
-    state_config = get_config_repository().get_all().copy()
+    config_repo = get_config_repository()
+    state_config = config_repo.get_all().copy()
+    thread_id = config_repo.get("thread_id", str(uuid.uuid4()))
     state_config = {"configurable": {"thread_id": thread_id}}
     return state_config
 

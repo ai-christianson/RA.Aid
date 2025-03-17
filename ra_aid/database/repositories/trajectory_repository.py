@@ -216,19 +216,8 @@ class TrajectoryRepository:
                 except peewee.DoesNotExist:
                     logger.warning(f"Human input with ID {human_input_id} not found")
 
-            # Create session reference if provided
-            # session = None
-            # if session_id is not None:
-            #     try:
-            #         from ra_aid.database.models import Session
-            #         session = Session.get_by_id(session_id)
-            #     except peewee.DoesNotExist:
-            #         logger.warning(f"Session with ID {session_id} not found")
-            #     except ImportError:
-            #         logger.warning("Could not import Session model")
             session_repo = get_session_repository()
             session_record = session_repo.get_current_session_record()
-            # session_record.get_id()
 
             trajectory = Trajectory.create(
                 human_input=human_input,

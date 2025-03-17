@@ -3,12 +3,11 @@ Tests for token usage tracking in agent_utils.py
 """
 
 import pytest
-from unittest.mock import patch, MagicMock, call
+from unittest.mock import patch, MagicMock
 import io
 import sys
 
 from ra_aid.agent_utils import _run_agent_stream
-from ra_aid.callbacks.anthropic_callback_handler import AnthropicCallbackHandler
 
 
 @pytest.fixture
