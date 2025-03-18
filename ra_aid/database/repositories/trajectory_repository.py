@@ -455,25 +455,29 @@ class TrajectoryRepository:
             peewee.DatabaseError: If there's an error accessing the database
         """
         try:
-            totals = {
-                "total_cost": 0.0,
-                "total_input_tokens": 0,
-                "total_output_tokens": 0,
-            }
-
-            trajectories = Trajectory.select().where(
-                (Trajectory.session == session_id)
-                & (Trajectory.record_type == "model_usage")
+            # Use SQL aggregation instead of Python computation
+            query = (
+                Trajectory
+                .select(
+                    peewee.fn.COALESCE(peewee.fn.SUM(Trajectory.current_cost), 0.0).alias('total_cost'),
+                    peewee.fn.COALESCE(peewee.fn.SUM(Trajectory.input_tokens), 0).alias('total_input_tokens'),
+                    peewee.fn.COALESCE(peewee.fn.SUM(Trajectory.output_tokens), 0).alias('total_output_tokens')
+                )
+                .where(
+                    (Trajectory.session == session_id)
+                    & (Trajectory.record_type == "model_usage")
+                )
+                .dicts()
+                .get()
             )
-
-            for traj in trajectories:
-                if traj.current_cost is not None:
-                    totals["total_cost"] += traj.current_cost
-                if traj.input_tokens is not None:
-                    totals["total_input_tokens"] += traj.input_tokens
-                if traj.output_tokens is not None:
-                    totals["total_output_tokens"] += traj.output_tokens
-
+            
+            # Extract the results from the query
+            totals = {
+                "total_cost": float(query['total_cost']),
+                "total_input_tokens": int(query['total_input_tokens']),
+                "total_output_tokens": int(query['total_output_tokens'])
+            }
+            
             # Calculate total tokens from input and output tokens
             totals["total_tokens"] = (
                 totals["total_input_tokens"] + totals["total_output_tokens"]
