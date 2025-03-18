@@ -227,18 +227,62 @@ async def get_session_trajectories(
         HTTPException: With a 404 status code if the session is not found
         HTTPException: With a 500 status code if there's a database error
     """
+    # Import the logger
+    from ra_aid.logging_config import get_logger
+    logger = get_logger(__name__)
+    
+    logger.info(f"Fetching trajectories for session ID: {session_id}")
+    
     try:
         # Verify the session exists
         session = session_repo.get(session_id)
         if not session:
+            logger.warning(f"Session with ID {session_id} not found")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Session with ID {session_id} not found",
             )
             
         # Get trajectories for the session
-        return trajectory_repo.get_trajectories_by_session(session_id)
+        trajectories = trajectory_repo.get_trajectories_by_session(session_id)
+        
+        # Log the number of trajectories found
+        logger.info(f"Found {len(trajectories)} trajectories for session ID: {session_id}")
+        
+        # If no trajectories were found, check if the database has any trajectories at all
+        if not trajectories:
+            # Try to get total trajectory count to verify if the DB is populated
+            import peewee
+            from ra_aid.database.models import Trajectory
+            try:
+                total_trajectories = Trajectory.select().count()
+                logger.info(f"Total trajectories in database: {total_trajectories}")
+                
+                # Check if the migrations were applied
+                from ra_aid.database.migrations import get_migration_status
+                migration_status = get_migration_status()
+                logger.info(
+                    f"Migration status: {migration_status['applied_count']} applied, "
+                    f"{migration_status['pending_count']} pending"
+                )
+                
+                # If no trajectories but migrations applied, it's just empty data
+                if total_trajectories == 0 and migration_status['pending_count'] == 0:
+                    logger.warning(
+                        "Database has no trajectories but all migrations are applied. "
+                        "The database is properly set up but contains no data."
+                    )
+                elif migration_status['pending_count'] > 0:
+                    logger.warning(
+                        f"There are {migration_status['pending_count']} pending migrations. "
+                        "Run migrations to ensure database is properly set up."
+                    )
+            except Exception as count_error:
+                logger.error(f"Error checking trajectory count: {str(count_error)}")
+        
+        return trajectories
     except peewee.DatabaseError as e:
+        logger.error(f"Database error fetching trajectories for session {session_id}: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Database error: {str(e)}",

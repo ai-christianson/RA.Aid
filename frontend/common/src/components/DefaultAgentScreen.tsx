@@ -7,7 +7,7 @@ import {
 } from './ui';
 import { SessionDrawer } from './SessionDrawer';
 import { SessionList } from './SessionList';
-import { TimelineFeed } from './TimelineFeed';
+import { TrajectoryPanel } from './TrajectoryPanel'; // Replace TimelineFeed import
 import { useSessionStore } from '../store';
 import logoBlack from '../assets/logo-black-transparent.png';
 import logoWhite from '../assets/logo-white-transparent.gif';
@@ -15,7 +15,7 @@ import logoWhite from '../assets/logo-white-transparent.gif';
 /**
  * DefaultAgentScreen component
  * 
- * Main application screen for displaying agent sessions and their steps.
+ * Main application screen for displaying agent sessions and their trajectories.
  * Handles state management, responsive design, and UI interactions.
  */
 export const DefaultAgentScreen: React.FC = () => {
@@ -61,11 +61,6 @@ export const DefaultAgentScreen: React.FC = () => {
     // Clean up event listener on component unmount
     return () => window.removeEventListener('resize', handleResize);
   }, [isDrawerOpen]);
-  
-  // Get steps for selected session
-  const selectedSessionSteps = selectedSessionId 
-    ? sessions.find(session => session.id === selectedSessionId)?.steps || []
-    : [];
   
   // Handle session selection
   const handleSessionSelect = (sessionId: string) => {
@@ -179,15 +174,15 @@ export const DefaultAgentScreen: React.FC = () => {
     />
   );
 
-  // Render main content
+  // Render main content with TrajectoryPanel instead of TimelineFeed
   const mainContent = (
     selectedSessionId ? (
       <>
         <h2 className="text-xl font-semibold mb-4">
           Session: {sessions.find(s => s.id === selectedSessionId)?.name || 'Unknown'}
         </h2>
-        <TimelineFeed 
-          steps={selectedSessionSteps}
+        <TrajectoryPanel 
+          sessionId={selectedSessionId}
         />
       </>
     ) : (

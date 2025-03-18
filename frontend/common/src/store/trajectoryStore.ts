@@ -118,6 +118,7 @@ export const useTrajectoryStore = create<TrajectoryStore>((set) => ({
    * @param sessionId - ID of the session to fetch trajectories for
    */
   fetchSessionTrajectories: async (sessionId: number) => {
+    console.log(`[TrajectoryStore] Fetching trajectories for session ID: ${sessionId}`);
     set({ isLoading: true, error: null });
     
     try {
@@ -125,18 +126,30 @@ export const useTrajectoryStore = create<TrajectoryStore>((set) => ({
       const { host, port } = useClientConfigStore.getState();
       
       // Fetch trajectories for the session from the API
-      const response = await fetch(`http://${host}:${port}/v1/session/${sessionId}/trajectory`);
+      const url = `http://${host}:${port}/v1/session/${sessionId}/trajectory`;
+      console.log(`[TrajectoryStore] Making API request to: ${url}`);
+      
+      const response = await fetch(url);
       if (!response.ok) throw new Error(`Failed to fetch trajectories for session ${sessionId}: ${response.statusText}`);
       
       const data = await response.json();
+      console.log('[TrajectoryStore] Raw API response data:', data);
+      
       const trajectories = data.map(safeBackendToTrajectory).filter(Boolean) as Trajectory[];
+      console.log(`[TrajectoryStore] Converted trajectories (${trajectories.length}):`, trajectories);
       
       set({ 
         trajectories,
         isLoading: false
       });
     } catch (error) {
-      console.error(`Error fetching trajectories for session ${sessionId}:`, error);
+      console.error(`[TrajectoryStore] ERROR fetching trajectories for session ${sessionId}:`, error);
+      console.error('[TrajectoryStore] Error details:', {
+        name: error instanceof Error ? error.name : 'Unknown',
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : 'No stack trace'
+      });
+      
       set({ 
         error: error instanceof Error ? error.message : `Failed to fetch trajectories for session ${sessionId}`,
         isLoading: false,
