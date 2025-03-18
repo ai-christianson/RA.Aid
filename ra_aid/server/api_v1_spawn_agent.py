@@ -84,8 +84,15 @@ def run_agent_thread(
         Values for expert_enabled and web_research_enabled are retrieved from the
         config repository, which stores the values set during server startup.
     """
+    logger = logging.getLogger(__name__)
+    logger.debug(f"Starting agent thread for session {session_id}")
+    
     try:
-        logger.info(f"Starting agent thread for session {session_id}")
+        # Get the current ConfigRepository that will be used as source for the thread
+        source_config_repo = get_config_repository()
+        
+        # Initialize database connection
+        db = DatabaseManager()
         
         env_discovery = EnvDiscovery()
         env_discovery.discover()
@@ -103,7 +110,7 @@ def run_agent_thread(
              RelatedFilesRepositoryManager() as related_files_repo, \
              TrajectoryRepositoryManager(db) as trajectory_repo, \
              WorkLogRepositoryManager() as work_log_repo, \
-             ConfigRepositoryManager() as config_repo, \
+             ConfigRepositoryManager(source_repo=source_config_repo) as config_repo, \
              EnvInvManager(env_data) as env_inv:
             
             # Update config repo with values for this thread

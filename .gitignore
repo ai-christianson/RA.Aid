@@ -19,3 +19,4 @@ appmap.log
 node_modules/
 /frontend/common/dist
 /frontend/web/dist/
+/.vscode
