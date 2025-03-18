@@ -14,6 +14,10 @@ export * from './components/SessionDrawer';
 export * from './components/SessionSidebar';
 // Export main screens
 export * from './components/DefaultAgentScreen';
+// Export stores
+export * from './store';
+// Export models
+export * from './models/session';
 // Export the hello function (temporary example)
 export const hello = () => {
     console.log("Hello from @ra-aid/common");

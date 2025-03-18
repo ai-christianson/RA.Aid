@@ -7,5 +7,7 @@ export * from './components/TimelineFeed';
 export * from './components/SessionDrawer';
 export * from './components/SessionSidebar';
 export * from './components/DefaultAgentScreen';
+export * from './store';
+export * from './models/session';
 export declare const hello: () => void;
 export { getSampleAgentSteps, getSampleAgentSessions } from './utils/sample-data';
