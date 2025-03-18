@@ -74,7 +74,7 @@ LLM_MAX_RETRIES = 5
 logger = get_logger(__name__)
 
 
-def get_env_var(name: str, expert: bool = False, default: str = None) -> Optional[str]:
+def get_env_var(name: str, expert: bool = False, default: Optional[str] = None) -> Optional[str]:
     """Get environment variable with optional expert prefix and fallback."""
     prefix = "EXPERT_" if expert else ""
     value = os.getenv(f"{prefix}{name}")
