@@ -79,6 +79,10 @@ def get_env_var(name: str, expert: bool = False, default: Optional[str] = None) 
     prefix = "EXPERT_" if expert else ""
     value = os.getenv(f"{prefix}{name}")
 
+    # If expert mode and no expert value, fall back to base value
+    if expert and not value:
+        value = os.getenv(name)
+
     return value if value is not None else default
 
 
