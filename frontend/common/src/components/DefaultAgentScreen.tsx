@@ -8,7 +8,7 @@ import {
 import { SessionDrawer } from './SessionDrawer';
 import { SessionList } from './SessionList';
 import { TimelineFeed } from './TimelineFeed';
-import { getSampleAgentSessions, getSampleAgentSteps } from '../utils/sample-data';
+import { useSessionStore } from '../store';
 import logoBlack from '../assets/logo-black-transparent.png';
 import logoWhite from '../assets/logo-white-transparent.gif';
 
@@ -22,28 +22,29 @@ export const DefaultAgentScreen: React.FC = () => {
   // State for drawer open/close
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   
-  // State for selected session
-  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
-  
   // State for theme (dark is default)
   const [isDarkTheme, setIsDarkTheme] = useState(true);
   
-  // Get sample data
-  const sessions = getSampleAgentSessions();
-  const allSteps = getSampleAgentSteps();
+  // Get session store data
+  const { 
+    sessions, 
+    selectedSessionId, 
+    selectSession, 
+    fetchSessions,
+    isLoading,
+    error
+  } = useSessionStore();
+  
+  // Fetch sessions on component mount
+  useEffect(() => {
+    fetchSessions();
+  }, [fetchSessions]);
   
   // Set up theme on component mount
   useEffect(() => {
     const isDark = setupTheme();
     setIsDarkTheme(isDark);
   }, []);
-  
-  // Set initial selected session if none selected
-  useEffect(() => {
-    if (!selectedSessionId && sessions.length > 0) {
-      setSelectedSessionId(sessions[0].id);
-    }
-  }, [sessions, selectedSessionId]);
   
   // Close drawer when window resizes to desktop width
   useEffect(() => {
@@ -61,14 +62,14 @@ export const DefaultAgentScreen: React.FC = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, [isDrawerOpen]);
   
-  // Filter steps for selected session
+  // Get steps for selected session
   const selectedSessionSteps = selectedSessionId 
-    ? allSteps.filter(step => sessions.find(s => s.id === selectedSessionId)?.steps.some(s => s.id === step.id))
+    ? sessions.find(session => session.id === selectedSessionId)?.steps || []
     : [];
   
   // Handle session selection
   const handleSessionSelect = (sessionId: string) => {
-    setSelectedSessionId(sessionId);
+    selectSession(sessionId);
     setIsDrawerOpen(false); // Close drawer on selection (mobile)
   };
   
@@ -160,6 +161,9 @@ export const DefaultAgentScreen: React.FC = () => {
         onSelectSession={handleSessionSelect}
         currentSessionId={selectedSessionId || undefined}
         className="flex-1 pr-1 -mr-1"
+        isLoading={isLoading}
+        error={error}
+        onRefresh={fetchSessions}
       />
     </div>
   );

@@ -12,16 +12,51 @@ import { z } from 'zod';
 import { AgentSession, AgentStep } from '../utils/types';
 
 /**
+ * Helper function to create a resilient datetime schema that:
+ * - Accepts null or undefined values
+ * - Handles invalid date formats gracefully
+ * - Returns null for invalid dates instead of throwing
+ */
+const resilientDatetime = () => 
+  z.union([
+    z.string(),
+    z.null(),
+    z.undefined()
+  ])
+  .transform(val => {
+    // Handle null or undefined
+    if (val === null || val === undefined) {
+      return null;
+    }
+    
+    try {
+      // Attempt to parse the date
+      const date = new Date(val);
+      
+      // Check if the date is valid
+      if (isNaN(date.getTime())) {
+        return null;
+      }
+      
+      // Convert to ISO string for consistency
+      return date.toISOString();
+    } catch {
+      return null;
+    }
+  });
+
+/**
  * Schema for the backend session model format received from the API
  */
 export const BackendSessionSchema = z.object({
   id: z.number().optional(),
-  created_at: z.string().datetime(),
-  updated_at: z.string().datetime(),
-  start_time: z.string().datetime(),
+  created_at: resilientDatetime(),
+  updated_at: resilientDatetime(),
+  start_time: resilientDatetime(),
   command_line: z.string().optional(),
   program_version: z.string().optional(),
-  machine_info: z.record(z.string(), z.any()).optional(),
+  // Accept both null and undefined for machine_info
+  machine_info: z.record(z.string(), z.any()).nullable().optional(),
   display_name: z.string().optional(),
 });
 
@@ -62,11 +97,14 @@ export const AgentSessionSchema: z.ZodType<AgentSession> = z.object({
  * @returns The converted frontend AgentSession model
  */
 export function backendToAgentSession(backendSession: BackendSession): AgentSession {
+  // Create default date objects for null/undefined datetime fields
+  const now = new Date();
+  
   return {
     id: backendSession.id !== undefined ? backendSession.id.toString() : '',
     name: backendSession.display_name || 'Unnamed Session',
-    created: new Date(backendSession.created_at),
-    updated: new Date(backendSession.updated_at),
+    created: backendSession.created_at ? new Date(backendSession.created_at) : now,
+    updated: backendSession.updated_at ? new Date(backendSession.updated_at) : now,
     status: 'active', // Default status since backend doesn't have this
     steps: [], // Default empty steps since backend doesn't have this
   };
