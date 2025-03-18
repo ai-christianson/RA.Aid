@@ -11,7 +11,7 @@ from ra_aid.database.connection import DatabaseManager
 from ra_aid.database.repositories.session_repository import SessionRepositoryManager
 from ra_aid.database.repositories.key_fact_repository import KeyFactRepositoryManager
 from ra_aid.database.repositories.key_snippet_repository import KeySnippetRepositoryManager
-from ra_aid.database.repositories.human_input_repository import HumanInputRepositoryManager
+from ra_aid.database.repositories.human_input_repository import HumanInputRepositoryManager, get_human_input_repository
 from ra_aid.database.repositories.research_note_repository import ResearchNoteRepositoryManager
 from ra_aid.database.repositories.related_files_repository import RelatedFilesRepositoryManager
 from ra_aid.database.repositories.trajectory_repository import TrajectoryRepositoryManager
@@ -140,6 +140,18 @@ def run_agent_thread(
             
             # Set thread_id in config repository too
             config_repo.set("thread_id", session_id)
+            
+            # Create a human input record with the message and associate it with the session
+            try:
+                human_input_repository = get_human_input_repository()
+                human_input_repository.create(
+                    content=message,
+                    source="server",
+                    session_id=int(session_id)
+                )
+                logger.debug(f"Created human input record for session {session_id}")
+            except Exception as e:
+                logger.error(f"Failed to create human input record: {str(e)}")
             
             # Run the research agent
             run_research_agent(

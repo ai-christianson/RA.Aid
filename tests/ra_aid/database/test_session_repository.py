@@ -10,7 +10,7 @@ from unittest.mock import patch
 import peewee
 
 from ra_aid.database.connection import DatabaseManager, db_var
-from ra_aid.database.models import Session, BaseModel
+from ra_aid.database.models import Session, BaseModel, HumanInput
 from ra_aid.database.repositories.session_repository import (
     SessionRepository,
     SessionRepositoryManager,
@@ -67,17 +67,28 @@ def setup_db(cleanup_db):
     """Set up an in-memory database with the Session table and patch the BaseModel.Meta.database."""
     # Initialize an in-memory database connection
     with DatabaseManager(in_memory=True) as db:
+        # Enable foreign keys
+        db.execute_sql('PRAGMA foreign_keys = ON')
+        
         # Patch the BaseModel.Meta.database to use our in-memory database
         with patch.object(BaseModel._meta, 'database', db):
-            # Create the Session table
+            # Create the tables
             with db.atomic():
-                db.create_tables([Session], safe=True)
+                db.create_tables([Session, HumanInput], safe=True)
             
             yield db
             
-            # Clean up
+            # Clean up - drop tables in reverse order to handle foreign key constraints
             with db.atomic():
-                Session.drop_table(safe=True)
+                try:
+                    # First drop HumanInput (which depends on Session)
+                    HumanInput.drop_table(safe=True)
+                    # Then drop Session
+                    Session.drop_table(safe=True)
+                except Exception as e:
+                    # Log error and continue
+                    import logging
+                    logging.error(f"Error dropping tables: {str(e)}")
 
 
 @pytest.fixture
@@ -99,12 +110,125 @@ def test_metadata():
 def sample_session(setup_db, test_metadata):
     """Create a sample session in the database."""
     now = datetime.datetime.now()
-    return Session.create(
-        start_time=now,
-        command_line="ra-aid test",
-        program_version="1.0.0",
-        machine_info=json.dumps(test_metadata)
+    with setup_db.atomic():
+        return Session.create(
+            created_at=now,
+            updated_at=now,
+            start_time=now,
+            command_line="python -m ra_aid.cli",
+            program_version="0.1.0",
+            machine_info=json.dumps(test_metadata)
+        )
+
+
+@pytest.fixture
+def session_with_long_command(setup_db):
+    """Create a session with a long command line."""
+    now = datetime.datetime.now()
+    long_command = "python -m ra_aid.cli " + "very_long_argument " * 20  # Will exceed 80 chars
+    with setup_db.atomic():
+        return Session.create(
+            created_at=now,
+            updated_at=now,
+            start_time=now,
+            command_line=long_command,
+            program_version="0.1.0"
+        )
+
+
+@pytest.fixture
+def human_input_model():
+    """Create the HumanInput model in the database."""
+    return HumanInput
+
+
+@pytest.fixture
+def session_with_human_input(setup_db):
+    """Create a test session with a single human input."""
+    # Create a session
+    session = Session.create(
+        start_time=datetime.datetime.now(),
+        command_line="python -m ra_aid.cli",
+        program_version="0.1.0",
     )
+    
+    # Create a human input linked to the session
+    human_input = HumanInput.create(
+        session=session,
+        content="This is a test human input message",
+        created_at=datetime.datetime.now(),
+        source="cli",
+    )
+    
+    # Return both objects for use in tests
+    return session, human_input
+
+
+@pytest.fixture
+def session_with_long_human_input(setup_db):
+    """Create a test session with a human input that has more than 80 characters."""
+    # Create a session
+    session = Session.create(
+        start_time=datetime.datetime.now(),
+        command_line="python -m ra_aid.cli",
+        program_version="0.1.0",
+    )
+    
+    # Create a long human input (> 80 chars)
+    long_message = "This is a very long human input message that should be truncated in the display name since it's over 80 characters long."
+    human_input = HumanInput.create(
+        session=session,
+        content=long_message,
+        created_at=datetime.datetime.now(),
+        source="chat",
+    )
+    
+    # Return both objects for use in tests
+    return session, human_input
+
+
+@pytest.fixture
+def multiple_human_inputs_session(setup_db):
+    """Create a test session with multiple human inputs of different ages."""
+    # Create a session
+    session = Session.create(
+        start_time=datetime.datetime.now(),
+        command_line="python -m ra_aid.cli",
+        program_version="0.1.0",
+    )
+    
+    # Create human inputs with different timestamps
+    human_inputs = []
+    
+    # Oldest input (created first, lowest ID)
+    oldest_input = HumanInput.create(
+        session=session,
+        content="This is the oldest message and should be used for display name",
+        created_at=datetime.datetime.now() - datetime.timedelta(hours=2),
+        source="cli",
+    )
+    human_inputs.append(oldest_input)
+    
+    # Middle input
+    middle_input = HumanInput.create(
+        session=session,
+        content="This is a newer message",
+        created_at=datetime.datetime.now() - datetime.timedelta(hours=1),
+        source="chat",
+    )
+    human_inputs.append(middle_input)
+    
+    # Newest input
+    newest_input = HumanInput.create(
+        session=session,
+        content="This is the newest message",
+        created_at=datetime.datetime.now(),
+        source="hil",
+    )
+    human_inputs.append(newest_input)
+    
+    # Return session and all human inputs for use in tests
+    return session, human_inputs
 
 
 def test_create_session_with_metadata(setup_db, test_metadata):
@@ -374,3 +498,174 @@ def test_get_current_session_id(setup_db, sample_session):
     # Verify None is returned when no session exists
     session_id = repo.get_current_session_id()
     assert session_id is None
+
+
+def test_display_name_from_command_line(setup_db, sample_session):
+    """Test that display_name uses command_line when no human input exists."""
+    # Create repository
+    repo = SessionRepository(setup_db)
+    
+    # Get the session
+    session_model = repo.get(sample_session.id)
+    
+    # Check display_name
+    assert session_model is not None
+    assert session_model.display_name == "python -m ra_aid.cli"
+
+
+def test_display_name_from_long_command_line(setup_db, session_with_long_command):
+    """Test that display_name truncates long command_line correctly."""
+    # Create repository
+    repo = SessionRepository(setup_db)
+    
+    # Get the session
+    session_model = repo.get(session_with_long_command.id)
+    
+    # Check display_name
+    assert session_model is not None
+    assert len(session_model.display_name) <= 83  # 80 chars + "..."
+    assert session_model.display_name.endswith("...")
+    assert session_model.display_name.startswith("python -m ra_aid.cli very_long_argument")
+
+
+def test_display_name_from_human_input(setup_db, session_with_human_input):
+    """Test that display_name uses human input content when it exists."""
+    session, human_input = session_with_human_input
+    
+    # Create repository
+    repo = SessionRepository(setup_db)
+    
+    # Get the session
+    session_model = repo.get(session.id)
+    
+    # Check display_name
+    assert session_model is not None
+    assert session_model.display_name == "This is a test human input message"
+
+
+def test_display_name_from_long_human_input(setup_db, session_with_long_human_input):
+    """Test that display_name truncates long human input correctly."""
+    session, human_input = session_with_long_human_input
+    
+    # Create repository
+    repo = SessionRepository(setup_db)
+    
+    # Get the session
+    session_model = repo.get(session.id)
+    
+    # Check display_name
+    assert session_model is not None
+    assert len(session_model.display_name) <= 83  # 80 chars + "..."
+    assert session_model.display_name.endswith("...")
+    assert session_model.display_name.startswith("This is a very long human input message")
+
+
+def test_display_name_from_oldest_human_input(setup_db, multiple_human_inputs_session):
+    """Test that display_name uses the oldest human input when multiple exist."""
+    session, human_inputs = multiple_human_inputs_session
+    oldest_input = human_inputs[0]  # First input is the oldest
+    
+    # Create repository
+    repo = SessionRepository(setup_db)
+    
+    # Get the session
+    session_model = repo.get(session.id)
+    
+    # Check display_name
+    assert session_model is not None
+    assert session_model.display_name == "This is the oldest message and should be used for display name"
+
+
+def test_display_name_in_get_all(setup_db):
+    """Test that display_name is included in get_all results."""
+    # Create multiple sessions
+    session1 = Session.create(
+        start_time=datetime.datetime.now() - datetime.timedelta(hours=2),
+        command_line="python -m ra_aid.cli command1",
+        program_version="0.1.0",
+    )
+    
+    session2 = Session.create(
+        start_time=datetime.datetime.now() - datetime.timedelta(hours=1),
+        command_line="python -m ra_aid.cli command2",
+        program_version="0.1.0",
+    )
+    
+    # Add human input to session1
+    human_input1 = HumanInput.create(
+        session=session1,
+        content="This is a human input for session 1",
+        created_at=datetime.datetime.now() - datetime.timedelta(hours=2),
+        source="cli",
+    )
+    
+    # Create repository
+    repo = SessionRepository(setup_db)
+    
+    # Get all sessions
+    sessions, count = repo.get_all()
+    
+    # Check results
+    assert len(sessions) == 2
+    assert count == 2
+    
+    # Check that display_name is present in each session
+    for session in sessions:
+        assert session.display_name is not None
+    
+    # Find session1 in results (might be in any order)
+    session1_result = next((s for s in sessions if s.id == session1.id), None)
+    assert session1_result is not None
+    assert session1_result.display_name == "This is a human input for session 1"
+    
+    # Find session2 in results
+    session2_result = next((s for s in sessions if s.id == session2.id), None)
+    assert session2_result is not None
+    assert session2_result.display_name == "python -m ra_aid.cli command2"
+
+
+def test_display_name_in_get_recent(setup_db):
+    """Test that display_name is included in get_recent results."""
+    # Create multiple sessions with different timestamps
+    session1 = Session.create(
+        start_time=datetime.datetime.now() - datetime.timedelta(hours=2),
+        command_line="python -m ra_aid.cli command1",
+        program_version="0.1.0",
+    )
+    
+    session2 = Session.create(
+        start_time=datetime.datetime.now() - datetime.timedelta(hours=1),
+        command_line="python -m ra_aid.cli command2",
+        program_version="0.1.0",
+    )
+    
+    # Add human input to session2
+    human_input2 = HumanInput.create(
+        session=session2,
+        content="This is a human input for session 2",
+        created_at=datetime.datetime.now() - datetime.timedelta(hours=1),
+        source="chat",
+    )
+    
+    # Create repository
+    repo = SessionRepository(setup_db)
+    
+    # Get recent sessions
+    sessions = repo.get_recent()
+    
+    # Check results
+    assert len(sessions) == 2
+    
+    # Check that display_name is present in each session
+    for session in sessions:
+        assert session.display_name is not None
+    
+    # Find session1 in results (might be in any order)
+    session1_result = next((s for s in sessions if s.id == session1.id), None)
+    assert session1_result is not None
+    assert session1_result.display_name == "python -m ra_aid.cli command1"
+    
+    # Find session2 in results
+    session2_result = next((s for s in sessions if s.id == session2.id), None)
+    assert session2_result is not None
+    assert session2_result.display_name == "This is a human input for session 2"

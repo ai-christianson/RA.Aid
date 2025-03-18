@@ -10,7 +10,7 @@ import contextvars
 
 import peewee
 
-from ra_aid.database.models import HumanInput
+from ra_aid.database.models import HumanInput, Session
 from ra_aid.database.pydantic_models import HumanInputModel
 from ra_aid.logging_config import get_logger
 
@@ -135,13 +135,14 @@ class HumanInputRepository:
         
         return HumanInputModel.model_validate(human_input, from_attributes=True)
     
-    def create(self, content: str, source: str) -> HumanInputModel:
+    def create(self, content: str, source: str, session_id: Optional[int] = None) -> HumanInputModel:
         """
         Create a new human input record in the database.
         
         Args:
             content: The text content of the human input
             source: The source of the input (e.g., "cli", "chat", "hil")
+            session_id: Optional ID of the session to associate with this input
             
         Returns:
             HumanInputModel: The newly created human input instance
@@ -150,8 +151,17 @@ class HumanInputRepository:
             peewee.DatabaseError: If there's an error creating the record
         """
         try:
-            input_record = HumanInput.create(content=content, source=source)
-            logger.debug(f"Created human input ID {input_record.id} from {source}")
+            # Get session object if session_id provided
+            session = None
+            if session_id is not None:
+                try:
+                    session = Session.get_by_id(session_id)
+                except peewee.DoesNotExist:
+                    logger.warning(f"Session with ID {session_id} not found, creating human input without session")
+            
+            input_record = HumanInput.create(content=content, source=source, session=session)
+            logger.debug(f"Created human input ID {input_record.id} from {source}" + 
+                        (f" for session {session_id}" if session_id else ""))
             return self._to_model(input_record)
         except peewee.DatabaseError as e:
             logger.error(f"Failed to create human input record: {str(e)}")

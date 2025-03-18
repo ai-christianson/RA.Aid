@@ -28,6 +28,7 @@ class SessionModel(BaseModel):
         command_line: Command line arguments used to start the program
         program_version: Version of the program
         machine_info: Dictionary containing machine-specific metadata
+        display_name: Display name for the session (derived from human input or command line)
     """
     id: Optional[int] = None
     created_at: datetime.datetime
@@ -36,6 +37,7 @@ class SessionModel(BaseModel):
     command_line: Optional[str] = None
     program_version: Optional[str] = None
     machine_info: Optional[Dict[str, Any]] = None
+    display_name: Optional[str] = None
     
     # Configure the model to work with ORM objects
     model_config = ConfigDict(from_attributes=True)

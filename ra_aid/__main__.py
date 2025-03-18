@@ -853,8 +853,10 @@ def main():
                     try:
                         # Using get_human_input_repository() to access the repository from context
                         human_input_repository = get_human_input_repository()
+                        # Get current session ID
+                        session_id = session_repo.get_current_session_id()
                         human_input_repository.create(
-                            content=initial_request, source="chat"
+                            content=initial_request, source="chat", session_id=session_id
                         )
                         human_input_repository.garbage_collect()
                     except Exception as e:
@@ -962,7 +964,11 @@ def main():
                 try:
                     # Using get_human_input_repository() to access the repository from context
                     human_input_repository = get_human_input_repository()
-                    human_input_repository.create(content=base_task, source="cli")
+                    # Get current session ID
+                    session_id = session_repo.get_current_session_id()
+                    human_input_repository.create(
+                        content=base_task, source="cli", session_id=session_id
+                    )
                     # Run garbage collection to ensure we don't exceed 100 inputs
                     human_input_repository.garbage_collect()
                     logger.debug(f"Recorded CLI input: {base_task}")
