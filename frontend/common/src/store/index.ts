@@ -6,3 +6,4 @@
 
 export * from './sessionStore';
 export * from './clientConfigStore';
+export * from './trajectoryStore';
