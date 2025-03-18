@@ -74,16 +74,12 @@ LLM_MAX_RETRIES = 5
 logger = get_logger(__name__)
 
 
-def get_env_var(name: str, expert: bool = False) -> Optional[str]:
+def get_env_var(name: str, expert: bool = False, default: str = None) -> Optional[str]:
     """Get environment variable with optional expert prefix and fallback."""
     prefix = "EXPERT_" if expert else ""
     value = os.getenv(f"{prefix}{name}")
 
-    # If expert mode and no expert value, fall back to base value
-    if expert and not value:
-        value = os.getenv(name)
-
-    return value
+    return value if value is not None else default
 
 
 def create_deepseek_client(
@@ -102,8 +98,8 @@ def create_deepseek_client(
                 0 if is_expert else (temperature if temperature is not None else 1)
             ),
             model=model_name,
-            timeout=LLM_REQUEST_TIMEOUT,
-            max_retries=LLM_MAX_RETRIES,
+            timeout=get_env_var(name="LLM_REQUEST_TIMEOUT", default=LLM_REQUEST_TIMEOUT),
+            max_retries=get_env_var(name="LLM_MAX_RETRIES", default=LLM_MAX_RETRIES),
         )
 
     return ChatOpenAI(
@@ -111,8 +107,8 @@ def create_deepseek_client(
         base_url=base_url,
         temperature=0 if is_expert else (temperature if temperature is not None else 1),
         model=model_name,
-        timeout=LLM_REQUEST_TIMEOUT,
-        max_retries=LLM_MAX_RETRIES,
+        timeout=get_env_var(name="LLM_REQUEST_TIMEOUT", default=LLM_REQUEST_TIMEOUT),
+        max_retries=get_env_var(name="LLM_MAX_RETRIES", default=LLM_MAX_RETRIES),
     )
 
 
@@ -133,8 +129,8 @@ def create_openrouter_client(
                 0 if is_expert else (temperature if temperature is not None else 1)
             ),
             model=model_name,
-            timeout=LLM_REQUEST_TIMEOUT,
-            max_retries=LLM_MAX_RETRIES,
+            timeout=get_env_var(name="LLM_REQUEST_TIMEOUT", default=LLM_REQUEST_TIMEOUT),
+            max_retries=get_env_var(name="LLM_MAX_RETRIES", default=LLM_MAX_RETRIES),
             default_headers=default_headers,
         )
 
@@ -142,8 +138,8 @@ def create_openrouter_client(
         api_key=api_key,
         base_url="https://openrouter.ai/api/v1",
         model=model_name,
-        timeout=LLM_REQUEST_TIMEOUT,
-        max_retries=LLM_MAX_RETRIES,
+        timeout=get_env_var(name="LLM_REQUEST_TIMEOUT", default=LLM_REQUEST_TIMEOUT),
+        max_retries=get_env_var(name="LLM_MAX_RETRIES", default=LLM_MAX_RETRIES),
         default_headers=default_headers,
         **({
             "temperature": temperature
@@ -338,16 +334,16 @@ def create_llm_client(
         return ChatOpenAI(
             **{
                 **openai_kwargs,
-                "timeout": LLM_REQUEST_TIMEOUT,
-                "max_retries": LLM_MAX_RETRIES,
+                "timeout": get_env_var(name="LLM_REQUEST_TIMEOUT", default=LLM_REQUEST_TIMEOUT),
+                "max_retries": get_env_var(name="LLM_MAX_RETRIES", default=LLM_MAX_RETRIES),
             }
         )
     elif provider == "anthropic":
         return ChatAnthropic(
             api_key=config.get("api_key"),
             model_name=model_name,
-            timeout=LLM_REQUEST_TIMEOUT,
-            max_retries=LLM_MAX_RETRIES,
+            timeout=get_env_var(name="LLM_REQUEST_TIMEOUT", default=LLM_REQUEST_TIMEOUT),
+            max_retries=get_env_var(name="LLM_MAX_RETRIES", default=LLM_MAX_RETRIES),
             **temp_kwargs,
             **thinking_kwargs,
             **other_kwargs,
@@ -357,8 +353,8 @@ def create_llm_client(
             api_key=config.get("api_key"),
             base_url=config.get("base_url"),
             model=model_name,
-            timeout=LLM_REQUEST_TIMEOUT,
-            max_retries=LLM_MAX_RETRIES,
+            timeout=get_env_var(name="LLM_REQUEST_TIMEOUT", default=LLM_REQUEST_TIMEOUT),
+            max_retries=get_env_var(name="LLM_MAX_RETRIES", default=LLM_MAX_RETRIES),
             **temp_kwargs,
             **thinking_kwargs,
         )
@@ -366,8 +362,8 @@ def create_llm_client(
         return ChatGoogleGenerativeAI(
             api_key=config.get("api_key"),
             model=model_name,
-            timeout=LLM_REQUEST_TIMEOUT,
-            max_retries=LLM_MAX_RETRIES,
+            timeout=get_env_var(name="LLM_REQUEST_TIMEOUT", default=LLM_REQUEST_TIMEOUT),
+            max_retries=get_env_var(name="LLM_MAX_RETRIES", default=LLM_MAX_RETRIES),
             **temp_kwargs,
             **thinking_kwargs,
         )
