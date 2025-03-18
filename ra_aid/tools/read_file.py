@@ -155,7 +155,7 @@ def read_file_tool(filepath: str, encoding: str = "utf-8") -> Dict[str, str]:
         )
 
         console_panel(
-            f"Read {line_count} lines ({total_bytes} bytes) from {filepath} in {elapsed:.2f}s",
+            f"Read {line_count} lines ({total_bytes} bytes) from {filepath}",
             title="📄 File Read",
             border_style="bright_blue",
         )

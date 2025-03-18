@@ -39,7 +39,7 @@ def console_panel(
     border_style: str = "blue",
     subtitle: Optional[str] = None,
     subtitle_align: str = "right",
-    padding: tuple = (1, 1),
+    padding: tuple = (0, 0),
     expand: bool = True,
     safe_box: bool = True,
     width: Optional[int] = None,
