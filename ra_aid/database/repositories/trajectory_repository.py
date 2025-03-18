@@ -491,3 +491,29 @@ class TrajectoryRepository:
         except peewee.DatabaseError as e:
             logger.error(f"Failed to calculate session usage totals: {str(e)}")
             raise
+
+    def get_trajectories_by_session(self, session_id: int) -> List[TrajectoryModel]:
+        """
+        Retrieve all trajectory records associated with a specific session.
+
+        Args:
+            session_id: The ID of the session to get trajectories for
+
+        Returns:
+            List[TrajectoryModel]: List of trajectory Pydantic models associated with the session
+
+        Raises:
+            peewee.DatabaseError: If there's an error accessing the database
+        """
+        try:
+            trajectories = list(
+                Trajectory.select()
+                .where(Trajectory.session == session_id)
+                .order_by(Trajectory.id)
+            )
+            return [self._to_model(trajectory) for trajectory in trajectories]
+        except peewee.DatabaseError as e:
+            logger.error(
+                f"Failed to fetch trajectories for session {session_id}: {str(e)}"
+            )
+            raise

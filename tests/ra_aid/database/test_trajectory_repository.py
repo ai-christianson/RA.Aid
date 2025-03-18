@@ -536,6 +536,70 @@ def test_get_session_usage_totals_with_nulls(setup_db):
     assert totals["total_tokens"] == 250  # 200 + 50
 
 
+def test_get_session_usage_totals_with_nulls(setup_db):
+    """Test calculating session usage totals with null values."""
+    # Set up repository
+    repo = TrajectoryRepository(db=setup_db)
+
+    # Create some trajectories with null values
+    for i in range(3):
+        # Create trajectories with model_usage record_type (used for totals)
+        traj = Trajectory.create(
+            session=1,
+            record_type="model_usage",
+            # Set one field null per trajectory for test coverage
+            current_cost=0.001 if i != 0 else None,
+            input_tokens=200 if i != 1 else None,
+            output_tokens=100 if i != 2 else None,
+        )
+
+    # Get session usage totals
+    totals = repo.get_session_usage_totals(1)
+
+    # Verify the totals (should exclude nulls)
+    assert totals["total_cost"] == 0.002  # 2 * 0.001 (one null)
+    assert totals["total_input_tokens"] == 400  # 2 * 200 (one null)
+    assert totals["total_output_tokens"] == 200  # 2 * 100 (one null)
+    assert totals["total_tokens"] == 600  # 400 + 200
+
+
+def test_get_trajectories_by_session(setup_db, mock_session_repository):
+    """Test retrieving trajectories by session ID."""
+    # Set up repository
+    repo = TrajectoryRepository(db=setup_db)
+
+    # Create two sessions
+    session1 = 1  # Using the default session from fixture
+    session2 = Session.create(id=2).id
+
+    # Create trajectories for both sessions
+    for i in range(2):
+        repo.create(tool_name=f"tool_s1_{i}", session_id=session1)
+
+    for i in range(3):
+        repo.create(tool_name=f"tool_s2_{i}", session_id=session2)
+
+    # Get trajectories for the first session
+    trajectories = repo.get_trajectories_by_session(session1)
+
+    # Verify we got a list of TrajectoryModel objects for the first session
+    assert len(trajectories) == 2
+    for trajectory in trajectories:
+        assert isinstance(trajectory, TrajectoryModel)
+        assert trajectory.session_id == session1
+        assert trajectory.tool_name.startswith("tool_s1")
+
+    # Get trajectories for the second session
+    trajectories = repo.get_trajectories_by_session(session2)
+
+    # Verify we got a list of TrajectoryModel objects for the second session
+    assert len(trajectories) == 3
+    for trajectory in trajectories:
+        assert isinstance(trajectory, TrajectoryModel)
+        assert trajectory.session_id == session2
+        assert trajectory.tool_name.startswith("tool_s2")
+
+
 def test_trajectory_repository_manager(setup_db, cleanup_repo, mock_session_repository):
     """Test the TrajectoryRepositoryManager context manager."""
     # Use the context manager to create a repository
