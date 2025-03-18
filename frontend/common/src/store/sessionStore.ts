@@ -88,7 +88,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
       const { host, port } = useClientConfigStore.getState();
       
       // Fetch sessions from the API
-      const response = await fetch(`http://${host}:${port}/v1/sessions`);
+      const response = await fetch(`http://${host}:${port}/v1/session`);
       if (!response.ok) throw new Error(`Failed to fetch sessions: ${response.statusText}`);
       
       const data = await response.json();
@@ -139,7 +139,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
       const validatedSession = validateAgentSession(newSession);
       
       // In the future, this would send the session to the API
-      // const response = await fetch('/api/v1/sessions', {
+      // const response = await fetch('/api/v1/session', {
       //   method: 'POST',
       //   headers: { 'Content-Type': 'application/json' },
       //   body: JSON.stringify(agentSessionToBackend(validatedSession))

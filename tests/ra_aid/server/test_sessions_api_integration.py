@@ -133,7 +133,7 @@ def test_create_session_with_metadata(client, mock_repo, sample_metadata):
     """Test creating a session with metadata through the API endpoint."""
     # Send request to create a session with metadata
     response = client.post(
-        "/v1/sessions",
+        "/v1/session",
         json={"metadata": sample_metadata}
     )
     
@@ -156,7 +156,7 @@ def test_create_session_with_metadata(client, mock_repo, sample_metadata):
 def test_create_session_without_metadata(client, mock_repo):
     """Test creating a session without metadata through the API endpoint."""
     # Send request without a body
-    response = client.post("/v1/sessions")
+    response = client.post("/v1/session")
     
     # Verify response status code and structure
     assert response.status_code == 201
@@ -201,7 +201,7 @@ def test_get_session_by_id(client):
     
     try:
         # Retrieve the session through the API
-        response = client.get(f"/v1/sessions/{test_session.id}")
+        response = client.get(f"/v1/session/{test_session.id}")
         
         # Verify response status code
         assert response.status_code == 200
@@ -230,7 +230,7 @@ def test_get_session_by_id(client):
 def test_get_session_not_found(client, mock_repo):
     """Test the error handling when requesting a non-existent session."""
     # Try to get a session with a non-existent ID
-    response = client.get("/v1/sessions/999999")
+    response = client.get("/v1/session/999999")
     
     # Verify response status code and error message
     assert response.status_code == 404
@@ -256,7 +256,7 @@ def test_list_sessions_empty(client, mock_repo):
     mock_repo.get_all.return_value = ([], 0)
     
     # Get the list of sessions
-    response = client.get("/v1/sessions")
+    response = client.get("/v1/session")
     
     # Verify response status code and structure
     assert response.status_code == 200
@@ -293,7 +293,7 @@ def test_list_sessions_with_pagination(client, mock_repo, mock_sessions):
     mock_repo.get_all.side_effect = mock_get_all
     
     # Test default pagination (limit=10, offset=0)
-    response = client.get("/v1/sessions")
+    response = client.get("/v1/session")
     assert response.status_code == 200
     data = response.json()
     assert data["total"] == len(mock_sessions)
@@ -302,7 +302,7 @@ def test_list_sessions_with_pagination(client, mock_repo, mock_sessions):
     assert data["offset"] == 0
     
     # Test with custom limit
-    response = client.get("/v1/sessions?limit=5")
+    response = client.get("/v1/session?limit=5")
     assert response.status_code == 200
     data = response.json()
     assert data["total"] == len(mock_sessions)
@@ -311,7 +311,7 @@ def test_list_sessions_with_pagination(client, mock_repo, mock_sessions):
     assert data["offset"] == 0
     
     # Test with custom offset
-    response = client.get("/v1/sessions?offset=10")
+    response = client.get("/v1/session?offset=10")
     assert response.status_code == 200
     data = response.json()
     assert data["total"] == len(mock_sessions)
@@ -320,7 +320,7 @@ def test_list_sessions_with_pagination(client, mock_repo, mock_sessions):
     assert data["offset"] == 10
     
     # Test with both custom limit and offset
-    response = client.get("/v1/sessions?limit=3&offset=5")
+    response = client.get("/v1/session?limit=3&offset=5")
     assert response.status_code == 200
     data = response.json()
     assert data["total"] == len(mock_sessions)
@@ -332,19 +332,19 @@ def test_list_sessions_with_pagination(client, mock_repo, mock_sessions):
 def test_list_sessions_invalid_parameters(client):
     """Test error handling for invalid pagination parameters."""
     # Test with negative offset
-    response = client.get("/v1/sessions?offset=-1")
+    response = client.get("/v1/session?offset=-1")
     assert response.status_code == 422
     
     # Test with negative limit
-    response = client.get("/v1/sessions?limit=-5")
+    response = client.get("/v1/session?limit=-5")
     assert response.status_code == 422
     
     # Test with zero limit
-    response = client.get("/v1/sessions?limit=0")
+    response = client.get("/v1/session?limit=0")
     assert response.status_code == 422
     
     # Test with limit exceeding maximum
-    response = client.get("/v1/sessions?limit=101")
+    response = client.get("/v1/session?limit=101")
     assert response.status_code == 422
 
 
@@ -403,7 +403,7 @@ def test_metadata_validation(client, mock_repo):
     
     # Try to create a session with null metadata
     response = client.post(
-        "/v1/sessions",
+        "/v1/session",
         json={"metadata": None}
     )
     
@@ -413,7 +413,7 @@ def test_metadata_validation(client, mock_repo):
     
     # Try to create a session with an empty metadata dict
     response = client.post(
-        "/v1/sessions",
+        "/v1/session",
         json={"metadata": {}}
     )
     
@@ -423,7 +423,7 @@ def test_metadata_validation(client, mock_repo):
     
     # Try to create a session with a complex nested metadata
     response = client.post(
-        "/v1/sessions",
+        "/v1/session",
         json={"metadata": {
             "level1": {
                 "level2": {
@@ -505,7 +505,7 @@ def test_integration_workflow(client, mock_repo):
     
     # 1. Create a session
     create_response = client.post(
-        "/v1/sessions",
+        "/v1/session",
         json={"metadata": {"workflow_test": True}}
     )
     assert create_response.status_code == 201
@@ -513,12 +513,12 @@ def test_integration_workflow(client, mock_repo):
     assert session_id == first_session.id
     
     # 2. Retrieve the created session
-    get_response = client.get(f"/v1/sessions/{session_id}")
+    get_response = client.get(f"/v1/session/{session_id}")
     assert get_response.status_code == 200
     assert get_response.json()["id"] == session_id
     
     # 3. List all sessions and verify the created one is included
-    list_response = client.get("/v1/sessions")
+    list_response = client.get("/v1/session")
     assert list_response.status_code == 200
     items = list_response.json()["items"]
     assert len(items) == 1
@@ -526,7 +526,7 @@ def test_integration_workflow(client, mock_repo):
     
     # 4. Create a second session
     create_response2 = client.post(
-        "/v1/sessions",
+        "/v1/session",
         json={"metadata": {"workflow_test": False, "second": True}}
     )
     assert create_response2.status_code == 201
@@ -534,7 +534,7 @@ def test_integration_workflow(client, mock_repo):
     assert session_id2 == second_session.id
     
     # 5. List all sessions and verify both sessions are included
-    list_response = client.get("/v1/sessions")
+    list_response = client.get("/v1/session")
     assert list_response.status_code == 200
     data = list_response.json()
     assert data["total"] == 2

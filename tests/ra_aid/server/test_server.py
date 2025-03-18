@@ -53,13 +53,13 @@ def test_api_documentation(client):
     assert "paths" in openapi_spec
     
     # Check that the sessions API paths are included
-    assert "/v1/sessions" in openapi_spec["paths"]
-    assert "/v1/sessions/{session_id}" in openapi_spec["paths"]
+    assert "/v1/session" in openapi_spec["paths"]
+    assert "/v1/session/{session_id}" in openapi_spec["paths"]
     
     # Verify that sessions API operations are documented
-    assert "get" in openapi_spec["paths"]["/v1/sessions"]
-    assert "post" in openapi_spec["paths"]["/v1/sessions"]
-    assert "get" in openapi_spec["paths"]["/v1/sessions/{session_id}"]
+    assert "get" in openapi_spec["paths"]["/v1/session"]
+    assert "post" in openapi_spec["paths"]["/v1/session"]
+    assert "get" in openapi_spec["paths"]["/v1/session/{session_id}"]
 
 
 @patch("ra_aid.database.repositories.session_repository.get_session_repository")
@@ -71,7 +71,7 @@ def test_sessions_api_mounted(mock_get_repo, client):
     mock_get_repo.return_value = mock_repo
     
     # Test that the sessions list endpoint is accessible
-    response = client.get("/v1/sessions")
+    response = client.get("/v1/session")
     assert response.status_code == 200
     
     # Verify the response structure follows our expected format
