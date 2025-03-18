@@ -40,6 +40,31 @@ with suppress(ImportError):
     import playhouse.postgres_ext as pw_pext
 
 
+# Define the Trajectory model class to represent the database schema after migration
+class TrajectoryModel(pw.Model):
+    id = pw.AutoField()
+    created_at = pw.DateTimeField()
+    updated_at = pw.DateTimeField()
+    tool_name = pw.TextField(null=True)  # JSON-encoded parameters
+    tool_parameters = pw.TextField(null=True)  # JSON-encoded parameters
+    tool_result = pw.TextField(null=True)  # JSON-encoded result
+    step_data = pw.TextField(null=True)  # JSON-encoded UI rendering data
+    record_type = pw.TextField(null=True)  # Type of trajectory record
+    # New fields for detailed token and cost tracking
+    input_tokens = pw.IntegerField(null=True)  # Track input/prompt tokens
+    output_tokens = pw.IntegerField(null=True)  # Track output/completion tokens
+    current_cost = pw.FloatField(null=True)  # Cost of the current operation
+    # Error tracking fields
+    is_error = pw.BooleanField(default=False)  # Flag indicating if this record represents an error
+    error_message = pw.TextField(null=True)  # The error message
+    error_type = pw.TextField(null=True)  # The type/class of the error
+    error_details = pw.TextField(null=True)  # Additional error details like stack traces or context
+    # Foreign keys are handled separately by the migrator
+    
+    class Meta:
+        table_name = "trajectory"
+
+
 def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
     """
     Add input_tokens, output_tokens, and current_cost fields to the Trajectory model.
@@ -66,7 +91,7 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
         database.execute_sql("SELECT input_tokens FROM trajectory LIMIT 1")
     except pw.OperationalError:
         migrator.add_fields(
-            'trajectory',
+            TrajectoryModel,
             input_tokens=pw.IntegerField(null=True),  # Track input/prompt tokens
         )
     
@@ -74,7 +99,7 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
         database.execute_sql("SELECT output_tokens FROM trajectory LIMIT 1")
     except pw.OperationalError:
         migrator.add_fields(
-            'trajectory',
+            TrajectoryModel,
             output_tokens=pw.IntegerField(null=True),  # Track output/completion tokens
         )
     
@@ -82,7 +107,7 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
         database.execute_sql("SELECT current_cost FROM trajectory LIMIT 1")
     except pw.OperationalError:
         migrator.add_fields(
-            'trajectory',
+            TrajectoryModel,
             current_cost=pw.FloatField(null=True),  # Cost of the current operation
         )
     
@@ -91,13 +116,13 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
         database.execute_sql("SELECT id FROM trajectory LIMIT 1")
         # Only attempt to remove fields if the table exists
         try:
-            migrator.remove_fields('trajectory', 'cost')
+            migrator.remove_fields(TrajectoryModel, 'cost')
         except Exception as e:
             # print(f"Error removing cost field: {e}")
             pass
         
         try:
-            migrator.remove_fields('trajectory', 'tokens')
+            migrator.remove_fields(TrajectoryModel, 'tokens')
         except Exception as e:
             # print(f"Error removing tokens field: {e}")
             pass
@@ -111,10 +136,10 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
 def rollback(migrator: Migrator, database: pw.Database, *, fake=False):
     """Remove the new fields and restore the legacy fields."""
     
-    migrator.remove_fields('trajectory', 'input_tokens', 'output_tokens', 'current_cost')
+    migrator.remove_fields(TrajectoryModel, 'input_tokens', 'output_tokens', 'current_cost')
     
     migrator.add_fields(
-        'trajectory',
+        TrajectoryModel,
         cost=pw.FloatField(null=True),
         tokens=pw.IntegerField(null=True)
     )
