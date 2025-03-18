@@ -69,6 +69,7 @@ class SpawnAgentResponse(BaseModel):
 def run_agent_thread(
     message: str,
     session_id: str,
+    source_config_repo: "ConfigRepository",
     research_only: bool = False,
     **kwargs
 ):
@@ -78,6 +79,7 @@ def run_agent_thread(
     Args:
         message: The message or task for the agent to process
         session_id: The ID of the session to associate with this agent
+        source_config_repo: The source ConfigRepository to copy for this thread
         research_only: Whether to use research-only mode
         
     Note:
@@ -88,9 +90,6 @@ def run_agent_thread(
     logger.debug(f"Starting agent thread for session {session_id}")
     
     try:
-        # Get the current ConfigRepository that will be used as source for the thread
-        source_config_repo = get_config_repository()
-        
         # Initialize database connection
         db = DatabaseManager()
         
@@ -222,6 +221,7 @@ async def spawn_agent(
             args=(
                 request.message,
                 str(session.id),
+                config_repo,
                 request.research_only,
             ),
             kwargs={

@@ -83,7 +83,7 @@ def client(mock_repository, mock_thread, mock_config_repository, monkeypatch):
     # Mock run_agent_thread to be a no-op
     monkeypatch.setattr(
         "ra_aid.server.api_v1_spawn_agent.run_agent_thread", 
-        lambda *args, **kwargs: None
+        lambda message, session_id, source_config_repo, research_only=False, **kwargs: None
     )
     
     # Mock get_config_repository to use our mock
