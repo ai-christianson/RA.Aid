@@ -9,33 +9,15 @@ from .console.formatting import (
 from .console.output import print_agent_output
 from .text.processing import truncate_output
 
-import importlib.util
 import sys
 from pathlib import Path
 
-def import_script(script_name):
-    """
-    Dynamically import a script from the scripts directory.
-    
-    Args:
-        script_name: Name of the script file without .py extension
-        
-    Returns:
-        The imported module
-    """
-    script_path = Path(__file__).parent.parent / "scripts" / f"{script_name}.py"
-    if not script_path.exists():
-        raise ImportError(f"Cannot find script {script_name} at {script_path}")
-        
-    spec = importlib.util.spec_from_file_location(script_name, script_path)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[script_name] = module
-    spec.loader.exec_module(module)
-    return module
+# Add the parent directory of ra_aid to the Python path
+sys.path.append(str(Path(__file__).parent.parent))
 
-# Dynamically import the get_latest_session_usage function
+# Now you can import from scripts
 try:
-    get_latest_session_usage = import_script("get_session_usage").get_latest_session_usage
+    from scripts.get_session_usage import get_latest_session_usage
 except ImportError as e:
     import logging
     logging.getLogger(__name__).warning(f"Could not import get_latest_session_usage: {e}")
