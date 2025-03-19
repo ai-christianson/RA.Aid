@@ -252,7 +252,6 @@ async def get_session_trajectories(
         # If no trajectories were found, check if the database has any trajectories at all
         if not trajectories:
             # Try to get total trajectory count to verify if the DB is populated
-            import peewee
             from ra_aid.database.models import Trajectory
             try:
                 total_trajectories = Trajectory.select().count()
