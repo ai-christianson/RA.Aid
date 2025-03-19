@@ -513,7 +513,7 @@ class TrajectoryRepository:
             trajectories = list(
                 Trajectory.select()
                 .where(Trajectory.session == session_id)
-                .order_by(Trajectory.id)
+                .order_by(Trajectory.created_at)
             )
             return [self._to_model(trajectory) for trajectory in trajectories]
         except peewee.DatabaseError as e:

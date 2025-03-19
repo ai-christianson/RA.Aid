@@ -53,13 +53,8 @@ export const TrajectoryPanel: React.FC<TrajectoryPanelProps> = ({
     }
   }, [sessionId, fetchSessionTrajectories]);
   
-  // Sort trajectories with newest first (desc order)
-  const sortedTrajectories = [...trajectories].sort((a, b) => {
-    return new Date(b.created).getTime() - new Date(a.created).getTime();
-  });
-  
-  // Log the sortedTrajectories array
-  console.log('TrajectoryPanel - sortedTrajectories:', sortedTrajectories);
+  // Log the trajectories array
+  console.log('TrajectoryPanel - trajectories to display:', trajectories);
   
   // Render loading state
   if (isLoading) {
@@ -87,7 +82,7 @@ export const TrajectoryPanel: React.FC<TrajectoryPanelProps> = ({
   }
   
   // Render empty state
-  if (sortedTrajectories.length === 0) {
+  if (trajectories.length === 0) {
     console.log('TrajectoryPanel - rendering state: EMPTY (no trajectories)');
     return (
       <div className="w-full rounded-md bg-background p-6 text-center border border-dashed border-border">
@@ -116,14 +111,14 @@ export const TrajectoryPanel: React.FC<TrajectoryPanelProps> = ({
   };
   
   // Render trajectories
-  console.log('TrajectoryPanel - rendering state: WITH DATA', sortedTrajectories.length, 'trajectories');
+  console.log('TrajectoryPanel - rendering state: WITH DATA', trajectories.length, 'trajectories');
   return (
     <div className="w-full rounded-md bg-background">
       <div 
         className="px-3 py-3 space-y-4 overflow-auto" 
         style={{ maxHeight: maxHeight || undefined }}
       >
-        {sortedTrajectories.map(renderTrajectory)}
+        {trajectories.map(renderTrajectory)}
       </div>
     </div>
   );
