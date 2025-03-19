@@ -254,3 +254,8 @@ Complete list of supported environment variables:
 - Check endpoint URLs for OpenAI-compatible setups
 - Monitor API rate limits and quotas
 - For Ollama, ensure the service is running (`ollama list`)
+
+## See Also
+
+- [Expert Model Configuration](/configuration/expert-model) - Detailed information about expert model setup and configuration
+- [Thinking Models](/configuration/thinking-models) - Learn about models that can show their reasoning process

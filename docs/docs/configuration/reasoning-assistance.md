@@ -94,3 +94,8 @@ Common issues and solutions:
 | Conflicting approach with custom instructions | If you're providing specific instructions that conflict with reasoning assistance, use `--no-reasoning-assistance` |
 
 If problems persist, check if the expert model and agent model are compatible, and consider adjusting the temperature setting to control randomness in both models.
+
+## See Also
+
+- [Expert Model Configuration](./expert-model.md) - Learn about the expert model configuration used for reasoning assistance
+- [Thinking Models](./thinking-models.md) - Information about models that can reveal their reasoning process
