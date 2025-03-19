@@ -53,9 +53,6 @@ export const StageTransitionTrajectory: React.FC<StageTransitionTrajectoryProps>
               {formatTime(trajectory.created)}
             </div>
           </div>
-          <div className="text-sm text-muted-foreground mt-1 line-clamp-2">
-            {fromStage && toStage ? `${fromStage} → ${toStage}` : (description || `Transitioning to ${stage}`)}
-          </div>
         </CardHeader>
       </CollapsibleTrigger>
       
@@ -67,26 +64,11 @@ export const StageTransitionTrajectory: React.FC<StageTransitionTrajectoryProps>
             </div>
           )}
           
-          {(fromStage || toStage) && (
-            <div className="flex items-center space-x-2 text-sm">
-              {fromStage && <span className="px-2 py-1 bg-muted rounded-md">{fromStage}</span>}
-              {fromStage && toStage && (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                </svg>
-              )}
-              {toStage && <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 rounded-md">{toStage}</span>}
-            </div>
-          )}
-          
-          {/* Display current stage information if no from/to stages */}
-          {!fromStage && !toStage && stage && (
-            <div className="flex items-center space-x-2 text-sm">
-              <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 rounded-md flex items-center">
-                <span className="mr-1">{stageIcon}</span> {stage}
-              </span>
-            </div>
-          )}
+          <div className="flex items-center space-x-2 text-sm">
+            <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 rounded-md flex items-center">
+              <span className="mr-1">{stageIcon}</span> {title}
+            </span>
+          </div>
           
           {isError && (
             <div className="mt-4">
