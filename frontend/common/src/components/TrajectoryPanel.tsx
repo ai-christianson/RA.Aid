@@ -19,6 +19,13 @@ interface TrajectoryPanelProps {
    * Optional maximum height for the container
    */
   maxHeight?: string;
+
+  /**
+   * Whether to add bottom padding to prevent content from being hidden
+   * behind a fixed-position input section at the bottom of the screen.
+   * Set to true when used in the main content area.
+   */
+  addBottomPadding?: boolean;
 }
 
 /**
@@ -30,7 +37,8 @@ interface TrajectoryPanelProps {
  */
 export const TrajectoryPanel: React.FC<TrajectoryPanelProps> = ({
   sessionId,
-  maxHeight
+  maxHeight,
+  addBottomPadding = false // Default to false when not specified
 }) => {
   // Log sessionId being passed to the component
   console.log('TrajectoryPanel - sessionId:', sessionId);
@@ -115,7 +123,7 @@ export const TrajectoryPanel: React.FC<TrajectoryPanelProps> = ({
   return (
     <div className="w-full rounded-md bg-background">
       <div 
-        className="px-3 py-3 space-y-4 overflow-auto" 
+        className={`px-3 py-3 space-y-4 overflow-auto ${addBottomPadding ? 'pb-32' : ''}`}
         style={{ maxHeight: maxHeight || undefined }}
       >
         {trajectories.map(renderTrajectory)}

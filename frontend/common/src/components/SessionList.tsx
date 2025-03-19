@@ -1,5 +1,4 @@
 import React from 'react';
-import { ScrollArea } from './ui/scroll-area';
 import { AgentSession } from '../utils/types';
 import { getSampleAgentSessions } from '../utils/sample-data';
 import { Button } from './ui/button';
@@ -55,23 +54,6 @@ export const SessionList: React.FC<SessionListProps> = ({
 
   return (
     <div className={className}>
-      {/* Header with title and refresh button */}
-      <div className="flex items-center justify-between mb-3 px-3">
-        <h2 className="text-sm font-semibold">Sessions</h2>
-        {onRefresh && (
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={onRefresh}
-            disabled={isLoading}
-            className="h-7 w-7 p-0" 
-            title="Refresh sessions"
-          >
-            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-          </Button>
-        )}
-      </div>
-
       {/* Error state */}
       {error && (
         <Card className="mb-3 mx-3 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800">
@@ -124,50 +106,48 @@ export const SessionList: React.FC<SessionListProps> = ({
 
       {/* Session list */}
       {!isLoading && sessions.length > 0 && (
-        <ScrollArea className="flex-1">
-          <div className="space-y-1.5 pt-1.5 pb-2">
-            {sessions.map((session) => {
-              const buttonContent = (
+        <div className="space-y-1.5 pt-1.5">
+          {sessions.map((session) => {
+            const buttonContent = (
+              <>
+                <div className={`w-2.5 h-2.5 rounded-full ${getStatusColor(session.status)} mt-1.5 mr-3 flex-shrink-0`} />
+                <div className="flex-1 min-w-0 pr-1">
+                  <div className="font-medium text-sm+ break-words">{session.name}</div>
+                  <div className="text-xs text-muted-foreground mt-1 break-words">
+                    {session.steps.length} steps • {formatDate(session.updated)}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-0.5 break-words">
+                    <span className="capitalize">{session.status}</span>
+                  </div>
+                </div>
+              </>
+            );
+
+            return React.createElement(
+              WrapperComponent,
+              {
+                key: session.id,
+                onClick: () => onSelectSession?.(session.id),
+                className: `w-full flex items-start px-3 py-2.5 text-left rounded-md transition-colors hover:bg-accent/50 ${
+                  currentSessionId === session.id ? 'bg-accent' : ''
+                }`
+              },
+              closeAction ? (
                 <>
-                  <div className={`w-2.5 h-2.5 rounded-full ${getStatusColor(session.status)} mt-1.5 mr-3 flex-shrink-0`} />
-                  <div className="flex-1 min-w-0 pr-1">
-                    <div className="font-medium text-sm+ break-words">{session.name}</div>
-                    <div className="text-xs text-muted-foreground mt-1 break-words">
-                      {session.steps.length} steps • {formatDate(session.updated)}
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-0.5 break-words">
-                      <span className="capitalize">{session.status}</span>
-                    </div>
+                  {buttonContent}
+                  <div className="ml-2 flex-shrink-0 self-center">
+                    {React.cloneElement(closeAction as React.ReactElement, { 
+                      onClick: (e: React.MouseEvent) => {
+                        e.stopPropagation();
+                        onSelectSession?.(session.id);
+                      }
+                    })}
                   </div>
                 </>
-              );
-
-              return React.createElement(
-                WrapperComponent,
-                {
-                  key: session.id,
-                  onClick: () => onSelectSession?.(session.id),
-                  className: `w-full flex items-start px-3 py-2.5 text-left rounded-md transition-colors hover:bg-accent/50 ${
-                    currentSessionId === session.id ? 'bg-accent' : ''
-                  }`
-                },
-                closeAction ? (
-                  <>
-                    {buttonContent}
-                    <div className="ml-2 flex-shrink-0 self-center">
-                      {React.cloneElement(closeAction as React.ReactElement, { 
-                        onClick: (e: React.MouseEvent) => {
-                          e.stopPropagation();
-                          onSelectSession?.(session.id);
-                        }
-                      })}
-                    </div>
-                  </>
-                ) : buttonContent
-              );
-            })}
-          </div>
-        </ScrollArea>
+              ) : buttonContent
+            );
+          })}
+        </div>
       )}
     </div>
   );

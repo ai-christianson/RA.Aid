@@ -38,7 +38,7 @@ export const Layout: React.FC<LayoutProps> = ({
       )}
       
       {/* Main content area */}
-      <main className="overflow-y-auto p-4 row-start-2 col-start-1 md:col-start-2 md:h-[calc(100vh-64px)]">
+      <main className="overflow-y-auto row-start-2 col-start-1 md:col-start-2 h-[calc(100vh-64px)] flex flex-col">
         {children}
       </main>
       
