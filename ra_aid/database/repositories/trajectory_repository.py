@@ -10,6 +10,7 @@ from typing import Dict, List, Optional, Any, Union
 import contextvars
 import json
 import logging
+import sys
 
 import peewee
 
@@ -242,6 +243,7 @@ class TrajectoryRepository:
         except peewee.DatabaseError as e:
             logger.error(f"Failed to create trajectory record: {str(e)}")
             raise
+
 
     def get(self, trajectory_id: int) -> Optional[TrajectoryModel]:
         """

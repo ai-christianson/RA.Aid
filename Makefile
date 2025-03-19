@@ -1,4 +1,15 @@
-.PHONY: test setup-dev setup-hooks
+.PHONY: test setup-dev setup-hooks last-cost help
+
+help:
+	@echo "Available targets:"
+	@echo "  help        - Display this help message"
+	@echo "  test        - Run tests with coverage reporting"
+	@echo "  setup-dev   - Install development dependencies"
+	@echo "  setup-hooks - Install git pre-commit hooks"
+	@echo "  check       - Run code quality checks with ruff"
+	@echo "  fix         - Fix code style issues automatically"
+	@echo "  fix-basic   - Fix basic code style issues"
+	@echo "  last-cost   - Display cost and token usage for the latest session"
 
 test:
 	# for future consideration append  --cov-fail-under=80 to fail test coverage if below 80%
@@ -20,3 +31,6 @@ fix:
 
 fix-basic:
 	ruff check --fix
+
+last-cost:
+	python scripts/get_session_usage.py
