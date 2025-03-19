@@ -16,6 +16,14 @@ RA.Aid's memory is stored in a SQLite database file located in a hidden `.ra-aid
 .ra-aid/pk.db
 ```
 
+You can customize this location using the `--project-state-dir` flag to store the database in a different directory:
+
+```bash
+ra-aid -m "Your task" --project-state-dir /path/to/custom/directory
+```
+
+This will store the database at `/path/to/custom/directory/pk.db` instead of the default location. See [Project State Directory](./project-state.md) for more details.
+
 This database implements several key tables:
 - `KeyFact`: Stores important facts about your project
 - `KeySnippet`: Preserves code snippets with their file paths and line numbers
@@ -55,6 +63,14 @@ ra-aid --wipe-project-memory [other arguments]
 ```
 
 This flag deletes the entire `.ra-aid/pk.db` database file, giving you a fresh start with no stored memory.
+
+If you're using a custom project state directory, combine both flags:
+
+```bash
+ra-aid --wipe-project-memory --project-state-dir /path/to/custom/directory [other arguments]
+```
+
+This will delete the database file at `/path/to/custom/directory/pk.db` instead of the default location.
 
 The memory statistics are displayed in the status panel when you start RA.Aid, showing:
 - The number of facts, snippets, and notes currently stored
