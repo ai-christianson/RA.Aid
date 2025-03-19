@@ -9,6 +9,7 @@ its total usage metrics (cost and tokens), then outputs the results as JSON.
 import json
 import sys
 import os
+from typing import Dict, Any, Tuple
 
 # Add the project root to the Python path if needed
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -33,23 +34,25 @@ def create_empty_result(error_message=None):
     return result
 
 
-def main():
+def get_latest_session_usage() -> Tuple[Dict[str, Any], int]:
     """
-    Command-line entry point for getting usage statistics for the latest session.
+    Get usage statistics for the latest session.
     
-    This function retrieves the latest session and calculates its total usage metrics,
-    then outputs the results as JSON to stdout.
+    This function retrieves the latest session and calculates its total usage metrics.
+    
+    Returns:
+        Tuple[Dict[str, Any], int]: A tuple containing:
+            - Dictionary with session info and usage metrics
+            - Status code (0 for success, 1 for error)
     """
     try:
         # Ensure database migrations are applied
         try:
             migration_result = ensure_migrations_applied()
             if not migration_result:
-                print(json.dumps(create_empty_result("Database migrations failed"), indent=2))
-                return 1
+                return create_empty_result("Database migrations failed"), 1
         except Exception as e:
-            print(json.dumps(create_empty_result(f"Database migration error: {str(e)}"), indent=2))
-            return 1
+            return create_empty_result(f"Database migration error: {str(e)}"), 1
             
         # Initialize database connection using DatabaseManager context
         with DatabaseManager() as db:
@@ -58,8 +61,7 @@ def main():
                 latest_session = session_repo.get_latest_session()
                 
                 if latest_session is None:
-                    print(json.dumps(create_empty_result("No sessions found in database"), indent=2))
-                    return 1
+                    return create_empty_result("No sessions found in database"), 1
                 
                 # Get usage totals for the session
                 with TrajectoryRepositoryManager(db) as trajectory_repo:
@@ -73,12 +75,21 @@ def main():
                         **usage_totals  # Unpack usage totals directly
                     }
                     
-                    # Output as JSON
-                    print(json.dumps(result, indent=2))
-                    return 0
+                    return result, 0
     except Exception as e:
-        print(json.dumps(create_empty_result(str(e)), indent=2))
-        return 1
+        return create_empty_result(str(e)), 1
+
+
+def main():
+    """
+    Command-line entry point for getting usage statistics for the latest session.
+    
+    This function retrieves the latest session and calculates its total usage metrics,
+    then outputs the results as JSON to stdout.
+    """
+    result, status_code = get_latest_session_usage()
+    print(json.dumps(result, indent=2))
+    return status_code
 
 
 if __name__ == "__main__":
