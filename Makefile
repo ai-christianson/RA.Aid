@@ -33,4 +33,4 @@ fix-basic:
 	ruff check --fix
 
 last-cost:
-	python scripts/get_session_usage.py
+	python ra_aid/scripts/cli.py

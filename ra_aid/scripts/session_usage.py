@@ -1,22 +1,16 @@
-#!/usr/bin/env python3
 """
-Script to get usage statistics for the latest session.
+Module to get usage statistics for sessions.
 
-This script retrieves the latest session from the database and calculates
-its total usage metrics (cost and tokens), then outputs the results as JSON.
+This module provides functions to retrieve session usage statistics
+from the database.
 """
 
 import json
-import sys
-import os
 from typing import Dict, Any, Tuple
 
-# Add the project root to the Python path if needed
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-from ra_aid.database import DatabaseManager, ensure_migrations_applied
-from ra_aid.database.repositories.session_repository import SessionRepositoryManager
-from ra_aid.database.repositories.trajectory_repository import TrajectoryRepositoryManager
+from ..database import DatabaseManager, ensure_migrations_applied
+from ..database.repositories.session_repository import SessionRepositoryManager
+from ..database.repositories.trajectory_repository import TrajectoryRepositoryManager
 
 
 def create_empty_result(error_message=None):
@@ -78,19 +72,3 @@ def get_latest_session_usage() -> Tuple[Dict[str, Any], int]:
                     return result, 0
     except Exception as e:
         return create_empty_result(str(e)), 1
-
-
-def main():
-    """
-    Command-line entry point for getting usage statistics for the latest session.
-    
-    This function retrieves the latest session and calculates its total usage metrics,
-    then outputs the results as JSON to stdout.
-    """
-    result, status_code = get_latest_session_usage()
-    print(json.dumps(result, indent=2))
-    return status_code
-
-
-if __name__ == "__main__":
-    sys.exit(main())
