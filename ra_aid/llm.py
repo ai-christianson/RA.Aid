@@ -65,6 +65,7 @@ known_temp_providers = {
     "openai-compatible",
     "gemini",
     "deepseek",
+    "ollama",
 }
 
 # Constants for API request configuration
@@ -151,6 +152,47 @@ def create_openrouter_client(
     )
 
 
+def create_ollama_client(
+    model_name: str,
+    base_url: Optional[str] = None,
+    temperature: Optional[float] = None,
+    with_thinking: bool = False,
+    is_expert: bool = False,
+) -> BaseChatModel:
+    """Create a ChatOllama client.
+
+    Args:
+        model_name: Name of the model to use
+        base_url: Base URL for the Ollama API
+        temperature: Temperature for generation
+        with_thinking: Whether to enable thinking patterns
+        is_expert: Whether this is for an expert model
+
+    Returns:
+        ChatOllama instance
+    """
+    from langchain_ollama import ChatOllama
+
+    # Default base URL if not provided
+    if not base_url:
+        base_url = "http://localhost:11434"
+
+    # Create temperature kwargs if specified
+    temp_kwargs = {}
+    if temperature is not None:
+        temp_kwargs["temperature"] = temperature
+
+    # Return the ChatOllama instance with appropriate configuration
+    return ChatOllama(
+        model=model_name,
+        base_url=base_url,
+        num_ctx=16384,  # Set context window size to 16384 as required
+        timeout=int(get_env_var(name="LLM_REQUEST_TIMEOUT", default=LLM_REQUEST_TIMEOUT)),
+        max_retries=int(get_env_var(name="LLM_MAX_RETRIES", default=LLM_MAX_RETRIES)),
+        **temp_kwargs,
+    )
+
+
 def get_provider_config(provider: str, is_expert: bool = False) -> Dict[str, Any]:
     """Get provider-specific configuration."""
     configs = {
@@ -178,9 +220,17 @@ def get_provider_config(provider: str, is_expert: bool = False) -> Dict[str, Any
             "api_key": get_env_var("DEEPSEEK_API_KEY", is_expert),
             "base_url": "https://api.deepseek.com",
         },
+        "ollama": {
+            "api_key": None,  # No API key needed for Ollama
+            "base_url": get_env_var("OLLAMA_BASE_URL", is_expert, "http://localhost:11434"),
+        },
     }
     config = configs.get(provider, {})
-    if not config or not config.get("api_key"):
+    if not config:
+        raise ValueError(f"Unsupported provider: {provider}")
+    
+    # Ollama doesn't require an API key
+    if provider != "ollama" and not config.get("api_key"):
         raise ValueError(
             f"Missing required environment variable for provider: {provider}"
         )
@@ -371,6 +421,14 @@ def create_llm_client(
             **temp_kwargs,
             **thinking_kwargs,
         )
+    elif provider == "ollama":
+        return create_ollama_client(
+            model_name=model_name,
+            base_url=config.get("base_url"),
+            temperature=temperature,
+            with_thinking=bool(thinking_kwargs),
+            is_expert=is_expert,
+        )
     else:
         raise ValueError(f"Unsupported provider: {provider}")
 
@@ -387,6 +445,9 @@ def initialize_expert_llm(provider: str, model_name: str) -> BaseChatModel:
     return create_llm_client(provider, model_name, temperature=None, is_expert=True)
 
 
+
+
+
 def validate_provider_env(provider: str) -> bool:
     """Check if the required environment variables for a provider are set."""
     required_vars = {
@@ -396,8 +457,14 @@ def validate_provider_env(provider: str) -> bool:
         "openai-compatible": "OPENAI_API_KEY",
         "gemini": "GEMINI_API_KEY",
         "deepseek": "DEEPSEEK_API_KEY",
+        "ollama": "OLLAMA_BASE_URL",  # Ollama requires a base URL but not an API key
     }
+    
     key = required_vars.get(provider.lower())
     if key:
+        # For Ollama, we still validate OLLAMA_BASE_URL but have a default value to fall back on
+        if provider.lower() == "ollama" and not os.getenv(key):
+            # Consistent with OllamaStrategy validation, require the base URL to be set
+            return False
         return bool(os.getenv(key))
     return False
