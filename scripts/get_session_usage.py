@@ -18,6 +18,21 @@ from ra_aid.database.repositories.session_repository import SessionRepositoryMan
 from ra_aid.database.repositories.trajectory_repository import TrajectoryRepositoryManager
 
 
+def create_empty_result(error_message=None):
+    """Create a default result dictionary with zeros for all metrics."""
+    result = {
+        "total_cost": 0.0,
+        "total_input_tokens": 0,
+        "total_output_tokens": 0,
+        "total_tokens": 0
+    }
+    
+    if error_message:
+        result["error"] = error_message
+        
+    return result
+
+
 def main():
     """
     Command-line entry point for getting usage statistics for the latest session.
@@ -30,39 +45,20 @@ def main():
         try:
             migration_result = ensure_migrations_applied()
             if not migration_result:
-                print(json.dumps({
-                    "error": "Database migrations failed",
-                    "total_cost": 0.0,
-                    "total_input_tokens": 0,
-                    "total_output_tokens": 0,
-                    "total_tokens": 0
-                }))
+                print(json.dumps(create_empty_result("Database migrations failed"), indent=2))
                 return 1
         except Exception as e:
-            print(json.dumps({
-                "error": f"Database migration error: {str(e)}",
-                "total_cost": 0.0,
-                "total_input_tokens": 0,
-                "total_output_tokens": 0,
-                "total_tokens": 0
-            }))
+            print(json.dumps(create_empty_result(f"Database migration error: {str(e)}"), indent=2))
             return 1
             
         # Initialize database connection using DatabaseManager context
         with DatabaseManager() as db:
-        
             # Get the latest session
             with SessionRepositoryManager(db) as session_repo:
                 latest_session = session_repo.get_latest_session()
                 
                 if latest_session is None:
-                    print(json.dumps({
-                        "error": "No sessions found in database",
-                        "total_cost": 0.0,
-                        "total_input_tokens": 0,
-                        "total_output_tokens": 0,
-                        "total_tokens": 0
-                    }))
+                    print(json.dumps(create_empty_result("No sessions found in database"), indent=2))
                     return 1
                 
                 # Get usage totals for the session
@@ -74,23 +70,14 @@ def main():
                         "session_id": latest_session.id,
                         "session_start_time": latest_session.start_time.isoformat() if latest_session.start_time else None,
                         "session_display_name": latest_session.display_name,
-                        "total_cost": usage_totals["total_cost"],
-                        "total_input_tokens": usage_totals["total_input_tokens"],
-                        "total_output_tokens": usage_totals["total_output_tokens"],
-                        "total_tokens": usage_totals["total_tokens"]
+                        **usage_totals  # Unpack usage totals directly
                     }
                     
                     # Output as JSON
                     print(json.dumps(result, indent=2))
                     return 0
     except Exception as e:
-        print(json.dumps({
-            "error": str(e),
-            "total_cost": 0.0,
-            "total_input_tokens": 0,
-            "total_output_tokens": 0,
-            "total_tokens": 0
-        }))
+        print(json.dumps(create_empty_result(str(e)), indent=2))
         return 1
 
 
