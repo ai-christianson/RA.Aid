@@ -158,6 +158,7 @@ def create_ollama_client(
     temperature: Optional[float] = None,
     with_thinking: bool = False,
     is_expert: bool = False,
+    num_ctx: int = 262144,
 ) -> BaseChatModel:
     """Create a ChatOllama client.
 
@@ -167,6 +168,7 @@ def create_ollama_client(
         temperature: Temperature for generation
         with_thinking: Whether to enable thinking patterns
         is_expert: Whether this is for an expert model
+        num_ctx: Context window size for the model (default: 262144)
 
     Returns:
         ChatOllama instance
@@ -186,7 +188,7 @@ def create_ollama_client(
     return ChatOllama(
         model=model_name,
         base_url=base_url,
-        num_ctx=262144,
+        num_ctx=num_ctx,
         timeout=int(get_env_var(name="LLM_REQUEST_TIMEOUT", default=LLM_REQUEST_TIMEOUT)),
         max_retries=int(get_env_var(name="LLM_MAX_RETRIES", default=LLM_MAX_RETRIES)),
         **temp_kwargs,
@@ -422,12 +424,23 @@ def create_llm_client(
             **thinking_kwargs,
         )
     elif provider == "ollama":
+        # Get num_ctx from config repository based on whether this is for expert model
+        from ra_aid.database.repositories.config_repository import get_config_repository
+        
+        # Get the config repository through the context manager pattern
+        config_repo = get_config_repository()
+        
+        # Get the appropriate num_ctx value from config repository
+        num_ctx_key = "expert_num_ctx" if is_expert else "num_ctx"
+        num_ctx_value = config_repo.get(num_ctx_key, 262144)
+        
         return create_ollama_client(
             model_name=model_name,
             base_url=config.get("base_url"),
             temperature=temperature,
             with_thinking=bool(thinking_kwargs),
             is_expert=is_expert,
+            num_ctx=num_ctx_value,
         )
     else:
         raise ValueError(f"Unsupported provider: {provider}")

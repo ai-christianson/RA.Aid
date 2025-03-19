@@ -223,8 +223,10 @@ def launch_server(host: str, port: int, args):
         config_repo.update({
             "provider": args.provider,
             "model": args.model,
+            "num_ctx": args.num_ctx,
             "expert_provider": args.expert_provider,
             "expert_model": args.expert_model,
+            "expert_num_ctx": args.expert_num_ctx,
             "temperature": args.temperature,
             "experimental_fallback_handler": args.experimental_fallback_handler,
             "expert_enabled": expert_enabled,
@@ -290,6 +292,7 @@ Examples:
         help="The LLM provider to use",
     )
     parser.add_argument("--model", type=str, help="The model name to use")
+    parser.add_argument("--num-ctx", type=int, default=262144, help="Context window size for Ollama models")
     parser.add_argument(
         "--research-provider",
         type=str,
@@ -326,6 +329,12 @@ Examples:
         "--expert-model",
         type=str,
         help="The model name to use for expert knowledge queries (required for non-OpenAI providers)",
+    )
+    parser.add_argument(
+        "--expert-num-ctx",
+        type=int,
+        default=262144,
+        help="Context window size for expert Ollama models",
     )
     parser.add_argument(
         "--hil",
@@ -761,8 +770,10 @@ def main():
                 config_repo.update(config)
                 config_repo.set("provider", args.provider)
                 config_repo.set("model", args.model)
+                config_repo.set("num_ctx", args.num_ctx)
                 config_repo.set("expert_provider", args.expert_provider)
                 config_repo.set("expert_model", args.expert_model)
+                config_repo.set("expert_num_ctx", args.expert_num_ctx)
                 config_repo.set("temperature", args.temperature)
                 config_repo.set(
                     "experimental_fallback_handler", args.experimental_fallback_handler
@@ -881,8 +892,10 @@ def main():
                     config_repo.update(config)
                     config_repo.set("provider", args.provider)
                     config_repo.set("model", args.model)
+                    config_repo.set("num_ctx", args.num_ctx)
                     config_repo.set("expert_provider", args.expert_provider)
                     config_repo.set("expert_model", args.expert_model)
+                    config_repo.set("expert_num_ctx", args.expert_num_ctx)
                     config_repo.set("temperature", args.temperature)
                     config_repo.set("show_thoughts", args.show_thoughts)
                     config_repo.set("show_cost", args.show_cost)
@@ -996,10 +1009,12 @@ def main():
                 # Store base provider/model configuration
                 config_repo.set("provider", args.provider)
                 config_repo.set("model", args.model)
+                config_repo.set("num_ctx", args.num_ctx)
 
                 # Store expert provider/model (no fallback)
                 config_repo.set("expert_provider", args.expert_provider)
                 config_repo.set("expert_model", args.expert_model)
+                config_repo.set("expert_num_ctx", args.expert_num_ctx)
 
                 # Store planner config with fallback to base values
                 config_repo.set(
