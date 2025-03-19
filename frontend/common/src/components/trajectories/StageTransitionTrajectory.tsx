@@ -10,16 +10,32 @@ interface StageTransitionTrajectoryProps {
 export const StageTransitionTrajectory: React.FC<StageTransitionTrajectoryProps> = ({ trajectory }) => {
   // Extract relevant data
   const stepData = trajectory.stepData || {};
-  const title = stepData.title || 'Stage Transition';
+  const title = stepData.display_title || 'Stage Transition';
   const description = stepData.description || '';
+  const stage = stepData.stage || '';
   const fromStage = stepData.from_stage || '';
   const toStage = stepData.to_stage || '';
   const isError = trajectory.isError;
+  
+  // Define stage icons mapping - similar to backend console formatting
+  const getStageIcon = (stageName: string): string => {
+    const stageIcons: Record<string, string> = {
+      'research_stage': '🔎',
+      'planning_stage': '📝',
+      'implementation_stage': '🔧',
+      'chat_mode': '💬',
+    };
+    
+    return stageIcons[stageName] || '🚀';
+  };
   
   // Format timestamp
   const formatTime = (timestamp: string) => {
     return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
+
+  // Get the appropriate icon
+  const stageIcon = getStageIcon(stage);
 
   return (
     <Collapsible className="w-full border border-border rounded-md overflow-hidden shadow-sm hover:shadow-md transition-all duration-200">
@@ -27,8 +43,8 @@ export const StageTransitionTrajectory: React.FC<StageTransitionTrajectoryProps>
         <CardHeader className="py-3 px-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-3">
-              <div className={`w-3 h-3 rounded-full bg-purple-500 ring-1 ring-ring/20`} />
-              <div className="flex-shrink-0 text-lg">🔄</div>
+              <div className={`w-3 h-3 rounded-full bg-green-500 ring-1 ring-ring/20`} />
+              <div className="flex-shrink-0 text-lg">{stageIcon}</div>
               <CardTitle className="text-base font-medium">
                 {title}
               </CardTitle>
@@ -38,7 +54,7 @@ export const StageTransitionTrajectory: React.FC<StageTransitionTrajectoryProps>
             </div>
           </div>
           <div className="text-sm text-muted-foreground mt-1 line-clamp-2">
-            {fromStage && toStage ? `${fromStage} → ${toStage}` : description}
+            {fromStage && toStage ? `${fromStage} → ${toStage}` : (description || `Transitioning to ${stage}`)}
           </div>
         </CardHeader>
       </CollapsibleTrigger>
@@ -59,7 +75,16 @@ export const StageTransitionTrajectory: React.FC<StageTransitionTrajectoryProps>
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                 </svg>
               )}
-              {toStage && <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200 rounded-md">{toStage}</span>}
+              {toStage && <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 rounded-md">{toStage}</span>}
+            </div>
+          )}
+          
+          {/* Display current stage information if no from/to stages */}
+          {!fromStage && !toStage && stage && (
+            <div className="flex items-center space-x-2 text-sm">
+              <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 rounded-md flex items-center">
+                <span className="mr-1">{stageIcon}</span> {stage}
+              </span>
             </div>
           )}
           
@@ -73,7 +98,7 @@ export const StageTransitionTrajectory: React.FC<StageTransitionTrajectoryProps>
             </div>
           )}
           
-          {trajectory.currentCost !== null && (
+          {trajectory.currentCost !== null && trajectory.currentCost !== undefined && (
             <div className="mt-3 pt-3 border-t border-border/50 text-xs text-muted-foreground">
               <span className="flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
