@@ -186,7 +186,7 @@ def create_ollama_client(
     return ChatOllama(
         model=model_name,
         base_url=base_url,
-        num_ctx=16384,  # Set context window size to 16384 as required
+        num_ctx=262144,
         timeout=int(get_env_var(name="LLM_REQUEST_TIMEOUT", default=LLM_REQUEST_TIMEOUT)),
         max_retries=int(get_env_var(name="LLM_MAX_RETRIES", default=LLM_MAX_RETRIES)),
         **temp_kwargs,
@@ -457,14 +457,14 @@ def validate_provider_env(provider: str) -> bool:
         "openai-compatible": "OPENAI_API_KEY",
         "gemini": "GEMINI_API_KEY",
         "deepseek": "DEEPSEEK_API_KEY",
-        "ollama": "OLLAMA_BASE_URL",  # Ollama requires a base URL but not an API key
+        "ollama": None,  # Ollama doesn't require any environment variables to be set
     }
     
     key = required_vars.get(provider.lower())
-    if key:
-        # For Ollama, we still validate OLLAMA_BASE_URL but have a default value to fall back on
-        if provider.lower() == "ollama" and not os.getenv(key):
-            # Consistent with OllamaStrategy validation, require the base URL to be set
-            return False
-        return bool(os.getenv(key))
-    return False
+    if key is None:
+        # For providers like Ollama that don't require any environment variables
+        if provider.lower() == "ollama":
+            # Always return True for Ollama, since we have a default base URL (http://localhost:11434)
+            return True
+        return False
+    return bool(os.getenv(key))

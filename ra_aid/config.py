@@ -17,4 +17,5 @@ VALID_PROVIDERS = [
     "openai-compatible",
     "deepseek",
     "gemini",
+    "ollama",
 ]
