@@ -4,6 +4,16 @@
 
 Reasoning Assistance is a feature in RA.Aid that helps weaker models make better decisions about tool usage and task planning. It leverages a stronger model (typically your expert model) to provide strategic guidance to the main agent model at the beginning of each agent stage.
 
+### Reasoning Assistance vs. Expert Model
+
+It's important to understand the distinction between two related features in RA.Aid:
+
+- **Reasoning Assistance**: Uses the expert model to help weaker agent models with their process - specifically choosing the right tools and planning their approach. This is about improving how the agent works.
+
+- **[Expert Model](./expert-model.md)**: Helps solve domain-specific problems about the project the agent is working on. When the agent encounters technical challenges like debugging or complex implementation decisions, it can consult the expert model directly.
+
+Think of reasoning assistance as having a mentor who guides your process and methodology, while the expert model is like consulting a domain specialist for specific technical challenges.
+
 This feature is particularly useful when working with less capable models that may struggle with complex reasoning, tool selection, or planning. By providing expert guidance upfront, these models can perform more effectively and produce better results.
 
 ## How It Works

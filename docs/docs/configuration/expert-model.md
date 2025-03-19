@@ -4,6 +4,16 @@
 
 RA.Aid allows you to configure an "expert model" - an AI model you select to provide advanced reasoning capabilities for complex tasks. Think of it as a "second opinion" system that helps with particularly challenging problems when the main agent needs additional assistance.
 
+### Expert Model vs. Reasoning Assistance
+
+It's important to understand the distinction between two related features in RA.Aid:
+
+- **Expert Model**: Helps solve domain-specific problems about the project the agent is working on. This is used when the agent needs help analyzing code, debugging issues, or making complex decisions about the implementation.
+
+- **[Reasoning Assistance](./reasoning-assistance.md)**: Uses the expert model in a different way - specifically to help weaker models make better decisions about tool usage and planning. This is more about helping the agent with its process rather than with domain-specific problems.
+
+Think of the expert model as the "domain expert" that helps with technical challenges, while reasoning assistance is where that same expert provides "meta-guidance" on how the agent should approach the task.
+
 The expert model feature is designed to help with:
 - Detailed analysis of code and complex systems
 - Debugging and identifying logical errors

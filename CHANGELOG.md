@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Project State Directory Feature
+  - Added `--project-state-dir` parameter to allow customization of where project data is stored
+  - Modified database connection, logging, and memory wiping to support custom directories
+  - Created comprehensive documentation in docs/docs/configuration/project-state.md
+- Ollama Integration
+  - Added support for running models locally via Ollama
+  - Implemented configuration options including model selection and context window size
+  - Added documentation for Ollama in docs/docs/configuration/ollama.md
+  - Updated open-models.md to include Ollama as a supported provider
+- Web UI and API Progress (partially implemented)
+  - Created API endpoints for session management (create, list, retrieve)
+  - Added trajectory tracking and visualization
+  - Implemented UI components for session management
+  - Added server infrastructure for web interface
+- Token Usage and Cost Tracking
+  - Enhanced trajectory tracking with token counting
+  - Added session-level token usage and cost tracking
+  - Improved cost calculation and logging
+
 ## [0.17.1] 2025-03-13
 
 ### Fixed
