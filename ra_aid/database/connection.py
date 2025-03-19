@@ -138,13 +138,20 @@ def init_db(in_memory: bool = False, base_dir: Optional[str] = None) -> peewee.S
         cwd = base_dir if base_dir is not None else os.getcwd()
         logger.debug(f"Base directory for database: {cwd}")
 
-        # Define the .ra-aid directory path
-        ra_aid_dir_str = os.path.join(cwd, ".ra-aid")
-        ra_aid_dir = Path(ra_aid_dir_str)
-        ra_aid_dir = ra_aid_dir.absolute()  # Ensure we have the absolute path
-        ra_aid_dir_str = str(
-            ra_aid_dir
-        )  # Update string representation with absolute path
+        # Define the directory path
+        if base_dir:
+            # Use the provided directory directly
+            ra_aid_dir = Path(base_dir)
+            ra_aid_dir = ra_aid_dir.absolute()  # Ensure we have the absolute path
+            ra_aid_dir_str = str(ra_aid_dir)
+        else:
+            # Use .ra-aid in the current working directory
+            ra_aid_dir_str = os.path.join(cwd, ".ra-aid")
+            ra_aid_dir = Path(ra_aid_dir_str)
+            ra_aid_dir = ra_aid_dir.absolute()  # Ensure we have the absolute path
+            ra_aid_dir_str = str(
+                ra_aid_dir
+            )  # Update string representation with absolute path
 
         logger.debug(f"Creating database directory at: {ra_aid_dir_str}")
 

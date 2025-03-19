@@ -195,7 +195,7 @@ def launch_server(host: str, port: int, args):
 
     # Initialize database connection and repositories
     with (
-        DatabaseManager() as db,
+        DatabaseManager(base_dir=args.project_state_dir) as db,
         SessionRepositoryManager(db) as session_repo,
         KeyFactRepositoryManager(db) as key_fact_repo,
         KeySnippetRepositoryManager(db) as key_snippet_repo,
@@ -437,6 +437,10 @@ Examples:
         help="Delete the project database file (.ra-aid/pk.db) before starting, effectively wiping all stored memory",
     )
     parser.add_argument(
+        "--project-state-dir",
+        help="Directory to store project state (database and logs). By default, a .ra-aid directory is created in the current working directory.",
+    )
+    parser.add_argument(
         "--show-thoughts",
         action="store_true",
         help="Display model thinking content extracted from think tags when supported by the model",
@@ -548,8 +552,11 @@ def is_stage_requested(stage: str) -> bool:
     return False
 
 
-def wipe_project_memory():
+def wipe_project_memory(custom_dir=None):
     """Delete the project database file to wipe all stored memory.
+
+    Args:
+        custom_dir: Optional custom directory to use instead of .ra-aid in current directory
 
     Returns:
         str: A message indicating the result of the operation
@@ -557,9 +564,13 @@ def wipe_project_memory():
     import os
     from pathlib import Path
 
-    cwd = os.getcwd()
-    ra_aid_dir = Path(os.path.join(cwd, ".ra-aid"))
-    db_path = os.path.join(ra_aid_dir, "pk.db")
+    if custom_dir:
+        ra_aid_dir = Path(custom_dir)
+        db_path = os.path.join(custom_dir, "pk.db")
+    else:
+        cwd = os.getcwd()
+        ra_aid_dir = Path(os.path.join(cwd, ".ra-aid"))
+        db_path = os.path.join(ra_aid_dir, "pk.db")
 
     if not os.path.exists(db_path):
         return "No project memory found to wipe."
@@ -667,12 +678,12 @@ def build_status():
 def main():
     """Main entry point for the ra-aid command line tool."""
     args = parse_arguments()
-    setup_logging(args.log_mode, args.pretty_logger, args.log_level)
+    setup_logging(args.log_mode, args.pretty_logger, args.log_level, base_dir=args.project_state_dir)
     logger.debug("Starting RA.Aid with arguments: %s", args)
 
     # Check if we need to wipe project memory before starting
     if args.wipe_project_memory:
-        result = wipe_project_memory()
+        result = wipe_project_memory(custom_dir=args.project_state_dir)
         logger.info(result)
         print(f"📋 {result}")
 
@@ -682,7 +693,7 @@ def main():
         return
 
     try:
-        with DatabaseManager() as db:
+        with DatabaseManager(base_dir=args.project_state_dir) as db:
             # Apply any pending database migrations
             try:
                 migration_result = ensure_migrations_applied()
