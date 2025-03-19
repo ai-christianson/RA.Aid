@@ -132,12 +132,13 @@ def test_main_with_wipe_project_memory_flag():
     """Test that the main function properly calls wipe_project_memory when flag is set."""
     from ra_aid.__main__ import main
 
-    # Create a mock args object with wipe_project_memory=True
+    # Create a mock args object with wipe_project_memory=True and project_state_dir=None
     mock_args = MagicMock()
     mock_args.wipe_project_memory = True
+    mock_args.project_state_dir = None
     
     # Mock the wipe_project_memory function to raise SystemExit after being called
-    def mock_wipe_side_effect():
+    def mock_wipe_side_effect(custom_dir=None):
         raise SystemExit(0)
     
     mock_wipe = MagicMock(side_effect=mock_wipe_side_effect)
@@ -156,5 +157,5 @@ def test_main_with_wipe_project_memory_flag():
         except SystemExit:
             pass
         
-        # Verify wipe_project_memory was called
-        mock_wipe.assert_called_once()
+        # Verify wipe_project_memory was called with the custom_dir parameter
+        mock_wipe.assert_called_once_with(custom_dir=mock_args.project_state_dir)
