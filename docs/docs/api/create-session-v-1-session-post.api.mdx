@@ -1,0 +1,71 @@
+---
+id: create-session-v-1-session-post
+title: "Create session"
+description: "Create a new session"
+sidebar_label: "Create session"
+hide_title: true
+hide_table_of_contents: true
+api: eJytV99T4zYQ/ld2/NJ2hiTA0Be/pcADnYNkknD3ADcZxd7EurNlV5KTSzP5329XkmOTUGiZ8gCSvPtpf3y7WnZRiibRsrKyVFEcXWsUFkGAwg0YNIaPz6KyQi1Y5C4locQJzcPn+frisKxKY0lc4181GvtHmW6jeBclpbKoLC9FVeUycVCDb4av3EUmybAQ7qvajpZR/LQ7smq8TYWyMoGiTDGHZakb28DZwotwp+k/q2c1y6QJwpUu15LgYC1ymXpZBvCKatX11CsPrdVyUVs08bMC+inQCtIUMYycRSKHVCZupbdQLkGkqQwfGlmwJRhbaoSNtBnYDDvhJJsooFaiYa8blZcRsNsKyfVy8Q0TG+3PDieqzvNo//XsKEb/k2lW2pxvuW+M2u/bQ8+OqRee+ICzzrumNgCNzn7PsBpNRUH3Ubg8v/hPXHmTIRorAiccTrCAYPExNZJSexNSwzHhQARJGCNuEGE0uQ+yQqUHKj2rDpf4g0Et6eRvf5KISixkLjm/fbizkJFMTgzkC8i/NWq+41kt0NIlCv6cjh56qBK6iLCIfGplHO54azMCPGSUAB13GagQSSYVzqValrCUmKevk1emMTwqSXGnJUeEZPUBJSTei/q6TufCxvAlI8M6EhRSClcKG2EaOa9UV+m/UsqFsY2w1zRWaDu3ssCOJsV4pUVxQHBCjUZSFgXFZZ6T4zFc+x3wDoRe1QW5Z6A2FEVHcdLsYnqMsJmHLMTw2S+4WE6Eu0GO4aatLKapkIrpFWR6psKEgpsc6sxDpNJUudjOlWA/b/wOeHecBPg1JR6tyfqlLgvIavIOpKpqC9yvOt7+dtJDupF5tY94Wr1ZnE08PzEGlWdLB0YkYwteRZzBHmctOm4MKQw77eBwY9QNwUeNawL3wBiEKdNXkSR1jxXqN6HoDSOAbmo/atS9x4A7xti7nHS59VHYcaiBwExGbmvl3VxMHe9n4fA4F225vgv06EVfTereP/JSI+XhqUuVF1e8MLzjYWiz99xaTx8QRn/Z3qd1kpDKss5hEh4Ndubq/Or0KWhauCotVVitXLavLi9PJT+3XRy1Lpk10e/n56eCN1TNC2GwEeMnUawMe95MDuwdFX5W8oAUxqBK2Ix2g/XFoH1g+SWbtPPR7Q9RVDkezQF8Q0NM12oSly5fQNFk2B/KFGYoCg63zukss7Yy8WCwoie9XvSpHwyE7CWZlsZKoejSgVeLToLrz38xMBzfteMSqrQqJTdUblPUGMSKu13jr3ufxIo77hmspYDJ7XTmDr/gYlom39EaMo4ecORktcYPKyoahMv++Yntm82mL9znfqlXg6BrBp/urm8fprc90ulntshdQdTUrPS2jQYbP6pQ8d8pteIOkVsJOjzUZnRBcOeubCld5GDHyDAGt1l7EbHOlPJPA3NgtMUfdkB9S7oidt7uAi2eovUF10dQIfpkzBo63+2Ya4863+/5mKjCfj7Rck0jgFiwT09fCS9DQS+Gay7fces6uDOrN+PbWTyv2YqTQYqbj9cYUl1V9k3ZLrHHo+mMhBdhsOfRiE612PDQT7/jyP2zYF1FkIA720W5UKuayELfPSb//ARujV2h
+sidebar_class_name: "post api-method"
+info_path: api/ra-aid-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Create session"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/v1/session"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Create a new session
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+  children={"Request"}
+>
+</Heading>
+
+<ParamsDetails
+  parameters={undefined}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  title={"Body"}
+  body={{"content":{"application/json":{"schema":{"anyOf":[{"description":"Pydantic model for session creation requests.\n\nThis model provides validation for creating new sessions.\n\nAttributes:\n    metadata: Optional dictionary of additional metadata to store with the session","properties":{"metadata":{"anyOf":[{"type":"object"},{"type":"null"}],"description":"Optional dictionary of additional metadata to store with the session","title":"Metadata"}},"title":"CreateSessionRequest","type":"object"},{"type":"null"}],"title":"Request"}}}}}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  id={undefined}
+  label={undefined}
+  responses={{"201":{"content":{"application/json":{"schema":{"description":"Pydantic model representing a Session.\n\nThis model corresponds to the Session Peewee ORM model and provides\nvalidation and serialization capabilities. It handles the conversion\nbetween JSON-encoded strings and Python dictionaries for the machine_info field.\n\nAttributes:\n    id: Unique identifier for the session\n    created_at: When the session record was created\n    updated_at: When the session record was last updated\n    start_time: When the program session started\n    command_line: Command line arguments used to start the program\n    program_version: Version of the program\n    machine_info: Dictionary containing machine-specific metadata\n    display_name: Display name for the session (derived from human input or command line)","properties":{"command_line":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Command Line"},"created_at":{"format":"date-time","title":"Created At","type":"string"},"display_name":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Display Name"},"id":{"anyOf":[{"type":"integer"},{"type":"null"}],"title":"Id"},"machine_info":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Machine Info"},"program_version":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Program Version"},"start_time":{"format":"date-time","title":"Start Time","type":"string"},"updated_at":{"format":"date-time","title":"Updated At","type":"string"}},"required":["created_at","updated_at","start_time"],"title":"SessionModel","type":"object"}}},"description":"Successful Response"},"404":{"description":"Session not found"},"422":{"description":"Validation error"},"500":{"description":"Database error"}}}
+>
+  
+</StatusCodes>
+
+
+      

@@ -1,0 +1,71 @@
+---
+id: spawn-agent-v-1-spawn-agent-post
+title: "Spawn agent"
+description: "Spawn a new RA.Aid agent to process a message or task"
+sidebar_label: "Spawn agent"
+hide_title: true
+hide_table_of_contents: true
+api: eJy1VlGPGjcQ/iuWX9pIBwun9mXfaHqRTkp6J6DNw12Eht2BdW7Xdm0vBCH+e2bsBfYgSdVK5eFYxjPffDPzefb2skRfOGWDMlrmcmZhqwUIjVsxnQwnqhSwRh1EMMI6U6D3dNrQF5mFcSKAf5E30lh0wBj3JaF4RlnEwMVmvOj/tMYH8nf4d4s+/GbKncz3sjA60Ck/grW1KiJW9tkzqb30RYUN8NNrto+7EnRQhWhMibVYEZ/ENmYUXRI/fNbPel4p3/lRIRtFSGIDtSpjqhgbo5Red/VHqBg7CcGpZRvQ589a0KdrQC7mFV52I0IFsl82LoU69AiuqBZG17tcfKyQfB27tR5PpwM+jXTFzyWuoK1DLt5B7fENdY8Aqd9BoeeedPmv2/NvyBFqUKEmFPmhwyPLzrLBU/V6LQ88th75lDByk/mKud1cEPjH4npZp92heGDoU+6lMTWClodDEo1ySAp7OhX96YwQtTvhuqZp8GcUs/yMRSCQVyjBtZiKskb71Mzb0fj/FGSX6VKR1EalSZA8maMTRzcQThOLEIMEh7q0Rn1PnZTAE5+FKpNA738XZhUxCocQsDx6XEnpHPltNf0I6TSGZBG0Ca4UdDHEXrrvzDG14tuDvNhcbcE6XrW1OIWR0y+3t9el/HW+9+iccez462h07TjpDa/zJNcAa8/04yyYeUMyN7z4uu1mIVT0K9uMs97U6ID1Mz2vvrsv0NgaX13iY6+uLlu8YZRd6ZU5ShSKKFENTbxCaWHPERoKb11NtioE6/MsW6tQtcthYZoM1KConPJBgSY+WQqTVx1N9p+8mDzen3fmUXo+CrMBDWtemd0o6e2gu1eGvxEbBWJ6N5tH40dczkzxgoF3Dd0o5AmdyU8s0KUSt8PRFfftdjuEeDw0bp11sT57f//27o/Z3YBihlVoai7Bt00DbnfuBpN/sKj5e2ax6K+ckwcZN+h8qntMcCPG4mlSgT2S3euxm+ardvV2xn9+i3YiD/glZLYGpZlF7MW+09ST3IzJsa8q0l/FsqOz/X4JHv909eHAZtIZd+KJHjfgFCy56qdPhFkhlOjox16+IDfrbeI+mDMDdq9bZnK1+w43x4gJXTcbfujbvxmPD7M5OS+7F35c/rl0sGWh099cxv8iODpuomjbyxr0uk33ImHy5ytxtQZj
+sidebar_class_name: "post api-method"
+info_path: api/ra-aid-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Spawn agent"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/v1/spawn-agent"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Spawn a new RA.Aid agent to process a message or task
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+  children={"Request"}
+>
+</Heading>
+
+<ParamsDetails
+  parameters={undefined}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  title={"Body"}
+  body={{"content":{"application/json":{"schema":{"description":"Pydantic model for agent spawn requests.\n\nThis model provides validation for spawning a new agent.\n\nAttributes:\n    message: The message or task for the agent to process\n    research_only: Whether to use research-only mode (default: False)","properties":{"message":{"description":"The message or task for the agent to process","title":"Message","type":"string"},"research_only":{"default":false,"description":"Whether to use research-only mode","title":"Research Only","type":"boolean"}},"required":["message"],"title":"SpawnAgentRequest","type":"object"}}},"required":true}}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  id={undefined}
+  label={undefined}
+  responses={{"201":{"content":{"application/json":{"schema":{"description":"Pydantic model for agent spawn responses.\n\nThis model defines the response format for the spawn-agent endpoint.\n\nAttributes:\n    session_id: The ID of the created session","properties":{"session_id":{"description":"The ID of the created session","title":"Session Id","type":"string"}},"required":["session_id"],"title":"SpawnAgentResponse","type":"object"}}},"description":"Successful Response"},"422":{"description":"Validation error"},"500":{"description":"Agent spawn error"}}}
+>
+  
+</StatusCodes>
+
+
+      
