@@ -3,7 +3,7 @@ import sys
 from typing import List, Optional
 
 from langchain_core.tools import BaseTool
-from ra_aid.console.output import console, cpm
+from ra_aid.console import console
 from rich.markdown import Markdown
 from rich.panel import Panel
 from ra_aid.tools import (
