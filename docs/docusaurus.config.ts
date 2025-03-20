@@ -26,7 +26,7 @@ const config: Config = {
         id: "api",
         docsPluginId: "classic",
         config: {
-          "ra-aid": {  // Make sure this matches the sidebar ID
+         api: {  // Make sure this matches the sidebar ID
             specPath: "./ra-aid.openapi.yml", // Ensure correct path
             outputDir: "docs/api", // This must match sidebars.ts
             sidebarOptions: {
@@ -45,6 +45,7 @@ const config: Config = {
         docs: {
           sidebarPath: './sidebars.ts',
           routeBasePath: '/',
+          docItemComponent: '@theme/ApiItem',
         },
         theme: {
           customCss: './src/css/custom.css',
