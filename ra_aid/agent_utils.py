@@ -7,12 +7,11 @@ import time
 from typing import Any, Dict, List, Literal, Optional
 import uuid
 
-from langchain_anthropic import ChatAnthropic
 from langgraph.graph.graph import CompiledGraph
 from ra_aid.callbacks.anthropic_callback_handler import (
     AnthropicCallbackHandler,
 )
-from ra_aid.anthropic_token_limiter import get_model_name_from_chat_model
+from ra_aid.model_detection import model_name_has_claude, should_use_react_agent, get_model_name_from_chat_model
 
 
 from anthropic import APIError, APITimeoutError, InternalServerError, RateLimitError
@@ -37,7 +36,7 @@ from ra_aid.agent_context import (
 from ra_aid.agent_backends.ciayn_agent import CiaynAgent
 from ra_aid.agents_alias import RAgents
 from ra_aid.config import DEFAULT_MAX_TEST_CMD_RETRIES, DEFAULT_MODEL
-from ra_aid.console.formatting import print_error
+from ra_aid.console.formatting import cpm, print_error
 from ra_aid.console.output import print_agent_output
 from ra_aid.exceptions import (
     AgentInterrupt,
@@ -48,8 +47,6 @@ from ra_aid.fallback_handler import FallbackHandler
 from ra_aid.logging_config import get_logger
 from ra_aid.models_params import (
     DEFAULT_TOKEN_LIMIT,
-    DEFAULT_AGENT_BACKEND,
-    AgentBackendType,
 )
 from ra_aid.tools.handle_user_defined_test_cmd_execution import execute_test_command
 from ra_aid.database.repositories.human_input_repository import (
@@ -71,7 +68,7 @@ logger = get_logger(__name__)
 
 def build_agent_kwargs(
     checkpointer: Optional[Any] = None,
-    model: ChatAnthropic = None,
+    model: BaseChatModel = None,
     max_input_tokens: Optional[int] = None,
 ) -> Dict[str, Any]:
     """Build kwargs dictionary for agent creation.
@@ -93,24 +90,9 @@ def build_agent_kwargs(
 
     # Use repository method to check if token limiting is enabled
     limit_tokens = get_config_repository().get("limit_tokens", True)
+    model_name = get_model_name_from_chat_model(model)
 
-    # Get model config to check if this is a model that needs token limiting
-    provider = get_config_repository().get("provider", "anthropic")
-    model_name = get_config_repository().get("model", "")
-
-    # Get the model parameters from models_params
-    from ra_aid.models_params import models_params, AgentBackendType
-
-    provider_config = models_params.get(provider, {})
-    model_config = provider_config.get(model_name, {})
-
-    # Check if this model uses the REACT backend (which is what we're configuring kwargs for)
-    uses_react_backend = (
-        model_config.get("default_backend", DEFAULT_AGENT_BACKEND)
-        == AgentBackendType.CREATE_REACT_AGENT
-    )
-
-    if limit_tokens and uses_react_backend and model is not None:
+    if limit_tokens and model is not None and model_name_has_claude(model_name):
 
         def wrapped_state_modifier(state: AgentState) -> list[BaseMessage]:
             model_name = get_model_name_from_chat_model(model)
@@ -127,11 +109,12 @@ def build_agent_kwargs(
 
         agent_kwargs["state_modifier"] = wrapped_state_modifier
 
-    model_name = get_model_name_from_chat_model(model)
     # Important for anthropic callback handler to determine the correct model name given the agent
     agent_kwargs["name"] = model_name
 
     return agent_kwargs
+
+
 
 
 def create_agent(
@@ -185,23 +168,20 @@ def create_agent(
             get_model_token_limit(config, agent_type, model) or DEFAULT_TOKEN_LIMIT
         )
 
-        from ra_aid.models_params import models_params
+        use_react_agent = should_use_react_agent(model)
 
-        provider_config = models_params.get(config.get("provider", ""), {})
-        model_config = provider_config.get(config.get("model", ""), {})
-
-        agent_backend = model_config.get("default_backend", DEFAULT_AGENT_BACKEND)
-
-        if agent_backend == AgentBackendType.CREATE_REACT_AGENT:
+        if use_react_agent:
             logger.debug(
-                "Using create_react_agent to instantiate agent based on model config."
+                "Using create_react_agent to instantiate agent based on model capabilities."
             )
+            cpm("Using ReAct Agent")
             agent_kwargs = build_agent_kwargs(checkpointer, model, max_input_tokens)
             return create_react_agent(
                 model, tools, interrupt_after=["tools"], **agent_kwargs
             )
         else:
-            logger.debug("Using CiaynAgent agent instance based on model config.")
+            cpm("Using Ciayn Agent")
+            logger.debug("Using CiaynAgent agent instance based on model capabilities.")
             return CiaynAgent(model, tools, max_tokens=max_input_tokens, config=config)
 
     except Exception as e:
