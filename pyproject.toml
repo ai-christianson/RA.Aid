@@ -78,4 +78,3 @@ path = "ra_aid/__version__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["ra_aid"]
-
