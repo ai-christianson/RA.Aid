@@ -6,6 +6,7 @@ from typing import Dict
 from langchain_core.tools import tool
 from rich.console import Console
 from rich.panel import Panel
+from ra_aid.console.formatting import console_panel
 from ra_aid.tools.memory import emit_related_files
 
 console = Console()
@@ -64,12 +65,10 @@ def put_complete_file_contents(
 
         logging.debug(f"File write complete: {bytes_written} bytes in {elapsed:.2f}s")
 
-        console.print(
-            Panel(
-                f"{'Initialized empty file' if not complete_file_contents else f'Wrote {bytes_written} bytes'} at {filepath} in {elapsed:.2f}s",
-                title="💾 File Write",
-                border_style="bright_green",
-            )
+        console_panel(
+            f"{'Initialized empty file' if not complete_file_contents else f'Wrote {bytes_written} bytes'} at {filepath} in {elapsed:.2f}s",
+            title="💾 File Write",
+            border_style="bright_green",
         )
         
         # Add file to related files
@@ -86,12 +85,10 @@ def put_complete_file_contents(
         else:
             result["message"] = error_msg
 
-        console.print(
-            Panel(
-                f"Failed to write {filepath}\nError: {error_msg}",
-                title="❌ File Write Error",
-                border_style="red",
-            )
+        console_panel(
+            f"Failed to write {filepath}\nError: {error_msg}",
+            title="❌ File Write Error",
+            border_style="red",
         )
 
     return result

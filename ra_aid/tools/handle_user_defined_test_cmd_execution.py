@@ -7,6 +7,7 @@ from typing import Any, Dict, Tuple
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
+from ra_aid.console.formatting import console_panel, cpm
 
 from ra_aid.config import DEFAULT_TEST_CMD_TIMEOUT
 from ra_aid.logging_config import get_logger
@@ -56,14 +57,10 @@ class TestCommandExecutor:
 
     def display_test_failure(self) -> None:
         """Display test failure message."""
-        console.print(
-            Panel(
-                Markdown(
-                    f"Test failed. Attempt number {self.state.test_attempts} of {self.max_retries}. Retrying and informing of failure output"
-                ),
-                title="🔎 User Defined Test",
-                border_style="red bold",
-            )
+        cpm(
+            f"Test failed. Attempt number {self.state.test_attempts} of {self.max_retries}. Retrying and informing of failure output",
+            title="🔎 User Defined Test",
+            border_style="red bold"
         )
 
     def handle_test_failure(
@@ -173,7 +170,7 @@ class TestCommandExecutor:
                 self.state.test_attempts,
             )
 
-        cmd = self.config["test_cmd"]
+        cmd = self.config.get("test_cmd")
 
         if not self.state.auto_test:
             print()
@@ -188,12 +185,10 @@ class TestCommandExecutor:
                 logger.error(
                     f"Maximum number of test retries ({self.max_retries}) reached. Stopping test execution."
                 )
-                console.print(
-                    Panel(
-                        f"Maximum retries ({self.max_retries}) reached. Test execution stopped.",
-                        title="⚠️ Test Execution",
-                        border_style="yellow bold",
-                    )
+                console_panel(
+                    f"Maximum retries ({self.max_retries}) reached. Test execution stopped.",
+                    title="⚠️ Test Execution",
+                    border_style="yellow bold"
                 )
                 self.state.should_break = True
             else:

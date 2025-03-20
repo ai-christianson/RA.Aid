@@ -61,11 +61,10 @@ def ask_human(question: str) -> str:
         from ra_aid.database.repositories.config_repository import get_config_repository
         
         # Determine the source based on context
-        config = get_config_repository().get_all()
         # If chat_mode is enabled, use 'chat', otherwise determine if hil mode is active
-        if config.get("chat_mode", False):
+        if get_config_repository().get("chat_mode", False):
             source = "chat"
-        elif config.get("hil", False):
+        elif get_config_repository().get("hil", False):
             source = "hil"
         else:
             source = "chat"  # Default fallback

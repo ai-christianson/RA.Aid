@@ -309,13 +309,9 @@ class OllamaStrategy(ProviderStrategy):
 
     def validate(self, args: Optional[Any] = None) -> ValidationResult:
         """Validate Ollama environment variables."""
-        missing = []
-
-        base_url = os.environ.get("OLLAMA_BASE_URL")
-        if not base_url:
-            missing.append("OLLAMA_BASE_URL environment variable is not set")
-
-        return ValidationResult(valid=len(missing) == 0, missing_vars=missing)
+        # No required environment variables for Ollama
+        # We use a default URL of "http://localhost:11434" if OLLAMA_BASE_URL is not set
+        return ValidationResult(valid=True, missing_vars=[])
 
 
 class ProviderFactory:

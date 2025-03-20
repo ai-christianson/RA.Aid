@@ -1,12 +1,84 @@
-from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 from typing import Optional
 
+from ra_aid.console.common import console
 from ra_aid.database.repositories.trajectory_repository import get_trajectory_repository
-from ra_aid.database.repositories.human_input_repository import get_human_input_repository
+from ra_aid.database.repositories.human_input_repository import (
+    get_human_input_repository,
+)
 
-console = Console()
+
+def cpm(message: str, title: Optional[str] = None, border_style: str = "blue", subtitle: Optional[str] = None) -> None:
+    """
+    Print a message using a Panel with Markdown formatting.
+
+    Args:
+        message (str): The message content to display.
+        title (Optional[str]): An optional title for the panel.
+        border_style (str): Border style for the panel.
+        subtitle (Optional[str]): An optional subtitle for the panel. If None, will try to get cost subtitle.
+    """
+    from ra_aid.console.output import get_cost_subtitle
+    
+    if subtitle is None:
+        subtitle = get_cost_subtitle()
+        
+    console.print(Panel(
+        Markdown(message), 
+        title=title, 
+        border_style=border_style,
+        subtitle=subtitle,
+        subtitle_align="right" if subtitle else None
+    ))
+
+
+def console_panel(
+    message: str, 
+    title: Optional[str] = None, 
+    border_style: str = "blue",
+    subtitle: Optional[str] = None,
+    subtitle_align: str = "right",
+    padding: tuple = (0, 0),
+    expand: bool = True,
+    safe_box: bool = True,
+    width: Optional[int] = None,
+    height: Optional[int] = None,
+) -> None:
+    """
+    Print a message using a Panel without Markdown formatting, with all panel options available.
+
+    Args:
+        message (str): The message content to display.
+        title (Optional[str]): An optional title for the panel.
+        border_style (str): Border style for the panel.
+        subtitle (Optional[str]): An optional subtitle for the panel. If None, will try to get cost subtitle.
+        subtitle_align (str): Alignment for the subtitle ("left", "center", or "right").
+        padding (tuple): Padding for the panel content (vertical, horizontal).
+        expand (bool): Whether the panel should expand to fill available width.
+        safe_box (bool): Whether to use ASCII characters instead of Unicode for the box.
+        width (Optional[int]): Optional fixed width for the panel.
+        height (Optional[int]): Optional fixed height for the panel.
+    """
+    from ra_aid.console.output import get_cost_subtitle
+    
+    if subtitle is None:
+        subtitle = get_cost_subtitle()
+        
+    console.print(
+        Panel(
+            message,
+            title=title,
+            border_style=border_style,
+            subtitle=subtitle,
+            subtitle_align=subtitle_align if subtitle else None,
+            padding=padding,
+            expand=expand,
+            safe_box=safe_box,
+            width=width,
+            height=height,
+        )
+    )
 
 
 def print_stage_header(stage: str) -> None:
@@ -36,7 +108,7 @@ def print_stage_header(stage: str) -> None:
 
     # Create styled panel with icon
     panel_content = f" {icon} {stage_title}"
-    console.print(Panel(panel_content, style="green bold", padding=0))
+    console_panel(panel_content, border_style="green bold", padding=(0, 1))
 
 
 def print_task_header(task: str) -> None:
@@ -45,7 +117,7 @@ def print_task_header(task: str) -> None:
     Args:
         task: The task text to print (supports Markdown formatting)
     """
-    console.print(Panel(Markdown(task), title="🔧 Task", border_style="yellow bold"))
+    cpm(task, title="🔧 Task", border_style="yellow bold")
 
 
 def print_error(message: str) -> None:
@@ -54,19 +126,19 @@ def print_error(message: str) -> None:
     Args:
         message: The error message to display (supports Markdown formatting)
     """
-    console.print(Panel(Markdown(message), title="Error", border_style="red bold"))
+    cpm(message, title="Error", border_style="red bold")
 
 
 def print_warning(message: str, title: str = "Warning") -> None:
     """Print a warning message in an amber-bordered panel with warning emoji.
-    
+
     Uses a text-only title to prevent console formatting issues.
 
     Args:
         message: The warning message to display (supports Markdown formatting)
         title: The title for the panel, defaults to "Warning"
     """
-    console.print(Panel(Markdown(message), title=title, border_style="yellow bold"))
+    cpm(message, title=title, border_style="yellow bold")
 
 
 def print_interrupt(message: str) -> None:
@@ -76,6 +148,4 @@ def print_interrupt(message: str) -> None:
         message: The interrupt message to display (supports Markdown formatting)
     """
     print()  # Add spacing for ^C
-    console.print(
-        Panel(Markdown(message), title="⛔ Interrupt", border_style="yellow bold")
-    )
+    cpm(message, title="⛔ Interrupt", border_style="yellow bold")

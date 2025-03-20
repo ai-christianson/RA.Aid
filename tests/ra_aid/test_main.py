@@ -2,6 +2,7 @@
 
 import pytest
 from unittest.mock import patch, MagicMock
+import copy
 
 from ra_aid.__main__ import parse_arguments
 from ra_aid.config import DEFAULT_RECURSION_LIMIT
@@ -19,25 +20,53 @@ def mock_config_repository():
         # Create a dictionary to simulate config
         config = {}
         
-        # Setup get method to return config values
-        def get_config(key, default=None):
-            return config.get(key, default)
-        mock_repo.get.side_effect = get_config
-        
         # Setup set method to update config values
         def set_config(key, value):
-            config[key] = value
+            config[key] = copy.deepcopy(value)
         mock_repo.set.side_effect = set_config
         
         # Setup update method to update multiple config values
         def update_config(config_dict):
-            config.update(config_dict)
+            for k, v in config_dict.items():
+                config[k] = copy.deepcopy(v)
         mock_repo.update.side_effect = update_config
         
-        # Setup get_all method to return the config dict
-        def get_all_config():
-            return config.copy()
-        mock_repo.get_all.side_effect = get_all_config
+        # Setup get method to return config values
+        def get_config(key, default=None):
+            return copy.deepcopy(config.get(key, default))
+        mock_repo.get.side_effect = get_config
+        
+        # Add get_keys method
+        def get_keys():
+            return list(config.keys())
+        mock_repo.get_keys.side_effect = get_keys
+        
+        # Add deep_copy method
+        def deep_copy():
+            new_mock = MagicMock()
+            new_config = copy.deepcopy(config)
+            
+            # Setup the new mock with the same methods
+            def new_get(key, default=None):
+                return copy.deepcopy(new_config.get(key, default))
+            new_mock.get.side_effect = new_get
+            
+            def new_set(key, value):
+                new_config[key] = copy.deepcopy(value)
+            new_mock.set.side_effect = new_set
+            
+            def new_update(update_dict):
+                for k, v in update_dict.items():
+                    new_config[k] = copy.deepcopy(v)
+            new_mock.update.side_effect = new_update
+            
+            def new_get_keys():
+                return list(new_config.keys())
+            new_mock.get_keys.side_effect = new_get_keys
+            
+            return new_mock
+            
+        mock_repo.deep_copy.side_effect = deep_copy
         
         # Make the mock context var return our mock repo
         mock_repo_var.get.return_value = mock_repo

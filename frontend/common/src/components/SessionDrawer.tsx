@@ -26,21 +26,24 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
   onClose
 }) => {
   return (
-    <Sheet open={isOpen} onOpenChange={onClose}>
+    <Sheet open={isOpen} onOpenChange={onClose} modal={false}>
       <SheetContent 
         side="left" 
-        className="w-full sm:max-w-md border-r border-border p-4"
+        className="w-full sm:max-w-md border-r border-border p-0"
       >
-        <SheetHeader className="px-2">
-          <SheetTitle>Sessions</SheetTitle>
-        </SheetHeader>
-        <SessionList
-          sessions={sessions}
-          currentSessionId={currentSessionId}
-          onSelectSession={onSelectSession}
-          className="h-[calc(100vh-9rem)] mt-4"
-          wrapperComponent={SheetClose}
-        />
+        <div className="h-full flex flex-col">
+          <SheetHeader className="px-4 py-4 flex-shrink-0">
+            <SheetTitle>Sessions</SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto p-4">
+            <SessionList
+              sessions={sessions}
+              currentSessionId={currentSessionId}
+              onSelectSession={onSelectSession}
+              wrapperComponent={SheetClose}
+            />
+          </div>
+        </div>
       </SheetContent>
     </Sheet>
   );

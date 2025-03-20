@@ -58,6 +58,15 @@ const config: Config = {
   themes: ['docusaurus-theme-openapi-docs'],
 
   themeConfig: {
+    algolia: {
+      appId: 'HZFTKC6J5D',          // Optional: required if your DocSearch config uses it
+      apiKey: '8e9db8266e2edda55250eada5c86d4a4',   // Public API key; safe to commit
+      indexName: 'ra-aid',    // The index provided by Algolia
+      contextualSearch: true,          // Optional: adjusts search results by language/version
+      // Optional parameters:
+      // searchParameters: {},
+      // searchPagePath: 'search',
+    },
     navbar: {
       logo: {
         alt: 'Site Logo',

@@ -7,7 +7,7 @@ providing validation, serialization, and deserialization capabilities.
 
 import datetime
 import json
-from typing import Dict, List, Any, Optional
+from typing import Dict, Any, Optional
 
 from pydantic import BaseModel, ConfigDict, field_serializer, field_validator
 
@@ -28,6 +28,7 @@ class SessionModel(BaseModel):
         command_line: Command line arguments used to start the program
         program_version: Version of the program
         machine_info: Dictionary containing machine-specific metadata
+        display_name: Display name for the session (derived from human input or command line)
     """
     id: Optional[int] = None
     created_at: datetime.datetime
@@ -36,6 +37,7 @@ class SessionModel(BaseModel):
     command_line: Optional[str] = None
     program_version: Optional[str] = None
     machine_info: Optional[Dict[str, Any]] = None
+    display_name: Optional[str] = None
     
     # Configure the model to work with ORM objects
     model_config = ConfigDict(from_attributes=True)
@@ -215,8 +217,9 @@ class TrajectoryModel(BaseModel):
         tool_result: Dictionary containing the result returned by the tool
         step_data: Dictionary containing UI rendering data
         record_type: Type of trajectory record
-        cost: Optional cost of the tool execution
-        tokens: Optional token usage of the tool execution
+        current_cost: Optional cost of the last LLM message
+        input_tokens: Optional input/prompt token usage
+        output_tokens: Optional output/completion token usage
         is_error: Flag indicating if this record represents an error
         error_message: The error message if is_error is True
         error_type: The type/class of the error if is_error is True
@@ -232,8 +235,9 @@ class TrajectoryModel(BaseModel):
     tool_result: Optional[Any] = None
     step_data: Optional[Dict[str, Any]] = None
     record_type: Optional[str] = None
-    cost: Optional[float] = None
-    tokens: Optional[int] = None
+    current_cost: Optional[float] = None
+    input_tokens: Optional[int] = None
+    output_tokens: Optional[int] = None
     is_error: bool = False
     error_message: Optional[str] = None
     error_type: Optional[str] = None

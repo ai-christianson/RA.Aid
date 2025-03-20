@@ -7,6 +7,7 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 from typing_extensions import TypedDict
+from ra_aid.console.formatting import console_panel, cpm
 
 from ra_aid.agent_context import (
     mark_plan_completed,
@@ -87,7 +88,7 @@ def emit_research_notes(notes: str) -> str:
             logger.warning(f"Failed to record trajectory: {str(e)}")
         
         # Display formatted note
-        console.print(Panel(Markdown(formatted_note), title="🔍 Research Notes"))
+        cpm(formatted_note, title="🔍 Research Notes")
         
         log_work_event(f"Stored research note #{note_id}.")
         
@@ -158,12 +159,10 @@ def emit_key_facts(facts: List[str]) -> str:
             logger.warning(f"Failed to record trajectory: {str(e)}")
 
         # Display panel with ID
-        console.print(
-            Panel(
-                Markdown(fact),
-                title=f"💡 Key Fact #{fact_id}",
-                border_style="bright_cyan",
-            )
+        cpm(
+            fact,
+            title=f"💡 Key Fact #{fact_id}",
+            border_style="bright_cyan"
         )
 
         # Add result message
@@ -275,12 +274,10 @@ def emit_key_snippet(snippet_info: SnippetInfo) -> str:
         logger.warning(f"Failed to record trajectory: {str(e)}")
 
     # Display panel
-    console.print(
-        Panel(
-            Markdown("\n".join(display_text)),
-            title=f"📝 Key Snippet #{snippet_id}",
-            border_style="bright_cyan",
-        )
+    cpm(
+        "\n".join(display_text),
+        title=f"📝 Key Snippet #{snippet_id}",
+        border_style="bright_cyan"
     )
 
     log_work_event(f"Stored code snippet #{snippet_id}.")
@@ -327,7 +324,7 @@ def one_shot_completed(message: str) -> str:
     except RuntimeError as e:
         logger.warning(f"Failed to record trajectory: {str(e)}")
     
-    console.print(Panel(Markdown(message), title="✅ Task Completed"))
+    cpm(message, title="✅ Task Completed")
     log_work_event(f"Task completed:\n\n{message}")
     return "Completion noted."
 
@@ -359,7 +356,7 @@ def task_completed(message: str) -> str:
     except RuntimeError as e:
         logger.warning(f"Failed to record trajectory: {str(e)}")
     
-    console.print(Panel(Markdown(message), title="✅ Task Completed"))
+    cpm(message, title="✅ Task Completed")
     log_work_event(f"Task completed:\n\n{message}")
     return "Completion noted."
 
@@ -392,7 +389,7 @@ def plan_implementation_completed(message: str) -> str:
     except RuntimeError as e:
         logger.warning(f"Failed to record trajectory: {str(e)}")
     
-    console.print(Panel(Markdown(message), title="✅ Plan Executed"))
+    cpm(message, title="✅ Plan Executed")
     log_work_event(f"Completed implementation:\n\n{message}")
     return "Plan completion noted."
 
@@ -501,12 +498,10 @@ def emit_related_files(files: List[str]) -> str:
         except RuntimeError as e:
             logger.warning(f"Failed to record trajectory: {str(e)}")
         
-        console.print(
-            Panel(
-                Markdown(md_content),
-                title="📁 Related Files Noted",
-                border_style="green",
-            )
+        cpm(
+            md_content,
+            title="📁 Related Files Noted",
+            border_style="green"
         )
 
     # Record to trajectory before displaying panel for binary files
@@ -531,12 +526,10 @@ def emit_related_files(files: List[str]) -> str:
         except RuntimeError as e:
             logger.warning(f"Failed to record trajectory: {str(e)}")
         
-        console.print(
-            Panel(
-                Markdown(md_content),
-                title="⚠️ Binary Files Not Added",
-                border_style="yellow",
-            )
+        cpm(
+            md_content,
+            title="⚠️ Binary Files Not Added",
+            border_style="yellow"
         )
 
     # Return summary message
@@ -629,12 +622,10 @@ def deregister_related_files(file_ids: List[int]) -> str:
             success_msg = (
                 f"Successfully removed related file #{file_id}: {deleted_file}"
             )
-            console.print(
-                Panel(
-                    Markdown(success_msg),
-                    title="File Reference Removed",
-                    border_style="green",
-                )
+            cpm(
+                success_msg,
+                title="File Reference Removed",
+                border_style="green"
             )
             results.append(success_msg)
 

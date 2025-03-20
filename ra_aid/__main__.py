@@ -20,7 +20,6 @@ from ra_aid.agent_utils import (
     run_agent_with_retry,
 )
 from ra_aid.agents.research_agent import run_research_agent
-from ra_aid.agents import run_planning_agent
 from ra_aid.config import (
     DEFAULT_MAX_TEST_CMD_RETRIES,
     DEFAULT_MODEL,
@@ -48,9 +47,7 @@ from ra_aid.database.repositories.trajectory_repository import (
     TrajectoryRepositoryManager,
     get_trajectory_repository,
 )
-from ra_aid.database.repositories.session_repository import (
-    SessionRepositoryManager, get_session_repository
-)
+from ra_aid.database.repositories.session_repository import SessionRepositoryManager
 from ra_aid.database.repositories.related_files_repository import (
     RelatedFilesRepositoryManager,
 )
@@ -63,7 +60,7 @@ from ra_aid.env_inv import EnvDiscovery
 from ra_aid.env_inv_context import EnvInvManager, get_env_inv
 from ra_aid.model_formatters import format_key_facts_dict
 from ra_aid.model_formatters.key_snippets_formatter import format_key_snippets_dict
-from ra_aid.console.output import cpm
+from ra_aid.console.formatting import cpm
 from ra_aid.database import (
     DatabaseManager,
     ensure_migrations_applied,
@@ -72,9 +69,9 @@ from ra_aid.dependencies import check_dependencies
 from ra_aid.env import validate_environment
 from ra_aid.exceptions import AgentInterrupt
 from ra_aid.fallback_handler import FallbackHandler
-from ra_aid.llm import initialize_llm
+from ra_aid.llm import initialize_llm, get_model_default_temperature
 from ra_aid.logging_config import get_logger, setup_logging
-from ra_aid.models_params import DEFAULT_TEMPERATURE, models_params
+from ra_aid.models_params import models_params
 from ra_aid.project_info import format_project_info, get_project_info
 from ra_aid.prompts.chat_prompts import CHAT_PROMPT
 from ra_aid.prompts.web_research_prompts import WEB_RESEARCH_PROMPT_SECTION_CHAT
@@ -104,36 +101,54 @@ def launch_server(host: str, port: int, args):
     from ra_aid.server import run_server
     from ra_aid.database.connection import DatabaseManager
     from ra_aid.database.repositories.session_repository import SessionRepositoryManager
-    from ra_aid.database.repositories.key_fact_repository import KeyFactRepositoryManager
-    from ra_aid.database.repositories.key_snippet_repository import KeySnippetRepositoryManager
-    from ra_aid.database.repositories.human_input_repository import HumanInputRepositoryManager
-    from ra_aid.database.repositories.research_note_repository import ResearchNoteRepositoryManager
-    from ra_aid.database.repositories.related_files_repository import RelatedFilesRepositoryManager
-    from ra_aid.database.repositories.trajectory_repository import TrajectoryRepositoryManager
-    from ra_aid.database.repositories.work_log_repository import WorkLogRepositoryManager
+    from ra_aid.database.repositories.key_fact_repository import (
+        KeyFactRepositoryManager,
+    )
+    from ra_aid.database.repositories.key_snippet_repository import (
+        KeySnippetRepositoryManager,
+    )
+    from ra_aid.database.repositories.human_input_repository import (
+        HumanInputRepositoryManager,
+    )
+    from ra_aid.database.repositories.research_note_repository import (
+        ResearchNoteRepositoryManager,
+    )
+    from ra_aid.database.repositories.related_files_repository import (
+        RelatedFilesRepositoryManager,
+    )
+    from ra_aid.database.repositories.trajectory_repository import (
+        TrajectoryRepositoryManager,
+    )
+    from ra_aid.database.repositories.work_log_repository import (
+        WorkLogRepositoryManager,
+    )
     from ra_aid.database.repositories.config_repository import ConfigRepositoryManager
     from ra_aid.env_inv_context import EnvInvManager
     from ra_aid.env_inv import EnvDiscovery
-    
+
     # Set the console handler level to INFO for server mode
     # Get the root logger and modify the console handler
     root_logger = logging.getLogger()
     for handler in root_logger.handlers:
         # Check if this is a console handler (outputs to stdout/stderr)
-        if isinstance(handler, logging.StreamHandler) and handler.stream in [sys.stdout, sys.stderr]:
+        if isinstance(handler, logging.StreamHandler) and handler.stream in [
+            sys.stdout,
+            sys.stderr,
+        ]:
             # Set console handler to INFO level for better visibility in server mode
             handler.setLevel(logging.INFO)
             logger.debug("Modified console logging level to INFO for server mode")
-    
+
     # Apply any pending database migrations
     from ra_aid.database import ensure_migrations_applied
+
     try:
         migration_result = ensure_migrations_applied()
         if not migration_result:
             logger.warning("Database migrations failed but execution will continue")
     except Exception as e:
         logger.error(f"Database migration error: {str(e)}")
-    
+
     # Check dependencies before proceeding
     check_dependencies()
 
@@ -143,15 +158,11 @@ def launch_server(host: str, port: int, args):
         expert_missing,
         web_research_enabled,
         web_research_missing,
-    ) = validate_environment(
-        args
-    )  # Will exit if main env vars missing
+    ) = validate_environment(args)  # Will exit if main env vars missing
     logger.debug("Environment validation successful")
 
     # Validate model configuration early
-    model_config = models_params.get(args.provider, {}).get(
-        args.model or "", {}
-    )
+    model_config = models_params.get(args.provider, {}).get(args.model or "", {})
     supports_temperature = model_config.get(
         "supports_temperature",
         args.provider
@@ -167,50 +178,35 @@ def launch_server(host: str, port: int, args):
     if supports_temperature and args.temperature is None:
         args.temperature = model_config.get("default_temperature")
         if args.temperature is None:
+            args.temperature = get_model_default_temperature(args.provider, args.model)
             cpm(
-                f"This model supports temperature argument but none was given. Setting default temperature to {DEFAULT_TEMPERATURE}."
+                f"This model supports temperature argument but none was given. Using model default temperature: {args.temperature}."
             )
-            args.temperature = DEFAULT_TEMPERATURE
         logger.debug(
             f"Using default temperature {args.temperature} for model {args.model}"
         )
-    
-    # Initialize config dictionary with values from args and environment validation
-    config = {
-        "provider": args.provider,
-        "model": args.model,
-        "expert_provider": args.expert_provider,
-        "expert_model": args.expert_model,
-        "temperature": args.temperature,
-        "experimental_fallback_handler": args.experimental_fallback_handler,
-        "expert_enabled": expert_enabled,
-        "web_research_enabled": web_research_enabled,
-        "show_thoughts": args.show_thoughts,
-        "show_cost": args.show_cost,
-        "force_reasoning_assistance": args.reasoning_assistance,
-        "disable_reasoning_assistance": args.no_reasoning_assistance
-    }
-    
+
     # Initialize environment discovery
     env_discovery = EnvDiscovery()
     env_discovery.discover()
     env_data = env_discovery.format_markdown()
-    
+
     print(f"Starting RA.Aid web interface on http://{host}:{port}")
-    
+
     # Initialize database connection and repositories
-    with DatabaseManager() as db, \
-         SessionRepositoryManager(db) as session_repo, \
-         KeyFactRepositoryManager(db) as key_fact_repo, \
-         KeySnippetRepositoryManager(db) as key_snippet_repo, \
-         HumanInputRepositoryManager(db) as human_input_repo, \
-         ResearchNoteRepositoryManager(db) as research_note_repo, \
-         RelatedFilesRepositoryManager() as related_files_repo, \
-         TrajectoryRepositoryManager(db) as trajectory_repo, \
-         WorkLogRepositoryManager() as work_log_repo, \
-         ConfigRepositoryManager(config) as config_repo, \
-         EnvInvManager(env_data) as env_inv:
-        
+    with (
+        DatabaseManager(base_dir=args.project_state_dir) as db,
+        SessionRepositoryManager(db) as session_repo,
+        KeyFactRepositoryManager(db) as key_fact_repo,
+        KeySnippetRepositoryManager(db) as key_snippet_repo,
+        HumanInputRepositoryManager(db) as human_input_repo,
+        ResearchNoteRepositoryManager(db) as research_note_repo,
+        RelatedFilesRepositoryManager() as related_files_repo,
+        TrajectoryRepositoryManager(db) as trajectory_repo,
+        WorkLogRepositoryManager() as work_log_repo,
+        ConfigRepositoryManager() as config_repo,
+        EnvInvManager(env_data) as env_inv,
+    ):
         # This initializes all repositories and makes them available via their respective get methods
         logger.debug("Initialized SessionRepository")
         logger.debug("Initialized KeyFactRepository")
@@ -222,6 +218,24 @@ def launch_server(host: str, port: int, args):
         logger.debug("Initialized WorkLogRepository")
         logger.debug("Initialized ConfigRepository")
         logger.debug("Initialized Environment Inventory")
+        
+        # Update config repo with values from args and environment validation
+        config_repo.update({
+            "provider": args.provider,
+            "model": args.model,
+            "num_ctx": args.num_ctx,
+            "expert_provider": args.expert_provider,
+            "expert_model": args.expert_model,
+            "expert_num_ctx": args.expert_num_ctx,
+            "temperature": args.temperature,
+            "experimental_fallback_handler": args.experimental_fallback_handler,
+            "expert_enabled": expert_enabled,
+            "web_research_enabled": web_research_enabled,
+            "show_thoughts": args.show_thoughts,
+            "show_cost": args.show_cost,
+            "force_reasoning_assistance": args.reasoning_assistance,
+            "disable_reasoning_assistance": args.no_reasoning_assistance
+        })
         
         # Run the server within the context managers
         run_server(host=host, port=port)
@@ -278,6 +292,7 @@ Examples:
         help="The LLM provider to use",
     )
     parser.add_argument("--model", type=str, help="The model name to use")
+    parser.add_argument("--num-ctx", type=int, default=262144, help="Context window size for Ollama models")
     parser.add_argument(
         "--research-provider",
         type=str,
@@ -314,6 +329,12 @@ Examples:
         "--expert-model",
         type=str,
         help="The model name to use for expert knowledge queries (required for non-OpenAI providers)",
+    )
+    parser.add_argument(
+        "--expert-num-ctx",
+        type=int,
+        default=262144,
+        help="Context window size for expert Ollama models",
     )
     parser.add_argument(
         "--hil",
@@ -416,6 +437,10 @@ Examples:
         help="Delete the project database file (.ra-aid/pk.db) before starting, effectively wiping all stored memory",
     )
     parser.add_argument(
+        "--project-state-dir",
+        help="Directory to store project state (database and logs). By default, a .ra-aid directory is created in the current working directory.",
+    )
+    parser.add_argument(
         "--show-thoughts",
         action="store_true",
         help="Display model thinking content extracted from think tags when supported by the model",
@@ -424,6 +449,18 @@ Examples:
         "--show-cost",
         action="store_true",
         help="Display cost information as the agent works",
+    )
+    parser.add_argument(
+        "--track-cost",
+        action="store_true",
+        default=False,
+        help="Track token usage and costs (default: False)",
+    )
+    parser.add_argument(
+        "--no-track-cost",
+        action="store_false",
+        dest="track_cost",
+        help="Disable tracking of token usage and costs",
     )
     parser.add_argument(
         "--reasoning-assistance",
@@ -488,6 +525,10 @@ Examples:
     if parsed_args.auto_test and not parsed_args.test_cmd:
         parser.error("Test command is required when using --auto-test")
 
+    # If show_cost is true, we must also enable track_cost
+    if parsed_args.show_cost:
+        parsed_args.track_cost = True
+
     return parsed_args
 
 
@@ -511,8 +552,11 @@ def is_stage_requested(stage: str) -> bool:
     return False
 
 
-def wipe_project_memory():
+def wipe_project_memory(custom_dir=None):
     """Delete the project database file to wipe all stored memory.
+
+    Args:
+        custom_dir: Optional custom directory to use instead of .ra-aid in current directory
 
     Returns:
         str: A message indicating the result of the operation
@@ -520,9 +564,13 @@ def wipe_project_memory():
     import os
     from pathlib import Path
 
-    cwd = os.getcwd()
-    ra_aid_dir = Path(os.path.join(cwd, ".ra-aid"))
-    db_path = os.path.join(ra_aid_dir, "pk.db")
+    if custom_dir:
+        ra_aid_dir = Path(custom_dir)
+        db_path = os.path.join(custom_dir, "pk.db")
+    else:
+        cwd = os.getcwd()
+        ra_aid_dir = Path(os.path.join(cwd, ".ra-aid"))
+        db_path = os.path.join(ra_aid_dir, "pk.db")
 
     if not os.path.exists(db_path):
         return "No project memory found to wipe."
@@ -630,12 +678,12 @@ def build_status():
 def main():
     """Main entry point for the ra-aid command line tool."""
     args = parse_arguments()
-    setup_logging(args.log_mode, args.pretty_logger, args.log_level)
+    setup_logging(args.log_mode, args.pretty_logger, args.log_level, base_dir=args.project_state_dir)
     logger.debug("Starting RA.Aid with arguments: %s", args)
 
     # Check if we need to wipe project memory before starting
     if args.wipe_project_memory:
-        result = wipe_project_memory()
+        result = wipe_project_memory(custom_dir=args.project_state_dir)
         logger.info(result)
         print(f"📋 {result}")
 
@@ -645,7 +693,7 @@ def main():
         return
 
     try:
-        with DatabaseManager() as db:
+        with DatabaseManager(base_dir=args.project_state_dir) as db:
             # Apply any pending database migrations
             try:
                 migration_result = ensure_migrations_applied()
@@ -664,17 +712,19 @@ def main():
             env_discovery = EnvDiscovery()
             env_discovery.discover()
             env_data = env_discovery.format_markdown()
-            
-            with SessionRepositoryManager(db) as session_repo, \
-                 KeyFactRepositoryManager(db) as key_fact_repo, \
-                 KeySnippetRepositoryManager(db) as key_snippet_repo, \
-                 HumanInputRepositoryManager(db) as human_input_repo, \
-                 ResearchNoteRepositoryManager(db) as research_note_repo, \
-                 RelatedFilesRepositoryManager() as related_files_repo, \
-                 TrajectoryRepositoryManager(db) as trajectory_repo, \
-                 WorkLogRepositoryManager() as work_log_repo, \
-                 ConfigRepositoryManager(config) as config_repo, \
-                 EnvInvManager(env_data) as env_inv:
+
+            with (
+                SessionRepositoryManager(db) as session_repo,
+                KeyFactRepositoryManager(db) as key_fact_repo,
+                KeySnippetRepositoryManager(db) as key_snippet_repo,
+                HumanInputRepositoryManager(db) as human_input_repo,
+                ResearchNoteRepositoryManager(db) as research_note_repo,
+                RelatedFilesRepositoryManager() as related_files_repo,
+                TrajectoryRepositoryManager(db) as trajectory_repo,
+                WorkLogRepositoryManager() as work_log_repo,
+                ConfigRepositoryManager() as config_repo,
+                EnvInvManager(env_data) as env_inv,
+            ):
                 # This initializes all repositories and makes them available via their respective get methods
                 logger.debug("Initialized SessionRepository")
                 logger.debug("Initialized KeyFactRepository")
@@ -686,12 +736,10 @@ def main():
                 logger.debug("Initialized WorkLogRepository")
                 logger.debug("Initialized ConfigRepository")
                 logger.debug("Initialized Environment Inventory")
-                
-                # Create a new session for this program run
+
                 logger.debug("Initializing new session")
                 session_repo.create_session()
 
-                # Check dependencies before proceeding
                 check_dependencies()
 
                 (
@@ -699,9 +747,7 @@ def main():
                     expert_missing,
                     web_research_enabled,
                     web_research_missing,
-                ) = validate_environment(
-                    args
-                )  # Will exit if main env vars missing
+                ) = validate_environment(args)  # Will exit if main env vars missing
                 logger.debug("Environment validation successful")
 
                 # Validate model configuration early
@@ -723,19 +769,22 @@ def main():
                 if supports_temperature and args.temperature is None:
                     args.temperature = model_config.get("default_temperature")
                     if args.temperature is None:
+                        args.temperature = get_model_default_temperature(args.provider, args.model)
                         cpm(
-                            f"This model supports temperature argument but none was given. Setting default temperature to {DEFAULT_TEMPERATURE}."
+                            f"This model supports temperature argument but none was given. Using model default temperature: {args.temperature}."
                         )
-                        args.temperature = DEFAULT_TEMPERATURE
                     logger.debug(
                         f"Using default temperature {args.temperature} for model {args.model}"
                     )
 
-                # Store all the configuration in the config repository
+                # Update config repo with values from CLI arguments
+                config_repo.update(config)
                 config_repo.set("provider", args.provider)
                 config_repo.set("model", args.model)
+                config_repo.set("num_ctx", args.num_ctx)
                 config_repo.set("expert_provider", args.expert_provider)
                 config_repo.set("expert_model", args.expert_model)
+                config_repo.set("expert_num_ctx", args.expert_num_ctx)
                 config_repo.set("temperature", args.temperature)
                 config_repo.set(
                     "experimental_fallback_handler", args.experimental_fallback_handler
@@ -743,6 +792,7 @@ def main():
                 config_repo.set("web_research_enabled", web_research_enabled)
                 config_repo.set("show_thoughts", args.show_thoughts)
                 config_repo.set("show_cost", args.show_cost)
+                config_repo.set("track_cost", args.track_cost)
                 config_repo.set("force_reasoning_assistance", args.reasoning_assistance)
                 config_repo.set(
                     "disable_reasoning_assistance", args.no_reasoning_assistance
@@ -770,8 +820,12 @@ def main():
                     if args.research_only:
                         try:
                             trajectory_repo = get_trajectory_repository()
-                            human_input_id = get_human_input_repository().get_most_recent_id()
-                            error_message = "Chat mode cannot be used with --research-only"
+                            human_input_id = (
+                                get_human_input_repository().get_most_recent_id()
+                            )
+                            error_message = (
+                                "Chat mode cannot be used with --research-only"
+                            )
                             trajectory_repo.create(
                                 step_data={
                                     "display_title": "Error",
@@ -790,7 +844,7 @@ def main():
                         sys.exit(1)
 
                     print_stage_header("Chat Mode")
-                    
+
                     # Record stage transition in trajectory
                     trajectory_repo = get_trajectory_repository()
                     human_input_id = get_human_input_repository().get_most_recent_id()
@@ -800,7 +854,7 @@ def main():
                             "display_title": "Chat Mode",
                         },
                         record_type="stage_transition",
-                        human_input_id=human_input_id
+                        human_input_id=human_input_id,
                     )
 
                     # Get project info
@@ -821,8 +875,10 @@ def main():
                     try:
                         # Using get_human_input_repository() to access the repository from context
                         human_input_repository = get_human_input_repository()
+                        # Get current session ID
+                        session_id = session_repo.get_current_session_id()
                         human_input_repository.create(
-                            content=initial_request, source="chat"
+                            content=initial_request, source="chat", session_id=session_id
                         )
                         human_input_repository.garbage_collect()
                     except Exception as e:
@@ -838,7 +894,6 @@ def main():
                         "recursion_limit": args.recursion_limit,
                         "chat_mode": True,
                         "cowboy_mode": args.cowboy_mode,
-                        "hil": True,  # Always true in chat mode
                         "web_research_enabled": web_research_enabled,
                         "initial_request": initial_request,
                         "limit_tokens": args.disable_limit_tokens,
@@ -848,13 +903,20 @@ def main():
                     config_repo.update(config)
                     config_repo.set("provider", args.provider)
                     config_repo.set("model", args.model)
+                    config_repo.set("num_ctx", args.num_ctx)
                     config_repo.set("expert_provider", args.expert_provider)
                     config_repo.set("expert_model", args.expert_model)
+                    config_repo.set("expert_num_ctx", args.expert_num_ctx)
                     config_repo.set("temperature", args.temperature)
                     config_repo.set("show_thoughts", args.show_thoughts)
                     config_repo.set("show_cost", args.show_cost)
-                    config_repo.set("force_reasoning_assistance", args.reasoning_assistance)
-                    config_repo.set("disable_reasoning_assistance", args.no_reasoning_assistance)
+                    config_repo.set("track_cost", args.track_cost)
+                    config_repo.set(
+                        "force_reasoning_assistance", args.reasoning_assistance
+                    )
+                    config_repo.set(
+                        "disable_reasoning_assistance", args.no_reasoning_assistance
+                    )
 
                     # Set modification tools based on use_aider flag
                     set_modification_tools(args.use_aider)
@@ -895,10 +957,12 @@ def main():
                     return
 
                 # Validate message is provided
-                if not args.message:
+                if not args.message and not args.wipe_project_memory:  # Add check for wipe_project_memory flag
                     try:
                         trajectory_repo = get_trajectory_repository()
-                        human_input_id = get_human_input_repository().get_most_recent_id()
+                        human_input_id = (
+                            get_human_input_repository().get_most_recent_id()
+                        )
                         error_message = "--message is required"
                         trajectory_repo.create(
                             step_data={
@@ -917,13 +981,18 @@ def main():
                     print_error("--message is required")
                     sys.exit(1)
 
-                base_task = args.message
+                if args.message:  # Only set base_task if message exists
+                    base_task = args.message
 
                 # Record CLI input in database
                 try:
                     # Using get_human_input_repository() to access the repository from context
                     human_input_repository = get_human_input_repository()
-                    human_input_repository.create(content=base_task, source="cli")
+                    # Get current session ID
+                    session_id = session_repo.get_current_session_id()
+                    human_input_repository.create(
+                        content=base_task, source="cli", session_id=session_id
+                    )
                     # Run garbage collection to ensure we don't exceed 100 inputs
                     human_input_repository.garbage_collect()
                     logger.debug(f"Recorded CLI input: {base_task}")
@@ -951,10 +1020,12 @@ def main():
                 # Store base provider/model configuration
                 config_repo.set("provider", args.provider)
                 config_repo.set("model", args.model)
+                config_repo.set("num_ctx", args.num_ctx)
 
                 # Store expert provider/model (no fallback)
                 config_repo.set("expert_provider", args.expert_provider)
                 config_repo.set("expert_model", args.expert_model)
+                config_repo.set("expert_num_ctx", args.expert_num_ctx)
 
                 # Store planner config with fallback to base values
                 config_repo.set(
@@ -982,7 +1053,7 @@ def main():
 
                 # Run research stage
                 print_stage_header("Research Stage")
-                
+
                 # Record stage transition in trajectory
                 trajectory_repo = get_trajectory_repository()
                 human_input_id = get_human_input_repository().get_most_recent_id()
@@ -992,7 +1063,7 @@ def main():
                         "display_title": "Research Stage",
                     },
                     record_type="stage_transition",
-                    human_input_id=human_input_id
+                    human_input_id=human_input_id,
                 )
 
                 # Initialize research model with potential overrides

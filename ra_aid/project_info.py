@@ -3,10 +3,6 @@
 from dataclasses import dataclass
 from typing import List, Optional
 
-from rich.console import Console
-from rich.markdown import Markdown
-from rich.panel import Panel
-
 __all__ = [
     "ProjectInfo",
     "ProjectInfoError",
@@ -15,10 +11,13 @@ __all__ = [
     "display_project_status",
 ]
 
+from ra_aid.console.formatting import cpm
 from ra_aid.file_listing import FileListerError, get_file_listing
 from ra_aid.project_state import ProjectStateError, is_new_project
 from ra_aid.database.repositories.trajectory_repository import get_trajectory_repository
-from ra_aid.database.repositories.human_input_repository import get_human_input_repository
+from ra_aid.database.repositories.human_input_repository import (
+    get_human_input_repository,
+)
 
 
 @dataclass
@@ -144,12 +143,10 @@ def display_project_status(info: ProjectInfo) -> None:
                 "display_title": "Project Status",
             },
             record_type="info",
-            human_input_id=human_input_id
+            human_input_id=human_input_id,
         )
     except Exception as e:
         # Silently continue if trajectory recording fails
         pass
 
-    # Create and display panel
-    console = Console()
-    console.print(Panel(Markdown(status_text.strip()), title="📊 Project Status"))
+    cpm(status_text.strip(), title="📊 Project Status")

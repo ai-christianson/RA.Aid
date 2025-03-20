@@ -72,9 +72,29 @@ def test_build_status_shows_reset_option():
          patch("ra_aid.__main__.get_research_note_repository") as mock_note_repo, \
          patch("ra_aid.__main__.get_config_repository") as mock_config_repo:
          
-        # Set up mock repositories
+        # Set up mock repositories to return specific results with get and get_all
+        # For key_fact_repository
+        def mock_fact_get(fact_id):
+            if 1 <= fact_id <= 3:
+                return MagicMock(id=fact_id, content=f"Fact {fact_id}")
+            return None
+        mock_fact_repo.return_value.get.side_effect = mock_fact_get
         mock_fact_repo.return_value.get_all.return_value = [1, 2, 3]  # 3 facts
+        
+        # For key_snippet_repository
+        def mock_snippet_get(snippet_id):
+            if snippet_id == 1:
+                return MagicMock(id=1, filepath="test.py", line_number=1, snippet="test")
+            return None
+        mock_snippet_repo.return_value.get.side_effect = mock_snippet_get
         mock_snippet_repo.return_value.get_all.return_value = [1]  # 1 snippet
+        
+        # For research_note_repository
+        def mock_note_get(note_id):
+            if 1 <= note_id <= 2:
+                return MagicMock(id=note_id, content=f"Note {note_id}")
+            return None
+        mock_note_repo.return_value.get.side_effect = mock_note_get
         mock_note_repo.return_value.get_all.return_value = [1, 2]  # 2 notes
         mock_config_repo.return_value.get.return_value = None
         
@@ -89,8 +109,14 @@ def test_build_status_shows_reset_option():
         assert "use --wipe-project-memory to reset" in status_str
         
         # Test with empty memory - should not show reset option
+        # Update both get and get_all mocks
+        mock_fact_repo.return_value.get.side_effect = lambda fact_id: None
         mock_fact_repo.return_value.get_all.return_value = []
+        
+        mock_snippet_repo.return_value.get.side_effect = lambda snippet_id: None
         mock_snippet_repo.return_value.get_all.return_value = []
+        
+        mock_note_repo.return_value.get.side_effect = lambda note_id: None
         mock_note_repo.return_value.get_all.return_value = []
         
         # Call build_status again
@@ -106,12 +132,13 @@ def test_main_with_wipe_project_memory_flag():
     """Test that the main function properly calls wipe_project_memory when flag is set."""
     from ra_aid.__main__ import main
 
-    # Create a mock args object with wipe_project_memory=True
+    # Create a mock args object with wipe_project_memory=True and project_state_dir=None
     mock_args = MagicMock()
     mock_args.wipe_project_memory = True
+    mock_args.project_state_dir = None
     
     # Mock the wipe_project_memory function to raise SystemExit after being called
-    def mock_wipe_side_effect():
+    def mock_wipe_side_effect(custom_dir=None):
         raise SystemExit(0)
     
     mock_wipe = MagicMock(side_effect=mock_wipe_side_effect)
@@ -130,5 +157,5 @@ def test_main_with_wipe_project_memory_flag():
         except SystemExit:
             pass
         
-        # Verify wipe_project_memory was called
-        mock_wipe.assert_called_once()
+        # Verify wipe_project_memory was called with the custom_dir parameter
+        mock_wipe.assert_called_once_with(custom_dir=mock_args.project_state_dir)

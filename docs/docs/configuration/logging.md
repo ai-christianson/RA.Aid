@@ -81,6 +81,18 @@ Log files are stored in the `.ra-aid/logs/` directory in your current working di
 
 RA.Aid automatically creates this directory if it doesn't exist.
 
+### Project State Directory
+
+By default, logs are stored in the `.ra-aid` directory in your current working directory. However, you can customize this location using the `--project-state-dir` flag:
+
+```bash
+ra-aid -m "Your task" --project-state-dir /path/to/custom/directory
+```
+
+This will store logs in `/path/to/custom/directory/logs/` instead of the default location.
+
+For more details on customizing the project state directory, see [Project State Directory](./project-state.md).
+
 ### Naming Convention
 
 Log files follow a timestamp-based naming pattern:
@@ -164,4 +176,3 @@ YYYY-MM-DD HH:MM:SS,MS - logger_name - LEVEL - Message text
 Example:
 ```
 2025-03-01 14:30:27,123 - ra_aid.agent_utils - WARNING - Command execution timeout after 60 seconds
-```

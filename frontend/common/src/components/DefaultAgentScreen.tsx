@@ -1,49 +1,75 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { PanelLeft } from 'lucide-react';
+import { PanelLeft, Plus, X } from 'lucide-react';
 import { 
   Button,
   Layout
 } from './ui';
 import { SessionDrawer } from './SessionDrawer';
 import { SessionList } from './SessionList';
-import { TimelineFeed } from './TimelineFeed';
-import { getSampleAgentSessions, getSampleAgentSteps } from '../utils/sample-data';
+import { TrajectoryPanel } from './TrajectoryPanel';
+import { InputSection } from './InputSection';
+import { useSessionStore } from '../store';
 import logoBlack from '../assets/logo-black-transparent.png';
 import logoWhite from '../assets/logo-white-transparent.gif';
 
 /**
  * DefaultAgentScreen component
  * 
- * Main application screen for displaying agent sessions and their steps.
+ * Main application screen for displaying agent sessions and their trajectories.
  * Handles state management, responsive design, and UI interactions.
  */
 export const DefaultAgentScreen: React.FC = () => {
   // State for drawer open/close
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   
-  // State for selected session
-  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
-  
   // State for theme (dark is default)
   const [isDarkTheme, setIsDarkTheme] = useState(true);
   
-  // Get sample data
-  const sessions = getSampleAgentSessions();
-  const allSteps = getSampleAgentSteps();
+  // Handle message submission for existing sessions
+  const handleSubmit = async (message: string) => {
+    if (!selectedSessionId || !message.trim()) return;
+    
+    try {
+      // TODO: Implement reply to existing session
+      // This will need a different endpoint for continuing conversations
+      console.log('Message submitted to existing session:', message, 'sessionId:', selectedSessionId);
+      
+      // Refresh sessions to get updated data
+      await fetchSessions();
+      
+      return true; // Success
+    } catch (error) {
+      console.error("Error handling message submission:", error);
+      return false; // Failure
+    }
+  };
+  
+  // Get session store data
+  const { 
+    sessions, 
+    selectedSessionId, 
+    selectSession, 
+    fetchSessions,
+    isLoading,
+    error,
+    newSession,
+    startNewSession,
+    cancelNewSession,
+    updateNewSessionMessage,
+    submitNewSession
+  } = useSessionStore();
+  
+  // Fetch sessions on component mount
+  useEffect(() => {
+    fetchSessions();
+  }, [fetchSessions]);
   
   // Set up theme on component mount
   useEffect(() => {
     const isDark = setupTheme();
     setIsDarkTheme(isDark);
   }, []);
-  
-  // Set initial selected session if none selected
-  useEffect(() => {
-    if (!selectedSessionId && sessions.length > 0) {
-      setSelectedSessionId(sessions[0].id);
-    }
-  }, [sessions, selectedSessionId]);
   
   // Close drawer when window resizes to desktop width
   useEffect(() => {
@@ -61,15 +87,19 @@ export const DefaultAgentScreen: React.FC = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, [isDrawerOpen]);
   
-  // Filter steps for selected session
-  const selectedSessionSteps = selectedSessionId 
-    ? allSteps.filter(step => sessions.find(s => s.id === selectedSessionId)?.steps.some(s => s.id === step.id))
-    : [];
-  
   // Handle session selection
   const handleSessionSelect = (sessionId: string) => {
-    setSelectedSessionId(sessionId);
+    selectSession(sessionId);
     setIsDrawerOpen(false); // Close drawer on selection (mobile)
+  };
+  
+  // Handle new session message submit - no longer needed as we handle this directly in the form
+  // This function is kept for compatibility but is no longer used in the UI
+  const handleNewSessionSubmit = (message: string) => {
+    if (!message.trim()) return;
+    
+    updateNewSessionMessage(message);
+    submitNewSession();
   };
   
   // Toggle theme function
@@ -154,12 +184,15 @@ export const DefaultAgentScreen: React.FC = () => {
 
   // Sidebar content with sessions list
   const sidebarContent = (
-    <div className="h-full flex flex-col px-4 py-3">
+    <div className="h-full flex flex-col p-4">
       <SessionList 
         sessions={sessions}
         onSelectSession={handleSessionSelect}
         currentSessionId={selectedSessionId || undefined}
         className="flex-1 pr-1 -mr-1"
+        isLoading={isLoading}
+        error={error}
+        onRefresh={fetchSessions}
       />
     </div>
   );
@@ -175,54 +208,140 @@ export const DefaultAgentScreen: React.FC = () => {
     />
   );
 
-  // Render main content
-  const mainContent = (
-    selectedSessionId ? (
-      <>
+  // Render main content based on the state
+  const mainContent = selectedSessionId ? (
+    // Existing session view
+    <div className="flex flex-col h-full w-full">
+      <div className="flex-1 overflow-auto w-full px-4">
         <h2 className="text-xl font-semibold mb-4">
           Session: {sessions.find(s => s.id === selectedSessionId)?.name || 'Unknown'}
         </h2>
-        <TimelineFeed 
-          steps={selectedSessionSteps}
+        <TrajectoryPanel 
+          sessionId={selectedSessionId}
+          addBottomPadding={true}
         />
-      </>
-    ) : (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-muted-foreground">Select a session to view details</p>
       </div>
-    )
+      <InputSection 
+        sessionId={parseInt(selectedSessionId)}
+        onSubmit={handleSubmit}
+        isDrawerOpen={isDrawerOpen}
+      />
+    </div>
+  ) : newSession ? (
+    // New session composition view
+    <div className="flex flex-col h-full w-full">
+      <div className="flex-1 overflow-auto w-full px-4">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold">Create New Session</h2>
+        </div>
+        
+        {/* Show informational content in the main area */}
+        <div className="mb-20 px-4 py-6 rounded-lg border border-border bg-card/30">
+          <h3 className="text-lg font-medium mb-3">Getting Started</h3>
+          <p className="text-muted-foreground mb-4">
+            Type your message in the input box below to start a new conversation with the agent.
+          </p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+            <div className="p-4 rounded-md border border-border bg-background/50">
+              <h4 className="text-sm font-medium mb-2">Research Mode</h4>
+              <p className="text-xs text-muted-foreground">
+                The agent will gather information about your request and provide a summary
+                without implementing any solutions.
+              </p>
+            </div>
+            
+            <div className="p-4 rounded-md border border-border bg-background/50">
+              <h4 className="text-sm font-medium mb-2">Implementation Mode</h4>
+              <p className="text-xs text-muted-foreground">
+                The agent will analyze your request, create a plan, and implement a solution
+                based on your requirements.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Use the same InputSection for new sessions */}
+      <InputSection 
+        isNewSession={true}
+        isDrawerOpen={isDrawerOpen}
+      />
+    </div>
+  ) : (
+    // No session selected view
+    <div className="flex items-center justify-center h-full">
+      <p className="text-muted-foreground">Select a session to view details</p>
+    </div>
   );
 
   // Floating action button component that uses Portal to render at document body level
   const FloatingActionButton = ({ onClick }: { onClick: () => void }) => {
     // Only render the portal on the client side, not during SSR
     const [mounted, setMounted] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
     
     useEffect(() => {
       setMounted(true);
-      return () => setMounted(false);
+      
+      const checkMobile = () => {
+        setIsMobile(window.innerWidth < 768);
+      };
+      
+      // Initial check
+      checkMobile();
+      
+      // Add event listener for resize
+      window.addEventListener('resize', checkMobile);
+      
+      // Cleanup
+      return () => {
+        setMounted(false);
+        window.removeEventListener('resize', checkMobile);
+      };
     }, []);
     
-    const button = (
-      <Button
-        variant="default"
-        size="icon"
-        onClick={onClick}
-        aria-label="Toggle sessions panel"
-        className="h-14 w-14 rounded-full shadow-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-100 flex items-center justify-center border-2 border-zinc-700 dark:border-zinc-600"
-      >
-        <PanelLeft className="h-6 w-6" />
-      </Button>
-    );
+    // Determine if the input section should be visible
+    const isInputVisible = (selectedSessionId || (newSession && !newSession.isSubmitting)) 
+                           && !(isMobile && isDrawerOpen);
     
-    const container = (
-      <div className="fixed bottom-6 right-6 z-[9999] md:hidden" style={{ pointerEvents: 'auto' }}>
-        {button}
-      </div>
-    );
+    // Button position logic:
+    // - When input is visible: position just above the input (104px from bottom)
+    // - When input is not visible: position at bottom of screen
+    const buttonPosition = isInputVisible ? "bottom-[104px]" : "bottom-4";
     
-    // Return null during SSR, or the portal on the client
-    return mounted ? createPortal(container, document.body) : null;
+    const buttonStyle = "p-2 rounded-md shadow-md bg-zinc-800/90 hover:bg-zinc-700 text-zinc-100 flex items-center justify-center border border-zinc-700 dark:border-zinc-600";
+    
+    // Don't render any buttons when we're already in new session mode
+    if (!mounted || newSession) return null;
+
+    return createPortal(
+      <div className={`fixed ${buttonPosition} right-4 z-[80] flex space-x-2`}>
+        {/* Panel toggle button - only shown on mobile */}
+        {isMobile && (
+          <Button
+            variant="default"
+            size="sm"
+            onClick={onClick}
+            aria-label="Toggle sessions panel"
+            className={buttonStyle}
+          >
+            <PanelLeft className="h-5 w-5" />
+          </Button>
+        )}
+        {/* New session button */}
+        <Button
+          variant="default"
+          size="sm"
+          onClick={startNewSession}
+          aria-label="Create new session"
+          className={buttonStyle}
+        >
+          <Plus className="h-5 w-5" />
+        </Button>
+      </div>,
+      document.body
+    );
   };
 
   return (

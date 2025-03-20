@@ -17,7 +17,7 @@ from ra_aid.models_params import DEFAULT_TOKEN_LIMIT, models_params
 from ra_aid.prompts.ciayn_prompts import CIAYN_AGENT_SYSTEM_PROMPT, CIAYN_AGENT_HUMAN_PROMPT, EXTRACT_TOOL_CALL_PROMPT, NO_TOOL_CALL_PROMPT
 from ra_aid.tools.expert import get_model
 from ra_aid.tools.reflection import get_function_info
-from ra_aid.console.output import cpm
+from ra_aid.console.formatting import cpm
 from ra_aid.console.formatting import print_warning, print_error, console
 from ra_aid.agent_context import should_exit
 from ra_aid.text.processing import extract_think_tag, process_thinking_content
@@ -170,7 +170,8 @@ class CiaynAgent:
         
         # Include the functions list in the system prompt
         functions_list = "\n\n".join(self.available_functions)
-        self.sys_message = SystemMessage(
+        # Use  HumanMessage because not all models support SystemMessage
+        self.sys_message = HumanMessage(
             CIAYN_AGENT_SYSTEM_PROMPT.format(functions_list=functions_list)
         )
         
@@ -192,10 +193,7 @@ class CiaynAgent:
         if last_result is not None:
             last_result_section = f"\n<last result>{last_result}</last result>"
         
-        # Build the human prompt without the function list
-        return CIAYN_AGENT_HUMAN_PROMPT.format(
-            last_result_section=last_result_section
-        )
+        return last_result_section
 
     def _detect_multiple_tool_calls(self, code: str) -> List[str]:
         """Detect if there are multiple tool calls in the code using AST parsing.

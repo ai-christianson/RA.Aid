@@ -1,6 +1,8 @@
 """Utilities for detecting and working with specific model types."""
 
-from typing import Optional, Dict, Any
+
+
+from typing import Any, Dict
 
 
 def is_claude_37(model: str) -> bool:
@@ -14,6 +16,17 @@ def is_claude_37(model: str) -> bool:
     """
     patterns = ["claude-3.7", "claude3.7", "claude-3-7"]
     return any(pattern in model for pattern in patterns)
+
+def model_name_has_claude(model_name: str) -> bool:
+    """Check if a model name contains 'claude'.
+
+    Args:
+        model_name: The model name to check
+
+    Returns:
+        bool: True if the model name contains 'claude'
+    """
+    return model_name and "claude" in model_name.lower()
 
 
 def is_anthropic_claude(config: Dict[str, Any]) -> bool:

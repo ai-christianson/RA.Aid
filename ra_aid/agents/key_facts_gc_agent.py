@@ -14,11 +14,11 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 
-logger = logging.getLogger(__name__)
 
 from ra_aid.agent_context import mark_should_exit
 # Import agent_utils functions at runtime to avoid circular imports
 from ra_aid import agent_utils
+from ra_aid.console.formatting import console_panel
 from ra_aid.database.repositories.key_fact_repository import get_key_fact_repository
 from ra_aid.database.repositories.human_input_repository import get_human_input_repository
 from ra_aid.database.repositories.config_repository import get_config_repository
@@ -27,7 +27,7 @@ from ra_aid.llm import initialize_llm
 from ra_aid.prompts.key_facts_gc_prompts import KEY_FACTS_GC_PROMPT
 from ra_aid.tools.memory import log_work_event
 
-
+logger = logging.getLogger(__name__)
 console = Console()
 
 
@@ -172,7 +172,7 @@ def run_key_facts_gc_agent() -> None:
         except Exception:
             pass  # Continue if trajectory recording fails
             
-        console.print(Panel(f"Error: {str(e)}", title="🗑 GC Error", border_style="red"))
+        console_panel(f"Error: {str(e)}", title="🗑 GC Error", border_style="red")
         return  # Exit the function if we can't access the repository
     
     # Display status panel with fact count included
@@ -191,7 +191,7 @@ def run_key_facts_gc_agent() -> None:
     except Exception:
         pass  # Continue if trajectory recording fails
         
-    console.print(Panel(f"Gathering my thoughts...\nCurrent number of key facts: {fact_count}", title="🗑 Garbage Collection"))
+    console_panel(f"Gathering my thoughts...\nCurrent number of key facts: {fact_count}", title="🗑 Garbage Collection")
     
     # Only run the agent if we actually have facts to clean
     if fact_count > 0:
@@ -217,14 +217,11 @@ def run_key_facts_gc_agent() -> None:
             facts_dict = {fact.id: fact.content for fact in eligible_facts}
             formatted_facts = "\n".join([f"Fact #{k}: {v}" for k, v in facts_dict.items()])
             
-            # Retrieve configuration
-            llm_config = get_config_repository().get_all()
-
             # Initialize the LLM model
             model = initialize_llm(
-                llm_config.get("provider", "anthropic"),
-                llm_config.get("model", "claude-3-7-sonnet-20250219"),
-                temperature=llm_config.get("temperature")
+                get_config_repository().get("provider", "anthropic"),
+                get_config_repository().get("model", "claude-3-7-sonnet-20250219"),
+                temperature=get_config_repository().get("temperature")
             )
             
             # Create the agent with the delete_key_facts tool
@@ -270,11 +267,9 @@ def run_key_facts_gc_agent() -> None:
                 except Exception:
                     pass  # Continue if trajectory recording fails
                 
-                console.print(
-                    Panel(
-                        f"Cleaned key facts: {fact_count} → {updated_count}\nProtected facts (associated with current request): {protected_count}",
-                        title="🗑 GC Complete"
-                    )
+                console_panel(
+                    f"Cleaned key facts: {fact_count} → {updated_count}\nProtected facts (associated with current request): {protected_count}",
+                    title="🗑 GC Complete"
                 )
             else:
                 # Record GC completion in trajectory
@@ -295,11 +290,9 @@ def run_key_facts_gc_agent() -> None:
                 except Exception:
                     pass  # Continue if trajectory recording fails
                 
-                console.print(
-                    Panel(
-                        f"Cleaned key facts: {fact_count} → {updated_count}",
-                        title="🗑 GC Complete"
-                    )
+                console_panel(
+                    f"Cleaned key facts: {fact_count} → {updated_count}",
+                    title="🗑 GC Complete"
                 )
         else:
             # Record GC info in trajectory
@@ -319,7 +312,7 @@ def run_key_facts_gc_agent() -> None:
             except Exception:
                 pass  # Continue if trajectory recording fails
                 
-            console.print(Panel(f"All {len(protected_facts)} facts are associated with the current request and protected from deletion.", title="🗑 GC Info"))
+            console_panel(f"All {len(protected_facts)} facts are associated with the current request and protected from deletion.", title="🗑 GC Info")
     else:
         # Record GC info in trajectory
         try:
@@ -338,4 +331,4 @@ def run_key_facts_gc_agent() -> None:
         except Exception:
             pass  # Continue if trajectory recording fails
             
-        console.print(Panel("No key facts to clean.", title="🗑 GC Info"))
+        console_panel("No key facts to clean.", title="🗑 GC Info")

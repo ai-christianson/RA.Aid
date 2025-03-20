@@ -6,6 +6,15 @@ from contextvars import ContextVar
 from typing import Any, Dict, List, Optional
 
 from langchain_core.callbacks import BaseCallbackHandler
+from playhouse.shortcuts import model_to_dict
+
+from ra_aid.config import DEFAULT_MODEL
+from ra_aid.database.repositories.session_repository import SessionRepository
+from ra_aid.database.repositories.trajectory_repository import TrajectoryRepository
+from ra_aid.logging_config import get_logger
+from ra_aid.utils.singleton import Singleton
+
+logger = get_logger(__name__)
 
 # Define cost per 1K tokens for various models
 ANTHROPIC_MODEL_COSTS = {
@@ -102,6 +111,9 @@ def get_anthropic_token_cost_for_model(
     model_name = standardize_model_name(model_name, is_completion)
 
     if model_name not in ANTHROPIC_MODEL_COSTS:
+        logger.warning(
+            "Could not find model_name in ANTHROPIC_MODEL_COSTS dictionary, defaulting to claude-3-sonnet."
+        )
         # Default to Claude 3 Sonnet pricing if model not found
         model_name = (
             "claude-3-sonnet" if not is_completion else "claude-3-sonnet-completion"
@@ -113,21 +125,86 @@ def get_anthropic_token_cost_for_model(
     return total_cost
 
 
-class AnthropicCallbackHandler(BaseCallbackHandler):
-    """Callback Handler that tracks Anthropic token usage and costs."""
+def calculate_token_cost(
+    model_name: str, input_tokens: int = 0, output_tokens: int = 0
+) -> float:
+    """
+    Calculate the total cost for input and output tokens.
+
+    Args:
+        model_name: Name of the model
+        input_tokens: Number of input/prompt tokens
+        output_tokens: Number of output/completion tokens
+
+    Returns:
+        float: Total cost in USD
+    """
+    input_cost = get_anthropic_token_cost_for_model(
+        model_name, input_tokens, is_completion=False
+    )
+    output_cost = get_anthropic_token_cost_for_model(
+        model_name, output_tokens, is_completion=True
+    )
+    return input_cost + output_cost
+
+
+class AnthropicCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
+    """Callback Handler that tracks Anthropic token usage and costs.
+
+    This class uses the Singleton metaclass to ensure only one instance exists.
+    """
 
     total_tokens: int = 0
     prompt_tokens: int = 0
     completion_tokens: int = 0
     successful_requests: int = 0
     total_cost: float = 0.0
-    model_name: str = "claude-3-sonnet"  # Default model
+    model_name: str = DEFAULT_MODEL
 
-    def __init__(self, model_name: Optional[str] = None) -> None:
+    # Track cumulative totals separately from last message
+    cumulative_total_tokens: int = 0
+    cumulative_prompt_tokens: int = 0
+    cumulative_completion_tokens: int = 0
+
+    # Repositories for callback handling
+    trajectory_repo = None
+    session_repo = None
+
+    # Session totals to maintain consistency across agent switches
+    session_totals = {
+        "cost": 0.0,
+        "tokens": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "session_id": None,
+    }
+
+    def __init__(
+        self,
+        model_name: str,
+    ) -> None:
         super().__init__()
         self._lock = threading.Lock()
         if model_name:
             self.model_name = model_name
+
+        from ra_aid.database.repositories.trajectory_repository import (
+            get_trajectory_repository,
+        )
+        from ra_aid.database.repositories.session_repository import (
+            get_session_repository,
+        )
+
+        self.trajectory_repo = get_trajectory_repository()
+
+        try:
+            session_repo = get_session_repository()
+            current_session = session_repo.get_current_session_record()
+            if current_session:
+                self.session_totals["session_id"] = current_session.get_id()
+
+        except Exception as e:
+            logger.warning(f"Failed to get current session: {e}")
 
         # Default costs for Claude 3.7 Sonnet
         self.input_cost_per_token = 0.003 / 1000  # $3/M input tokens
@@ -135,7 +212,7 @@ class AnthropicCallbackHandler(BaseCallbackHandler):
 
     def __repr__(self) -> str:
         return (
-            f"Tokens Used: {self.total_tokens}\n"
+            f"Tokens Used: {self.prompt_tokens + self.completion_tokens}\n"
             f"\tPrompt Tokens: {self.prompt_tokens}\n"
             f"\tCompletion Tokens: {self.completion_tokens}\n"
             f"Successful Requests: {self.successful_requests}\n"
@@ -155,20 +232,12 @@ class AnthropicCallbackHandler(BaseCallbackHandler):
             self.model_name = serialized["name"]
 
     def on_llm_new_token(self, token: str, **kwargs: Any) -> None:
-        """Count tokens as they're generated."""
-        with self._lock:
-            self.completion_tokens += 1
-            self.total_tokens += 1
-            token_cost = get_anthropic_token_cost_for_model(
-                self.model_name, 1, is_completion=True
-            )
-            self.total_cost += token_cost
+        pass
 
     def on_llm_end(self, response: Any, **kwargs: Any) -> None:
         """Collect token usage from response."""
         token_usage = {}
 
-        # Try to extract token usage from response
         if hasattr(response, "llm_output") and response.llm_output:
             llm_output = response.llm_output
             if "token_usage" in llm_output:
@@ -176,13 +245,11 @@ class AnthropicCallbackHandler(BaseCallbackHandler):
             elif "usage" in llm_output:
                 usage = llm_output["usage"]
 
-                # Handle Anthropic's specific usage format
                 if "input_tokens" in usage:
                     token_usage["prompt_tokens"] = usage["input_tokens"]
                 if "output_tokens" in usage:
                     token_usage["completion_tokens"] = usage["output_tokens"]
 
-            # Extract model name if available
             if "model_name" in llm_output:
                 self.model_name = llm_output["model_name"]
 
@@ -207,29 +274,68 @@ class AnthropicCallbackHandler(BaseCallbackHandler):
 
         # Update counts with lock to prevent race conditions
         with self._lock:
+            # Store the current message's tokens directly (non-cumulative)
             prompt_tokens = token_usage.get("prompt_tokens", 0)
             completion_tokens = token_usage.get("completion_tokens", 0)
 
-            # Only update prompt tokens if we have them
+            # Update cumulative totals
+            self.cumulative_prompt_tokens += prompt_tokens
+            self.cumulative_completion_tokens += completion_tokens
+            self.cumulative_total_tokens += prompt_tokens + completion_tokens
+
+            # Set the current message tokens (non-cumulative)
+            self.prompt_tokens = prompt_tokens
+            self.completion_tokens = completion_tokens
+            self.total_tokens = prompt_tokens + completion_tokens
+
+            # Calculate costs based on the current message
             if prompt_tokens > 0:
-                self.prompt_tokens += prompt_tokens
-                self.total_tokens += prompt_tokens
                 prompt_cost = get_anthropic_token_cost_for_model(
                     self.model_name, prompt_tokens, is_completion=False
                 )
                 self.total_cost += prompt_cost
 
-            # Only update completion tokens if not already counted by on_llm_new_token
-            if completion_tokens > 0 and completion_tokens > self.completion_tokens:
-                additional_tokens = completion_tokens - self.completion_tokens
-                self.completion_tokens = completion_tokens
-                self.total_tokens += additional_tokens
+            if completion_tokens > 0:
                 completion_cost = get_anthropic_token_cost_for_model(
-                    self.model_name, additional_tokens, is_completion=True
+                    self.model_name, completion_tokens, is_completion=True
                 )
                 self.total_cost += completion_cost
 
             self.successful_requests += 1
+
+            self._handle_callback_update()
+
+    def _handle_callback_update(self) -> None:
+        """
+        Handle callback updates and record trajectory data.
+        """
+        if not self.trajectory_repo:
+            return
+
+        try:
+            if not self.session_totals["session_id"]:
+                logger.warning("session_id not initialized")
+                return
+
+            last_cost = calculate_token_cost(
+                self.model_name, self.prompt_tokens, self.completion_tokens
+            )
+            
+            self.session_totals["cost"] += last_cost
+            self.session_totals["tokens"] += self.prompt_tokens + self.completion_tokens
+            self.session_totals["input_tokens"] += self.prompt_tokens
+            self.session_totals["output_tokens"] += self.completion_tokens
+
+            self.trajectory_repo.create(
+                record_type="model_usage",
+                current_cost=last_cost,
+                input_tokens=self.prompt_tokens,
+                output_tokens=self.completion_tokens,
+                session_id=self.session_totals["session_id"],
+            )
+
+        except Exception as e:
+            logger.error(f"Failed to store token usage data: {e}")
 
     def __copy__(self) -> "AnthropicCallbackHandler":
         """Return a copy of the callback handler."""

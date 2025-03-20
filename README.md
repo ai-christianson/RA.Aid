@@ -46,7 +46,7 @@ Key sections:
 - [License](#license)
 - [Contact](#contact)
 
-> 👋 **Pull requests are very welcome!** Have ideas for how to impove RA.Aid? Don't be shy - your help makes a real difference!
+> 👋 **Pull requests are very welcome!** Have ideas for how to improve RA.Aid? Don't be shy - your help makes a real difference!
 >
 > 💬 **Join our Discord community:** [Click here to join](https://discord.gg/f6wYbzHYxV)
 
@@ -133,6 +133,15 @@ RA.Aid can be installed directly using pip:
 ```bash
 pip install ra-aid
 ```
+### macOS Installation with Homebrew
+
+```bash
+brew tap ai-christianson/homebrew-ra-aid
+brew install ra-aid
+```
+
+**NOTE:** macOS may also be installed with pip as shown above.
+
 
 ### Prerequisites
 
@@ -170,6 +179,8 @@ You can get your API keys from:
 - OpenAI API key: https://platform.openai.com/api-keys
 - OpenRouter API key: https://openrouter.ai/keys
 - Gemini API key: https://aistudio.google.com/app/apikey
+
+Note: `aider` must be installed separately as it is not included in the RA.Aid package. See [aider-chat](https://pypi.org/project/aider-chat/) for more details.
 
 Complete installation documentation is available in our [Installation Guide](https://docs.ra-aid.ai/quickstart/installation).
 
@@ -225,6 +236,9 @@ More information is available in our [Usage Examples](https://docs.ra-aid.ai/cat
 - `--auto-test`: Automatically run tests after each code change
 - `--max-test-cmd-retries`: Maximum number of test command retry attempts (default: 3)
 - `--test-cmd-timeout`: Timeout in seconds for test command execution (default: 300)
+- `--show-cost`: Display cost information as the agent works - currently only supported on claude model agents
+- `--track-cost`: Track token usage and costs (default: False)
+- `--no-track-cost`: Disable tracking of token usage and costs
 - `--version`: Show program version number and exit
 - `--server`: Launch the server with web interface (alpha feature)
 - `--server-host`: Host to listen on for server (default: 0.0.0.0)  (alpha feature)

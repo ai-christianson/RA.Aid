@@ -138,3 +138,6 @@ For the most effective use of thinking models:
 
 5. **Provide clear instructions**: When the model's thinking seems off-track, provide clearer instructions in your next prompt to guide its reasoning process.
 
+## See Also
+
+- [Expert Model Configuration](./expert-model.md) - Learn about the expert model which leverages thinking capabilities for complex reasoning tasks

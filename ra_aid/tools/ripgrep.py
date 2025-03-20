@@ -5,6 +5,7 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 
+from ra_aid.console.formatting import console_panel, cpm
 from ra_aid.database.repositories.human_input_repository import get_human_input_repository
 from ra_aid.database.repositories.trajectory_repository import get_trajectory_repository
 from ra_aid.proc.interactive import run_interactive_command
@@ -184,12 +185,10 @@ def ripgrep_search(
         human_input_id=human_input_id
     )
     
-    console.print(
-        Panel(
-            Markdown(f"Searching for: **{pattern}**"),
-            title="🔎 Ripgrep Search",
-            border_style="bright_blue",
-        )
+    cpm(
+        f"Searching for: **{pattern}**",
+        title="🔎 Ripgrep Search",
+        border_style="bright_blue"
     )
     try:
         print()
@@ -234,5 +233,5 @@ def ripgrep_search(
             error_type=type(e).__name__
         )
         
-        console.print(Panel(error_msg, title="❌ Error", border_style="red"))
+        console_panel(error_msg, title="❌ Error", border_style="red")
         return {"output": error_msg, "return_code": 1, "success": False}

@@ -23,6 +23,7 @@ RA.Aid supports these model providers:
 | OpenAI-compatible | Self-hosted model endpoints | Compatible with Llama, Mistral and other open models |
 | Anthropic | Claude model series | 200k token context, strong tool use, JSON/XML parsing |
 | Gemini | Google's multimodal models | Code generation in 20+ languages, parallel request support |
+| Ollama | Local LLM hosting framework | Run models locally, no API keys required, offline usage |
 
   </TabItem>
   <TabItem value="setup" label="Quick Setup">
@@ -37,6 +38,7 @@ export OPENROUTER_API_KEY=your_key
 export OPENAI_API_KEY=your_key
 export ANTHROPIC_API_KEY=your_key
 export GEMINI_API_KEY=your_key
+# Ollama doesn't require an API key
 ```
 
 2. Run RA.Aid with your chosen provider:
@@ -141,6 +143,39 @@ ra-aid -m "Your task" --provider gemini --model gemini-1.5-flash-latest --temper
 - Temperature control is supported for creative vs. deterministic responses
 - Obtain your API key from [AI Studio](https://aistudio.google.com/app/apikey)
 </TabItem>
+<TabItem value="ollama" label="Ollama">
+
+### Ollama Integration
+
+Ollama provides a framework for running large language models locally on your machine.
+
+```bash
+# No environment variables required by default
+# Ollama uses http://localhost:11434 by default
+
+# Basic usage
+ra-aid -m "Your task" --provider ollama --model justinledwards/mistral-small-3.1-Q6_K
+
+# With context window control
+ra-aid -m "Your task" --provider ollama --model qwq:32b --num-ctx 8192
+
+# With temperature control
+ra-aid -m "Your task" --provider ollama --model MHKetbi/Qwen2.5-Coder-32B-Instruct --temperature 0.3
+```
+
+**Popular Models:**
+- `justinledwards/mistral-small-3.1-Q6_K`: Optimized Mistral small model
+- `qwq:32b`: High-performing yet compact reasoning model
+- `MHKetbi/Qwen2.5-Coder-32B-Instruct`: Qwen 2.5 optimized for code tasks
+
+**Configuration Notes:**
+- Requires [Ollama](https://ollama.com/download) to be installed and running
+- No API keys needed - all processing happens locally
+- Adjust context window with `--num-ctx` (default: 262144)
+- Works completely offline after model download
+
+For detailed setup instructions and advanced configuration options, see our [Ollama Configuration Guide](../configuration/ollama.md).
+</TabItem>
 </Tabs>
 
 ## Advanced Configuration
@@ -164,6 +199,9 @@ ra-aid -m "Your task" --expert-provider openrouter --expert-model mistralai/mist
 # Gemini expert
 export EXPERT_GEMINI_API_KEY=your_key
 ra-aid -m "Your task" --expert-provider gemini --expert-model gemini-2.0-flash-thinking-exp-1219
+
+# Ollama expert
+ra-aid -m "Your task" --expert-provider ollama --expert-model qwq:32b
 ```
 
 </TabItem>
@@ -197,19 +235,27 @@ ra-aid -m "Your task" --temperature 0.8
 Complete list of supported environment variables:
 
 | Variable | Provider | Purpose |
-|----------|----------|----------|
+|----------|----------|---------|
 | `OPENROUTER_API_KEY` | OpenRouter | Main API access |
 | `DEEPSEEK_API_KEY` | DeepSeek | Main API access |
 | `OPENAI_API_KEY` | OpenAI-compatible | API access |
 | `OPENAI_API_BASE` | OpenAI-compatible | Custom endpoint |
 | `ANTHROPIC_API_KEY` | Anthropic | API access |
 | `GEMINI_API_KEY` | Gemini | API access |
+| `OLLAMA_BASE_URL` | Ollama | Custom endpoint (default: http://localhost:11434) |
 | `EXPERT_OPENROUTER_API_KEY` | OpenRouter | Expert tool |
 | `EXPERT_DEEPSEEK_API_KEY` | DeepSeek | Expert tool |
 | `EXPERT_GEMINI_API_KEY` | Gemini | Expert tool |
+| `EXPERT_OLLAMA_BASE_URL` | Ollama | Expert tool endpoint |
 
 ## Troubleshooting
 
 - Verify API keys are set correctly
 - Check endpoint URLs for OpenAI-compatible setups
 - Monitor API rate limits and quotas
+- For Ollama, ensure the service is running (`ollama list`)
+
+## See Also
+
+- [Expert Model Configuration](/configuration/expert-model) - Detailed information about expert model setup and configuration
+- [Thinking Models](/configuration/thinking-models) - Learn about models that can show their reasoning process

@@ -61,6 +61,8 @@ If you prefer to use aider's specialized code editing capabilities instead of RA
 ra-aid -m "Implement this feature" --use-aider
 ```
 
+Note: aider must be installed separately. See [aider-chat](https://pypi.org/project/aider-chat/) for more information.
+
 You can control logging verbosity and location using the `--log-mode` and `--log-level` options:
 
 ```bash
@@ -74,3 +76,5 @@ ra-aid -m "Your task" --log-mode console --log-level info
 For more detailed logging configuration, see the [Logging documentation](../configuration/logging.md).
 
 For information on RA.Aid's memory management and how to reset memory when needed, see the [Memory Management documentation](../configuration/memory-management.md).
+
+For advanced reasoning capabilities, see the [Expert Model Configuration](../configuration/expert-model.md) to configure a specialized expert model for complex tasks.

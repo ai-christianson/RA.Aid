@@ -36,12 +36,13 @@ class PrettyHandler(logging.Handler):
             else:
                 title = "🐞 DEBUG"
                 style = "blue"
-            self.console.print(Panel(Markdown(msg.strip()), title=title, style=style))
+            from ra_aid.console.formatting import cpm
+            cpm(msg.strip(), title=title, border_style=style)
         except Exception:
             self.handleError(record)
 
 
-def setup_logging(log_mode: str = "file", pretty: bool = False, log_level: Optional[str] = None) -> None:
+def setup_logging(log_mode: str = "file", pretty: bool = False, log_level: Optional[str] = None, base_dir: Optional[str] = None) -> None:
     """
     Configure logging for ra_aid.
     
@@ -63,9 +64,14 @@ def setup_logging(log_mode: str = "file", pretty: bool = False, log_level: Optio
     - Uses the requested log_level
     - When log_level=debug is used with log_mode="file", debug logs only go to the file, not to the console
     """
-    # Create .ra-aid/logs directory if it doesn't exist
-    cwd = os.getcwd()
-    ra_aid_dir_str = os.path.join(cwd, ".ra-aid")
+    # Create logs directory if it doesn't exist
+    if base_dir:
+        # Use the provided directory directly
+        ra_aid_dir_str = base_dir
+    else:
+        # Use .ra-aid in the current working directory
+        cwd = os.getcwd()
+        ra_aid_dir_str = os.path.join(cwd, ".ra-aid")
     logs_dir_str = os.path.join(ra_aid_dir_str, "logs")
     
     # Create directory structure if log_mode is "file"
