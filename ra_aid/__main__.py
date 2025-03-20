@@ -75,6 +75,7 @@ from ra_aid.models_params import models_params
 from ra_aid.project_info import format_project_info, get_project_info
 from ra_aid.prompts.chat_prompts import CHAT_PROMPT
 from ra_aid.prompts.web_research_prompts import WEB_RESEARCH_PROMPT_SECTION_CHAT
+from ra_aid.prompts.custom_tools_prompts import DEFAULT_CUSTOM_TOOLS_PROMPT
 from ra_aid.tool_configs import get_chat_tools, set_modification_tools, get_custom_tools
 from ra_aid.tools.human import ask_human
 
@@ -607,6 +608,7 @@ def build_status():
         "experimental_fallback_handler", False
     )
     web_research_enabled = config_repo.get("web_research_enabled", False)
+    custom_tools_enabled = config_repo.get("custom_tools_enabled", False)
 
     # Get the expert enabled status
     expert_enabled = bool(expert_provider and expert_model)
@@ -633,6 +635,16 @@ def build_status():
         "Enabled" if web_research_enabled else "Disabled",
         style=None if web_research_enabled else "italic",
     )
+    status.append("\n")
+
+    # Custom tools status
+    if custom_tools_enabled:
+        status.append("🛠️ Custom Tools: ")
+        status.append(
+            "Enabled" if custom_tools_enabled else "Disabled",
+            style=None if custom_tools_enabled else "italic",
+        )
+        status.append("\n")
 
     # Fallback handler status
     if experimental_fallback_handler:
@@ -803,9 +815,11 @@ def main():
                     "disable_reasoning_assistance", args.no_reasoning_assistance
                 )
                 config_repo.set("custom_tools", args.custom_tools)
+                config_repo.set("custom_tools_enabled", True if args.custom_tools else False)
 
                 # Validate custom tools function signatures
                 get_custom_tools()
+                custom_tools_enabled = config_repo.get("custom_tools_enabled", False)
 
                 # Build status panel with memory statistics
                 status = build_status()
@@ -948,6 +962,11 @@ def main():
                             web_research_section=(
                                 WEB_RESEARCH_PROMPT_SECTION_CHAT
                                 if web_research_enabled
+                                else ""
+                            ),
+                            custom_tools_section=(
+                                DEFAULT_CUSTOM_TOOLS_PROMPT
+                                if custom_tools_enabled
                                 else ""
                             ),
                             working_directory=working_directory,

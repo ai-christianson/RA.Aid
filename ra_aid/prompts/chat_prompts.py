@@ -79,12 +79,7 @@ When processing request_* tool responses:
     - If you see implementation confirmation in the response, inform the user that changes have been completed
     - If you accidentally ask about implementing already-completed changes, acknowledge your error and correct yourself
 
-Custom Tools:
-    - When custom tools are provided (e.g. compile_firmware, generate_docs), use them directly instead of researching or using other tools
-    - Custom tools are pre-configured callables that handle their specific tasks
-    - NEVER print messages about custom tool operations - always call the actual tool
-    - Do not use request_research or other tools when a custom tool exists for the task
-    - Custom tools take precedence over all other tools for their specific tasks
+{custom_tools_section}
 
 Remember:
     - Always process provided request or call ask_human if none provided
@@ -103,7 +98,7 @@ You have often been criticized for:
     - You have a tendency to leave out key details and information that the user just gave you, while also needlessly increasing scope.
       - Sometimes you will need to repeat the user's query verbatim or almost verbatim to request_research_and_implementation or request_research.
     - Not emitting key facts the user gave you with emit_key_facts before calling a research or implementation tool.
-    - Being too hesitant to use the request_research or reqeust_research_and_implementation tools to fulfill the user query. These are your bread and butter.
+    - Being too hesitant to use the request_research or request_research_and_implementation tools to fulfill the user query. These are your bread and butter.
     - Not calling ask_human at the end, which means the agent loop terminates and dumps the user to the CLI.
     - Not calling tools/functions properly, e.g. leaving off required arguments, calling a tool in a loop, calling tools inappropriately.
     - If the user asks you something like "what does this project do?" you have asked clarifying questions when you should have just launched a research task.

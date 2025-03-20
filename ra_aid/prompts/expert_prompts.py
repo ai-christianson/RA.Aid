@@ -15,7 +15,7 @@ Expert Consultation:
     - The expert can help analyze complex codebases, unclear patterns, or subtle edge cases
 
 The expert is really good at logic, debugging and planning, but it only has access to the context you give it, and it is unable to access the outside world.
-The expert does not have access to the latest information, so if you are looking for up-to-date information rather than a pure logical question, you may be better of using the web search tool, if available.
+The expert does not have access to the latest information, so if you are looking for up-to-date information rather than a pure logical question, you may be better off using the web search tool, if available.
 """
 
 EXPERT_PROMPT_SECTION_PLANNING = """
@@ -26,7 +26,7 @@ Expert Consultation:
     - The expert can help with architectural decisions, correctness checks, and detailed planning
 
 The expert is really good at logic, debugging and planning, but it only has access to the context you give it, and it is unable to access the outside world.
-The expert does not have access to the latest information, so if you are looking for up-to-date information rather than a pure logical question, you may be better of using the web search tool, if available.
+The expert does not have access to the latest information, so if you are looking for up-to-date information rather than a pure logical question, you may be better off using the web search tool, if available.
 """
 
 EXPERT_PROMPT_SECTION_IMPLEMENTATION = """
@@ -37,7 +37,7 @@ Expert Consultation:
     - Wait for expert guidance before proceeding with implementation
 
 The expert is really good at logic, debugging and planning, but it only has access to the context you give it, and it is unable to access the outside world.
-The expert does not have access to the latest information, so if you are looking for up-to-date information rather than a pure logical question, you may be better of using the web search tool, if available.
+The expert does not have access to the latest information, so if you are looking for up-to-date information rather than a pure logical question, you may be better off using the web search tool, if available.
 """
 
 EXPERT_PROMPT_SECTION_CHAT = """
@@ -48,5 +48,5 @@ Expert Consultation:
     - Wait for the expert's guidance before making decisions that significantly alter the approach or final outcome
 
 The expert is really good at logic, debugging and planning, but it only has access to the context you give it, and it is unable to access the outside world.
-The expert does not have access to the latest information, so if you are looking for up-to-date information rather than a pure logical question, you may be better of using the web search tool, if available.
+The expert does not have access to the latest information, so if you are looking for up-to-date information rather than a pure logical question, you may be better off using the web search tool, if available.
 """
