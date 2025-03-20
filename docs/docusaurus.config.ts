@@ -46,6 +46,7 @@ const config: Config = {
           sidebarPath: './sidebars.ts',
           routeBasePath: '/',
           docItemComponent: '@theme/ApiItem',
+          docRootComponent: "@theme/DocRoot",
         },
         theme: {
           customCss: './src/css/custom.css',
