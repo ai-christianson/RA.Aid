@@ -5,7 +5,6 @@ This module provides functions to retrieve session usage statistics
 from the database.
 """
 
-import json
 from typing import Dict, Any, Tuple
 
 from ..database import DatabaseManager, ensure_migrations_applied

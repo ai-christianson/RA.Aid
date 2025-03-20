@@ -2,7 +2,7 @@
 
 import json
 import sys
-from ra_aid.scripts.session_usage import get_latest_session_usage
+from ra_aid.scripts.last_session_usage import get_latest_session_usage
 
 def main():
     """

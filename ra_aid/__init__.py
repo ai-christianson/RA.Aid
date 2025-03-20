@@ -8,7 +8,8 @@ from .console.formatting import (
 )
 from .console.output import print_agent_output
 from .text.processing import truncate_output
-from .scripts.session_usage import get_latest_session_usage
+from .scripts.last_session_usage import get_latest_session_usage
+from .scripts.all_sessions_usage import get_all_sessions_usage
 
 __all__ = [
     "print_stage_header",
@@ -20,4 +21,5 @@ __all__ = [
     "run_agent_with_retry",
     "__version__",
     "get_latest_session_usage",
+    "get_all_sessions_usage",
 ]

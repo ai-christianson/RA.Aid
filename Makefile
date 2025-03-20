@@ -33,4 +33,7 @@ fix-basic:
 	ruff check --fix
 
 last-cost:
-	python ra_aid/scripts/cli.py
+	python ra_aid/scripts/cli.py latest
+
+all-costs:
+	python ra_aid/scripts/cli.py all

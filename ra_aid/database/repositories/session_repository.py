@@ -479,6 +479,21 @@ class SessionRepository:
         except peewee.DatabaseError as e:
             logger.error(f"Failed to get latest session: {str(e)}")
             return None
+            
+    def get_all_session_ids(self) -> List[int]:
+        """
+        Get all session IDs from the database.
+        
+        Returns:
+            List[int]: List of all session IDs ordered by creation time (newest first)
+        """
+        try:
+            # Query for all session IDs
+            query = Session.select(Session.id).order_by(Session.created_at.desc())
+            return [session.id for session in query]
+        except peewee.DatabaseError as e:
+            logger.error(f"Failed to get all session IDs: {str(e)}")
+            return []
 
     def _get_display_name_subquery(self):
         """
