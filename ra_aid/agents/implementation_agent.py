@@ -39,6 +39,7 @@ from ra_aid.prompts.human_prompts import HUMAN_PROMPT_SECTION_IMPLEMENTATION
 from ra_aid.prompts.implementation_prompts import IMPLEMENTATION_PROMPT
 from ra_aid.prompts.reasoning_assist_prompt import REASONING_ASSIST_PROMPT_IMPLEMENTATION
 from ra_aid.prompts.web_research_prompts import WEB_RESEARCH_PROMPT_SECTION_CHAT
+from ra_aid.prompts.custom_tools_prompts import DEFAULT_CUSTOM_TOOLS_PROMPT
 from ra_aid.tool_configs import get_implementation_tools
 from ra_aid.tools.memory import get_related_files, log_work_event
 from ra_aid.text.processing import process_thinking_content
@@ -285,6 +286,11 @@ def run_task_implementation_agent(
         web_research_section=(
             WEB_RESEARCH_PROMPT_SECTION_CHAT
             if get_config_repository().get("web_research_enabled", False)
+            else ""
+        ),
+        custom_tools_section=(
+            DEFAULT_CUSTOM_TOOLS_PROMPT
+            if get_config_repository().get("custom_tools_enabled", False)
             else ""
         ),
         env_inv=env_inv,

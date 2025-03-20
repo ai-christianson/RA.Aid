@@ -51,6 +51,7 @@ from ra_aid.prompts.web_research_prompts import (
     WEB_RESEARCH_PROMPT,
     WEB_RESEARCH_PROMPT_SECTION_RESEARCH,
 )
+from ra_aid.prompts.custom_tools_prompts import DEFAULT_CUSTOM_TOOLS_PROMPT
 from ra_aid.prompts.common_prompts import NEW_PROJECT_HINTS
 from ra_aid.tool_configs import get_research_tools, get_web_research_tools
 from ra_aid.tools.memory import get_related_files, log_work_event
@@ -328,6 +329,11 @@ def run_research_agent(
         if get_config_repository().get("web_research_enabled")
         else ""
     )
+    custom_tools_section = (
+        DEFAULT_CUSTOM_TOOLS_PROMPT
+        if get_config_repository().get("custom_tools_enabled", False)
+        else ""
+    )
 
     # Prepare expert guidance section if expert guidance is available
     expert_guidance_section = ""
@@ -355,6 +361,7 @@ YOU MUST FOLLOW THE EXPERT'S GUIDANCE OR ELSE BE TERMINATED!
         expert_section=expert_section,
         human_section=human_section,
         web_research_section=web_research_section,
+        custom_tools_section=custom_tools_section,
         key_facts=key_facts,
         work_log=get_work_log_repository().format_work_log(),
         key_snippets=key_snippets,

@@ -80,6 +80,7 @@ Guidelines:
 {expert_section}
 {human_section}
 {web_research_section}
+{custom_tools_section}
 
 You have often been criticized for:
   - Overcomplicating things.

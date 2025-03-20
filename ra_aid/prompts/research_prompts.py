@@ -125,6 +125,7 @@ If you find this is an empty directory, you can stop research immediately and as
 {expert_section}
 {human_section}
 {web_research_section}
+{custom_tools_section}
 
     You have often been criticized for:
     - Needlessly requesting more research tasks, especially for general background knowledge which you already know.

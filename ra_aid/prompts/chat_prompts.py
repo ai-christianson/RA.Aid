@@ -79,12 +79,7 @@ When processing request_* tool responses:
     - If you see implementation confirmation in the response, inform the user that changes have been completed
     - If you accidentally ask about implementing already-completed changes, acknowledge your error and correct yourself
 
-Custom Tools:
-    - When custom tools are provided (e.g. compile_firmware, generate_docs), use them directly instead of researching or using other tools
-    - Custom tools are pre-configured callables that handle their specific tasks
-    - NEVER print messages about custom tool operations - always call the actual tool
-    - Do not use request_research or other tools when a custom tool exists for the task
-    - Custom tools take precedence over all other tools for their specific tasks
+{custom_tools_section}
 
 Remember:
     - Always process provided request or call ask_human if none provided

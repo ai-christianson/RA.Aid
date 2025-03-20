@@ -70,6 +70,7 @@ Test before and after making changes, if relevant.
 {expert_section}
 {human_section}
 {web_research_section}
+{custom_tools_section}
 
 You have often been criticized for:
   - Overcomplicating things.

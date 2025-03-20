@@ -75,6 +75,7 @@ from ra_aid.models_params import models_params
 from ra_aid.project_info import format_project_info, get_project_info
 from ra_aid.prompts.chat_prompts import CHAT_PROMPT
 from ra_aid.prompts.web_research_prompts import WEB_RESEARCH_PROMPT_SECTION_CHAT
+from ra_aid.prompts.custom_tools_prompts import DEFAULT_CUSTOM_TOOLS_PROMPT
 from ra_aid.tool_configs import get_chat_tools, set_modification_tools, get_custom_tools
 from ra_aid.tools.human import ask_human
 
@@ -818,6 +819,7 @@ def main():
 
                 # Validate custom tools function signatures
                 get_custom_tools()
+                custom_tools_enabled = config_repo.get("custom_tools_enabled", False)
 
                 # Build status panel with memory statistics
                 status = build_status()
@@ -960,6 +962,11 @@ def main():
                             web_research_section=(
                                 WEB_RESEARCH_PROMPT_SECTION_CHAT
                                 if web_research_enabled
+                                else ""
+                            ),
+                            custom_tools_section=(
+                                DEFAULT_CUSTOM_TOOLS_PROMPT
+                                if custom_tools_enabled
                                 else ""
                             ),
                             working_directory=working_directory,
