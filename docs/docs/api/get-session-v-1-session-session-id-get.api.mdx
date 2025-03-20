@@ -1,0 +1,71 @@
+---
+id: get-session-v-1-session-session-id-get
+title: "Get session"
+description: "Get a specific session by ID"
+sidebar_label: "Get session"
+hide_title: true
+hide_table_of_contents: true
+api: eJydVk1v2zgQ/SsEL9sCiZ0E2YtuRhMUXjQfiNP2kBQGLY0tthKlkpSzXsP/fd9QlCUn3WYRX0xSbx7ne7iVGbnU6trryshEfiQvlHA1pXqpU+HIOXwQi42YXsgjWdVkFUOnGcAr8vOImK9P98v9QmfzOTCQq5VVJXmyTiYPW6n5qlr5HJ8MPmDXy+DM0s9GW8Id3jZ0JF2aU6lkspVe+4Lhs6jYlOF+U/OZNp5WZOVu940pXF0ZsLLU2ckJ/6UVEMbzUtV1odNgyvi7Y9O3g1sOfXK7yZTx8EZZZVQISzXIwaPNCr6KmowezaO5z7WLqLSyrQqZE74SPqcOKW6JnojEzd1VxCqTidpWa417H81aFToLmoUPjqzGyT/tSapqtdCF9prcSEy9yIEpyIULYN8aLgbu0SzI4xIj/prdXB+TSXERuLyF0i7w3m58DsJMp0ysLAjFsrKBqFRprg3NtVlWYqmpyIJ5Ew/5RePJJY9G4KezRHw2+mdDWLJHgLV7lhjSFppaUp6yufKJ+JpDsQECLoW7MvGkXIdrhZo6+19ChXK+A7eSzivr516XNJCEj1fIwz1DAHUSaVWW8Mu8gOGJ+NDuBO+EsqumhHlONA5eRDiD5JCz5YibeYxCIr60C1EtX4KHTk7ERReHDYfRK204vSLmeF+QKCIFM1VLkWlXF2oz5xpiirATvHseBPEuQx6tof3SVqXIG1gntKkbLwBMB9a+53K1XOicY23Z9J4JtWM2N8tQx7Hw2rSSu6P9iWmKQnIZdvXa+fMTc+yOZJ8OzAhlS15JjuAxR00ORFuomPi+1Pc3yqEL3qpc57hr5gAnetCvmPb95TdU6EcgGIb2rUpdtRxiyhy7EJNhbr2V9jbWQMxMZu5r5dVYzELe38fD57Hoy/VVos8t9JdB3Q0HwMMwVQ6uOFB8YGFss1fcWnvyavGdUg9yzpmD9j5r0hQiy6YQd3FosDHnJ+cvR0HXwk3lUWGNCdE+Pzt7ifzSd3GytuKskX+2Y+gQeIFqXihHHQw4r1Y8J7uZ6Ng6FH5exaEbBiqGZyLH69NxRI23/QjdAdHlXugmaYhIHLV3k9FEZ+KeVMketQXOcu9rl4zHK+3zZjFCyY+VPk5zq53XymBCjlsx+cJ/7fkfTkxup/sxJshkdaW5Z3InQu2rFTe0zqQwgtSKm+qRWGsl7i5n9+HwKy1mVfqDvINymNHE8eiVn9SoCxJno5MXuj89PY1U+Dyq7GocZd340/TD5fXs8hgyo9yXRcj5Bv3IbnpvsPI3NRn+n6HbDnK1R+BwX37yFHQnoTIr52HgQEl+RUVL5TN3DV4hrz22YuZ6+tuP0Z90KNZg8jbG/0GuT7kO9lclg2cUkiaHZozabjnDPttit+NjzGs2/QHLNQa/WrCZ6CLopbxGli1V4eg3mr+7iwX6XvyXovEQPYq9poqGd1j+oM3hc2/3DeicFAZU0KIFTFCUtR+Ivnix7YZV8fHyHqXzL+0GvnA=
+sidebar_class_name: "get api-method"
+info_path: api/ra-aid-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Get session"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/v1/session/{session_id}"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Get a specific session by ID
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+  children={"Request"}
+>
+</Heading>
+
+<ParamsDetails
+  parameters={[{"in":"path","name":"session_id","required":true,"schema":{"title":"Session Id","type":"integer"}}]}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  title={"Body"}
+  body={undefined}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  id={undefined}
+  label={undefined}
+  responses={{"200":{"content":{"application/json":{"schema":{"description":"Pydantic model representing a Session.\n\nThis model corresponds to the Session Peewee ORM model and provides\nvalidation and serialization capabilities. It handles the conversion\nbetween JSON-encoded strings and Python dictionaries for the machine_info field.\n\nAttributes:\n    id: Unique identifier for the session\n    created_at: When the session record was created\n    updated_at: When the session record was last updated\n    start_time: When the program session started\n    command_line: Command line arguments used to start the program\n    program_version: Version of the program\n    machine_info: Dictionary containing machine-specific metadata\n    display_name: Display name for the session (derived from human input or command line)","properties":{"command_line":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Command Line"},"created_at":{"format":"date-time","title":"Created At","type":"string"},"display_name":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Display Name"},"id":{"anyOf":[{"type":"integer"},{"type":"null"}],"title":"Id"},"machine_info":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Machine Info"},"program_version":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Program Version"},"start_time":{"format":"date-time","title":"Start Time","type":"string"},"updated_at":{"format":"date-time","title":"Updated At","type":"string"}},"required":["created_at","updated_at","start_time"],"title":"SessionModel","type":"object"}}},"description":"Successful Response"},"404":{"description":"Session not found"},"422":{"description":"Validation error"},"500":{"description":"Database error"}}}
+>
+  
+</StatusCodes>
+
+
+      

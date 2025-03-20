@@ -9,6 +9,8 @@ import traceback
 from pathlib import Path
 from typing import List
 
+from fastapi.openapi.utils import get_openapi
+
 # Configure module-specific logging without affecting root logger
 logger = logging.getLogger(__name__)
 # Only configure this specific logger, not the root logger
@@ -50,6 +52,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 # Include API routers
 app.include_router(sessions_router)
@@ -252,6 +255,31 @@ async def websocket_endpoint(websocket: WebSocket):
 async def get_config(request: Request):
     """Return server configuration including host and port."""
     return {"host": request.client.host, "port": request.scope.get("server")[1]}
+
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+    openapi_schema = get_openapi(
+        title="RA.Aid API",
+        summary="RA.Aid API OpenAPI Spec",
+        version="1.0.0",
+        description="RA.Aid's API provides endpoints for managing sessions and agents, via REST and WebSockets",
+        routes=app.routes,
+        license_info={
+            "name": "Apache 2.0",
+            "url": "https://www.apache.org/licenses/LICENSE-2.0.html",
+        },
+        contact={
+            "name": "RA.Aid Team",
+            "url": "https://github.com/ai-christianson/RA.Aid",
+        }
+    )
+
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+app.openapi = custom_openapi
+
 
 
 def run_server(host: str = "0.0.0.0", port: int = 1818):
