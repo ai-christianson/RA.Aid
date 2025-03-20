@@ -8,6 +8,7 @@ import {
 import { SessionDrawer } from './SessionDrawer';
 import { SessionList } from './SessionList';
 import { TrajectoryPanel } from './TrajectoryPanel'; // Replace TimelineFeed import
+import { InputSection } from './InputSection';
 import { useSessionStore } from '../store';
 import logoBlack from '../assets/logo-black-transparent.png';
 import logoWhite from '../assets/logo-white-transparent.gif';
@@ -24,6 +25,12 @@ export const DefaultAgentScreen: React.FC = () => {
   
   // State for theme (dark is default)
   const [isDarkTheme, setIsDarkTheme] = useState(true);
+  
+  // Handle message submission
+  const handleSubmit = (message: string) => {
+    console.log('Message submitted:', message);
+    // TODO: Implement actual message submission logic
+  };
   
   // Get session store data
   const { 
@@ -177,14 +184,22 @@ export const DefaultAgentScreen: React.FC = () => {
   // Render main content with TrajectoryPanel instead of TimelineFeed
   const mainContent = (
     selectedSessionId ? (
-      <>
-        <h2 className="text-xl font-semibold mb-4">
-          Session: {sessions.find(s => s.id === selectedSessionId)?.name || 'Unknown'}
-        </h2>
-        <TrajectoryPanel 
-          sessionId={selectedSessionId}
+      <div className="flex flex-col h-full w-full">
+        <div className="flex-1 overflow-auto w-full px-4">
+          <h2 className="text-xl font-semibold mb-4">
+            Session: {sessions.find(s => s.id === selectedSessionId)?.name || 'Unknown'}
+          </h2>
+          <TrajectoryPanel 
+            sessionId={selectedSessionId}
+            addBottomPadding={true}
+          />
+        </div>
+        <InputSection 
+          sessionId={parseInt(selectedSessionId)}
+          onSubmit={handleSubmit}
+          isDrawerOpen={isDrawerOpen}
         />
-      </>
+      </div>
     ) : (
       <div className="flex items-center justify-center h-full">
         <p className="text-muted-foreground">Select a session to view details</p>
@@ -196,26 +211,46 @@ export const DefaultAgentScreen: React.FC = () => {
   const FloatingActionButton = ({ onClick }: { onClick: () => void }) => {
     // Only render the portal on the client side, not during SSR
     const [mounted, setMounted] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
     
     useEffect(() => {
       setMounted(true);
-      return () => setMounted(false);
+      
+      const checkMobile = () => {
+        setIsMobile(window.innerWidth < 768);
+      };
+      
+      // Initial check
+      checkMobile();
+      
+      // Add event listener for resize
+      window.addEventListener('resize', checkMobile);
+      
+      // Cleanup
+      return () => {
+        setMounted(false);
+        window.removeEventListener('resize', checkMobile);
+      };
     }, []);
+    
+    // When drawer is open or we're not on mobile, button should be at bottom
+    // When drawer is closed and input is visible, button should be above input
+    const buttonPosition = isMobile && !isDrawerOpen ? "bottom-[104px]" : "bottom-4";
     
     const button = (
       <Button
         variant="default"
-        size="icon"
+        size="sm"
         onClick={onClick}
         aria-label="Toggle sessions panel"
-        className="h-14 w-14 rounded-full shadow-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-100 flex items-center justify-center border-2 border-zinc-700 dark:border-zinc-600"
+        className="p-2 rounded-md shadow-md bg-zinc-800/90 hover:bg-zinc-700 text-zinc-100 flex items-center justify-center border border-zinc-700 dark:border-zinc-600"
       >
-        <PanelLeft className="h-6 w-6" />
+        <PanelLeft className="h-5 w-5" />
       </Button>
     );
     
     const container = (
-      <div className="fixed bottom-6 right-6 z-[9999] md:hidden" style={{ pointerEvents: 'auto' }}>
+      <div className={`fixed ${buttonPosition} right-4 z-[9999] md:hidden`} style={{ pointerEvents: 'auto' }}>
         {button}
       </div>
     );
