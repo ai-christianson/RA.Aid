@@ -8,7 +8,7 @@ dynamic = ["version"]
 description = "RA.Aid - ReAct Aid"
 readme = "README.md"
 license = {file = "LICENSE"}
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 keywords = ["langchain", "ai", "agent", "tools", "development"]
 authors = [{name = "AI Christianson", email = "ai.christianson@christianson.ai"}]
 classifiers = [
@@ -50,7 +50,9 @@ dependencies = [
     "platformdirs>=3.17.9",
     "requests",
     "packaging",
-    "prompt-toolkit"
+    "prompt-toolkit",
+    "mcp[cli]>=1.4.1",
+    "langchain-mcp-adapters>=0.0.5",
 ]
 
 [project.optional-dependencies]
