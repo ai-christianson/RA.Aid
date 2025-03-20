@@ -607,6 +607,7 @@ def build_status():
         "experimental_fallback_handler", False
     )
     web_research_enabled = config_repo.get("web_research_enabled", False)
+    custom_tools_enabled = config_repo.get("custom_tools_enabled", False)
 
     # Get the expert enabled status
     expert_enabled = bool(expert_provider and expert_model)
@@ -633,6 +634,16 @@ def build_status():
         "Enabled" if web_research_enabled else "Disabled",
         style=None if web_research_enabled else "italic",
     )
+    status.append("\n")
+
+    # Custom tools status
+    if custom_tools_enabled:
+        status.append("🛠️ Custom Tools: ")
+        status.append(
+            "Enabled" if custom_tools_enabled else "Disabled",
+            style=None if custom_tools_enabled else "italic",
+        )
+        status.append("\n")
 
     # Fallback handler status
     if experimental_fallback_handler:
@@ -803,6 +814,7 @@ def main():
                     "disable_reasoning_assistance", args.no_reasoning_assistance
                 )
                 config_repo.set("custom_tools", args.custom_tools)
+                config_repo.set("custom_tools_enabled", True if args.custom_tools else False)
 
                 # Validate custom tools function signatures
                 get_custom_tools()
