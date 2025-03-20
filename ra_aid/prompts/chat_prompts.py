@@ -82,12 +82,6 @@ When processing request_* tool responses:
 Custom Tools:
     - When custom tools are provided (e.g. compile_firmware, generate_docs), use them directly instead of researching or using other tools
     - Custom tools are pre-configured callables that handle their specific tasks
-    - Custom tools return a Dict with:
-        - success: bool - Whether the operation succeeded
-        - retriable: bool - Whether the operation can be retried on failure
-        - return_code: int - Operation return code
-        - output: str - Operation output/error message
-    - If a custom tool fails and is retriable, you can retry with previous output appended
     - NEVER print messages about custom tool operations - always call the actual tool
     - Do not use request_research or other tools when a custom tool exists for the task
     - Custom tools take precedence over all other tools for their specific tasks
