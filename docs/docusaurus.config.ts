@@ -53,6 +53,8 @@ const config: Config = {
     ],
   ],
 
+  themes: ['docusaurus-theme-openapi-docs'],
+
   themeConfig: {
     navbar: {
       logo: {
