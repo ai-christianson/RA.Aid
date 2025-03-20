@@ -54,24 +54,6 @@ export const SessionList: React.FC<SessionListProps> = ({
 
   return (
     <div className={className}>
-      {/* Header with optional refresh button */}
-      <div className="flex justify-between items-center mb-2 px-3">
-        <h3 className="text-sm font-medium">Sessions</h3>
-        {onRefresh && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onRefresh}
-            disabled={isLoading}
-            className="h-7 w-7 p-0"
-            aria-label="Refresh sessions"
-            title="Refresh sessions"
-          >
-            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-          </Button>
-        )}
-      </div>
-      
       {/* Error state */}
       {error && (
         <Card className="mb-3 mx-3 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800">

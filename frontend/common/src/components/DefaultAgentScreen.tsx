@@ -184,7 +184,7 @@ export const DefaultAgentScreen: React.FC = () => {
 
   // Sidebar content with sessions list
   const sidebarContent = (
-    <div className="h-full flex flex-col px-4 py-3">
+    <div className="h-full flex flex-col px-4 py-5">
       <SessionList 
         sessions={sessions}
         onSelectSession={handleSessionSelect}
@@ -233,69 +233,40 @@ export const DefaultAgentScreen: React.FC = () => {
       <div className="flex-1 overflow-auto w-full px-4">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold">Create New Session</h2>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={cancelNewSession}
-            aria-label="Cancel new session"
-            disabled={newSession.isSubmitting}
-          >
-            <X className="h-4 w-4 mr-1" />
-            Cancel
-          </Button>
         </div>
         
-        {newSession.error && (
-          <div className="bg-destructive/10 text-destructive p-3 rounded-md mb-4">
-            {newSession.error}
-          </div>
-        )}
-        
-        <p className="text-muted-foreground mb-4">
-          Type your message to start a new conversation with the agent.
-        </p>
-        
-        <div className="w-full mb-8">
-          <textarea
-            value={newSession.message}
-            onChange={(e) => updateNewSessionMessage(e.target.value)}
-            placeholder="What would you like help with today?"
-            className="flex w-full resize-none rounded-lg border border-input bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            rows={6}
-            disabled={newSession.isSubmitting}
-          />
+        {/* Show informational content in the main area */}
+        <div className="mb-20 px-4 py-6 rounded-lg border border-border bg-card/30">
+          <h3 className="text-lg font-medium mb-3">Getting Started</h3>
+          <p className="text-muted-foreground mb-4">
+            Type your message in the input box below to start a new conversation with the agent.
+          </p>
           
-          <div className="flex justify-end space-x-2 mt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => submitNewSession(true)}
-              disabled={!newSession.message.trim() || newSession.isSubmitting}
-            >
-              {newSession.isSubmitting ? (
-                <span className="flex items-center">
-                  <span className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  Processing...
-                </span>
-              ) : "Research Only"}
-            </Button>
-            <Button
-              type="button"
-              onClick={() => submitNewSession()}
-              disabled={!newSession.message.trim() || newSession.isSubmitting}
-              className="min-w-[100px]"
-            >
-              {newSession.isSubmitting ? (
-                <span className="flex items-center">
-                  <span className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  Creating...
-                </span>
-              ) : "Create Session"}
-            </Button>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+            <div className="p-4 rounded-md border border-border bg-background/50">
+              <h4 className="text-sm font-medium mb-2">Research Mode</h4>
+              <p className="text-xs text-muted-foreground">
+                The agent will gather information about your request and provide a summary
+                without implementing any solutions.
+              </p>
+            </div>
+            
+            <div className="p-4 rounded-md border border-border bg-background/50">
+              <h4 className="text-sm font-medium mb-2">Implementation Mode</h4>
+              <p className="text-xs text-muted-foreground">
+                The agent will analyze your request, create a plan, and implement a solution
+                based on your requirements.
+              </p>
+            </div>
           </div>
         </div>
       </div>
-      {/* Removed InputSection from new session view to avoid duplicate inputs */}
+      
+      {/* Use the same InputSection for new sessions */}
+      <InputSection 
+        isNewSession={true}
+        isDrawerOpen={isDrawerOpen}
+      />
     </div>
   ) : (
     // No session selected view
@@ -341,10 +312,11 @@ export const DefaultAgentScreen: React.FC = () => {
     
     const buttonStyle = "p-2 rounded-md shadow-md bg-zinc-800/90 hover:bg-zinc-700 text-zinc-100 flex items-center justify-center border border-zinc-700 dark:border-zinc-600";
     
-    if (!mounted) return null;
+    // Don't render any buttons when we're already in new session mode
+    if (!mounted || newSession) return null;
 
     return createPortal(
-      <div className={`fixed ${buttonPosition} right-4 z-50 flex space-x-2`}>
+      <div className={`fixed ${buttonPosition} right-4 z-[80] flex space-x-2`}>
         {/* Panel toggle button - only shown on mobile */}
         {isMobile && (
           <Button
@@ -357,13 +329,12 @@ export const DefaultAgentScreen: React.FC = () => {
             <PanelLeft className="h-5 w-5" />
           </Button>
         )}
-        {/* New session button - disabled when a new session is already being submitted */}
+        {/* New session button */}
         <Button
           variant="default"
           size="sm"
           onClick={startNewSession}
           aria-label="Create new session"
-          disabled={newSession?.isSubmitting}
           className={buttonStyle}
         >
           <Plus className="h-5 w-5" />

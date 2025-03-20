@@ -26,7 +26,7 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
   onClose
 }) => {
   return (
-    <Sheet open={isOpen} onOpenChange={onClose}>
+    <Sheet open={isOpen} onOpenChange={onClose} modal={false}>
       <SheetContent 
         side="left" 
         className="w-full sm:max-w-md border-r border-border p-0"
