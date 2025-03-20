@@ -82,16 +82,12 @@ def get_custom_tools() -> List[BaseTool]:
         if not custom_tools_path:
             return []
             
-        # Convert module path to system path
-        module_path = custom_tools_path.replace(".", "/") + ".py"
-        
-        # Import the module
-        spec = importlib.util.spec_from_file_location(custom_tools_path, module_path)
+        # Import the module directly using the provided path
+        spec = importlib.util.spec_from_file_location("custom_tools", custom_tools_path)
         if not spec or not spec.loader:
             raise Exception(f"Could not load custom tools module: {custom_tools_path}")
             
         module = importlib.util.module_from_spec(spec)
-        sys.modules[custom_tools_path] = module
         spec.loader.exec_module(module)
         
         # Get the tools list
@@ -329,6 +325,8 @@ def get_web_research_tools(expert_enabled: bool = True):
     if expert_enabled:
         tools.append(emit_expert_context)
         tools.append(ask_expert)
+
+    tools.extend(get_custom_tools())
 
     return tools
 

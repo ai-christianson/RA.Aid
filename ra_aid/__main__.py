@@ -475,7 +475,7 @@ Examples:
     parser.add_argument(
         "--custom-tools",
         type=str,
-        help="Python module path containing custom tools (e.g. backend.custom_tools)",
+        help="File path of Python module containing custom tools (e.g. ./path/to_custom_tools.py)",
     )
     if args is None:
         args = sys.argv[1:]
