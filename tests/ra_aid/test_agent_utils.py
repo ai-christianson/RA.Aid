@@ -163,51 +163,57 @@ def test_create_agent_openai(mock_model, mock_config_repository):
     """Test create_agent with OpenAI model."""
     mock_config_repository.update({"provider": "openai", "model": "gpt-4"})
 
-    with patch("ra_aid.agent_utils.CiaynAgent") as mock_ciayn:
-        mock_ciayn.return_value = "ciayn_agent"
-        agent = create_agent(mock_model, [])
+    # Mock should_use_react_agent to return False to force CiaynAgent usage
+    with patch("ra_aid.agent_utils.should_use_react_agent", return_value=False):
+        with patch("ra_aid.agent_utils.CiaynAgent") as mock_ciayn:
+            mock_ciayn.return_value = "ciayn_agent"
+            agent = create_agent(mock_model, [])
 
-        assert agent == "ciayn_agent"
-        mock_ciayn.assert_called_once_with(
-            mock_model,
-            [],
-            max_tokens=models_params["openai"]["gpt-4"]["token_limit"],
-            config={"provider": "openai", "model": "gpt-4"},
-        )
+            assert agent == "ciayn_agent"
+            mock_ciayn.assert_called_once_with(
+                mock_model,
+                [],
+                max_tokens=models_params["openai"]["gpt-4"]["token_limit"],
+                config={"provider": "openai", "model": "gpt-4"},
+            )
 
 
 def test_create_agent_no_token_limit(mock_model, mock_config_repository):
     """Test create_agent when no token limit is found."""
     mock_config_repository.update({"provider": "unknown", "model": "unknown-model"})
 
-    with patch("ra_aid.agent_utils.CiaynAgent") as mock_ciayn:
-        mock_ciayn.return_value = "ciayn_agent"
-        agent = create_agent(mock_model, [])
+    # Mock should_use_react_agent to return False to force CiaynAgent usage
+    with patch("ra_aid.agent_utils.should_use_react_agent", return_value=False):
+        with patch("ra_aid.agent_utils.CiaynAgent") as mock_ciayn:
+            mock_ciayn.return_value = "ciayn_agent"
+            agent = create_agent(mock_model, [])
 
-        assert agent == "ciayn_agent"
-        mock_ciayn.assert_called_once_with(
-            mock_model,
-            [],
-            max_tokens=DEFAULT_TOKEN_LIMIT,
-            config={"provider": "unknown", "model": "unknown-model"},
-        )
+            assert agent == "ciayn_agent"
+            mock_ciayn.assert_called_once_with(
+                mock_model,
+                [],
+                max_tokens=DEFAULT_TOKEN_LIMIT,
+                config={"provider": "unknown", "model": "unknown-model"},
+            )
 
 
 def test_create_agent_missing_config(mock_model, mock_config_repository):
     """Test create_agent with missing configuration."""
     mock_config_repository.update({"provider": "openai"})
 
-    with patch("ra_aid.agent_utils.CiaynAgent") as mock_ciayn:
-        mock_ciayn.return_value = "ciayn_agent"
-        agent = create_agent(mock_model, [])
+    # Mock should_use_react_agent to return False to force CiaynAgent usage
+    with patch("ra_aid.agent_utils.should_use_react_agent", return_value=False):
+        with patch("ra_aid.agent_utils.CiaynAgent") as mock_ciayn:
+            mock_ciayn.return_value = "ciayn_agent"
+            agent = create_agent(mock_model, [])
 
-        assert agent == "ciayn_agent"
-        mock_ciayn.assert_called_once_with(
-            mock_model,
-            [],
-            max_tokens=DEFAULT_TOKEN_LIMIT,
-            config={"provider": "openai"},
-        )
+            assert agent == "ciayn_agent"
+            mock_ciayn.assert_called_once_with(
+                mock_model,
+                [],
+                max_tokens=DEFAULT_TOKEN_LIMIT,
+                config={"provider": "openai"},
+            )
 
 
 @pytest.fixture
@@ -231,17 +237,19 @@ def test_create_agent_with_checkpointer(mock_model, mock_config_repository):
     mock_config_repository.update({"provider": "openai", "model": "gpt-4"})
     mock_checkpointer = Mock()
 
-    with patch("ra_aid.agent_utils.CiaynAgent") as mock_ciayn:
-        mock_ciayn.return_value = "ciayn_agent"
-        agent = create_agent(mock_model, [], checkpointer=mock_checkpointer)
+    # Mock should_use_react_agent to return False to force CiaynAgent usage
+    with patch("ra_aid.agent_utils.should_use_react_agent", return_value=False):
+        with patch("ra_aid.agent_utils.CiaynAgent") as mock_ciayn:
+            mock_ciayn.return_value = "ciayn_agent"
+            agent = create_agent(mock_model, [], checkpointer=mock_checkpointer)
 
-        assert agent == "ciayn_agent"
-        mock_ciayn.assert_called_once_with(
-            mock_model,
-            [],
-            max_tokens=models_params["openai"]["gpt-4"]["token_limit"],
-            config={"provider": "openai", "model": "gpt-4"},
-        )
+            assert agent == "ciayn_agent"
+            mock_ciayn.assert_called_once_with(
+                mock_model,
+                [],
+                max_tokens=models_params["openai"]["gpt-4"]["token_limit"],
+                config={"provider": "openai", "model": "gpt-4"},
+            )
 
 
 def test_create_agent_anthropic_token_limiting_enabled(
@@ -701,35 +709,37 @@ def test_handle_api_error_resource_exhausted():
 
 @patch("ra_aid.agent_utils.create_react_agent")
 def test_agent_backend_selection(mock_create_react_agent, mock_config_repository, mock_model):
-    """Test that create_agent correctly selects backend based on model_params settings."""
+    """Test that create_agent correctly selects backend based on model capabilities."""
     # Setup
     mock_create_react_agent.return_value = MagicMock()
     mock_repo = mock_config_repository
 
-    # Test 1: Model with CREATE_REACT_AGENT backend
-    mock_repo.get.side_effect = lambda key, default=None: {
-        "provider": "anthropic",
-        "model": "claude-3-7-sonnet-20250219",
-    }.get(key, default)
+    # Test 1: Model that supports function calling (should use ReAct agent)
+    with patch("ra_aid.agent_utils.should_use_react_agent", return_value=True):
+        mock_repo.get.side_effect = lambda key, default=None: {
+            "provider": "anthropic",
+            "model": "claude-3-7-sonnet-20250219",
+        }.get(key, default)
 
-    # Call create_agent
-    agent = create_agent(mock_model, [])
-    
-    # Should have called create_react_agent 
-    mock_create_react_agent.assert_called_once()
-    mock_create_react_agent.reset_mock()
-    
-    # Test 2: Model with CIAYN backend (default)
-    mock_repo.get.side_effect = lambda key, default=None: {
-        "provider": "openai",
-        "model": "gpt-4",
-    }.get(key, default)
-    
-    with patch("ra_aid.agent_utils.CiaynAgent") as mock_ciayn:
-        mock_ciayn.return_value = MagicMock()
-        
         # Call create_agent
         agent = create_agent(mock_model, [])
         
-        # Should have created CiaynAgent
-        mock_ciayn.assert_called_once()
+        # Should have called create_react_agent 
+        mock_create_react_agent.assert_called_once()
+        mock_create_react_agent.reset_mock()
+    
+    # Test 2: Model that doesn't support function calling (should use CiaynAgent)
+    with patch("ra_aid.agent_utils.should_use_react_agent", return_value=False):
+        mock_repo.get.side_effect = lambda key, default=None: {
+            "provider": "openai",
+            "model": "gpt-4",
+        }.get(key, default)
+        
+        with patch("ra_aid.agent_utils.CiaynAgent") as mock_ciayn:
+            mock_ciayn.return_value = MagicMock()
+            
+            # Call create_agent
+            agent = create_agent(mock_model, [])
+            
+            # Should have created CiaynAgent
+            mock_ciayn.assert_called_once()
