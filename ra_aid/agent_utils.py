@@ -38,7 +38,7 @@ from ra_aid.agent_backends.ciayn_agent import CiaynAgent
 from ra_aid.agents_alias import RAgents
 from ra_aid.config import DEFAULT_MAX_TEST_CMD_RETRIES, DEFAULT_MODEL
 from ra_aid.console.formatting import print_error
-from ra_aid.console.output import cpm, print_agent_output
+from ra_aid.console.output import print_agent_output
 from ra_aid.exceptions import (
     AgentInterrupt,
     FallbackToolExecutionError,
