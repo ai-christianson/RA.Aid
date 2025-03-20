@@ -7,12 +7,11 @@ import time
 from typing import Any, Dict, List, Literal, Optional
 import uuid
 
-from langchain_anthropic import ChatAnthropic
 from langgraph.graph.graph import CompiledGraph
 from ra_aid.callbacks.anthropic_callback_handler import (
     AnthropicCallbackHandler,
 )
-from ra_aid.model_detection import model_name_has_claude, normalize_model_name, should_use_react_agent, get_model_name_from_chat_model
+from ra_aid.model_detection import model_name_has_claude, should_use_react_agent, get_model_name_from_chat_model
 
 
 from anthropic import APIError, APITimeoutError, InternalServerError, RateLimitError
@@ -48,7 +47,6 @@ from ra_aid.fallback_handler import FallbackHandler
 from ra_aid.logging_config import get_logger
 from ra_aid.models_params import (
     DEFAULT_TOKEN_LIMIT,
-    DEFAULT_AGENT_BACKEND,
 )
 from ra_aid.tools.handle_user_defined_test_cmd_execution import execute_test_command
 from ra_aid.database.repositories.human_input_repository import (
