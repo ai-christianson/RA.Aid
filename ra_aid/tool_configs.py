@@ -35,6 +35,8 @@ from ra_aid.tools.agent import (
 from ra_aid.tools.memory import plan_implementation_completed
 from ra_aid.database.repositories.config_repository import get_config_repository
 
+# Define constant tool groups
+CUSTOM_TOOLS = []
 
 def set_modification_tools(use_aider=False):
     """Set the MODIFICATION_TOOLS list based on configuration.
@@ -76,9 +78,7 @@ def get_custom_tools() -> List[BaseTool]:
         return CUSTOM_TOOLS
     
     try:
-        config = get_config_repository().get_all()
-        custom_tools_path = config.get("custom_tools")
-        
+        custom_tools_path = get_config_repository().get("custom_tools", False)        
         if not custom_tools_path:
             return []
             
@@ -146,8 +146,6 @@ def get_read_only_tools(
         ripgrep_search,
         run_shell_command,  # can modify files, but we still need it for read-only tasks.
     ]
-
-    tools.extend(get_custom_tools())
 
     if web_research_enabled:
         tools.append(request_web_research)
@@ -237,6 +235,9 @@ def get_research_tools(
     # Add chat-specific tools
     tools.append(request_research)
 
+    # Add custom tools
+    tools.extend(get_custom_tools())
+
     return tools
 
 
@@ -274,6 +275,9 @@ def get_planning_tools(
     if expert_enabled:
         tools.extend(EXPERT_TOOLS)
 
+    # Add custom tools
+    tools.extend(get_custom_tools())
+
     return tools
 
 
@@ -305,6 +309,9 @@ def get_implementation_tools(
     # Add expert tools if enabled
     if expert_enabled:
         tools.extend(EXPERT_TOOLS)
+
+    # Add custom tools
+    tools.extend(get_custom_tools())
 
     return tools
 
