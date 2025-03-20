@@ -32,16 +32,15 @@ export const SessionDrawer: React.FC<SessionDrawerProps> = ({
         className="w-full sm:max-w-md border-r border-border p-0"
       >
         <div className="h-full flex flex-col">
-          <SheetHeader className="px-6 pt-6 pb-4 flex-shrink-0">
+          <SheetHeader className="px-4 py-4 flex-shrink-0">
             <SheetTitle>Sessions</SheetTitle>
           </SheetHeader>
-          <div className="flex-1 overflow-y-auto px-4 pb-4">
+          <div className="flex-1 overflow-y-auto p-4">
             <SessionList
               sessions={sessions}
               currentSessionId={currentSessionId}
               onSelectSession={onSelectSession}
               wrapperComponent={SheetClose}
-              className="pb-4"
             />
           </div>
         </div>

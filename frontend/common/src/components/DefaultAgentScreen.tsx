@@ -184,7 +184,7 @@ export const DefaultAgentScreen: React.FC = () => {
 
   // Sidebar content with sessions list
   const sidebarContent = (
-    <div className="h-full flex flex-col px-4 py-5">
+    <div className="h-full flex flex-col p-4">
       <SessionList 
         sessions={sessions}
         onSelectSession={handleSessionSelect}

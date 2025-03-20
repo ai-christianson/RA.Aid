@@ -106,7 +106,7 @@ export const SessionList: React.FC<SessionListProps> = ({
 
       {/* Session list */}
       {!isLoading && sessions.length > 0 && (
-        <div className="space-y-1.5 pt-1.5">
+        <div className="space-y-1.5">
           {sessions.map((session) => {
             const buttonContent = (
               <>
