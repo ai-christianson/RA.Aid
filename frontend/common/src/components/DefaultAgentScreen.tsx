@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { PanelLeft } from 'lucide-react';
+import { PanelLeft, Plus } from 'lucide-react';
 import { 
   Button,
   Layout
@@ -39,7 +39,8 @@ export const DefaultAgentScreen: React.FC = () => {
     selectSession, 
     fetchSessions,
     isLoading,
-    error
+    error,
+    createSession
   } = useSessionStore();
   
   // Fetch sessions on component mount
@@ -233,30 +234,49 @@ export const DefaultAgentScreen: React.FC = () => {
       };
     }, []);
     
-    // When drawer is open or we're not on mobile, button should be at bottom
-    // When drawer is closed and input is visible, button should be above input
-    const buttonPosition = isMobile && !isDrawerOpen ? "bottom-[104px]" : "bottom-4";
+    // Determine if the input section should be visible
+    const isInputVisible = selectedSessionId && !(isMobile && isDrawerOpen);
     
-    const button = (
-      <Button
-        variant="default"
-        size="sm"
-        onClick={onClick}
-        aria-label="Toggle sessions panel"
-        className="p-2 rounded-md shadow-md bg-zinc-800/90 hover:bg-zinc-700 text-zinc-100 flex items-center justify-center border border-zinc-700 dark:border-zinc-600"
-      >
-        <PanelLeft className="h-5 w-5" />
-      </Button>
+    // Button position logic:
+    // - When input is visible: position just above the input (104px from bottom)
+    // - When input is not visible: position at bottom of screen
+    const buttonPosition = isInputVisible ? "bottom-[104px]" : "bottom-4";
+    
+    const buttonStyle = "p-2 rounded-md shadow-md bg-zinc-800/90 hover:bg-zinc-700 text-zinc-100 flex items-center justify-center border border-zinc-700 dark:border-zinc-600";
+    
+    const handleNewSession = () => {
+      createSession({ name: `Session ${new Date().toLocaleString()}` });
+    };
+    
+    if (!mounted) return null;
+
+    return createPortal(
+      <div className={`fixed ${buttonPosition} right-4 z-50 flex space-x-2`}>
+        {/* Panel toggle button - only shown on mobile */}
+        {isMobile && (
+          <Button
+            variant="default"
+            size="sm"
+            onClick={onClick}
+            aria-label="Toggle sessions panel"
+            className={buttonStyle}
+          >
+            <PanelLeft className="h-5 w-5" />
+          </Button>
+        )}
+        {/* New session button - always visible */}
+        <Button
+          variant="default"
+          size="sm"
+          onClick={handleNewSession}
+          aria-label="Create new session"
+          className={buttonStyle}
+        >
+          <Plus className="h-5 w-5" />
+        </Button>
+      </div>,
+      document.body
     );
-    
-    const container = (
-      <div className={`fixed ${buttonPosition} right-4 z-[9999] md:hidden`} style={{ pointerEvents: 'auto' }}>
-        {button}
-      </div>
-    );
-    
-    // Return null during SSR, or the portal on the client
-    return mounted ? createPortal(container, document.body) : null;
   };
 
   return (
