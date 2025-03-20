@@ -55,8 +55,20 @@ export const BackendSessionSchema = z.object({
   start_time: resilientDatetime(),
   command_line: z.string().optional(),
   program_version: z.string().optional(),
-  // Accept both null and undefined for machine_info
-  machine_info: z.record(z.string(), z.any()).nullable().optional(),
+  // Create a refined schema for machine_info that properly transforms string to object
+  machine_info: z.union([
+    z.record(z.string(), z.any()),  // Already an object
+    z.string().transform((str) => {
+      try {
+        return str ? JSON.parse(str) : null;
+      } catch (e) {
+        console.error('Failed to parse machine_info JSON:', e);
+        return null;
+      }
+    }),
+    z.null(),
+    z.undefined()
+  ]).nullable().optional(),
   display_name: z.string().optional(),
 });
 
@@ -137,7 +149,26 @@ export function agentSessionToBackend(agentSession: AgentSession): BackendSessio
  * @throws If validation fails
  */
 export function validateBackendSession(data: unknown): BackendSession {
-  return BackendSessionSchema.parse(data);
+  try {
+    return BackendSessionSchema.parse(data);
+  } catch (error) {
+    // Log the specific error for debugging
+    if (error instanceof z.ZodError) {
+      console.error('Backend session validation failed:', error.format());
+      
+      // Safely check for machine_info errors in a type-safe way
+      const formattedError = error.format();
+      const fieldErrors = formattedError as Record<string, unknown>;
+      
+      if ('machine_info' in fieldErrors && typeof data === 'object' && data !== null) {
+        const typedData = data as Record<string, unknown>;
+        if ('machine_info' in typedData) {
+          console.warn('Machine info parsing issue, received type:', typeof typedData.machine_info);
+        }
+      }
+    }
+    throw error;
+  }
 }
 
 /**

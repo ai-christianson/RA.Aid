@@ -7,3 +7,4 @@ export * from './layout';
 export * from './sheet';
 export * from './switch';
 export * from './scroll-area';
+export * from './textarea';

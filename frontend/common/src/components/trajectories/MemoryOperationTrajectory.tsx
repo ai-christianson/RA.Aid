@@ -100,7 +100,7 @@ export const MemoryOperationTrajectory: React.FC<MemoryOperationTrajectoryProps>
             </div>
           )}
           
-          {trajectory.currentCost !== null && (
+          {trajectory.currentCost !== null && trajectory.currentCost !== undefined && (
             <div className="mt-3 pt-3 border-t border-border/50 text-xs text-muted-foreground">
               <span className="flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">

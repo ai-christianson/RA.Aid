@@ -5,6 +5,7 @@
  * - Fetching sessions (with fallback to sample data)
  * - Selecting a session
  * - Creating a new session
+ * - Managing new session state
  */
 
 import { create } from 'zustand';
@@ -17,6 +18,27 @@ import {
   safeBackendToAgentSession
 } from '../models/session';
 import { useClientConfigStore } from './clientConfigStore';
+import { spawnAgent, ApiError } from '../utils/api';
+
+/**
+ * Interface for tracking the state of a message being composed for a new session
+ */
+interface NewSessionState {
+  /**
+   * Message content being composed
+   */
+  message: string;
+  
+  /**
+   * Whether the message is currently being submitted
+   */
+  isSubmitting: boolean;
+  
+  /**
+   * Error message if submission failed
+   */
+  error: string | null;
+}
 
 /**
  * Session store state interface
@@ -31,6 +53,11 @@ interface SessionState {
    * Currently selected session ID
    */
   selectedSessionId: string | null;
+  
+  /**
+   * State for a new session being composed (null if not composing)
+   */
+  newSession: NewSessionState | null;
   
   /**
    * Loading state for sessions
@@ -61,6 +88,26 @@ interface SessionActions {
    * Create a new session
    */
   createSession: (sessionData: Partial<AgentSession>) => Promise<AgentSession>;
+  
+  /**
+   * Start composing a new session
+   */
+  startNewSession: () => void;
+  
+  /**
+   * Cancel composing a new session
+   */
+  cancelNewSession: () => void;
+  
+  /**
+   * Update the message for a new session
+   */
+  updateNewSessionMessage: (message: string) => void;
+  
+  /**
+   * Submit a new session message to create a real session
+   */
+  submitNewSession: (researchOnly?: boolean) => Promise<void>;
 }
 
 /**
@@ -74,6 +121,7 @@ type SessionStore = SessionState & SessionActions;
 export const useSessionStore = create<SessionStore>((set, get) => ({
   sessions: [],
   selectedSessionId: null,
+  newSession: null,
   isLoading: false,
   error: null,
   
@@ -115,7 +163,11 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
    * Select a session by ID
    */
   selectSession: (sessionId: string | null) => {
-    set({ selectedSessionId: sessionId });
+    set({ 
+      selectedSessionId: sessionId,
+      // Clear new session state when selecting an existing session
+      newSession: sessionId ? null : get().newSession
+    });
   },
   
   /**
@@ -158,6 +210,111 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
     } catch (error) {
       console.error('Error creating session:', error);
       throw error;
+    }
+  },
+  
+  /**
+   * Start composing a new session
+   */
+  startNewSession: () => {
+    set({
+      newSession: {
+        message: '',
+        isSubmitting: false,
+        error: null
+      },
+      selectedSessionId: null
+    });
+  },
+  
+  /**
+   * Cancel composing a new session
+   */
+  cancelNewSession: () => {
+    set({ newSession: null });
+    
+    // Select the first session if available
+    const sessions = get().sessions;
+    if (sessions.length > 0) {
+      set({ selectedSessionId: sessions[0].id });
+    }
+  },
+  
+  /**
+   * Update the message for a new session
+   */
+  updateNewSessionMessage: (message: string) => {
+    const currentNewSession = get().newSession;
+    
+    if (currentNewSession) {
+      set({
+        newSession: {
+          ...currentNewSession,
+          message,
+          error: null
+        }
+      });
+    }
+  },
+  
+  /**
+   * Submit a new session message to create a real session
+   * 
+   * @param researchOnly - Whether to use research-only mode
+   */
+  submitNewSession: async (researchOnly = false) => {
+    const currentNewSession = get().newSession;
+    
+    if (!currentNewSession) {
+      return;
+    }
+    
+    // If message is empty, set an error and return
+    if (!currentNewSession.message.trim()) {
+      set({
+        newSession: {
+          ...currentNewSession,
+          error: 'Message cannot be empty'
+        }
+      });
+      return;
+    }
+    
+    // Set isSubmitting to true
+    set({
+      newSession: {
+        ...currentNewSession,
+        isSubmitting: true,
+        error: null
+      }
+    });
+    
+    try {
+      // Call the spawn agent API
+      const data = await spawnAgent({
+        message: currentNewSession.message,
+        research_only: researchOnly
+      });
+      
+      // Refresh the sessions to get the newly created one
+      await get().fetchSessions();
+      
+      // Select the new session
+      set({
+        selectedSessionId: data.session_id,
+        newSession: null
+      });
+      
+    } catch (error) {
+      console.error('Error submitting new session:', error);
+      
+      set({
+        newSession: {
+          ...currentNewSession,
+          isSubmitting: false,
+          error: error instanceof Error ? error.message : 'Failed to submit message'
+        }
+      });
     }
   }
 }));

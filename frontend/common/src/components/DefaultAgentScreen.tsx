@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { PanelLeft, Plus } from 'lucide-react';
+import { PanelLeft, Plus, X } from 'lucide-react';
 import { 
   Button,
   Layout
 } from './ui';
 import { SessionDrawer } from './SessionDrawer';
 import { SessionList } from './SessionList';
-import { TrajectoryPanel } from './TrajectoryPanel'; // Replace TimelineFeed import
+import { TrajectoryPanel } from './TrajectoryPanel';
 import { InputSection } from './InputSection';
 import { useSessionStore } from '../store';
 import logoBlack from '../assets/logo-black-transparent.png';
@@ -26,10 +26,23 @@ export const DefaultAgentScreen: React.FC = () => {
   // State for theme (dark is default)
   const [isDarkTheme, setIsDarkTheme] = useState(true);
   
-  // Handle message submission
-  const handleSubmit = (message: string) => {
-    console.log('Message submitted:', message);
-    // TODO: Implement actual message submission logic
+  // Handle message submission for existing sessions
+  const handleSubmit = async (message: string) => {
+    if (!selectedSessionId || !message.trim()) return;
+    
+    try {
+      // TODO: Implement reply to existing session
+      // This will need a different endpoint for continuing conversations
+      console.log('Message submitted to existing session:', message, 'sessionId:', selectedSessionId);
+      
+      // Refresh sessions to get updated data
+      await fetchSessions();
+      
+      return true; // Success
+    } catch (error) {
+      console.error("Error handling message submission:", error);
+      return false; // Failure
+    }
   };
   
   // Get session store data
@@ -40,7 +53,11 @@ export const DefaultAgentScreen: React.FC = () => {
     fetchSessions,
     isLoading,
     error,
-    createSession
+    newSession,
+    startNewSession,
+    cancelNewSession,
+    updateNewSessionMessage,
+    submitNewSession
   } = useSessionStore();
   
   // Fetch sessions on component mount
@@ -74,6 +91,15 @@ export const DefaultAgentScreen: React.FC = () => {
   const handleSessionSelect = (sessionId: string) => {
     selectSession(sessionId);
     setIsDrawerOpen(false); // Close drawer on selection (mobile)
+  };
+  
+  // Handle new session message submit - no longer needed as we handle this directly in the form
+  // This function is kept for compatibility but is no longer used in the UI
+  const handleNewSessionSubmit = (message: string) => {
+    if (!message.trim()) return;
+    
+    updateNewSessionMessage(message);
+    submitNewSession();
   };
   
   // Toggle theme function
@@ -182,30 +208,100 @@ export const DefaultAgentScreen: React.FC = () => {
     />
   );
 
-  // Render main content with TrajectoryPanel instead of TimelineFeed
-  const mainContent = (
-    selectedSessionId ? (
-      <div className="flex flex-col h-full w-full">
-        <div className="flex-1 overflow-auto w-full px-4">
-          <h2 className="text-xl font-semibold mb-4">
-            Session: {sessions.find(s => s.id === selectedSessionId)?.name || 'Unknown'}
-          </h2>
-          <TrajectoryPanel 
-            sessionId={selectedSessionId}
-            addBottomPadding={true}
-          />
-        </div>
-        <InputSection 
-          sessionId={parseInt(selectedSessionId)}
-          onSubmit={handleSubmit}
-          isDrawerOpen={isDrawerOpen}
+  // Render main content based on the state
+  const mainContent = selectedSessionId ? (
+    // Existing session view
+    <div className="flex flex-col h-full w-full">
+      <div className="flex-1 overflow-auto w-full px-4">
+        <h2 className="text-xl font-semibold mb-4">
+          Session: {sessions.find(s => s.id === selectedSessionId)?.name || 'Unknown'}
+        </h2>
+        <TrajectoryPanel 
+          sessionId={selectedSessionId}
+          addBottomPadding={true}
         />
       </div>
-    ) : (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-muted-foreground">Select a session to view details</p>
+      <InputSection 
+        sessionId={parseInt(selectedSessionId)}
+        onSubmit={handleSubmit}
+        isDrawerOpen={isDrawerOpen}
+      />
+    </div>
+  ) : newSession ? (
+    // New session composition view
+    <div className="flex flex-col h-full w-full">
+      <div className="flex-1 overflow-auto w-full px-4">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold">Create New Session</h2>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={cancelNewSession}
+            aria-label="Cancel new session"
+            disabled={newSession.isSubmitting}
+          >
+            <X className="h-4 w-4 mr-1" />
+            Cancel
+          </Button>
+        </div>
+        
+        {newSession.error && (
+          <div className="bg-destructive/10 text-destructive p-3 rounded-md mb-4">
+            {newSession.error}
+          </div>
+        )}
+        
+        <p className="text-muted-foreground mb-4">
+          Type your message to start a new conversation with the agent.
+        </p>
+        
+        <div className="w-full mb-8">
+          <textarea
+            value={newSession.message}
+            onChange={(e) => updateNewSessionMessage(e.target.value)}
+            placeholder="What would you like help with today?"
+            className="flex w-full resize-none rounded-lg border border-input bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            rows={6}
+            disabled={newSession.isSubmitting}
+          />
+          
+          <div className="flex justify-end space-x-2 mt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => submitNewSession(true)}
+              disabled={!newSession.message.trim() || newSession.isSubmitting}
+            >
+              {newSession.isSubmitting ? (
+                <span className="flex items-center">
+                  <span className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  Processing...
+                </span>
+              ) : "Research Only"}
+            </Button>
+            <Button
+              type="button"
+              onClick={() => submitNewSession()}
+              disabled={!newSession.message.trim() || newSession.isSubmitting}
+              className="min-w-[100px]"
+            >
+              {newSession.isSubmitting ? (
+                <span className="flex items-center">
+                  <span className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  Creating...
+                </span>
+              ) : "Create Session"}
+            </Button>
+          </div>
+        </div>
       </div>
-    )
+      {/* Removed InputSection from new session view to avoid duplicate inputs */}
+    </div>
+  ) : (
+    // No session selected view
+    <div className="flex items-center justify-center h-full">
+      <p className="text-muted-foreground">Select a session to view details</p>
+    </div>
   );
 
   // Floating action button component that uses Portal to render at document body level
@@ -235,7 +331,8 @@ export const DefaultAgentScreen: React.FC = () => {
     }, []);
     
     // Determine if the input section should be visible
-    const isInputVisible = selectedSessionId && !(isMobile && isDrawerOpen);
+    const isInputVisible = (selectedSessionId || (newSession && !newSession.isSubmitting)) 
+                           && !(isMobile && isDrawerOpen);
     
     // Button position logic:
     // - When input is visible: position just above the input (104px from bottom)
@@ -243,10 +340,6 @@ export const DefaultAgentScreen: React.FC = () => {
     const buttonPosition = isInputVisible ? "bottom-[104px]" : "bottom-4";
     
     const buttonStyle = "p-2 rounded-md shadow-md bg-zinc-800/90 hover:bg-zinc-700 text-zinc-100 flex items-center justify-center border border-zinc-700 dark:border-zinc-600";
-    
-    const handleNewSession = () => {
-      createSession({ name: `Session ${new Date().toLocaleString()}` });
-    };
     
     if (!mounted) return null;
 
@@ -264,12 +357,13 @@ export const DefaultAgentScreen: React.FC = () => {
             <PanelLeft className="h-5 w-5" />
           </Button>
         )}
-        {/* New session button - always visible */}
+        {/* New session button - disabled when a new session is already being submitted */}
         <Button
           variant="default"
           size="sm"
-          onClick={handleNewSession}
+          onClick={startNewSession}
           aria-label="Create new session"
+          disabled={newSession?.isSubmitting}
           className={buttonStyle}
         >
           <Plus className="h-5 w-5" />
