@@ -265,6 +265,14 @@ def custom_openapi():
         version="1.0.0",
         description="RA.Aid's API provides endpoints for managing sessions and agents, via REST and WebSockets",
         routes=app.routes,
+        license_info={
+            "name": "Apache 2.0",
+            "url": "https://www.apache.org/licenses/LICENSE-2.0.html",
+        },
+        contact={
+            "name": "RA.Aid Team",
+            "url": "https://github.com/ai-christianson/RA.Aid",
+        }
     )
 
     app.openapi_schema = openapi_schema
