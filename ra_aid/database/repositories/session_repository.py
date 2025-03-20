@@ -443,6 +443,58 @@ class SessionRepository:
             logger.error(f"Failed to get recent sessions: {str(e)}")
             return []
 
+    def get_latest_session(self) -> Optional[SessionModel]:
+        """
+        Get the most recent session from the database.
+
+        This method retrieves the single most recent session based on creation time.
+        Unlike get_current_session(), this always queries the database and doesn't
+        use the cached current_session.
+
+        Returns:
+            Optional[SessionModel]: The most recent session or None if no sessions exist
+        """
+        try:
+            # Get the most recent session
+            session = Session.select().order_by(Session.created_at.desc()).first()
+            if session is None:
+                return None
+                
+            # Convert to model
+            model = self._to_model(session)
+            
+            # Get display name directly
+            display_name = self._get_display_name_for_session(session.id)
+            if display_name:
+                model.display_name = display_name
+            elif model.command_line:
+                # Fallback to command line
+                if len(model.command_line) > 80:
+                    model.display_name = model.command_line[:80] + "..."
+                else:
+                    model.display_name = model.command_line
+            
+            return model
+            
+        except peewee.DatabaseError as e:
+            logger.error(f"Failed to get latest session: {str(e)}")
+            return None
+            
+    def get_all_session_ids(self) -> List[int]:
+        """
+        Get all session IDs from the database.
+        
+        Returns:
+            List[int]: List of all session IDs ordered by creation time (newest first)
+        """
+        try:
+            # Query for all session IDs
+            query = Session.select(Session.id).order_by(Session.created_at.desc())
+            return [session.id for session in query]
+        except peewee.DatabaseError as e:
+            logger.error(f"Failed to get all session IDs: {str(e)}")
+            return []
+
     def _get_display_name_subquery(self):
         """
         Create a subquery for computing the display_name field.
