@@ -180,6 +180,8 @@ You can get your API keys from:
 - OpenRouter API key: https://openrouter.ai/keys
 - Gemini API key: https://aistudio.google.com/app/apikey
 
+Note: `aider` must be installed separately as it is not included in the RA.Aid package. See [aider-chat](https://pypi.org/project/aider-chat/) for more details.
+
 Complete installation documentation is available in our [Installation Guide](https://docs.ra-aid.ai/quickstart/installation).
 
 ## Usage
