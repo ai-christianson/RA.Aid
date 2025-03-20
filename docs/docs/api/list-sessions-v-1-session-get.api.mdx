@@ -1,0 +1,71 @@
+---
+id: list-sessions-v-1-session-get
+title: "List sessions"
+description: "Get a paginated list of sessions"
+sidebar_label: "List sessions"
+hide_title: true
+hide_table_of_contents: true
+api: eJydV8lu4zgQ/RVCl5kBHC9B5qKb0R00MshixE73IQkMWipZ7EiUmqSc9hj+96kiKZmOs3jii0Xq1auVxdImSkEnStRGVDKKo29gGGc1XwrJDaSsENqwKmMatEaEjnpRVYPiBL9IUYAA8/btfDVqn+dLMAiuueIlGFA6iu83L5RdN+UCVEjPTMX0k6hRUhDiVwNqjQuJJLisskxbWgW/GqEADch4oaEX6SSHkkcxqch4U5goHvb+j7pSSFE2pRUzwhSk7qZVZ9Y1rYU0sAQVbbe9l65c8d8kzuSrOhSYRsk3nCpEKY71aXTg1JGKSwcjhmHg7Gjn7KU348DXRzJN18gImow5HQ7pL6kQIQ098rouRGJrYvBTk1mbPeNDeyfrlEsjElZWKRQsq1RQbd501unrP8gHOcuF9nBdQyJ4If4FdC8HtgQJCskmLcWtl7TEU0d3ZUWFgdLxjY1RYtEY0PGDZPizr2J26Wv9UMyykb6kUQqdJpOBqlvRYTDCBcZC9x7edV1BjX4im5BLPHNe60uPk0q5aKQ2oWSER7IJwDMAu7m98lguU4YmrQTqfZArjFNqk2JfaAwURc7tJLzmC1EIsr3PLgzLEVP4qGJqV3hiEfcgF2BQiWT/TG+uT0AmqAi5MIByqS3vZG1yJExFQsRcIWEXrpInuZAwFzKrWCagSN9IQBqzOynwYOAjRQSxqmPxVeGgiQLK85ybmP3I0bAAgSHFcKXsmesW54SaOj1KqOBYAR7sJLXhysyNKCGQxBgvsa11DBbUSiRVWWJc5gU6HrMvbsVoxbhaNiW6p1mjMYrUfEgy5HQcfjH3WYjZd/dA1XkADoMcs69tHtaURsPxpGN5ecyJPT8ZlSAYjm5yR5EKXRd8PaeORBR2xWj1MgnszxTraIXWZ6oqWd6gd0zIusGTo1rfrbd/HZyPMDK2bcj1TWavBd9zXFlF1F39jmyKIqIO1HapNp6XxLHtRbtyIEY0tqSniDJ4QlmLAlEHZeOgy3UaozAEnzWuDdw1cSCnSF9l6lrrO1R4t26pa+9S+1mjrhwHuyCOrc1JWFufpZ34M+Ark5h3Z+XDXExt3c/85stc7I7rh0R3DvpqUrfhnXoflsqeij3DAw/Da2BHXi1+QmLIyi5Vttt3AK4UX9N7d6+jAx/dsL12rgmwb44euFMZXoTYmd14bUrZ8994mPD2tnOHVx7mtr1NfQjaS/UwCqRj/5KbNkmCUllTsE4MQWfDs8MLsb3IZGWwzzTS1vzZ6ekh8vvuLgOlKhuHv90csg/8ij1twfH+9zCKF1/S8Bl1Iyx6iu0vr2h8badUk+NisBoNPMrOau7Q2Taa2Oz4ie123B+LlM2Al1RKCrMR5cbUOh4MlsLkzaKPvW7AxUmSKxwqBJc4FQ2cWHQQMrf/h2bjyUV3fzOQaV0JuiyoBWPTo6Qsd9MddUGcQhDQYyvB2e35dGY3f8BiWiVPYFySE6AU7Iwf19gQgJ32hwe2Pz8/97l93a/UcuBl9eDy4sv59fT8BGX6uSkLe9gbbMQ4xnbRIONvapD0P8VrJjikOwRudn0nGiHd0LakSht0MDDSjmLBN8dewILZ85jvFV+yBn6bAbZnYXuVdXzjE38frUbUBnzqsT5ytIj2NxsqpjtVbLe07SZ3+yEjNF8UwbD+poXvfnW8atsTrMNvHZzjGgLZdny83iM/DN6xoG0QOwMeaYFj5ILSev+IyBw4DgQ2JE5ojMe/DqUOPg624fn7dj7DQ/ofW/8MOQ==
+sidebar_class_name: "get api-method"
+info_path: api/ra-aid-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"List sessions"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/v1/session"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Get a paginated list of sessions
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+  children={"Request"}
+>
+</Heading>
+
+<ParamsDetails
+  parameters={[{"description":"Number of sessions to skip","in":"query","name":"offset","required":false,"schema":{"default":0,"description":"Number of sessions to skip","minimum":0,"title":"Offset","type":"integer"}},{"description":"Maximum number of sessions to return","in":"query","name":"limit","required":false,"schema":{"default":10,"description":"Maximum number of sessions to return","maximum":100,"minimum":1,"title":"Limit","type":"integer"}}]}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  title={"Body"}
+  body={undefined}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  id={undefined}
+  label={undefined}
+  responses={{"200":{"content":{"application/json":{"schema":{"description":"Pydantic model for paginated session responses.\n\nThis model specializes the generic PaginatedResponse for SessionModel items.\n\nAttributes:\n    items: List of SessionModel items for the current page","properties":{"items":{"items":{"description":"Pydantic model representing a Session.\n\nThis model corresponds to the Session Peewee ORM model and provides\nvalidation and serialization capabilities. It handles the conversion\nbetween JSON-encoded strings and Python dictionaries for the machine_info field.\n\nAttributes:\n    id: Unique identifier for the session\n    created_at: When the session record was created\n    updated_at: When the session record was last updated\n    start_time: When the program session started\n    command_line: Command line arguments used to start the program\n    program_version: Version of the program\n    machine_info: Dictionary containing machine-specific metadata\n    display_name: Display name for the session (derived from human input or command line)","properties":{"command_line":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Command Line"},"created_at":{"format":"date-time","title":"Created At","type":"string"},"display_name":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Display Name"},"id":{"anyOf":[{"type":"integer"},{"type":"null"}],"title":"Id"},"machine_info":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Machine Info"},"program_version":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Program Version"},"start_time":{"format":"date-time","title":"Start Time","type":"string"},"updated_at":{"format":"date-time","title":"Updated At","type":"string"}},"required":["created_at","updated_at","start_time"],"title":"SessionModel","type":"object"},"title":"Items","type":"array"},"limit":{"title":"Limit","type":"integer"},"offset":{"title":"Offset","type":"integer"},"total":{"title":"Total","type":"integer"}},"required":["total","items","limit","offset"],"title":"PaginatedSessionResponse","type":"object"}}},"description":"Successful Response"},"404":{"description":"Session not found"},"422":{"description":"Validation error"},"500":{"description":"Database error"}}}
+>
+  
+</StatusCodes>
+
+
+      

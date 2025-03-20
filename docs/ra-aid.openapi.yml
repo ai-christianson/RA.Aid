@@ -1,0 +1,426 @@
+components:
+  schemas:
+    CreateSessionRequest:
+      description: "Pydantic model for session creation requests.\n\nThis model provides\
+        \ validation for creating new sessions.\n\nAttributes:\n    metadata: Optional\
+        \ dictionary of additional metadata to store with the session"
+      properties:
+        metadata:
+          anyOf:
+          - type: object
+          - type: 'null'
+          description: Optional dictionary of additional metadata to store with the
+            session
+          title: Metadata
+      title: CreateSessionRequest
+      type: object
+    PaginatedSessionResponse:
+      description: "Pydantic model for paginated session responses.\n\nThis model\
+        \ specializes the generic PaginatedResponse for SessionModel items.\n\nAttributes:\n\
+        \    items: List of SessionModel items for the current page"
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/SessionModel'
+          title: Items
+          type: array
+        limit:
+          title: Limit
+          type: integer
+        offset:
+          title: Offset
+          type: integer
+        total:
+          title: Total
+          type: integer
+      required:
+      - total
+      - items
+      - limit
+      - offset
+      title: PaginatedSessionResponse
+      type: object
+    SessionModel:
+      description: "Pydantic model representing a Session.\n\nThis model corresponds\
+        \ to the Session Peewee ORM model and provides\nvalidation and serialization\
+        \ capabilities. It handles the conversion\nbetween JSON-encoded strings and\
+        \ Python dictionaries for the machine_info field.\n\nAttributes:\n    id:\
+        \ Unique identifier for the session\n    created_at: When the session record\
+        \ was created\n    updated_at: When the session record was last updated\n\
+        \    start_time: When the program session started\n    command_line: Command\
+        \ line arguments used to start the program\n    program_version: Version of\
+        \ the program\n    machine_info: Dictionary containing machine-specific metadata\n\
+        \    display_name: Display name for the session (derived from human input\
+        \ or command line)"
+      properties:
+        command_line:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Command Line
+        created_at:
+          format: date-time
+          title: Created At
+          type: string
+        display_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Display Name
+        id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Id
+        machine_info:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Machine Info
+        program_version:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Program Version
+        start_time:
+          format: date-time
+          title: Start Time
+          type: string
+        updated_at:
+          format: date-time
+          title: Updated At
+          type: string
+      required:
+      - created_at
+      - updated_at
+      - start_time
+      title: SessionModel
+      type: object
+    SpawnAgentRequest:
+      description: "Pydantic model for agent spawn requests.\n\nThis model provides\
+        \ validation for spawning a new agent.\n\nAttributes:\n    message: The message\
+        \ or task for the agent to process\n    research_only: Whether to use research-only\
+        \ mode (default: False)"
+      properties:
+        message:
+          description: The message or task for the agent to process
+          title: Message
+          type: string
+        research_only:
+          default: false
+          description: Whether to use research-only mode
+          title: Research Only
+          type: boolean
+      required:
+      - message
+      title: SpawnAgentRequest
+      type: object
+    SpawnAgentResponse:
+      description: "Pydantic model for agent spawn responses.\n\nThis model defines\
+        \ the response format for the spawn-agent endpoint.\n\nAttributes:\n    session_id:\
+        \ The ID of the created session"
+      properties:
+        session_id:
+          description: The ID of the created session
+          title: Session Id
+          type: string
+      required:
+      - session_id
+      title: SpawnAgentResponse
+      type: object
+    TrajectoryModel:
+      description: "Pydantic model representing a Trajectory.\n\nThis model corresponds\
+        \ to the Trajectory Peewee ORM model and provides\nvalidation and serialization\
+        \ capabilities. It handles the conversion\nbetween JSON-encoded strings and\
+        \ Python dictionaries for the tool_parameters,\ntool_result, and step_data\
+        \ fields.\n\nAttributes:\n    id: Unique identifier for the trajectory\n \
+        \   created_at: When the record was created\n    updated_at: When the record\
+        \ was last updated\n    human_input_id: Optional reference to the associated\
+        \ human input\n    tool_name: Name of the tool that was executed\n    tool_parameters:\
+        \ Dictionary containing the parameters passed to the tool\n    tool_result:\
+        \ Dictionary containing the result returned by the tool\n    step_data: Dictionary\
+        \ containing UI rendering data\n    record_type: Type of trajectory record\n\
+        \    current_cost: Optional cost of the last LLM message\n    input_tokens:\
+        \ Optional input/prompt token usage\n    output_tokens: Optional output/completion\
+        \ token usage\n    is_error: Flag indicating if this record represents an\
+        \ error\n    error_message: The error message if is_error is True\n    error_type:\
+        \ The type/class of the error if is_error is True\n    error_details: Additional\
+        \ error details if is_error is True\n    session_id: Optional reference to\
+        \ the associated session"
+      properties:
+        created_at:
+          format: date-time
+          title: Created At
+          type: string
+        current_cost:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Current Cost
+        error_details:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Error Details
+        error_message:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Error Message
+        error_type:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Error Type
+        human_input_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Human Input Id
+        id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Id
+        input_tokens:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Input Tokens
+        is_error:
+          default: false
+          title: Is Error
+          type: boolean
+        output_tokens:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Output Tokens
+        record_type:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Record Type
+        session_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Session Id
+        step_data:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Step Data
+        tool_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Tool Name
+        tool_parameters:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Tool Parameters
+        tool_result:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Tool Result
+        updated_at:
+          format: date-time
+          title: Updated At
+          type: string
+      required:
+      - created_at
+      - updated_at
+      title: TrajectoryModel
+      type: object
+info:
+  contact:
+    name: RA.Aid Team
+    url: https://github.com/ai-christianson/RA.Aid
+  description: RA.Aid's API provides endpoints for managing sessions and agents, via
+    REST and WebSockets
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+  summary: RA.Aid API OpenAPI Spec
+  title: RA.Aid API
+  version: 1.0.0
+openapi: 3.1.0
+paths:
+  /:
+    get:
+      description: Serve the index.html file with port parameter.
+      operationId: get_root__get
+      responses:
+        '200':
+          content:
+            text/html:
+              schema:
+                type: string
+          description: Successful Response
+      summary: Get Root
+  /config:
+    get:
+      description: Return server configuration including host and port.
+      operationId: get_config_config_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+      summary: Get Config
+  /v1/session:
+    get:
+      description: Get a paginated list of sessions
+      operationId: list_sessions_v1_session_get
+      parameters:
+      - description: Number of sessions to skip
+        in: query
+        name: offset
+        required: false
+        schema:
+          default: 0
+          description: Number of sessions to skip
+          minimum: 0
+          title: Offset
+          type: integer
+      - description: Maximum number of sessions to return
+        in: query
+        name: limit
+        required: false
+        schema:
+          default: 10
+          description: Maximum number of sessions to return
+          maximum: 100
+          minimum: 1
+          title: Limit
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSessionResponse'
+          description: Successful Response
+        '404':
+          description: Session not found
+        '422':
+          description: Validation error
+        '500':
+          description: Database error
+      summary: List sessions
+      tags:
+      - sessions
+    post:
+      description: Create a new session
+      operationId: create_session_v1_session_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              anyOf:
+              - $ref: '#/components/schemas/CreateSessionRequest'
+              - type: 'null'
+              title: Request
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionModel'
+          description: Successful Response
+        '404':
+          description: Session not found
+        '422':
+          description: Validation error
+        '500':
+          description: Database error
+      summary: Create session
+      tags:
+      - sessions
+  /v1/session/{session_id}:
+    get:
+      description: Get a specific session by ID
+      operationId: get_session_v1_session__session_id__get
+      parameters:
+      - in: path
+        name: session_id
+        required: true
+        schema:
+          title: Session Id
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionModel'
+          description: Successful Response
+        '404':
+          description: Session not found
+        '422':
+          description: Validation error
+        '500':
+          description: Database error
+      summary: Get session
+      tags:
+      - sessions
+  /v1/session/{session_id}/trajectory:
+    get:
+      description: Get all trajectory records associated with a specific session
+      operationId: get_session_trajectories_v1_session__session_id__trajectory_get
+      parameters:
+      - in: path
+        name: session_id
+        required: true
+        schema:
+          title: Session Id
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/TrajectoryModel'
+                title: Response Get Session Trajectories V1 Session  Session Id  Trajectory
+                  Get
+                type: array
+          description: Successful Response
+        '404':
+          description: Session not found
+        '422':
+          description: Validation error
+        '500':
+          description: Database error
+      summary: Get session trajectories
+      tags:
+      - sessions
+  /v1/spawn-agent:
+    post:
+      description: Spawn a new RA.Aid agent to process a message or task
+      operationId: spawn_agent_v1_spawn_agent_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SpawnAgentRequest'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpawnAgentResponse'
+          description: Successful Response
+        '422':
+          description: Validation error
+        '500':
+          description: Agent spawn error
+      summary: Spawn agent
+      tags:
+      - agent
+
