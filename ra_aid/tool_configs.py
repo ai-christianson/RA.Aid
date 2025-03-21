@@ -103,7 +103,7 @@ def get_custom_tools() -> List[BaseTool]:
             custom_tool_output = f"""These custom tools are available to the agent:\n"""
             for tool in tools:
                 custom_tool_output += f"* {tool.name}: {tool.description}\n"
-            console.print(Panel(Markdown(custom_tool_output.strip()), title="⚙️ Custom Tools Available", border_style="magenta"))
+            console.print(Panel(Markdown(custom_tool_output.strip()), title="🛠️ Custom Tools Available", border_style="magenta"))
 
         # Set global
         CUSTOM_TOOLS.clear()

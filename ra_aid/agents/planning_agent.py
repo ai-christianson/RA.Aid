@@ -41,6 +41,7 @@ from ra_aid.prompts.human_prompts import HUMAN_PROMPT_SECTION_PLANNING
 from ra_aid.prompts.planning_prompts import PLANNING_PROMPT
 from ra_aid.prompts.reasoning_assist_prompt import REASONING_ASSIST_PROMPT_PLANNING
 from ra_aid.prompts.web_research_prompts import WEB_RESEARCH_PROMPT_SECTION_PLANNING
+from ra_aid.prompts.custom_tools_prompts import DEFAULT_CUSTOM_TOOLS_PROMPT
 from ra_aid.tool_configs import get_planning_tools
 from ra_aid.tools.memory import get_related_files, log_work_event
 
@@ -322,6 +323,11 @@ def run_planning_agent(
         if get_config_repository().get("web_research_enabled", False)
         else ""
     )
+    custom_tools_section = (
+        DEFAULT_CUSTOM_TOOLS_PROMPT
+        if get_config_repository().get("custom_tools_enabled", False)
+        else ""
+    )
 
     # Prepare expert guidance section if expert guidance is available
     expert_guidance_section = ""
@@ -336,6 +342,7 @@ def run_planning_agent(
         expert_section=expert_section,
         human_section=human_section,
         web_research_section=web_research_section,
+        custom_tools_section=custom_tools_section,
         base_task=base_task,
         project_info=formatted_project_info,
         research_notes=formatted_research_notes,
