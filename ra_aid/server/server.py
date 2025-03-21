@@ -55,7 +55,7 @@ app.include_router(spawn_agent_router)
 CURRENT_DIR = Path(__file__).parent
 
 # Placeholder WebSocket API endpoint
-@app.websocket("/ws")
+@app.websocket("/v1/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     try:
@@ -83,7 +83,7 @@ async def get_root(request: Request):
             </head>
             <body>
                 <h1>RA.Aid API</h1>
-                <p>A placeholder WebSocket API is available at /ws. We recommend using the REST API endpoints for production use.</p>
+                <p>A placeholder WebSocket API is available at /v1/ws. We recommend using the REST API endpoints for production use.</p>
                 <p>See the <a href="/docs">API documentation</a> for more information.</p>
             </body>
         </html>
