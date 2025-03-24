@@ -31,7 +31,7 @@ def main():
         sys.exit(1)
 
     version = sys.argv[1]
-    changelog_path = Path(__file__).parent.parent / "CHANGELOG.md"
+    changelog_path = Path(__file__).parent.parent.parent / "CHANGELOG.md"
 
     try:
         content = changelog_path.read_text()
