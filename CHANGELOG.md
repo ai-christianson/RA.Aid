@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.18.1] 2025-03-24
+
+### Added
+- Custom Tools Feature
+  - Added support for custom tools with `--custom-tools <path>` CLI flag
+  - Implemented MCP (Model-Completion-Protocol) client for integrating external tool providers
+  - Created documentation on custom tools usage in `docs/docs/usage/custom-tools.md`
+  - Added example code in `examples/custom-tools-mcp/` directory
+- API Documentation
+  - Added comprehensive OpenAPI documentation for REST API endpoints
+  - Implemented API documentation in Docusaurus with new MDX files
+  - Added YAML OpenAPI specification file `docs/ra-aid.openapi.yml`
+  - Created script to generate OpenAPI documentation automatically
+- Session Usage Statistics
+  - Added CLI commands for retrieving usage statistics for all sessions and the latest session
+  - Enhanced session and trajectory repositories with new methods
+  - Moved scripts into proper Python package structure (`ra_aid/scripts/`)
+- Web UI Improvements
+  - Added new UI components including input box, session screen, and buttons
+  - Improved session management UI
+  - Enhanced styling and layout
+
+### Changed
+- WebSocket Endpoint Migration
+  - Migrated WebSocket endpoint from `/ws` to `/v1/ws` to align with REST API endpoint pattern
+  - Updated root HTML endpoint to reflect the new WebSocket path
+- Project Maintenance
+  - Refactored agent creation logic to use model capabilities for selecting agent type
+  - Improved model detection and normalization
+  - Updated dependencies via uv.lock
+  - Fixed various typos and improved prompts
+
 ## [0.18.0] 2025-03-19
 
 ### Added
@@ -32,7 +64,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Fixed bug with `process_thinking_content` function by moving it from `agent_utils` to `ra_aid.text.processing` module
 - Fixed config parameter handling in research request functions
-- Updated development setup instructions in README to use `pip install -e ".[dev]"` instead of `pip install -r requirements-dev.txt`
+- Updated development setup instructions in README to use `pip install -e \".[dev]\"` instead of `pip install -r requirements-dev.txt`
 
 ## [0.17.0] 2025-03-12
 
