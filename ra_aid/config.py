@@ -18,4 +18,6 @@ VALID_PROVIDERS = [
     "deepseek",
     "gemini",
     "ollama",
+    "fireworks",
+    "groq",
 ]

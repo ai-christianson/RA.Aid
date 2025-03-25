@@ -14,8 +14,8 @@ DEFAULT_AGENT_BACKEND = AgentBackendType.CIAYN
 
 models_params = {
     "fireworks": {
-        "accounts/fireworks/models/mixtral-8x7b-instruct": {
-            "token_limit": 32000,
+        "accounts/fireworks/models/deepseek-v3-0324": {
+            "token_limit": 163840,
             "supports_temperature": True,
             "default_temperature": DEFAULT_TEMPERATURE,
             "latency_coefficient": DEFAULT_BASE_LATENCY,
@@ -815,6 +815,12 @@ models_params = {
         },
     },
     "groq": {
+        "qwen-qwq-32": {
+            "token_limit": 131072,
+            "supports_temperature": True,
+            "default_temperature": 0.6,
+            "latency_coefficient": DEFAULT_BASE_LATENCY,
+        },
         "llama3-8b-8192": {
             "token_limit": 8192,
             "supports_temperature": True,
