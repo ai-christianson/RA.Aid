@@ -11,6 +11,7 @@ from ra_aid.provider_strategy import (
     AnthropicStrategy,
     FireworksStrategy,
     GeminiStrategy,
+    GroqStrategy,
     OpenAICompatibleStrategy,
     OpenAIStrategy,
     OpenRouterStrategy,
@@ -50,6 +51,8 @@ def clean_env():
         "GEMINI_MODEL",
         "FIREWORKS_API_KEY",
         "EXPERT_FIREWORKS_API_KEY",
+        "GROQ_API_KEY",
+        "EXPERT_GROQ_API_KEY",
     ]
 
     # Store original values
@@ -307,6 +310,28 @@ def test_fireworks_validation(clean_env):
 
     # Valid API key
     os.environ["FIREWORKS_API_KEY"] = "test-key"
+    result = strategy.validate()
+    assert result.valid
+    assert not result.missing_vars
+
+
+def test_groq_validation(clean_env):
+    """Test Groq provider validation."""
+    strategy = GroqStrategy()
+
+    # No API key
+    result = strategy.validate()
+    assert not result.valid
+    assert "GROQ_API_KEY environment variable is not set" in result.missing_vars
+
+    # Empty API key
+    os.environ["GROQ_API_KEY"] = ""
+    result = strategy.validate()
+    assert not result.valid
+    assert "GROQ_API_KEY environment variable is not set" in result.missing_vars
+
+    # Valid API key
+    os.environ["GROQ_API_KEY"] = "test-key"
     result = strategy.validate()
     assert result.valid
     assert not result.missing_vars

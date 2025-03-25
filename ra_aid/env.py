@@ -47,6 +47,7 @@ def copy_base_to_expert_vars(base_provider: str, expert_provider: str) -> None:
         },
         "deepseek": {"DEEPSEEK_API_KEY": "EXPERT_DEEPSEEK_API_KEY"},
         "fireworks": {"FIREWORKS_API_KEY": "EXPERT_FIREWORKS_API_KEY"},
+        "groq": {"GROQ_API_KEY": "EXPERT_GROQ_API_KEY"},
         "ollama": {"OLLAMA_BASE_URL": "EXPERT_OLLAMA_BASE_URL"},
     }
 
