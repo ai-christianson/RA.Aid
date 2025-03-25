@@ -18,6 +18,7 @@ from anthropic import APIError, APITimeoutError, InternalServerError, RateLimitE
 from openai import RateLimitError as OpenAIRateLimitError
 from litellm.exceptions import RateLimitError as LiteLLMRateLimitError
 from google.api_core.exceptions import ResourceExhausted
+from fireworks.client.error import ServiceUnavailableError, RateLimitError as FireworksRateLimitError
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import (
     BaseMessage,
@@ -275,12 +276,17 @@ def _handle_api_error(e, attempt, max_retries, base_delay):
         ):
             raise e
 
-    # 2. Check for status_code or http_status attribute equal to 429
-    if hasattr(e, "status_code") and e.status_code == 429:
+    # 2. Check for specific error types that should be retried
+    if isinstance(e, ServiceUnavailableError):
+        pass  # This is a service unavailable error, retry
+    elif isinstance(e, FireworksRateLimitError):
+        pass  # This is a Fireworks rate limit error, retry
+    # 3. Check for status_code or http_status attribute equal to 429
+    elif hasattr(e, "status_code") and e.status_code == 429:
         pass  # This is a rate limit error, continue with retry logic
     elif hasattr(e, "http_status") and e.http_status == 429:
         pass  # This is a rate limit error, continue with retry logic
-    # 3. Check for rate limit phrases in error message
+    # 4. Check for rate limit phrases in error message
     elif isinstance(e, Exception) and not isinstance(e, ValueError):
         error_str = str(e).lower()
         if not any(
@@ -605,6 +611,8 @@ def run_agent_with_retry(
                     ResourceExhausted,
                     APIError,
                     ValueError,
+                    ServiceUnavailableError,
+                    FireworksRateLimitError,
                 ) as e:
                     # Check if this is a BadRequestError (HTTP 400) which is unretryable
                     error_str = str(e).lower()
