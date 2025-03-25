@@ -46,6 +46,7 @@ def copy_base_to_expert_vars(base_provider: str, expert_provider: str) -> None:
             "GEMINI_MODEL": "EXPERT_GEMINI_MODEL",
         },
         "deepseek": {"DEEPSEEK_API_KEY": "EXPERT_DEEPSEEK_API_KEY"},
+        "fireworks": {"FIREWORKS_API_KEY": "EXPERT_FIREWORKS_API_KEY"},
         "ollama": {"OLLAMA_BASE_URL": "EXPERT_OLLAMA_BASE_URL"},
     }
 

@@ -26,6 +26,7 @@ dependencies = [
     "langchain-openai>=0.3.8",
     "langchain-ollama>=0.2.3",
     "langchain-google-genai>=2.0.11",
+    "langchain-fireworks>=0.2.8",
     "langgraph>=0.3.5",
     "langgraph-checkpoint>=2.0.18",
     "langchain-core>=0.3.5",

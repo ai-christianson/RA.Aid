@@ -13,6 +13,38 @@ DEFAULT_BASE_LATENCY = 240
 DEFAULT_AGENT_BACKEND = AgentBackendType.CIAYN
 
 models_params = {
+    "fireworks": {
+        "accounts/fireworks/models/mixtral-8x7b-instruct": {
+            "token_limit": 32000,
+            "supports_temperature": True,
+            "default_temperature": DEFAULT_TEMPERATURE,
+            "latency_coefficient": DEFAULT_BASE_LATENCY,
+        },
+        "accounts/fireworks/models/llama-v3-70b-instruct": {
+            "token_limit": 8192,
+            "supports_temperature": True,
+            "default_temperature": DEFAULT_TEMPERATURE,
+            "latency_coefficient": DEFAULT_BASE_LATENCY,
+        },
+        "accounts/fireworks/models/llama-v3-8b-instruct": {
+            "token_limit": 8192,
+            "supports_temperature": True,
+            "default_temperature": DEFAULT_TEMPERATURE,
+            "latency_coefficient": DEFAULT_BASE_LATENCY,
+        },
+        "accounts/fireworks/models/mixtral-8x22b-instruct": {
+            "token_limit": 65536,
+            "supports_temperature": True,
+            "default_temperature": DEFAULT_TEMPERATURE,
+            "latency_coefficient": DEFAULT_BASE_LATENCY,
+        },
+        "accounts/fireworks/models/firefunction-v2": {
+            "token_limit": 16000,
+            "supports_temperature": True,
+            "default_temperature": DEFAULT_TEMPERATURE,
+            "latency_coefficient": DEFAULT_BASE_LATENCY,
+        },
+    },
     "openai": {
         "gpt-3.5-turbo-0125": {
             "token_limit": 16385,
