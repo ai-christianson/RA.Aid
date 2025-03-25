@@ -815,11 +815,13 @@ models_params = {
         },
     },
     "groq": {
-        "qwen-qwq-32": {
+        "qwen-qwq-32b": {
             "token_limit": 131072,
             "supports_temperature": True,
+            "supports_think_tag": True,
             "default_temperature": 0.6,
             "latency_coefficient": DEFAULT_BASE_LATENCY,
+            "max_tokens": 131072,
         },
         "llama3-8b-8192": {
             "token_limit": 8192,
