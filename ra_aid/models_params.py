@@ -19,6 +19,7 @@ models_params = {
             "supports_temperature": True,
             "default_temperature": DEFAULT_TEMPERATURE,
             "latency_coefficient": DEFAULT_BASE_LATENCY,
+            "default_backend": AgentBackendType.CIAYN
         },
         "accounts/fireworks/models/llama-v3-70b-instruct": {
             "token_limit": 8192,
