@@ -400,6 +400,15 @@ models_params = {
             "latency_coefficient": DEFAULT_BASE_LATENCY,
         },
     },
+    "gemini": {
+        "gemini-2.5-pro-exp-03-25": {
+            "token_limit": 1000000,
+            "supports_temperature": True,
+            "default_temperature": DEFAULT_TEMPERATURE,
+            "latency_coefficient": DEFAULT_BASE_LATENCY,
+            "default_backend": AgentBackendType.CREATE_REACT_AGENT
+        },
+    },
     "ollama": {
         "command-r": {
             "token_limit": 12800,
