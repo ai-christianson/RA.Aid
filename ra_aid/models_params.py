@@ -402,9 +402,9 @@ models_params = {
     },
     "gemini": {
         "gemini-2.5-pro-exp-03-25": {
-            "token_limit": 1000000,
+            "token_limit": 1048576,
             "supports_temperature": True,
-            "default_temperature": DEFAULT_TEMPERATURE,
+            "default_temperature": 1.0,
             "latency_coefficient": DEFAULT_BASE_LATENCY,
             "default_backend": AgentBackendType.CREATE_REACT_AGENT
         },
