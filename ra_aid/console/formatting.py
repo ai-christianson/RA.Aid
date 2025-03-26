@@ -141,6 +141,15 @@ def print_warning(message: str, title: str = "Warning") -> None:
     cpm(message, title=title, border_style="yellow bold")
 
 
+def print_rate_limit_info(message: str) -> None:
+    """Print a rate limit info message in a yellow-bordered panel.
+
+    Args:
+        message: The rate limit message to display (supports Markdown formatting)
+    """
+    cpm(message, title="⏳ Rate Limit Hit - Retrying", border_style="yellow bold")
+
+
 def print_interrupt(message: str) -> None:
     """Print an interrupt message in a yellow-bordered panel with stop emoji.
 

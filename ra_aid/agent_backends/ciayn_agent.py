@@ -20,6 +20,7 @@ from ra_aid.tools.reflection import get_function_info
 from ra_aid.tool_configs import CUSTOM_TOOLS
 from ra_aid.console.formatting import cpm
 from ra_aid.console.formatting import print_warning, print_error, console
+import ra_aid.console.formatting
 from ra_aid.agent_context import should_exit
 from ra_aid.text.processing import extract_think_tag, process_thinking_content
 from rich.panel import Panel
@@ -393,8 +394,7 @@ class CiaynAgent:
             # Regular single tool call case
             if validate_function_call_pattern(code):
                 logger.debug(f"Tool call validation failed. Attempting to extract function call using LLM.")
-                from ra_aid.console.formatting import print_warning
-                print_warning("Tool call validation failed. Attempting to extract function call using LLM.", title="Tool Validation Error")
+                ra_aid.console.formatting.print_warning("Tool call validation failed. Attempting to extract function call using LLM.", title="Tool Validation Error")
                 functions_list = "\n\n".join(self.available_functions)
                 code = self._extract_tool_call(code, functions_list)
 
@@ -485,7 +485,7 @@ class CiaynAgent:
             if is_custom_tool:
                 custom_tool_output = f"Executing custom tool: {tool_name}\n"
                 custom_tool_output += f"\n\tResult: {result}"
-                console.print(Panel(Markdown(custom_tool_output.strip()), title=" Custom Tool", border_style="magenta"))
+                ra_aid.console.formatting.console.print(ra_aid.console.formatting.Panel(ra_aid.console.formatting.Markdown(custom_tool_output.strip()), title=" Custom Tool", border_style="magenta"))
 
             return result
         except Exception as e:
@@ -524,7 +524,7 @@ class CiaynAgent:
                 # Just log and continue if there's an error in trajectory recording
                 logger.error(f"Error recording trajectory for tool error display: {trajectory_error}")
                 
-            print_warning(f"Tool execution failed for `{tool_name}`:\nError: {str(e)}\n\nCode:\n\n````\n{code}\n````", title="Tool Error")
+            ra_aid.console.formatting.print_warning(f"Tool execution failed for `{tool_name}`:\nError: {str(e)}\n\nCode:\n\n````\n{code}\n````", title="Tool Error")
             raise ToolExecutionError(
                 error_msg, base_message=msg, tool_name=tool_name
             ) from e
@@ -587,7 +587,7 @@ class CiaynAgent:
                 # Just log and continue if there's an error in trajectory recording
                 logger.error(f"Error recording trajectory for fallback failed warning: {trajectory_error}")
                 
-            print_warning(f"Tool fallback was attempted but did not succeed. Original error: {str(e)}", title="Fallback Failed")
+            ra_aid.console.formatting.print_warning(f"Tool fallback was attempted but did not succeed. Original error: {str(e)}", title="Fallback Failed")
             return ""
 
         self.chat_history.append(self.fallback_fixed_msg)
@@ -716,7 +716,7 @@ class CiaynAgent:
                 # Just log and continue if there's an error in trajectory recording
                 logger.error(f"Error recording trajectory for extraction error display: {trajectory_error}")
                 
-            print_warning("Failed to extract a valid tool call from the model's response.", title="Extraction Failed")
+            ra_aid.console.formatting.print_warning("Failed to extract a valid tool call from the model's response.", title="Extraction Failed")
             raise ToolExecutionError("Failed to extract tool call")
         ma = matches[0][0].strip()
         mb = matches[0][1].strip().replace("\n", " ")
@@ -799,7 +799,7 @@ class CiaynAgent:
                     # Just log and continue if there's an error in trajectory recording
                     logger.error(f"Error recording trajectory for empty response warning: {trajectory_error}")
                     
-                print_warning(warning_message, title="Empty Response")
+                ra_aid.console.formatting.print_warning(warning_message, title="Empty Response")
                 
                 if empty_response_count >= max_empty_responses:
                     # If we've had too many empty responses, raise an error to break the loop
@@ -841,7 +841,7 @@ class CiaynAgent:
                         # Just log and continue if there's an error in trajectory recording
                         logger.error(f"Error recording trajectory for agent crash: {trajectory_error}")
                         
-                    print_error(error_message)
+                    ra_aid.console.formatting.print_error(error_message)
                     
                     yield self._create_error_chunk(crash_message)
                     return
