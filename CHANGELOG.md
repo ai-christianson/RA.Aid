@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Fixed tool call validation logic, improving compatibility with models like `gemini-2.5-pro-exp-03-25`. (3e2d888)
+- Prevent console logs from showing when `log_mode` is set to "file". (2ca0da2)
+- Fixed a test related to the `mark_research_complete_no_implementation_required` tool. (065747b)
 
 ## [0.19.1] 2025-03-25
 
