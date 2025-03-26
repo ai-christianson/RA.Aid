@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Added `mark_research_complete_no_implementation_required` tool to prevent infinite research loops when no implementation is needed after research. (83b03bf)
+
+### Changed
+- Improved messaging around API rate limits to be less alarming. (9baee8c)
+- Updated dependencies and optimized model parameters for Gemini. (4197822)
+- Improved support for the `gemini-2.5-pro-exp-03-25` model. (110efc6)
+- Updated model parameters. (83d2192)
+
+### Fixed
+- Fixed tool call validation logic, improving compatibility with models like `gemini-2.5-pro-exp-03-25`. (3e2d888)
+
 ## [0.19.1] 2025-03-25
 
 ### Added
