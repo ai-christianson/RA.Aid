@@ -216,6 +216,7 @@ class TestFunctionCallValidation:
             'nested_parens(func("test"))',
             "under_score()",
             # Removed invalid Python syntax with dash: "with-dash()",
+            "run_shell_command(command='git describe --tags --abbrev=0')",
         ],
     )
     def test_valid_function_calls(self, test_input):
@@ -280,6 +281,17 @@ class TestFunctionCallValidation:
             with open(invalid_file, "r") as f:
                 invalid_case = f.read().strip()
                 assert validate_function_call_pattern(invalid_case), f"Should fail on invalid case: {os.path.basename(invalid_file)}"
+
+    def test_shell_command_validation_with_markdown(self):
+        """Test the validation of shell command with markdown formatting."""
+        # This replicates the exact format seen in logs with markdown backticks
+        markdown_cmd = """```python
+run_shell_command(command='git describe --tags --abbrev=0')
+```"""
+        
+        # Test that the command validates properly
+        assert not validate_function_call_pattern(markdown_cmd), "Shell command with markdown backticks should be valid"
+
 
 class TestCiaynAgentNewMethods(unittest.TestCase):
     pass

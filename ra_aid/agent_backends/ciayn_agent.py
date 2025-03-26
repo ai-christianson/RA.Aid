@@ -48,12 +48,18 @@ def validate_function_call_pattern(s: str) -> bool:
     """
     # Clean up the code before parsing
     s = s.strip()
-    if s.startswith("```") and s.endswith("```"):
-        s = s[3:-3].strip()
-    elif s.startswith("```"):
-        s = s[3:].strip()
-    elif s.endswith("```"):
-        s = s[:-3].strip()
+    
+    # Handle markdown code blocks more comprehensively
+    if s.startswith("```"):
+        # Extract the content between the backticks
+        lines = s.split("\n")
+        # Remove first line (which may contain ```python or just ```)
+        lines = lines[1:] if len(lines) > 1 else []
+        # Remove last line if it contains closing backticks
+        if lines and "```" in lines[-1]:
+            lines = lines[:-1]
+        # Rejoin the content
+        s = "\n".join(lines).strip()
     
     # Use AST parsing as the single validation method
     try:
@@ -261,14 +267,24 @@ class CiaynAgent:
 
         try:
             code = code.strip()
-            if code.startswith("```"):
+            # Check for code blocks with any language specifier
+            if code.startswith("```") and not code.startswith("``` "):
+                # Extract everything after the first newline to skip the language specifier
+                first_newline = code.find('\n')
+                if first_newline != -1:
+                    code = code[first_newline + 1:].strip()
+                else:
+                    # If there's no newline, just remove the backticks
+                    code = code[3:].strip()
+            # Additional check for simple code blocks without language
+            elif code.startswith("```"):
                 code = code[3:].strip()
             if code.endswith("```"):
                 code = code[:-3].strip()
             
             # Check for multiple tool calls that can be bundled
             tool_calls = self._detect_multiple_tool_calls(code)
-            
+
             # If we have multiple valid bundleable calls, execute them in sequence
             if len(tool_calls) > 1:
                 # Check for should_exit before executing bundled tool calls
@@ -377,6 +393,8 @@ class CiaynAgent:
             # Regular single tool call case
             if validate_function_call_pattern(code):
                 logger.debug(f"Tool call validation failed. Attempting to extract function call using LLM.")
+                from ra_aid.console.formatting import print_warning
+                print_warning("Tool call validation failed. Attempting to extract function call using LLM.", title="Tool Validation Error")
                 functions_list = "\n\n".join(self.available_functions)
                 code = self._extract_tool_call(code, functions_list)
 
@@ -467,7 +485,7 @@ class CiaynAgent:
             if is_custom_tool:
                 custom_tool_output = f"Executing custom tool: {tool_name}\n"
                 custom_tool_output += f"\n\tResult: {result}"
-                console.print(Panel(Markdown(custom_tool_output.strip()), title="⚙️ Custom Tool", border_style="magenta"))
+                console.print(Panel(Markdown(custom_tool_output.strip()), title=" Custom Tool", border_style="magenta"))
 
             return result
         except Exception as e:
@@ -723,7 +741,8 @@ class CiaynAgent:
                 break
                 
             base_prompt = self._build_prompt(last_result)
-            self.chat_history.append(HumanMessage(content=base_prompt))
+            if base_prompt:  # Only add if non-empty
+                self.chat_history.append(HumanMessage(content=base_prompt))
             full_history = self._trim_chat_history(initial_messages, self.chat_history)
             response = self.model.invoke([self.sys_message] + full_history)
             
@@ -739,7 +758,7 @@ class CiaynAgent:
                 content=response.content,
                 supports_think_tag=supports_think_tag,
                 supports_thinking=supports_thinking,
-                panel_title="💭 Thoughts",
+                panel_title=" Thoughts",
                 show_thoughts=self.config.get("show_thoughts", False)
             )
 
@@ -815,7 +834,8 @@ class CiaynAgent:
                             human_input_id=human_input_id,
                             is_error=True,
                             error_message=error_message,
-                            error_type="AgentCrashError"
+                            error_type="AgentCrashError",
+                            tool_name="unknown_tool"
                         )
                     except Exception as trajectory_error:
                         # Just log and continue if there's an error in trajectory recording
@@ -826,11 +846,6 @@ class CiaynAgent:
                     yield self._create_error_chunk(crash_message)
                     return
                 
-                # Send a message to the model explicitly telling it to make a tool call
-                self.chat_history.append(AIMessage(content=""))  # Add the empty response
-                self.chat_history.append(HumanMessage(content=NO_TOOL_CALL_PROMPT))
-                continue
-            
             # Reset empty response counter on successful response
             empty_response_count = 0
 
