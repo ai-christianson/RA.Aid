@@ -314,6 +314,82 @@ class OllamaStrategy(ProviderStrategy):
         return ValidationResult(valid=True, missing_vars=[])
 
 
+class FireworksStrategy(ProviderStrategy):
+    """Fireworks provider validation strategy."""
+
+    def validate(self, args: Optional[Any] = None) -> ValidationResult:
+        """Validate Fireworks environment variables.
+
+        Args:
+            args: Optional command line arguments
+
+        Returns:
+            Result of validation
+        """
+        missing = []
+
+        if (
+            args
+            and hasattr(args, "expert_provider")
+            and args.expert_provider == "fireworks"
+        ):
+            key = os.environ.get("EXPERT_FIREWORKS_API_KEY")
+            if not key or key == "":
+                # Try to copy from base if not set
+                base_key = os.environ.get("FIREWORKS_API_KEY")
+                if base_key:
+                    os.environ["EXPERT_FIREWORKS_API_KEY"] = base_key
+                    key = base_key
+            if not key:
+                missing.append(
+                    "EXPERT_FIREWORKS_API_KEY environment variable is not set"
+                )
+        else:
+            key = os.environ.get("FIREWORKS_API_KEY")
+            if not key:
+                missing.append("FIREWORKS_API_KEY environment variable is not set")
+
+        return ValidationResult(valid=len(missing) == 0, missing_vars=missing)
+
+
+class GroqStrategy(ProviderStrategy):
+    """Groq provider validation strategy."""
+
+    def validate(self, args: Optional[Any] = None) -> ValidationResult:
+        """Validate Groq environment variables.
+
+        Args:
+            args: Optional command line arguments
+
+        Returns:
+            Result of validation
+        """
+        missing = []
+
+        if (
+            args
+            and hasattr(args, "expert_provider")
+            and args.expert_provider == "groq"
+        ):
+            key = os.environ.get("EXPERT_GROQ_API_KEY")
+            if not key or key == "":
+                # Try to copy from base if not set
+                base_key = os.environ.get("GROQ_API_KEY")
+                if base_key:
+                    os.environ["EXPERT_GROQ_API_KEY"] = base_key
+                    key = base_key
+            if not key:
+                missing.append(
+                    "EXPERT_GROQ_API_KEY environment variable is not set"
+                )
+        else:
+            key = os.environ.get("GROQ_API_KEY")
+            if not key:
+                missing.append("GROQ_API_KEY environment variable is not set")
+
+        return ValidationResult(valid=len(missing) == 0, missing_vars=missing)
+
+
 class ProviderFactory:
     """Factory for creating provider validation strategies."""
 
@@ -336,6 +412,8 @@ class ProviderFactory:
             "gemini": GeminiStrategy(),
             "ollama": OllamaStrategy(),
             "deepseek": DeepSeekStrategy(),
+            "fireworks": FireworksStrategy(),
+            "groq": GroqStrategy(),
         }
         strategy = strategies.get(provider)
         return strategy

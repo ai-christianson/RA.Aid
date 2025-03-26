@@ -19,6 +19,7 @@ RA.Aid supports these model providers:
 | Provider | Description | Key Features |
 |----------|-------------|--------------|
 | DeepSeek | Chinese hedge fund who creates sophisticated LLMs | Strong, open models like R1 |
+| Fireworks | Serverless AI inference platform for open-source models | High-performance inference, pay-per-token, variety of open models |
 | OpenRouter | Multi-model gateway service | Access to 100+ models, unified API interface, pay-per-token |
 | OpenAI-compatible | Self-hosted model endpoints | Compatible with Llama, Mistral and other open models |
 | Anthropic | Claude model series | 200k token context, strong tool use, JSON/XML parsing |
@@ -34,6 +35,7 @@ RA.Aid supports these model providers:
 ```bash
 # Choose the appropriate provider
 export DEEPSEEK_API_KEY=your_key
+export FIREWORKS_API_KEY=your_key
 export OPENROUTER_API_KEY=your_key
 export OPENAI_API_KEY=your_key
 export ANTHROPIC_API_KEY=your_key
@@ -238,6 +240,7 @@ Complete list of supported environment variables:
 |----------|----------|---------|
 | `OPENROUTER_API_KEY` | OpenRouter | Main API access |
 | `DEEPSEEK_API_KEY` | DeepSeek | Main API access |
+| `FIREWORKS_API_KEY` | Fireworks | Main API access |
 | `OPENAI_API_KEY` | OpenAI-compatible | API access |
 | `OPENAI_API_BASE` | OpenAI-compatible | Custom endpoint |
 | `ANTHROPIC_API_KEY` | Anthropic | API access |
@@ -245,6 +248,7 @@ Complete list of supported environment variables:
 | `OLLAMA_BASE_URL` | Ollama | Custom endpoint (default: http://localhost:11434) |
 | `EXPERT_OPENROUTER_API_KEY` | OpenRouter | Expert tool |
 | `EXPERT_DEEPSEEK_API_KEY` | DeepSeek | Expert tool |
+| `EXPERT_FIREWORKS_API_KEY` | Fireworks | Expert tool |
 | `EXPERT_GEMINI_API_KEY` | Gemini | Expert tool |
 | `EXPERT_OLLAMA_BASE_URL` | Ollama | Expert tool endpoint |
 

@@ -17,6 +17,7 @@ from ra_aid.tools import (
     file_str_replace,
     fuzzy_find_project_files,
     list_directory_tree,
+    mark_research_complete_no_implementation_required,
     put_complete_file_contents,
     read_file_tool,
     ripgrep_search,
@@ -191,6 +192,7 @@ RESEARCH_TOOLS = [
     # one_shot_completed,
     # monorepo_detected,
     # ui_detected,
+    mark_research_complete_no_implementation_required,
 ]
 
 

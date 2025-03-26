@@ -56,12 +56,14 @@ The expert model can be configured through these environment variables:
 
 | Variable | Description |
 |----------|-------------|
-| `OPENAI_API_KEY` | API key for OpenAI models |
 | `ANTHROPIC_API_KEY` | API key for Anthropic models |
 | `DEEPSEEK_API_KEY` | API key for DeepSeek models |
-| `EXPERT_OPENAI_API_KEY` | API key specifically for expert (OpenAI) |
 | `EXPERT_ANTHROPIC_API_KEY` | API key specifically for expert (Anthropic) |
+| `EXPERT_FIREWORKS_API_KEY` | API key specifically for expert (Fireworks) |
+| `EXPERT_OPENAI_API_KEY` | API key specifically for expert (OpenAI) |
+| `FIREWORKS_API_KEY` | API key for Fireworks models |
 | `OLLAMA_BASE_URL` | URL for Ollama API (default: http://localhost:11434) |
+| `OPENAI_API_KEY` | API key for OpenAI models |
 
 The `EXPERT_` prefixed variables let you use different API keys for the expert model than for the main agent.
 
