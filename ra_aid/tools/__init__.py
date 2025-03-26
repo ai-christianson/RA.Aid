@@ -14,7 +14,7 @@ from .memory import (
 )
 from .programmer import run_programming_task
 from .read_file import read_file_tool
-from .research import existing_project_detected, monorepo_detected, ui_detected
+from .research import existing_project_detected, monorepo_detected, ui_detected, mark_research_complete_no_implementation_required
 from .ripgrep import ripgrep_search
 from .shell import run_shell_command
 from .web_search_tavily import web_search_tavily
@@ -43,4 +43,5 @@ __all__ = [
     "ask_human",
     "task_completed",
     "plan_implementation_completed",
+    "mark_research_complete_no_implementation_required",
 ]
