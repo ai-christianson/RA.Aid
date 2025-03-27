@@ -55,6 +55,15 @@ models_params = {
             "latency_coefficient": DEFAULT_BASE_LATENCY,
         },
     },
+    "mock": {
+        "mock_model": {
+            "attempt_llm_tool_extraction": True,
+            "supports_system_prompt": True,
+            "supports_tools": True,
+            "token_limit": 4096,
+            "max_tokens": 4096,
+        }
+    },
     "openai": {
         "gpt-3.5-turbo-0125": {
             "token_limit": 16385,

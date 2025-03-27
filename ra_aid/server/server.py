@@ -30,7 +30,6 @@ project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(_
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-from ra_aid.config import get_config # Keep this import after path modification
 from ra_aid.database.pydantic_models import TrajectoryModel
 # Import get_trajectory_repository as well
 from ra_aid.database.repositories.trajectory_repository import TrajectoryRepository, get_trajectory_repository

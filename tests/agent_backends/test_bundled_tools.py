@@ -155,6 +155,7 @@ def test_execute_tool_bundled_with_validation():
         agent = CiaynAgent(
             model=MagicMock(),
             tools=mock_tools,
+            config={"provider": "mock", "model": "mock_model", "attempt_llm_tool_extraction": True},
         )
     
     # Intentionally malformed calls that would require validation

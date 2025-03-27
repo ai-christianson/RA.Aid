@@ -54,14 +54,14 @@ def validate_function_call_pattern(s: str) -> bool:
     # Handle markdown code blocks more comprehensively
     if s.startswith("```"):
         # Extract the content between the backticks
-        lines = s.split("\\n")
+        lines = s.split('\n')
         # Remove first line (which may contain ```python or just ```)
         lines = lines[1:] if len(lines) > 1 else []
         # Remove last line if it contains closing backticks
         if lines and "```" in lines[-1]:
             lines = lines[:-1]
         # Rejoin the content
-        s = "\\n".join(lines).strip()
+        s = '\n'.join(lines).strip()
 
     # Use AST parsing as the single validation method
     try:
@@ -432,7 +432,7 @@ class CiaynAgent:
 
                                     # Generate a random ID for this result
                                     result_id = self._generate_random_id()
-                                    result_strings.append(f"<result-{result_id}>\\n{result}\\n</result-{result_id}>")
+                                    result_strings.append(f"<result-{result_id}>\n{result}\n</result-{result_id}>")
                                     continue
 
                                 # Update last tool call fingerprint for next comparison
@@ -449,10 +449,10 @@ class CiaynAgent:
 
                     # Generate a random ID for this result
                     result_id = self._generate_random_id()
-                    result_strings.append(f"<result-{result_id}>\\n{result}\\n</result-{result_id}>")
+                    result_strings.append(f"<result-{result_id}>\n{result}\n</result-{result_id}>")
 
                 # Return all results as one big string with tagged sections
-                return "\\n\\n".join(result_strings)
+                return "\n\n".join(result_strings)
 
             # Regular single tool call case
             if validate_function_call_pattern(code):
