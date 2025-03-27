@@ -6,7 +6,7 @@ following the repository pattern for data access abstraction. It handles
 operations for storing and retrieving agent action trajectories.
 """
 
-from typing import Dict, List, Optional, Any, Union
+from typing import Dict, List, Optional, Any, Union, Callable
 import contextvars
 import json
 import logging
@@ -112,6 +112,9 @@ class TrajectoryRepository:
     serialization and deserialization of JSON fields for tool parameters, results,
     and UI rendering data.
 
+    It also supports registering hooks that are executed after a new trajectory record
+    is successfully created.
+
     Example:
         with DatabaseManager() as db:
             with TrajectoryRepositoryManager(db) as repo:
@@ -121,6 +124,8 @@ class TrajectoryRepository:
                 )
                 all_trajectories = repo.get_all()
     """
+
+    _create_hooks: List[Callable[[TrajectoryModel], None]] = []
 
     def __init__(self, db):
         """
@@ -132,6 +137,25 @@ class TrajectoryRepository:
         if db is None:
             raise ValueError("Database connection is required for TrajectoryRepository")
         self.db = db
+
+    @classmethod
+    def register_create_hook(cls, hook: Callable[[TrajectoryModel], None]) -> None:
+        """
+        Register a hook to be called after a trajectory is created.
+
+        The hook function will receive the newly created TrajectoryModel as its only argument.
+        Hooks are executed in the order they are registered. If a hook raises an exception,
+        it will be logged, but subsequent hooks will still be executed, and the create
+        method will return normally.
+
+        Args:
+            hook: A callable that accepts a single TrajectoryModel argument.
+        """
+        if not callable(hook):
+            raise TypeError("Hook must be callable")
+        cls._create_hooks.append(hook)
+        logger.info(f"Registered trajectory create hook: {hook.__name__}")
+
 
     def _to_model(self, trajectory: Optional[Trajectory]) -> Optional[TrajectoryModel]:
         """
@@ -166,7 +190,7 @@ class TrajectoryRepository:
         error_details: Optional[str] = None,
     ) -> TrajectoryModel:
         """
-        Create a new trajectory record in the database.
+        Create a new trajectory record in the database and execute registered hooks.
 
         Args:
             tool_name: Optional name of the tool that was executed
@@ -239,7 +263,23 @@ class TrajectoryRepository:
                 logger.debug(
                     f"Created trajectory record ID {trajectory.id} of type: {record_type}"
                 )
-            return self._to_model(trajectory)
+
+            # Convert to Pydantic model
+            model = self._to_model(trajectory)
+
+            # Execute registered hooks
+            for hook in TrajectoryRepository._create_hooks:
+                try:
+                    hook(model)
+                except Exception as hook_exc:
+                    logger.error(
+                        f"Error executing trajectory create hook {hook.__name__}: {hook_exc}",
+                        exc_info=True # Add stack trace to log
+                    )
+                    # Do not re-raise, allow other hooks to run
+
+            return model # Return the model after hooks have run (or attempted to run)
+
         except peewee.DatabaseError as e:
             logger.error(f"Failed to create trajectory record: {str(e)}")
             raise
@@ -395,9 +435,7 @@ class TrajectoryRepository:
         """
         try:
             trajectories = Trajectory.select().order_by(Trajectory.id)
-            return {
-                trajectory.id: self._to_model(trajectory) for trajectory in trajectories
-            }
+            return {                trajectory.id: self._to_model(trajectory) for trajectory in trajectories            }
         except peewee.DatabaseError as e:
             logger.error(f"Failed to fetch all trajectories: {str(e)}")
             raise
@@ -438,8 +476,7 @@ class TrajectoryRepository:
             trajectory_id: ID of the trajectory to retrieve
 
         Returns:
-            Optional[TrajectoryModel]: The trajectory as a Pydantic model with parsed JSON fields,
-                                      or None if not found
+            Optional[TrajectoryModel]: The trajectory as a Pydantic model with parsed JSON fields,                                      or None if not found
         """
         return self.get(trajectory_id)
 

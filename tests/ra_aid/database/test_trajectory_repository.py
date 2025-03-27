@@ -4,7 +4,8 @@ Tests for the TrajectoryRepository class.
 
 import pytest
 import json
-from unittest.mock import patch
+import logging
+from unittest.mock import patch, MagicMock, call
 
 
 from ra_aid.database.connection import DatabaseManager, db_var
@@ -49,15 +50,17 @@ def cleanup_db():
 
 @pytest.fixture
 def cleanup_repo():
-    """Reset the repository contextvar after each test."""
+    """Reset the repository contextvar and hooks after each test."""
     # Reset before the test
     trajectory_repo_var.set(None)
+    TrajectoryRepository._create_hooks = [] # Clear hooks before each test
 
     # Run the test
     yield
 
     # Reset after the test
     trajectory_repo_var.set(None)
+    TrajectoryRepository._create_hooks = [] # Clear hooks after each test
 
 
 @pytest.fixture
@@ -144,6 +147,7 @@ def sample_trajectory(
 
 def test_create_trajectory(
     setup_db,
+    cleanup_repo, # Use cleanup_repo fixture
     sample_human_input,
     test_tool_parameters,
     test_tool_result,
@@ -189,7 +193,7 @@ def test_create_trajectory(
     assert trajectory.human_input_id == sample_human_input.id
 
 
-def test_create_trajectory_minimal(setup_db):
+def test_create_trajectory_minimal(setup_db, cleanup_repo): # Use cleanup_repo fixture
     """Test creating a trajectory with minimal fields."""
     # Set up repository
     repo = TrajectoryRepository(db=setup_db)
@@ -323,7 +327,7 @@ def test_delete_trajectory(setup_db, sample_trajectory):
     assert result is False
 
 
-def test_get_all_trajectories(setup_db, sample_human_input, mock_session_repository):
+def test_get_all_trajectories(setup_db, sample_human_input, mock_session_repository, cleanup_repo): # Use cleanup_repo fixture
     """Test retrieving all trajectories."""
     # Set up repository
     repo = TrajectoryRepository(db=setup_db)
@@ -353,7 +357,7 @@ def test_get_all_trajectories(setup_db, sample_human_input, mock_session_reposit
 
 
 def test_get_trajectories_by_human_input(
-    setup_db, sample_human_input, mock_session_repository
+    setup_db, sample_human_input, mock_session_repository, cleanup_repo # Use cleanup_repo fixture
 ):
     """Test retrieving trajectories by human input ID."""
     # Set up repository
@@ -490,7 +494,7 @@ def test_get_session_usage_totals(setup_db):
     totals = repo.get_session_usage_totals(1)
 
     # Verify the totals are calculated correctly
-    assert totals["total_cost"] == 0.006  # 0.001 + 0.002 + 0.003
+    assert totals["total_cost"] == pytest.approx(0.006)  # 0.001 + 0.002 + 0.003
     assert totals["total_input_tokens"] == 600  # 100 + 200 + 300
     assert totals["total_output_tokens"] == 300  # 50 + 100 + 150
     assert totals["total_tokens"] == 900  # 600 + 300
@@ -499,7 +503,7 @@ def test_get_session_usage_totals(setup_db):
     totals_session2 = repo.get_session_usage_totals(2)
 
     # Verify the totals for session 2
-    assert totals_session2["total_cost"] == 0.999  # Just the one record
+    assert totals_session2["total_cost"] == pytest.approx(0.999)  # Just the one record
     assert totals_session2["total_input_tokens"] == 999
     assert totals_session2["total_output_tokens"] == 999
     assert totals_session2["total_tokens"] == 1998  # 999 + 999
@@ -530,40 +534,13 @@ def test_get_session_usage_totals_with_nulls(setup_db):
     totals = repo.get_session_usage_totals(1)
 
     # Verify the totals handle null values correctly
-    assert totals["total_cost"] == 0.001  # Only the non-null cost
+    assert totals["total_cost"] == pytest.approx(0.001)  # Only the non-null cost
     assert totals["total_input_tokens"] == 200  # Only the non-null input tokens
     assert totals["total_output_tokens"] == 50  # Only the non-null output tokens
     assert totals["total_tokens"] == 250  # 200 + 50
 
 
-def test_get_session_usage_totals_with_nulls(setup_db):
-    """Test calculating session usage totals with null values."""
-    # Set up repository
-    repo = TrajectoryRepository(db=setup_db)
-
-    # Create some trajectories with null values
-    for i in range(3):
-        # Create trajectories with model_usage record_type (used for totals)
-        traj = Trajectory.create(
-            session=1,
-            record_type="model_usage",
-            # Set one field null per trajectory for test coverage
-            current_cost=0.001 if i != 0 else None,
-            input_tokens=200 if i != 1 else None,
-            output_tokens=100 if i != 2 else None,
-        )
-
-    # Get session usage totals
-    totals = repo.get_session_usage_totals(1)
-
-    # Verify the totals (should exclude nulls)
-    assert totals["total_cost"] == 0.002  # 2 * 0.001 (one null)
-    assert totals["total_input_tokens"] == 400  # 2 * 200 (one null)
-    assert totals["total_output_tokens"] == 200  # 2 * 100 (one null)
-    assert totals["total_tokens"] == 600  # 400 + 200
-
-
-def test_get_trajectories_by_session(setup_db, mock_session_repository):
+def test_get_trajectories_by_session(setup_db, mock_session_repository, cleanup_repo): # Use cleanup_repo fixture
     """Test retrieving trajectories by session ID."""
     # Set up repository
     repo = TrajectoryRepository(db=setup_db)
@@ -635,3 +612,90 @@ def test_repository_init_without_db():
 
     # Verify the correct error message
     assert "Database connection is required" in str(excinfo.value)
+
+
+# --- Tests for Hook Mechanism ---
+
+def test_register_create_hook(setup_db, cleanup_repo):
+    """Test registering a valid hook."""
+    mock_hook = MagicMock()
+    mock_hook.__name__ = 'mock_hook' # Added line
+    TrajectoryRepository.register_create_hook(mock_hook)
+    assert mock_hook in TrajectoryRepository._create_hooks
+
+def test_register_invalid_hook(setup_db, cleanup_repo):
+    """Test registering an invalid (non-callable) hook."""
+    with pytest.raises(TypeError, match="Hook must be callable"):
+        TrajectoryRepository.register_create_hook("not a function")
+
+def test_create_hook_execution(setup_db, cleanup_repo, mock_session_repository):
+    """Test that registered hooks are executed upon trajectory creation."""
+    repo = TrajectoryRepository(db=setup_db)
+
+    # Create mock hooks
+    mock_hook_1 = MagicMock(name='hook1')
+    mock_hook_1.__name__ = 'mock_hook_1' # Added line
+    mock_hook_2 = MagicMock(name="hook2")
+    mock_hook_2.__name__ = 'mock_hook_2' # Added line
+
+    # Register hooks
+    TrajectoryRepository.register_create_hook(mock_hook_1)
+    TrajectoryRepository.register_create_hook(mock_hook_2)
+
+    # Create a trajectory
+    trajectory_model = repo.create(tool_name="hook_test", current_cost=0.1)
+
+    # Verify hooks were called once with the created model
+    mock_hook_1.assert_called_once_with(trajectory_model)
+    mock_hook_2.assert_called_once_with(trajectory_model)
+
+    # Verify the model content passed to the hook
+    args, _ = mock_hook_1.call_args
+    passed_model = args[0]
+    assert isinstance(passed_model, TrajectoryModel)
+    assert passed_model.tool_name == "hook_test"
+    assert passed_model.current_cost == 0.1
+
+
+def test_create_hook_error_handling(setup_db, cleanup_repo, mock_session_repository):
+    """Test that hook errors are logged and don't stop other hooks or the create method."""
+    repo = TrajectoryRepository(db=setup_db)
+
+    # Mock logger to check error logging
+    with patch("ra_aid.database.repositories.trajectory_repository.logger") as mock_logger:
+
+        # Create mock hooks
+        failing_hook = MagicMock(name="failing_hook", side_effect=ValueError("Hook failed!"))
+        failing_hook.__name__ = 'failing_hook' # Added line
+        successful_hook = MagicMock(name="successful_hook")
+        successful_hook.__name__ = 'successful_hook' # Added line
+
+        # Register hooks
+        TrajectoryRepository.register_create_hook(failing_hook)
+        TrajectoryRepository.register_create_hook(successful_hook)
+
+        # Create a trajectory - this should not raise an exception
+        trajectory_model = None
+        try:
+            trajectory_model = repo.create(tool_name="hook_error_test")
+        except Exception as e:
+            pytest.fail(f"repo.create raised an unexpected exception: {e}")
+
+        # Verify the failing hook was called
+        failing_hook.assert_called_once()
+
+        # Verify the successful hook was still called after the failing one
+        successful_hook.assert_called_once_with(trajectory_model)
+
+        # Verify the error was logged
+        mock_logger.error.assert_called_once()
+        args, kwargs = mock_logger.error.call_args
+        assert "Error executing trajectory create hook failing_hook" in args[0]
+        assert "Hook failed!" in args[0]
+        assert kwargs.get("exc_info") is True # Check if stack trace was included
+
+        # Verify create still returned the model
+        assert isinstance(trajectory_model, TrajectoryModel)
+        assert trajectory_model.tool_name == "hook_error_test"
+
+# --- End Tests for Hook Mechanism ---
