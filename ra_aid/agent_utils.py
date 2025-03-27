@@ -12,7 +12,6 @@ from ra_aid.callbacks.anthropic_callback_handler import (
     AnthropicCallbackHandler,
 )
 from ra_aid.model_detection import (
-    model_name_has_claude,
     should_use_react_agent,
     get_model_name_from_chat_model,
 )
