@@ -267,7 +267,6 @@ Examples:
     ra-aid -m "Add error handling to the database module"
     ra-aid -m "Explain the authentication flow" --research-only
     ra-aid --msg-file task_description.txt
-    ra-aid --msg-file task_description.txt
         """,
     )
     parser.add_argument(
