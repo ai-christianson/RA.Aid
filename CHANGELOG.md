@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+## [0.21.0] 2025-03-27
+
+### Added
+- Add `include_paths` argument to ripgrep tool (`881d4f0`).
+- Add trajectory hooks (`3160dcd`).
+- Add support for `--msg-file` argument to read task/message from a file (`a827742`).
+
+### Changed
+- Improve CIAYN agent's robust code handling (`ac5abb3`, `38340b2`).
+- Optimize LLM-based tool call extraction for specific models (`67b268f`).
+- Set max context for Fireworks models (`44cbe84`).
+- Update model parameters for R1 on Fireworks (`328d49d`).
+- Correct CIAYN capitalization (`d07ccc0`).
+- Remove duplicate example for ra-aid command in documentation (`3d119e7`).
+- Update README to clarify command line options for message and msg-file arguments (`a827742`).
+
+### Fixed
+- Fix tests (`ce5301d`, `feb9a11`).
+- Fix ripgrep tool functionality (`4d28d68`).
+- Add tests for `--msg-file` argument handling and exclusivity (`a827742`).
+
 ## [0.20.0] 2025-03-26
 
 ### Added
@@ -343,6 +365,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Use reasoning_effort=high for OpenAI expert models
 - Do not default to o1 model (#82)
 - Make current working directory and date available to more agents
+- Fixed o1 reference (#82)
 
 ## [0.13.2] - 2025-02-02
 
