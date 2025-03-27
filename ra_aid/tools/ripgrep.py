@@ -1,4 +1,3 @@
-
 from typing import Dict, List, Union, Optional
 
 from langchain_core.tools import tool
@@ -213,10 +212,21 @@ def ripgrep_search(
         decoded_output = output.decode() if output else ""
 
         # Update trajectory with results
-        trajectory_repo.update_last_by_tool_name(
-            "ripgrep_search",
-            tool_output={"output": truncate_output(decoded_output), "return_code": return_code, "success": return_code == 0}
+        trajectory_repo.create(
+            tool_name="ripgrep_search",
+            tool_parameters={"pattern": pattern, "after_context_lines": after_context_lines, "before_context_lines": before_context_lines},
+            tool_result={"output": truncate_output(decoded_output), "return_code": return_code, "success": return_code == 0}
         )
+
+        if return_code != 0:
+            console_panel(truncate_output(decoded_output), title="🚨 Error", border_style="red")
+            return {"output": truncate_output(decoded_output), "return_code": return_code, "success": False}
+
+        # Display results
+        if decoded_output:
+            console.print(Markdown(truncate_output(decoded_output)))
+        else:
+            console_panel("No results found", title="🔍 Search Results", border_style="green")
 
         return {
             "output": truncate_output(decoded_output),
@@ -228,13 +238,13 @@ def ripgrep_search(
         error_msg = str(e)
 
         # Record error in trajectory
-        # No need to create a new one, just update the existing one
-        trajectory_repo.update_last_by_tool_name(
-            "ripgrep_search",
+        trajectory_repo.create(
+            tool_name="ripgrep_search",
+            tool_parameters={"pattern": pattern, "after_context_lines": after_context_lines, "before_context_lines": before_context_lines},
+            tool_result={"output": error_msg, "return_code": 1, "success": False},
             is_error=True,
             error_message=error_msg,
-            error_type=type(e).__name__,
-            tool_output={"output": error_msg, "return_code": 1, "success": False}
+            error_type=type(e).__name__
         )
 
         console_panel(error_msg, title="❌ Error", border_style="red")
