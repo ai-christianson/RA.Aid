@@ -24,6 +24,7 @@ from ra_aid.console.formatting import print_warning, print_error, console
 import ra_aid.console.formatting
 from ra_aid.agent_context import should_exit
 from ra_aid.text.processing import extract_think_tag, process_thinking_content
+from ra_aid.text import fix_triple_quote_contents
 from rich.panel import Panel
 from rich.markdown import Markdown
 
@@ -324,6 +325,7 @@ class CiaynAgent:
 
         try:
             code = self.strip_code_markup(code)
+            code = fix_triple_quote_contents(code)
 
             # Check for multiple tool calls that can be bundled
             tool_calls = self._detect_multiple_tool_calls(code)
@@ -763,70 +765,6 @@ class CiaynAgent:
             return 0
 
         return len(text.encode("utf-8")) // 2.0
-
-    def _extract_tool_call(self, code: str, functions_list: str) -> str:
-        """Extract a tool call from the code using a language model."""
-        model = get_model()
-        logger.debug(f"Attempting to fix malformed tool call using LLM. Original code:\\n```\\n{code}\\n```")
-        prompt = EXTRACT_TOOL_CALL_PROMPT.format(
-            functions_list=functions_list, code=code
-        )
-        response = model.invoke(prompt)
-        response_content = response.content # Use variable to avoid multiple accesses
-
-        # Enhanced pattern to handle various function call formats
-        # Includes optional whitespace, multi-line arguments, nested structures
-        pattern = r"([a-zA-Z_][\w_]*)\s*\(([\s\S]*)\)"
-        matches = re.findall(pattern, response_content, re.DOTALL)
-
-        if not matches:
-            logger.info(f"Failed to extract a valid tool call from the model's response. Response: {response_content}")
-
-            # Record error in trajectory
-            try:
-                # Import here to avoid circular imports
-                from ra_aid.database.repositories.trajectory_repository import TrajectoryRepository
-                from ra_aid.database.repositories.human_input_repository import HumanInputRepository
-                from ra_aid.database.connection import get_db
-
-                # Create repositories directly
-                trajectory_repo = TrajectoryRepository(get_db())
-                human_input_repo = HumanInputRepository(get_db())
-                human_input_id = human_input_repo.get_most_recent_id()
-
-                trajectory_repo.create(
-                    step_data={
-                        "error_message": "Failed to extract a valid tool call from the model's response.",
-                        "display_title": "Extraction Failed",
-                        "code": code,
-                        "response": response_content # Add model response to trajectory
-                    },
-                    record_type="error",
-                    human_input_id=human_input_id,
-                    is_error=True,
-                    error_message="Failed to extract a valid tool call from the model's response.",
-                    error_type="ExtractionError"
-                )
-            except Exception as trajectory_error:
-                # Just log and continue if there's an error in trajectory recording
-                logger.error(f"Error recording trajectory for extraction error display: {trajectory_error}")
-
-            ra_aid.console.formatting.print_warning(f"Failed to extract a valid tool call from the model's response. Response: {response_content}", title="Extraction Failed")
-            raise ToolExecutionError(f"Failed to extract tool call from response: {response_content}")
-
-        # Use the first match, assuming the model provides the best guess first
-        ma = matches[0][0].strip()
-        mb = matches[0][1].strip() # Keep potential newlines if arguments are multi-line
-
-        # Basic validation: Check if extracted function name exists
-        if ma not in [tool.func.__name__ for tool in self.tools]:
-             logger.warning(f"Extracted tool name '{ma}' not found in available tools.")
-             raise ToolExecutionError(f"Extracted tool name '{ma}' is not a valid tool.")
-
-        fixed_code = f"{ma}({mb})"
-        logger.debug(f"Successfully extracted tool call: `{fixed_code}`")
-        return fixed_code
-
 
     def stream(
         self, messages_dict: Dict[str, List[Any]], _config: Dict[str, Any] = None
