@@ -1,11 +1,14 @@
 """
 List of model parameters
 """
+
 from enum import Enum
+
 
 class AgentBackendType(Enum):
     CREATE_REACT_AGENT = 1
     CIAYN = 2
+
 
 DEFAULT_TOKEN_LIMIT = 100000
 DEFAULT_TEMPERATURE = 0.7
@@ -19,7 +22,7 @@ models_params = {
             "supports_temperature": True,
             "default_temperature": DEFAULT_TEMPERATURE,
             "latency_coefficient": DEFAULT_BASE_LATENCY,
-            "default_backend": AgentBackendType.CIAYN
+            "default_backend": AgentBackendType.CIAYN,
         },
         "accounts/fireworks/models/llama-v3-70b-instruct": {
             "token_limit": 8192,
@@ -44,6 +47,16 @@ models_params = {
             "supports_temperature": True,
             "default_temperature": DEFAULT_TEMPERATURE,
             "latency_coefficient": DEFAULT_BASE_LATENCY,
+        },
+    },
+    "deepseek": {
+        "deepseek-chat": {
+            "token_limit": 128000,
+            "supports_temperature": True,
+            "default_temperature": DEFAULT_TEMPERATURE,
+            "supports_reasoning_effort": False,
+            "latency_coefficient": DEFAULT_BASE_LATENCY,
+            "default_backend": AgentBackendType.CREATE_REACT_AGENT,
         },
     },
     "openai": {
@@ -407,7 +420,7 @@ models_params = {
             "supports_temperature": True,
             "default_temperature": 1.0,
             "latency_coefficient": DEFAULT_BASE_LATENCY,
-            "default_backend": AgentBackendType.CIAYN
+            "default_backend": AgentBackendType.CIAYN,
         },
     },
     "ollama": {
@@ -1011,7 +1024,7 @@ models_params = {
             "supports_temperature": True,
             "default_temperature": 1.0,
             "latency_coefficient": DEFAULT_BASE_LATENCY,
-            "default_backend": AgentBackendType.CREATE_REACT_AGENT
+            "default_backend": AgentBackendType.CREATE_REACT_AGENT,
         },
         "claude-3-7-sonnet-20250219": {
             "token_limit": 200000,
@@ -1020,7 +1033,7 @@ models_params = {
             "max_tokens": 64000,
             "default_temperature": 1.0,
             "latency_coefficient": DEFAULT_BASE_LATENCY,
-            "default_backend": AgentBackendType.CREATE_REACT_AGENT
+            "default_backend": AgentBackendType.CREATE_REACT_AGENT,
         },
         "claude-3-5-haiku-latest": {
             "token_limit": 200000,

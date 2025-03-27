@@ -77,11 +77,6 @@ def normalize_model_name(model_name: str) -> str:
     return model_name
 
 
-def is_deepseek_model(model: BaseChatModel) -> bool:
-    """Check if the given model is a ChatDeepSeek instance."""
-    return isinstance(model, ChatDeepSeek)
-
-
 def is_claude_37(model: str) -> bool:
     """Check if the model is a Claude 3.7 model.
 
@@ -108,10 +103,6 @@ def should_use_react_agent(model: BaseChatModel) -> bool:
     use_react_agent = False
     model_name = get_model_name_from_chat_model(model)
     normalized_model_name = normalize_model_name(model_name)
-
-    if is_deepseek_v3(model_name) and is_deepseek_model(model):
-        logger.debug(f"Using create_react_agent for DeepSeek model: {model_name}")
-        return True
 
     try:
         supports_function_calling = litellm.supports_function_calling(
