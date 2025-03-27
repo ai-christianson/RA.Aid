@@ -133,7 +133,7 @@ def state_modifier(
     return result
 
 
-def sonnet_35_state_modifier(
+def base_state_modifier(
     state: AgentState, max_input_tokens: int = DEFAULT_TOKEN_LIMIT
 ) -> list[BaseMessage]:
     """Given the agent state and max_tokens, return a trimmed list of messages.
@@ -260,7 +260,9 @@ def get_model_token_limit(
             # So we'll use the passed config directly
             repository_available = False
 
-        provider, model_name = get_provider_and_model_for_agent_type(config, agent_type, use_repository=repository_available)
+        provider, model_name = get_provider_and_model_for_agent_type(
+            config, agent_type, use_repository=repository_available
+        )
 
         # Always attempt to get model info from litellm first
         provider_model = model_name if not provider else f"{provider}/{model_name}"

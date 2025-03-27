@@ -1,11 +1,10 @@
 """Utilities for detecting and working with specific model types."""
 
-
-
 import litellm
 from typing import Any, Dict, Optional
 
 from langchain_core.language_models import BaseChatModel
+from langchain_deepseek import ChatDeepSeek
 from ra_aid.config import DEFAULT_MODEL
 from ra_aid.database.repositories.config_repository import get_config_repository
 from ra_aid.logging_config import get_logger
@@ -13,6 +12,24 @@ from ra_aid.models_params import models_params, AgentBackendType, DEFAULT_AGENT_
 
 
 logger = get_logger(__name__)
+
+
+def is_deepseek_v3(model_name: str) -> bool:
+    """Check if the model is DeepSeek v3.
+
+    Args:
+        model_name: Name of the model
+
+    Returns:
+        True if the model is a DeepSeek v3 model, False otherwise
+    """
+    # DeepSeek v3 is identified by "deepseek-chat" in the model name
+    # or when using "deepseek/deepseek-chat" through OpenRouter
+    return (
+        model_name == "deepseek-chat"
+        or model_name.lower().endswith("/deepseek-chat")
+        or "deepseek/deepseek-chat" in model_name.lower()
+    )
 
 
 def get_model_name_from_chat_model(model: Optional[BaseChatModel]) -> str:
@@ -39,10 +56,10 @@ def get_model_name_from_chat_model(model: Optional[BaseChatModel]) -> str:
 def normalize_model_name(model_name: str) -> str:
     """
     Normalize a model name by removing provider prefixes and version suffixes.
-    
+
     Args:
         model_name: The model name to normalize
-        
+
     Returns:
         str: The normalized model name
     """
@@ -52,25 +69,26 @@ def normalize_model_name(model_name: str) -> str:
     # Remove provider prefix (e.g., "anthropic/", "google/")
     elif "/" in model_name:
         model_name = model_name.split("/", 1)[1]
-    
+
     # Remove version suffix (e.g., ":free", ":v1")
     if ":" in model_name:
         model_name = model_name.split(":", 1)[0]
-        
+
     return model_name
 
 
 def is_claude_37(model: str) -> bool:
     """Check if the model is a Claude 3.7 model.
-    
+
     Args:
         model: The model name to check
-        
+
     Returns:
         bool: True if the model is a Claude 3.7 model, False otherwise
     """
     patterns = ["claude-3.7", "claude3.7", "claude-3-7"]
     return any(pattern in model for pattern in patterns)
+
 
 def should_use_react_agent(model: BaseChatModel) -> bool:
     """
@@ -95,9 +113,7 @@ def should_use_react_agent(model: BaseChatModel) -> bool:
             f"Model {model_name} (normalized: {normalized_model_name}) supports_function_calling: {supports_function_calling}"
         )
     except Exception as e:
-        logger.warning(
-            f"Error checking function calling support: {e}."
-        )
+        logger.warning(f"Error checking function calling support: {e}.")
 
     try:
         provider = get_config_repository().get("provider", "anthropic")
