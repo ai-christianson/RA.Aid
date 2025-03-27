@@ -155,6 +155,7 @@ def test_execute_tool_bundled_with_validation():
         agent = CiaynAgent(
             model=MagicMock(),
             tools=mock_tools,
+            config={"provider": "mock", "model": "mock_model", "attempt_llm_tool_extraction": True},
         )
     
     # Intentionally malformed calls that would require validation
@@ -170,7 +171,7 @@ emit_key_snippet({"file": "example.py", "start_line": 10, "end_line": 20})'''
         mock_validate.side_effect = [True, False]
         
         # Mock extract_tool_call to return a fixed version of the tool call
-        with patch.object(agent, "_extract_tool_call", return_value='emit_key_facts(["Fact 1", "Fact 2"])'):
+        with patch.object(CiaynAgent, "_extract_tool_call", return_value='emit_key_facts(["Fact 1", "Fact 2"])', create=True):
             # Execute
             result = agent._execute_tool(mock_message)
     

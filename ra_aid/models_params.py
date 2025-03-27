@@ -24,6 +24,15 @@ models_params = {
             "latency_coefficient": DEFAULT_BASE_LATENCY,
             "default_backend": AgentBackendType.CIAYN,
         },
+        "accounts/fireworks/models/deepseek-r1": {
+            "token_limit": 163840,
+            "max_tokens": 163840,
+            "supports_temperature": True,
+            "supports_think_tag": True,
+            "default_temperature": DEFAULT_TEMPERATURE,
+            "latency_coefficient": DEFAULT_BASE_LATENCY,
+            "default_backend": AgentBackendType.CIAYN
+        },
         "accounts/fireworks/models/llama-v3-70b-instruct": {
             "token_limit": 8192,
             "supports_temperature": True,
@@ -56,10 +65,23 @@ models_params = {
             "default_temperature": DEFAULT_TEMPERATURE,
             "supports_reasoning_effort": False,
             "latency_coefficient": DEFAULT_BASE_LATENCY,
-            "default_backend": AgentBackendType.CREATE_REACT_AGENT,
+            "default_backend": AgentBackendType.CIAYN,
         },
     },
+    "mock": {
+        "mock_model": {
+            "attempt_llm_tool_extraction": True,
+            "supports_system_prompt": True,
+            "supports_tools": True,
+            "token_limit": 4096,
+            "max_tokens": 4096,
+        }
+    },
     "openai": {
+        "chatgpt-4o-latest": {
+            "token_limit": 128000,
+            "default_backend": AgentBackendType.CIAYN,
+        },
         "gpt-3.5-turbo-0125": {
             "token_limit": 16385,
             "supports_temperature": True,

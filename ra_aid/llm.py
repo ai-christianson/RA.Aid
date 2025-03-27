@@ -16,6 +16,8 @@ from ra_aid.logging_config import get_logger
 from ra_aid.model_detection import is_claude_37, is_deepseek_v3
 
 
+from ra_aid.database.repositories.config_repository import get_config_repository
+
 from .models_params import models_params
 
 
@@ -169,6 +171,7 @@ def create_fireworks_client(
     api_key: str,
     temperature: Optional[float] = None,
     is_expert: bool = False,
+    num_ctx: int = 262144,
 ) -> BaseChatModel:
     """Create a ChatFireworks client.
 
@@ -187,12 +190,13 @@ def create_fireworks_client(
         temp_kwargs["temperature"] = temperature
     elif is_expert:
         temp_kwargs["temperature"] = 0
-
+    
     return ChatFireworks(
         model=model_name,
         fireworks_api_key=api_key,
         timeout=int(get_env_var(name="LLM_REQUEST_TIMEOUT", default=LLM_REQUEST_TIMEOUT)),
         max_retries=int(get_env_var(name="LLM_MAX_RETRIES", default=LLM_MAX_RETRIES)),
+        max_tokens=num_ctx,
         **temp_kwargs,
     )
 
@@ -400,6 +404,13 @@ def create_llm_client(
     other_kwargs = {}
     if is_claude_37(model_name):
         other_kwargs = {"max_tokens": 64000}
+    
+    # Get the config repository through the context manager pattern
+    config_repo = get_config_repository()
+        
+    # Get the appropriate num_ctx value from config repository
+    num_ctx_key = "expert_num_ctx" if is_expert else "num_ctx"
+    num_ctx_value = config_repo.get(num_ctx_key, 262144)
 
     # Handle temperature settings
     if is_expert:
@@ -534,16 +545,7 @@ def create_llm_client(
             **thinking_kwargs,
         )
     elif provider == "ollama":
-        # Get num_ctx from config repository based on whether this is for expert model
-        from ra_aid.database.repositories.config_repository import get_config_repository
-
-        # Get the config repository through the context manager pattern
-        config_repo = get_config_repository()
-
-        # Get the appropriate num_ctx value from config repository
-        num_ctx_key = "expert_num_ctx" if is_expert else "num_ctx"
-        num_ctx_value = config_repo.get(num_ctx_key, 262144)
-
+        
         return create_ollama_client(
             model_name=model_name,
             base_url=config.get("base_url"),
@@ -558,6 +560,7 @@ def create_llm_client(
             api_key=config.get("api_key"),
             temperature=temperature if temp_kwargs else None,
             is_expert=is_expert,
+            num_ctx=num_ctx_value,
         )
     elif provider == "groq":
         return create_groq_client(

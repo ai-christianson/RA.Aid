@@ -329,6 +329,27 @@ def test_missing_message():
     assert args.message == "test"
 
 
+def test_msg_file_argument(tmp_path):
+    """Test --msg-file argument handling."""
+    # Create a test file
+    test_file = tmp_path / "test_task.txt"
+    test_file.write_text("Test task content")
+
+    # Test reading from file
+    args = parse_arguments(["--msg-file", str(test_file)])
+    assert args.message == "Test task content"
+    assert args.msg_file == str(test_file)
+
+    # Test mutual exclusivity with --message
+    with pytest.raises(SystemExit):
+        parse_arguments(["--msg-file", str(test_file), "-m", "direct message"])
+
+    # Test non-existent file
+    non_existent = tmp_path / "nonexistent.txt"
+    with pytest.raises(SystemExit):
+        parse_arguments(["--msg-file", str(non_existent)])
+
+
 def test_research_model_provider_args(mock_dependencies, mock_config_repository):
     """Test that research-specific model/provider args are correctly stored in config."""
     import sys

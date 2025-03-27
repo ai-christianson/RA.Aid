@@ -206,7 +206,8 @@ More information is available in our [Usage Examples](https://docs.ra-aid.ai/cat
 
 ### Command Line Options
 
-- `-m, --message`: The task or query to be executed (required except in chat mode)
+- `-m, --message`: The task or query to be executed (required except in chat mode, cannot be used with --msg-file)
+- `--msg-file`: Path to a text file containing the task/message (cannot be used with --message)
 - `--research-only`: Only perform research without implementation
 - `--provider`: The LLM provider to use (choices: anthropic, openai, openrouter, openai-compatible, gemini)
 - `--model`: The model name to use (required for non-Anthropic providers)
