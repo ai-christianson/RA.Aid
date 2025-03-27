@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Optional
 
 from langchain_anthropic import ChatAnthropic
 from langchain_core.language_models import BaseChatModel
+from langchain_deepseek import ChatDeepSeek
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
 from openai import OpenAI
@@ -10,7 +11,8 @@ from openai import OpenAI
 from ra_aid.chat_models.deepseek_chat import ChatDeepseekReasoner
 from ra_aid.console.formatting import cpm
 from ra_aid.logging_config import get_logger
-from ra_aid.model_detection import is_claude_37
+from ra_aid.model_detection import is_claude_37, is_deepseek_v3
+
 
 from .models_params import models_params
 
@@ -75,7 +77,9 @@ LLM_MAX_RETRIES = 5
 logger = get_logger(__name__)
 
 
-def get_env_var(name: str, expert: bool = False, default: Optional[str] = None) -> Optional[str]:
+def get_env_var(
+    name: str, expert: bool = False, default: Optional[str] = None
+) -> Optional[str]:
     """Get environment variable with optional expert prefix and fallback."""
     prefix = "EXPERT_" if expert else ""
     value = os.getenv(f"{prefix}{name}")
@@ -95,26 +99,28 @@ def create_deepseek_client(
     is_expert: bool = False,
 ) -> BaseChatModel:
     """Create DeepSeek client with appropriate configuration."""
-    if model_name.lower() == "deepseek-reasoner":
-        return ChatDeepseekReasoner(
-            api_key=api_key,
-            base_url=base_url,
-            temperature=(
-                0 if is_expert else (temperature if temperature is not None else 1)
-            ),
-            model=model_name,
-            timeout=int(get_env_var(name="LLM_REQUEST_TIMEOUT", default=LLM_REQUEST_TIMEOUT)),
-            max_retries=int(get_env_var(name="LLM_MAX_RETRIES", default=LLM_MAX_RETRIES)),
-        )
 
-    return ChatOpenAI(
-        api_key=api_key,
-        base_url=base_url,
-        temperature=0 if is_expert else (temperature if temperature is not None else 1),
-        model=model_name,
-        timeout=int(get_env_var(name="LLM_REQUEST_TIMEOUT", default=LLM_REQUEST_TIMEOUT)),
-        max_retries=int(get_env_var(name="LLM_MAX_RETRIES", default=LLM_MAX_RETRIES)),
-    )
+    temp_value = 0 if is_expert else (temperature if temperature is not None else 1)
+
+    common_params = {
+        "api_key": api_key,
+        "model": model_name,
+        "temperature": temp_value,
+        "timeout": int(
+            get_env_var(name="LLM_REQUEST_TIMEOUT", default=LLM_REQUEST_TIMEOUT)
+        ),
+        "max_retries": int(
+            get_env_var(name="LLM_MAX_RETRIES", default=LLM_MAX_RETRIES)
+        ),
+    }
+
+    if model_name.lower() == "deepseek-reasoner":
+        return ChatDeepseekReasoner(base_url=base_url, **common_params)
+
+    elif is_deepseek_v3(model_name):
+        return ChatDeepSeek(**common_params)
+
+    return ChatOpenAI(base_url=base_url, **common_params)
 
 
 def create_openrouter_client(
@@ -125,30 +131,32 @@ def create_openrouter_client(
 ) -> BaseChatModel:
     """Create OpenRouter client with appropriate configuration."""
     default_headers = {"HTTP-Referer": "https://ra-aid.ai", "X-Title": "RA.Aid"}
+    base_url = "https://openrouter.ai/api/v1"
 
+    # Set temperature based on expert mode and provided value
+    temp_value = 0 if is_expert else (temperature if temperature is not None else 1)
+
+    # Common parameters for all OpenRouter clients
+    common_params = {
+        "api_key": api_key,
+        "base_url": base_url,
+        "model": model_name,
+        "timeout": int(
+            get_env_var(name="LLM_REQUEST_TIMEOUT", default=LLM_REQUEST_TIMEOUT)
+        ),
+        "max_retries": int(
+            get_env_var(name="LLM_MAX_RETRIES", default=LLM_MAX_RETRIES)
+        ),
+        "default_headers": default_headers,
+    }
+
+    # Use ChatDeepseekReasoner for DeepSeek Reasoner models
     if model_name.startswith("deepseek/") and "deepseek-r1" in model_name.lower():
-        return ChatDeepseekReasoner(
-            api_key=api_key,
-            base_url="https://openrouter.ai/api/v1",
-            temperature=(
-                0 if is_expert else (temperature if temperature is not None else 1)
-            ),
-            model=model_name,
-            timeout=int(get_env_var(name="LLM_REQUEST_TIMEOUT", default=LLM_REQUEST_TIMEOUT)),
-            max_retries=int(get_env_var(name="LLM_MAX_RETRIES", default=LLM_MAX_RETRIES)),
-            default_headers=default_headers,
-        )
+        return ChatDeepseekReasoner(temperature=temp_value, **common_params)
 
     return ChatOpenAI(
-        api_key=api_key,
-        base_url="https://openrouter.ai/api/v1",
-        model=model_name,
-        timeout=int(get_env_var(name="LLM_REQUEST_TIMEOUT", default=LLM_REQUEST_TIMEOUT)),
-        max_retries=int(get_env_var(name="LLM_MAX_RETRIES", default=LLM_MAX_RETRIES)),
-        default_headers=default_headers,
-        **({
-            "temperature": temperature
-        } if temperature is not None else {}),
+        **common_params,
+        **({"temperature": temperature} if temperature is not None else {}),
     )
 
 
@@ -189,7 +197,9 @@ def create_ollama_client(
         model=model_name,
         base_url=base_url,
         num_ctx=num_ctx,
-        timeout=int(get_env_var(name="LLM_REQUEST_TIMEOUT", default=LLM_REQUEST_TIMEOUT)),
+        timeout=int(
+            get_env_var(name="LLM_REQUEST_TIMEOUT", default=LLM_REQUEST_TIMEOUT)
+        ),
         max_retries=int(get_env_var(name="LLM_MAX_RETRIES", default=LLM_MAX_RETRIES)),
         **temp_kwargs,
     )
@@ -224,13 +234,15 @@ def get_provider_config(provider: str, is_expert: bool = False) -> Dict[str, Any
         },
         "ollama": {
             "api_key": None,  # No API key needed for Ollama
-            "base_url": get_env_var("OLLAMA_BASE_URL", is_expert, "http://localhost:11434"),
+            "base_url": get_env_var(
+                "OLLAMA_BASE_URL", is_expert, "http://localhost:11434"
+            ),
         },
     }
     config = configs.get(provider, {})
     if not config:
         raise ValueError(f"Unsupported provider: {provider}")
-    
+
     # Ollama doesn't require an API key
     if provider != "ollama" and not config.get("api_key"):
         raise ValueError(
@@ -241,20 +253,20 @@ def get_provider_config(provider: str, is_expert: bool = False) -> Dict[str, Any
 
 def get_model_default_temperature(provider: str, model_name: str) -> float:
     """Get the default temperature for a given model.
-    
+
     Args:
         provider: The LLM provider
         model_name: Name of the model
-        
+
     Returns:
         The default temperature value from models_params, or DEFAULT_TEMPERATURE if not specified
     """
     from ra_aid.models_params import models_params, DEFAULT_TEMPERATURE
-    
+
     # Extract the model_config directly from models_params
     model_config = models_params.get(provider, {}).get(model_name, {})
     default_temp = model_config.get("default_temperature")
-    
+
     # Return the model's default_temperature if it exists, otherwise DEFAULT_TEMPERATURE
     return default_temp if default_temp is not None else DEFAULT_TEMPERATURE
 
@@ -298,7 +310,9 @@ def create_llm_client(
     # Default to True for known providers that support temperature if not specified
     if "supports_temperature" not in model_config:
         # Just set the value in the dictionary without modifying the source
-        model_config = dict(model_config)  # Create a copy to avoid modifying the original
+        model_config = dict(
+            model_config
+        )  # Create a copy to avoid modifying the original
         # Set default value for supports_temperature based on known providers
         model_config["supports_temperature"] = provider in known_temp_providers
 
@@ -317,7 +331,7 @@ def create_llm_client(
             # Use the model's default temperature from models_params
             temperature = get_model_default_temperature(provider, model_name)
             msg = f"This model supports temperature argument but none was given. Using model default temperature: {temperature}."
-            
+
             try:
                 # Try to log to the database, but continue even if it fails
                 # Import repository classes directly to avoid circular imports
@@ -335,8 +349,10 @@ def create_llm_client(
                     trajectory_repo = TrajectoryRepository(db)
                     human_input_repo = HumanInputRepository(db)
                     human_input_id = human_input_repo.get_most_recent_id()
-                    
-                    if human_input_id is not None:  # Check if we have a valid human input
+
+                    if (
+                        human_input_id is not None
+                    ):  # Check if we have a valid human input
                         trajectory_repo.create(
                             step_data={
                                 "message": msg,
@@ -349,10 +365,10 @@ def create_llm_client(
                 # Silently continue if database operations fail
                 # This handles testing scenarios where database might not be initialized
                 pass
-                
+
             # Always log to the console
             cpm(msg)
-                
+
         temp_kwargs = {"temperature": temperature}
     else:
         temp_kwargs = {}
@@ -390,16 +406,24 @@ def create_llm_client(
         return ChatOpenAI(
             **{
                 **openai_kwargs,
-                "timeout": int(get_env_var(name="LLM_REQUEST_TIMEOUT", default=LLM_REQUEST_TIMEOUT)),
-                "max_retries": int(get_env_var(name="LLM_MAX_RETRIES", default=LLM_MAX_RETRIES)),
+                "timeout": int(
+                    get_env_var(name="LLM_REQUEST_TIMEOUT", default=LLM_REQUEST_TIMEOUT)
+                ),
+                "max_retries": int(
+                    get_env_var(name="LLM_MAX_RETRIES", default=LLM_MAX_RETRIES)
+                ),
             }
         )
     elif provider == "anthropic":
         return ChatAnthropic(
             api_key=config.get("api_key"),
             model_name=model_name,
-            timeout=int(get_env_var(name="LLM_REQUEST_TIMEOUT", default=LLM_REQUEST_TIMEOUT)),
-            max_retries=int(get_env_var(name="LLM_MAX_RETRIES", default=LLM_MAX_RETRIES)),
+            timeout=int(
+                get_env_var(name="LLM_REQUEST_TIMEOUT", default=LLM_REQUEST_TIMEOUT)
+            ),
+            max_retries=int(
+                get_env_var(name="LLM_MAX_RETRIES", default=LLM_MAX_RETRIES)
+            ),
             **temp_kwargs,
             **thinking_kwargs,
             **other_kwargs,
@@ -409,8 +433,12 @@ def create_llm_client(
             api_key=config.get("api_key"),
             base_url=config.get("base_url"),
             model=model_name,
-            timeout=int(get_env_var(name="LLM_REQUEST_TIMEOUT", default=LLM_REQUEST_TIMEOUT)),
-            max_retries=int(get_env_var(name="LLM_MAX_RETRIES", default=LLM_MAX_RETRIES)),
+            timeout=int(
+                get_env_var(name="LLM_REQUEST_TIMEOUT", default=LLM_REQUEST_TIMEOUT)
+            ),
+            max_retries=int(
+                get_env_var(name="LLM_MAX_RETRIES", default=LLM_MAX_RETRIES)
+            ),
             **temp_kwargs,
             **thinking_kwargs,
         )
@@ -418,22 +446,26 @@ def create_llm_client(
         return ChatGoogleGenerativeAI(
             api_key=config.get("api_key"),
             model=model_name,
-            timeout=int(get_env_var(name="LLM_REQUEST_TIMEOUT", default=LLM_REQUEST_TIMEOUT)),
-            max_retries=int(get_env_var(name="LLM_MAX_RETRIES", default=LLM_MAX_RETRIES)),
+            timeout=int(
+                get_env_var(name="LLM_REQUEST_TIMEOUT", default=LLM_REQUEST_TIMEOUT)
+            ),
+            max_retries=int(
+                get_env_var(name="LLM_MAX_RETRIES", default=LLM_MAX_RETRIES)
+            ),
             **temp_kwargs,
             **thinking_kwargs,
         )
     elif provider == "ollama":
         # Get num_ctx from config repository based on whether this is for expert model
         from ra_aid.database.repositories.config_repository import get_config_repository
-        
+
         # Get the config repository through the context manager pattern
         config_repo = get_config_repository()
-        
+
         # Get the appropriate num_ctx value from config repository
         num_ctx_key = "expert_num_ctx" if is_expert else "num_ctx"
         num_ctx_value = config_repo.get(num_ctx_key, 262144)
-        
+
         return create_ollama_client(
             model_name=model_name,
             base_url=config.get("base_url"),
@@ -458,9 +490,6 @@ def initialize_expert_llm(provider: str, model_name: str) -> BaseChatModel:
     return create_llm_client(provider, model_name, temperature=None, is_expert=True)
 
 
-
-
-
 def validate_provider_env(provider: str) -> bool:
     """Check if the required environment variables for a provider are set."""
     required_vars = {
@@ -472,7 +501,7 @@ def validate_provider_env(provider: str) -> bool:
         "deepseek": "DEEPSEEK_API_KEY",
         "ollama": None,  # Ollama doesn't require any environment variables to be set
     }
-    
+
     key = required_vars.get(provider.lower())
     if key is None:
         # For providers like Ollama that don't require any environment variables

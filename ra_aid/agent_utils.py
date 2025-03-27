@@ -11,7 +11,11 @@ from langgraph.graph.graph import CompiledGraph
 from ra_aid.callbacks.anthropic_callback_handler import (
     AnthropicCallbackHandler,
 )
-from ra_aid.model_detection import model_name_has_claude, should_use_react_agent, get_model_name_from_chat_model
+from ra_aid.model_detection import (
+    model_name_has_claude,
+    should_use_react_agent,
+    get_model_name_from_chat_model,
+)
 
 
 from anthropic import APIError, APITimeoutError, InternalServerError, RateLimitError
@@ -57,7 +61,7 @@ from ra_aid.database.repositories.trajectory_repository import (
 )
 from ra_aid.database.repositories.config_repository import get_config_repository
 from ra_aid.anthropic_token_limiter import (
-    sonnet_35_state_modifier,
+    base_state_modifier,
     state_modifier,
     get_model_token_limit,
 )
@@ -88,24 +92,21 @@ def build_agent_kwargs(
     if checkpointer is not None:
         agent_kwargs["checkpointer"] = checkpointer
 
-    # Use repository method to check if token limiting is enabled
     limit_tokens = get_config_repository().get("limit_tokens", True)
     model_name = get_model_name_from_chat_model(model)
 
-    if limit_tokens and model is not None and model_name_has_claude(model_name):
+    if limit_tokens and model is not None:
 
         def wrapped_state_modifier(state: AgentState) -> list[BaseMessage]:
             model_name = get_model_name_from_chat_model(model)
 
             if any(
                 pattern in model_name
-                for pattern in ["claude-3.5", "claude3.5", "claude-3-5"]
+                for pattern in ["claude-3.7", "claude3.7", "claude-3-7"]
             ):
-                return sonnet_35_state_modifier(
-                    state, max_input_tokens=max_input_tokens
-                )
+                return state_modifier(state, model, max_input_tokens=max_input_tokens)
 
-            return state_modifier(state, model, max_input_tokens=max_input_tokens)
+            return base_state_modifier(state, max_input_tokens=max_input_tokens)
 
         agent_kwargs["state_modifier"] = wrapped_state_modifier
 
@@ -113,8 +114,6 @@ def build_agent_kwargs(
     agent_kwargs["name"] = model_name
 
     return agent_kwargs
-
-
 
 
 def create_agent(
