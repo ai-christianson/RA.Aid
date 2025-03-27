@@ -204,6 +204,61 @@ class CiaynAgent:
 
         return last_result_section
 
+    def strip_code_markup(self, code: str) -> str:
+        """
+        Strips markdown code block markup from a string.
+        
+        Handles cases for:
+        - Code blocks with language specifiers (```python)
+        - Code blocks without language specifiers (```)
+        - Code surrounded with single backticks (`)
+        
+        Args:
+            code: The string potentially containing code markup
+            
+        Returns:
+            The code with markup removed
+        """
+        code = code.strip()
+        
+        # Check for code blocks with any language specifier
+        if code.startswith("```") and not code.startswith("``` "):
+            # Extract everything after the first newline to skip the language specifier
+            first_newline = code.find('\n')
+            if first_newline != -1:
+                code = code[first_newline + 1:].strip()
+            else:
+                # If there's no newline, just remove the backticks and handle special cases
+                # like language specifiers with spaces
+                code = code[3:].strip()
+                if code.endswith("```"):
+                    code = code[:-3].strip()
+                
+                # Try to detect language specifier followed by space
+                import re
+                match = re.match(r'^([a-zA-Z0-9_\-+]+)(\s+)(.*)', code)
+                if match:
+                    # Only remove language specifier if there's a clear space delimiter
+                    # This preserves behavior for cases like "pythonprint" where there's no clear
+                    # way to separate the language from the code
+                    lang, space, remaining = match.groups()
+                    if remaining:  # Make sure there's content after the space
+                        code = remaining
+        # Additional check for simple code blocks without language
+        elif code.startswith("```"):
+            code = code[3:].strip()
+        # Check for code surrounded with single backticks
+        elif code.startswith("`") and not code.startswith("``"):
+            code = code[1:].strip()
+            
+        if code.endswith("```"):
+            code = code[:-3].strip()
+        # Check for code ending with single backtick
+        elif code.endswith("`") and not code.endswith("``"):
+            code = code[:-1].strip()
+            
+        return code
+
     def _detect_multiple_tool_calls(self, code: str) -> List[str]:
         """Detect if there are multiple tool calls in the code using AST parsing.
 
@@ -268,21 +323,7 @@ class CiaynAgent:
         globals_dict = {tool.func.__name__: tool.func for tool in self.tools}
 
         try:
-            code = code.strip()
-            # Check for code blocks with any language specifier
-            if code.startswith("```") and not code.startswith("``` "):
-                # Extract everything after the first newline to skip the language specifier
-                first_newline = code.find('\\n')
-                if first_newline != -1:
-                    code = code[first_newline + 1:].strip()
-                else:
-                    # If there's no newline, just remove the backticks
-                    code = code[3:].strip()
-            # Additional check for simple code blocks without language
-            elif code.startswith("```"):
-                code = code[3:].strip()
-            if code.endswith("```"):
-                code = code[:-3].strip()
+            code = self.strip_code_markup(code)
 
             # Check for multiple tool calls that can be bundled
             tool_calls = self._detect_multiple_tool_calls(code)
@@ -413,7 +454,6 @@ class CiaynAgent:
                 # Return all results as one big string with tagged sections
                 return "\\n\\n".join(result_strings)
 
-            # --- START MODIFIED SECTION for single tool call validation ---
             # Regular single tool call case
             if validate_function_call_pattern(code):
                 # Retrieve the configuration flag
@@ -433,17 +473,13 @@ class CiaynAgent:
                         # If extraction fails, re-raise the error to be caught by the main loop
                         raise extraction_error
                 else:
-                    logger.warning(f"Invalid tool call format detected and LLM extraction is disabled for this model. Code: {code}")
-                    warning_message = f"Invalid tool call format detected:\\n```\\n{code}\\n```\\nLLM extraction is disabled for this model."
-                    ra_aid.console.formatting.print_warning(warning_message, title="Invalid Tool Call")
+                    logger.info(f"Invalid tool call format detected and LLM extraction is disabled for this model. Code: {code}")
 
-                    error_msg = f"Invalid tool call format and LLM extraction is disabled. Code: {code}"
+                    error_msg = f"Invalid tool call format and LLM extraction is disabled."
                     # Try to get tool name for better error reporting, default if fails
                     tool_name = self.extract_tool_name(code) or "unknown_tool_format"
                     # Use the original message `msg` available in the scope
                     raise ToolExecutionError(error_msg, base_message=msg, tool_name=tool_name)
-            # --- END MODIFIED SECTION ---
-
 
             # Check for repeated tool call with the same parameters (single tool case)
             tool_name = self.extract_tool_name(code)
@@ -571,10 +607,10 @@ class CiaynAgent:
                 # Just log and continue if there's an error in trajectory recording
                 logger.error(f"Error recording trajectory for tool error display: {trajectory_error}")
 
-            ra_aid.console.formatting.print_warning(f"Tool execution failed for `{tool_name}`:\\nError: {str(e)}\\n\\nCode:\\n\\n````\\n{code}\\n````", title="Tool Error")
+            ra_aid.console.formatting.print_warning(f"Tool execution failed for `{tool_name if tool_name else "unknown"}`:\nError: {str(e)}\n\nCode:\n\n````\n{code}\n````", title="Tool Error")
             # Re-raise the original error if it's already a ToolExecutionError and we didn't modify it
             if isinstance(e, ToolExecutionError) and not (
-                'error_msg' in locals() and e.message == error_msg # Check if we created a new error msg
+                'error_msg' in locals() and e.base_message == error_msg # Check if we created a new error msg
                 ):
                 raise e
             # Otherwise, raise a new ToolExecutionError
