@@ -21,6 +21,15 @@ models_params = {
             "latency_coefficient": DEFAULT_BASE_LATENCY,
             "default_backend": AgentBackendType.CIAYN
         },
+        "accounts/fireworks/models/deepseek-r1": {
+            "token_limit": 163840,
+            "max_tokens": 163840,
+            "supports_temperature": True,
+            "supports_think_tag": True,
+            "default_temperature": DEFAULT_TEMPERATURE,
+            "latency_coefficient": DEFAULT_BASE_LATENCY,
+            "default_backend": AgentBackendType.CIAYN
+        },
         "accounts/fireworks/models/llama-v3-70b-instruct": {
             "token_limit": 8192,
             "supports_temperature": True,
