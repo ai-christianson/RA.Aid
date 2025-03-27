@@ -65,6 +65,10 @@ models_params = {
         }
     },
     "openai": {
+        "chatgpt-4o-latest": {
+            "token_limit": 128000,
+            "default_backend": AgentBackendType.CIAYN,
+        },
         "gpt-3.5-turbo-0125": {
             "token_limit": 16385,
             "supports_temperature": True,
