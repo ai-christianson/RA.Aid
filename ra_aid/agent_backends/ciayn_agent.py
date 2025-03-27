@@ -787,6 +787,7 @@ class CiaynAgent:
                 self.chat_history.append(HumanMessage(content=base_prompt))
             full_history = self._trim_chat_history(initial_messages, self.chat_history)
             response = self.model.invoke([self.sys_message] + full_history)
+            print(f"response={response}")
 
             # Check if model supports think tags
             provider = self.config.get("provider", "")
