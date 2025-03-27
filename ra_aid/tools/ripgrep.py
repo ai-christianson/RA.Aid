@@ -222,12 +222,6 @@ def ripgrep_search(
             console_panel(truncate_output(decoded_output), title="🚨 Error", border_style="red")
             return {"output": truncate_output(decoded_output), "return_code": return_code, "success": False}
 
-        # Display results
-        if decoded_output:
-            console.print(Markdown(truncate_output(decoded_output)))
-        else:
-            console_panel("No results found", title="🔍 Search Results", border_style="green")
-
         return {
             "output": truncate_output(decoded_output),
             "return_code": return_code,
