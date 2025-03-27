@@ -159,7 +159,9 @@ def launch_server(host: str, port: int, args):
         expert_missing,
         web_research_enabled,
         web_research_missing,
-    ) = validate_environment(args)  # Will exit if main env vars missing
+    ) = validate_environment(
+        args
+    )  # Will exit if main env vars missing
     logger.debug("Environment validation successful")
 
     # Validate model configuration early
@@ -219,25 +221,27 @@ def launch_server(host: str, port: int, args):
         logger.debug("Initialized WorkLogRepository")
         logger.debug("Initialized ConfigRepository")
         logger.debug("Initialized Environment Inventory")
-        
+
         # Update config repo with values from args and environment validation
-        config_repo.update({
-            "provider": args.provider,
-            "model": args.model,
-            "num_ctx": args.num_ctx,
-            "expert_provider": args.expert_provider,
-            "expert_model": args.expert_model,
-            "expert_num_ctx": args.expert_num_ctx,
-            "temperature": args.temperature,
-            "experimental_fallback_handler": args.experimental_fallback_handler,
-            "expert_enabled": expert_enabled,
-            "web_research_enabled": web_research_enabled,
-            "show_thoughts": args.show_thoughts,
-            "show_cost": args.show_cost,
-            "force_reasoning_assistance": args.reasoning_assistance,
-            "disable_reasoning_assistance": args.no_reasoning_assistance
-        })
-        
+        config_repo.update(
+            {
+                "provider": args.provider,
+                "model": args.model,
+                "num_ctx": args.num_ctx,
+                "expert_provider": args.expert_provider,
+                "expert_model": args.expert_model,
+                "expert_num_ctx": args.expert_num_ctx,
+                "temperature": args.temperature,
+                "experimental_fallback_handler": args.experimental_fallback_handler,
+                "expert_enabled": expert_enabled,
+                "web_research_enabled": web_research_enabled,
+                "show_thoughts": args.show_thoughts,
+                "show_cost": args.show_cost,
+                "force_reasoning_assistance": args.reasoning_assistance,
+                "disable_reasoning_assistance": args.no_reasoning_assistance,
+            }
+        )
+
         # Run the server within the context managers
         run_server(host=host, port=port)
 
@@ -262,13 +266,20 @@ def parse_arguments(args=None):
 Examples:
     ra-aid -m "Add error handling to the database module"
     ra-aid -m "Explain the authentication flow" --research-only
+    ra-aid --msg-file task_description.txt
+    ra-aid --msg-file task_description.txt
         """,
     )
     parser.add_argument(
         "-m",
         "--message",
         type=str,
-        help="The task or query to be executed by the agent",
+        help="The task or query to be executed by the agent (cannot be used with --msg-file)",
+    )
+    parser.add_argument(
+        "--msg-file",
+        type=str,
+        help="Path to a text file containing the task/message (cannot be used with --message)",
     )
     parser.add_argument(
         "--version",
@@ -293,7 +304,12 @@ Examples:
         help="The LLM provider to use",
     )
     parser.add_argument("--model", type=str, help="The model name to use")
-    parser.add_argument("--num-ctx", type=int, default=262144, help="Context window size for Ollama models")
+    parser.add_argument(
+        "--num-ctx",
+        type=int,
+        default=262144,
+        help="Context window size for Ollama models",
+    )
     parser.add_argument(
         "--research-provider",
         type=str,
@@ -481,6 +497,16 @@ Examples:
     if args is None:
         args = sys.argv[1:]
     parsed_args = parser.parse_args(args)
+
+    # Validate message vs msg-file usage
+    if parsed_args.message and parsed_args.msg_file:
+        parser.error("Cannot use both --message and --msg-file")
+    if parsed_args.msg_file:
+        try:
+            with open(parsed_args.msg_file, "r") as f:
+                parsed_args.message = f.read()
+        except IOError as e:
+            parser.error(f"Failed to read message file: {str(e)}")
 
     # Set hil=True when chat mode is enabled
     if parsed_args.chat:
@@ -695,7 +721,12 @@ def build_status():
 def main():
     """Main entry point for the ra-aid command line tool."""
     args = parse_arguments()
-    setup_logging(args.log_mode, args.pretty_logger, args.log_level, base_dir=args.project_state_dir)
+    setup_logging(
+        args.log_mode,
+        args.pretty_logger,
+        args.log_level,
+        base_dir=args.project_state_dir,
+    )
     logger.debug("Starting RA.Aid with arguments: %s", args)
 
     # Check if we need to wipe project memory before starting
@@ -764,7 +795,9 @@ def main():
                     expert_missing,
                     web_research_enabled,
                     web_research_missing,
-                ) = validate_environment(args)  # Will exit if main env vars missing
+                ) = validate_environment(
+                    args
+                )  # Will exit if main env vars missing
                 logger.debug("Environment validation successful")
 
                 # Validate model configuration early
@@ -786,7 +819,9 @@ def main():
                 if supports_temperature and args.temperature is None:
                     args.temperature = model_config.get("default_temperature")
                     if args.temperature is None:
-                        args.temperature = get_model_default_temperature(args.provider, args.model)
+                        args.temperature = get_model_default_temperature(
+                            args.provider, args.model
+                        )
                         cpm(
                             f"This model supports temperature argument but none was given. Using model default temperature: {args.temperature}."
                         )
@@ -815,7 +850,9 @@ def main():
                     "disable_reasoning_assistance", args.no_reasoning_assistance
                 )
                 config_repo.set("custom_tools", args.custom_tools)
-                config_repo.set("custom_tools_enabled", True if args.custom_tools else False)
+                config_repo.set(
+                    "custom_tools_enabled", True if args.custom_tools else False
+                )
 
                 # Validate custom tools function signatures
                 get_custom_tools()
@@ -901,7 +938,9 @@ def main():
                         # Get current session ID
                         session_id = session_repo.get_current_session_id()
                         human_input_repository.create(
-                            content=initial_request, source="chat", session_id=session_id
+                            content=initial_request,
+                            source="chat",
+                            session_id=session_id,
                         )
                         human_input_repository.garbage_collect()
                     except Exception as e:
@@ -985,13 +1024,15 @@ def main():
                     return
 
                 # Validate message is provided
-                if not args.message and not args.wipe_project_memory:  # Add check for wipe_project_memory flag
+                if (
+                    not args.message and not args.wipe_project_memory
+                ):  # Add check for wipe_project_memory flag
+                    error_message = "--message or --msg-file is required"
                     try:
                         trajectory_repo = get_trajectory_repository()
                         human_input_id = (
                             get_human_input_repository().get_most_recent_id()
                         )
-                        error_message = "--message is required"
                         trajectory_repo.create(
                             step_data={
                                 "display_title": "Error",
@@ -1006,7 +1047,7 @@ def main():
                         # Swallow exception to avoid recursion
                         logger.debug(f"Error recording trajectory: {traj_error}")
                         pass
-                    print_error("--message is required")
+                    print_error(error_message)
                     sys.exit(1)
 
                 if args.message:  # Only set base_task if message exists
