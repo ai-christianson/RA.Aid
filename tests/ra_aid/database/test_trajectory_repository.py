@@ -18,6 +18,8 @@ from ra_aid.database.repositories.trajectory_repository import (
 )
 from ra_aid.database.pydantic_models import TrajectoryModel
 
+# Conftest fixture for mocking session repository
+# from tests.conftest import mock_session_repository # Assuming this exists
 
 @pytest.fixture
 def cleanup_db():
@@ -50,17 +52,17 @@ def cleanup_db():
 
 @pytest.fixture
 def cleanup_repo():
-    """Reset the repository contextvar and hooks after each test."""
+    """Reset the repository contextvar after each test."""
     # Reset before the test
     trajectory_repo_var.set(None)
-    TrajectoryRepository._create_hooks = [] # Clear hooks before each test
+    # No need to clear class hooks anymore
 
     # Run the test
     yield
 
     # Reset after the test
     trajectory_repo_var.set(None)
-    TrajectoryRepository._create_hooks = [] # Clear hooks after each test
+    # No need to clear class hooks anymore
 
 
 @pytest.fixture
@@ -144,6 +146,15 @@ def sample_trajectory(
         is_error=False,
     )
 
+# Mock session repository fixture (replace with your actual conftest setup if different)
+@pytest.fixture
+def mock_session_repository():
+    mock_repo = MagicMock()
+    mock_session_record = MagicMock()
+    mock_session_record.get_id.return_value = 1 # Example session ID
+    mock_repo.get_current_session_record.return_value = mock_session_record
+    with patch("ra_aid.database.repositories.trajectory_repository.get_session_repository", return_value=mock_repo):
+        yield mock_repo
 
 def test_create_trajectory(
     setup_db,
@@ -193,7 +204,7 @@ def test_create_trajectory(
     assert trajectory.human_input_id == sample_human_input.id
 
 
-def test_create_trajectory_minimal(setup_db, cleanup_repo): # Use cleanup_repo fixture
+def test_create_trajectory_minimal(setup_db, cleanup_repo, mock_session_repository): # Use cleanup_repo fixture
     """Test creating a trajectory with minimal fields."""
     # Set up repository
     repo = TrajectoryRepository(db=setup_db)
@@ -208,7 +219,7 @@ def test_create_trajectory_minimal(setup_db, cleanup_repo): # Use cleanup_repo f
     assert trajectory.id is not None
     assert trajectory.tool_name == "simple_tool"
 
-    # Verify optional fields are None
+    # Verify optional fields are None or default
     assert trajectory.tool_parameters is None
     assert trajectory.tool_result is None
     assert trajectory.step_data is None
@@ -217,6 +228,7 @@ def test_create_trajectory_minimal(setup_db, cleanup_repo): # Use cleanup_repo f
     assert trajectory.output_tokens is None
     assert trajectory.input_tokens is None
     assert trajectory.is_error is False
+    assert trajectory.session_id == 1 # Assuming mock returns session 1
 
 
 def test_get_trajectory(
@@ -614,33 +626,35 @@ def test_repository_init_without_db():
     assert "Database connection is required" in str(excinfo.value)
 
 
-# --- Tests for Hook Mechanism ---
+# --- Tests for Hook Mechanism (Instance Level) ---
 
-def test_register_create_hook(setup_db, cleanup_repo):
-    """Test registering a valid hook."""
+def test_register_create_hook_instance(setup_db, cleanup_repo):
+    """Test registering a valid hook on an instance."""
+    repo = TrajectoryRepository(db=setup_db)
     mock_hook = MagicMock()
-    mock_hook.__name__ = 'mock_hook' # Added line
-    TrajectoryRepository.register_create_hook(mock_hook)
-    assert mock_hook in TrajectoryRepository._create_hooks
+    mock_hook.__name__ = 'mock_hook'
+    repo.register_create_hook(mock_hook) # Call on instance
+    assert mock_hook in repo._create_hooks # Check instance attribute
 
-def test_register_invalid_hook(setup_db, cleanup_repo):
-    """Test registering an invalid (non-callable) hook."""
+def test_register_invalid_hook_instance(setup_db, cleanup_repo):
+    """Test registering an invalid (non-callable) hook on an instance."""
+    repo = TrajectoryRepository(db=setup_db)
     with pytest.raises(TypeError, match="Hook must be callable"):
-        TrajectoryRepository.register_create_hook("not a function")
+        repo.register_create_hook("not a function") # Call on instance
 
-def test_create_hook_execution(setup_db, cleanup_repo, mock_session_repository):
-    """Test that registered hooks are executed upon trajectory creation."""
+def test_create_hook_execution_instance(setup_db, cleanup_repo, mock_session_repository):
+    """Test that instance hooks are executed upon trajectory creation."""
     repo = TrajectoryRepository(db=setup_db)
 
     # Create mock hooks
     mock_hook_1 = MagicMock(name='hook1')
-    mock_hook_1.__name__ = 'mock_hook_1' # Added line
+    mock_hook_1.__name__ = 'mock_hook_1'
     mock_hook_2 = MagicMock(name="hook2")
-    mock_hook_2.__name__ = 'mock_hook_2' # Added line
+    mock_hook_2.__name__ = 'mock_hook_2'
 
-    # Register hooks
-    TrajectoryRepository.register_create_hook(mock_hook_1)
-    TrajectoryRepository.register_create_hook(mock_hook_2)
+    # Register hooks on the instance
+    repo.register_create_hook(mock_hook_1)
+    repo.register_create_hook(mock_hook_2)
 
     # Create a trajectory
     trajectory_model = repo.create(tool_name="hook_test", current_cost=0.1)
@@ -656,9 +670,31 @@ def test_create_hook_execution(setup_db, cleanup_repo, mock_session_repository):
     assert passed_model.tool_name == "hook_test"
     assert passed_model.current_cost == 0.1
 
+def test_create_hook_isolation(setup_db, cleanup_repo, mock_session_repository):
+    """Test that hooks registered on one instance don't affect another."""
+    repo1 = TrajectoryRepository(db=setup_db)
+    repo2 = TrajectoryRepository(db=setup_db)
 
-def test_create_hook_error_handling(setup_db, cleanup_repo, mock_session_repository):
-    """Test that hook errors are logged and don't stop other hooks or the create method."""
+    hook_for_repo1 = MagicMock(name='hook_repo1')
+    hook_for_repo1.__name__ = 'hook_for_repo1'
+
+    repo1.register_create_hook(hook_for_repo1)
+
+    # Create trajectory using repo2
+    trajectory_model_2 = repo2.create(tool_name="repo2_test")
+
+    # Verify hook for repo1 was NOT called
+    hook_for_repo1.assert_not_called()
+
+    # Create trajectory using repo1
+    trajectory_model_1 = repo1.create(tool_name="repo1_test")
+
+    # Verify hook for repo1 WAS called
+    hook_for_repo1.assert_called_once_with(trajectory_model_1)
+
+
+def test_create_hook_error_handling_instance(setup_db, cleanup_repo, mock_session_repository):
+    """Test that instance hook errors are logged and don't stop other hooks or the create method."""
     repo = TrajectoryRepository(db=setup_db)
 
     # Mock logger to check error logging
@@ -666,13 +702,13 @@ def test_create_hook_error_handling(setup_db, cleanup_repo, mock_session_reposit
 
         # Create mock hooks
         failing_hook = MagicMock(name="failing_hook", side_effect=ValueError("Hook failed!"))
-        failing_hook.__name__ = 'failing_hook' # Added line
+        failing_hook.__name__ = 'failing_hook'
         successful_hook = MagicMock(name="successful_hook")
-        successful_hook.__name__ = 'successful_hook' # Added line
+        successful_hook.__name__ = 'successful_hook'
 
-        # Register hooks
-        TrajectoryRepository.register_create_hook(failing_hook)
-        TrajectoryRepository.register_create_hook(successful_hook)
+        # Register hooks on the instance
+        repo.register_create_hook(failing_hook)
+        repo.register_create_hook(successful_hook)
 
         # Create a trajectory - this should not raise an exception
         trajectory_model = None

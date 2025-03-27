@@ -1,4 +1,4 @@
-"""
+"""""
 Trajectory repository implementation for database access.
 
 This module provides a repository implementation for the Trajectory model,
@@ -125,7 +125,7 @@ class TrajectoryRepository:
                 all_trajectories = repo.get_all()
     """
 
-    _create_hooks: List[Callable[[TrajectoryModel], None]] = []
+    # _create_hooks: List[Callable[[TrajectoryModel], None]] = [] # Removed class variable
 
     def __init__(self, db):
         """
@@ -137,9 +137,10 @@ class TrajectoryRepository:
         if db is None:
             raise ValueError("Database connection is required for TrajectoryRepository")
         self.db = db
+        self._create_hooks: List[Callable[[TrajectoryModel], None]] = [] # Initialized instance variable
 
-    @classmethod
-    def register_create_hook(cls, hook: Callable[[TrajectoryModel], None]) -> None:
+    # @classmethod # Removed decorator
+    def register_create_hook(self, hook: Callable[[TrajectoryModel], None]) -> None: # Changed cls to self
         """
         Register a hook to be called after a trajectory is created.
 
@@ -153,7 +154,7 @@ class TrajectoryRepository:
         """
         if not callable(hook):
             raise TypeError("Hook must be callable")
-        cls._create_hooks.append(hook)
+        self._create_hooks.append(hook) # Changed cls._create_hooks to self._create_hooks
         logger.info(f"Registered trajectory create hook: {hook.__name__}")
 
 
@@ -268,7 +269,7 @@ class TrajectoryRepository:
             model = self._to_model(trajectory)
 
             # Execute registered hooks
-            for hook in TrajectoryRepository._create_hooks:
+            for hook in self._create_hooks: # Changed TrajectoryRepository._create_hooks to self._create_hooks
                 try:
                     hook(model)
                 except Exception as hook_exc:
