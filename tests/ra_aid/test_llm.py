@@ -577,6 +577,14 @@ def mock_deepseek_reasoner():
         yield mock
 
 
+@pytest.fixture
+def mock_deepseek():
+    """Mock ChatDeepSeek for testing DeepSeek provider initialization."""
+    with patch("ra_aid.llm.ChatDeepSeek") as mock:
+        mock.return_value = Mock()
+        yield mock
+
+
 def test_reasoning_effort_only_passed_to_supported_models(
     clean_env, mock_openai, monkeypatch
 ):
@@ -616,7 +624,7 @@ def test_reasoning_effort_passed_to_supported_models(
 
 
 def test_initialize_deepseek(
-    clean_env, mock_openai, mock_deepseek_reasoner, monkeypatch
+    clean_env, mock_openai, mock_deepseek_reasoner, mock_deepseek, monkeypatch
 ):
     """Test DeepSeek provider initialization with different models."""
     monkeypatch.setenv("DEEPSEEK_API_KEY", "test-key")
@@ -632,12 +640,22 @@ def test_initialize_deepseek(
         max_retries=5,
     )
 
-    # Test with OpenAI-compatible model
+    # Test with deepseek-chat model (should use ChatDeepSeek)
     _model = initialize_llm("deepseek", "deepseek-chat", temperature=0.7)
+    mock_deepseek.assert_called_with(
+        api_key="test-key",
+        model="deepseek-chat",
+        temperature=0.7,
+        timeout=180,
+        max_retries=5,
+    )
+
+    # Test with OpenAI-compatible model (non-deepseek-chat)
+    _model = initialize_llm("deepseek", "other-model", temperature=0.7)
     mock_openai.assert_called_with(
         api_key="test-key",
-        base_url="https://api.deepseek.com",  # Updated to match implementation
-        model="deepseek-chat",
+        base_url="https://api.deepseek.com",
+        model="other-model",
         temperature=0.7,
         timeout=180,
         max_retries=5,

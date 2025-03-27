@@ -1,3 +1,4 @@
+
 """Unit tests for agent_utils.py."""
 
 from typing import Any, Dict, Literal
@@ -142,7 +143,7 @@ def test_create_agent_anthropic(mock_model, mock_config_repository):
 
     with (
         patch("ra_aid.agent_utils.create_react_agent") as mock_react,
-        patch("ra_aid.anthropic_token_limiter.state_modifier") as mock_state_modifier,
+        patch("ra_aid.anthropic_token_limiter.base_state_modifier") as mock_state_modifier,
         patch.dict("ra_aid.models_params.models_params", {"anthropic": mock_anthropic_model_config})
     ):
         mock_react.return_value = "react_agent"
@@ -408,7 +409,7 @@ def test_run_agent_stream(monkeypatch, mock_config_repository):
     with agent_context() as ctx:
         assert ctx.plan_completed is False
         assert ctx.task_completed is False
-        assert ctx.completion_message == ""
+    assert ctx.completion_message == ""
 
 
 def test_execute_test_command_wrapper(monkeypatch):
@@ -743,3 +744,52 @@ def test_agent_backend_selection(mock_create_react_agent, mock_config_repository
             
             # Should have created CiaynAgent
             mock_ciayn.assert_called_once()
+
+
+def test_create_agent_openai_token_limiting_disabled(mock_model, mock_config_repository):
+    """Test CiaynAgent creation with OpenAI model when token limiting is disabled."""
+    mock_config_repository.update({
+        "provider": "openai", 
+        "model": "gpt-4",
+        "limit_tokens": False
+    })
+
+    with patch("ra_aid.agent_utils.should_use_react_agent", return_value=False):
+        with patch("ra_aid.agent_utils.CiaynAgent") as mock_ciayn:
+            mock_ciayn.return_value = "ciayn_agent"
+            agent = create_agent(mock_model, [])
+
+            assert agent == "ciayn_agent"
+            mock_ciayn.assert_called_once_with(
+                mock_model,
+                [],
+                max_tokens=models_params["openai"]["gpt-4"]["token_limit"],
+                config={
+                    "provider": "openai",
+                    "model": "gpt-4"
+                },
+            )
+
+
+def test_create_agent_default_token_limit(mock_model, mock_config_repository):
+    """Test CiaynAgent uses DEFAULT_TOKEN_LIMIT when no model-specific limit exists."""
+    mock_config_repository.update({
+        "provider": "unknown",
+        "model": "unknown-model"
+    })
+
+    with patch("ra_aid.agent_utils.should_use_react_agent", return_value=False):
+        with patch("ra_aid.agent_utils.CiaynAgent") as mock_ciayn:
+            mock_ciayn.return_value = "ciayn_agent"
+            agent = create_agent(mock_model, [])
+
+            assert agent == "ciayn_agent"
+            mock_ciayn.assert_called_once_with(
+                mock_model,
+                [],
+                max_tokens=DEFAULT_TOKEN_LIMIT,
+                config={
+                    "provider": "unknown",
+                    "model": "unknown-model"
+                },
+            )
