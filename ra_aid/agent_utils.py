@@ -181,7 +181,7 @@ def create_agent(
                 model, tools, interrupt_after=["tools"], **agent_kwargs
             )
         else:
-            cpm("Using Ciayn Agent")
+            cpm("Using CIAYN Agent")
             logger.debug("Using CiaynAgent agent instance based on model capabilities.")
             return CiaynAgent(model, tools, max_tokens=max_input_tokens, config=config)
 
