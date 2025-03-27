@@ -103,6 +103,17 @@ def test_tool_parameters():
         "options": {"case_sensitive": True, "whole_words": False},
     }
 
+@pytest.fixture
+def test_tool_parameters_with_include():
+    """Return test tool parameters including include_paths."""
+    return {
+        "pattern": "test pattern",
+        "file_path": "/path/to/file",
+        "options": {"case_sensitive": True, "whole_words": False},
+        "include_paths": ["src/", "tests/"],
+        "fixed_string": False # Added fixed_string to match create call
+    }
+
 
 @pytest.fixture
 def test_tool_result():
@@ -201,6 +212,42 @@ def test_create_trajectory(
     assert trajectory.output_tokens == 100
 
     # Verify foreign key reference
+    assert trajectory.human_input_id == sample_human_input.id
+
+
+def test_create_trajectory_with_include_paths(
+    setup_db,
+    cleanup_repo,
+    sample_human_input,
+    test_tool_parameters_with_include,
+    test_tool_result,
+    test_step_data,
+    mock_session_repository,
+):
+    """Test creating a trajectory where tool_parameters includes include_paths."""
+    repo = TrajectoryRepository(db=setup_db)
+
+    trajectory = repo.create(
+        tool_name="ripgrep_search",
+        tool_parameters=test_tool_parameters_with_include,
+        tool_result=test_tool_result,
+        step_data=test_step_data,
+        record_type="tool_execution",
+        human_input_id=sample_human_input.id,
+    )
+
+    assert isinstance(trajectory, TrajectoryModel)
+    assert trajectory.id is not None
+    assert trajectory.tool_name == "ripgrep_search"
+    assert isinstance(trajectory.tool_parameters, dict)
+
+    # Verify include_paths is present and correct
+    assert "include_paths" in trajectory.tool_parameters
+    assert trajectory.tool_parameters["include_paths"] == ["src/", "tests/"]
+    assert trajectory.tool_parameters["fixed_string"] is False
+
+    # Verify other parts are still correct
+    assert trajectory.tool_parameters["options"]["case_sensitive"] == True
     assert trajectory.human_input_id == sample_human_input.id
 
 

@@ -1,4 +1,5 @@
-from typing import Dict, List, Union
+
+from typing import Dict, List, Union, Optional
 
 from langchain_core.tools import tool
 from rich.console import Console
@@ -75,13 +76,14 @@ FILE_TYPE_MAP = {
 def ripgrep_search(
     pattern: str,
     *,
-    before_context_lines: int = None,
-    after_context_lines: int = None,
-    file_type: str = None,
+    before_context_lines: Optional[int] = None,
+    after_context_lines: Optional[int] = None,
+    file_type: Optional[str] = None,
     case_sensitive: bool = True,
     include_hidden: bool = False,
     follow_links: bool = False,
-    exclude_dirs: List[str] = None,
+    exclude_dirs: Optional[List[str]] = None,
+    include_paths: Optional[List[str]] = None,
     fixed_string: bool = False,
 ) -> Dict[str, Union[str, int, bool]]:
     """Execute a ripgrep (rg) search with formatting and common options.
@@ -97,6 +99,8 @@ def ripgrep_search(
         include_hidden: Whether to search hidden files and directories (default: False)
         follow_links: Whether to follow symbolic links (default: False)
         exclude_dirs: Additional directories to exclude (combines with defaults)
+        include_paths: Optional list of specific file or directory paths to search within.
+                       If provided, rg will only search these paths.
         fixed_string: Whether to treat pattern as a literal string instead of regex (default: False)
     """
     # Build rg command with options
@@ -118,9 +122,11 @@ def ripgrep_search(
         cmd.append("--follow")
 
     if file_type:
-        if FILE_TYPE_MAP.get(file_type):
-            file_type = FILE_TYPE_MAP.get(file_type)
-        cmd.extend(["-t", file_type])
+        mapped_type = FILE_TYPE_MAP.get(file_type)
+        if mapped_type:
+            cmd.extend(["-t", mapped_type])
+        else:
+             cmd.extend(["-t", file_type]) # Pass original if not in map
 
     # Add exclusions
     exclusions = DEFAULT_EXCLUDE_DIRS + (exclude_dirs or [])
@@ -134,8 +140,12 @@ def ripgrep_search(
     # Add the search pattern
     cmd.append(pattern)
 
-    # Build info sections for display
-    info_sections = []
+    # Add include paths if specified
+    if include_paths:
+        cmd.extend(include_paths)
+
+    # Build info string for display
+    info_lines = []
 
     # Search parameters section
     params = [
@@ -158,7 +168,12 @@ def ripgrep_search(
         params.append("\n**Additional Exclusions**:")
         for dir in exclude_dirs:
             params.append(f"- `{dir}`")
-    info_sections.append("\n".join(params))
+    # Use \n for Markdown line breaks
+    if include_paths:
+        params.append("\n**Included Paths**:") # Corrected newline
+        for path in include_paths:
+            params.append(f"- `{path}`")
+    info_lines.append("\n".join(params)) # Corrected newline join
 
     # Execute command
     # Record ripgrep search in trajectory
@@ -175,6 +190,7 @@ def ripgrep_search(
             "include_hidden": include_hidden,
             "follow_links": follow_links,
             "exclude_dirs": exclude_dirs,
+            "include_paths": include_paths,
             "fixed_string": fixed_string
         },
         step_data={
@@ -184,9 +200,9 @@ def ripgrep_search(
         record_type="tool_execution",
         human_input_id=human_input_id
     )
-    
+
     cpm(
-        f"Searching for: **{pattern}**",
+        f"Searching for: **{pattern}**{' in ' + ', '.join(include_paths) if include_paths else ''}",
         title="🔎 Ripgrep Search",
         border_style="bright_blue"
     )
@@ -196,6 +212,12 @@ def ripgrep_search(
         print()
         decoded_output = output.decode() if output else ""
 
+        # Update trajectory with results
+        trajectory_repo.update_last_by_tool_name(
+            "ripgrep_search",
+            tool_output={"output": truncate_output(decoded_output), "return_code": return_code, "success": return_code == 0}
+        )
+
         return {
             "output": truncate_output(decoded_output),
             "return_code": return_code,
@@ -204,34 +226,16 @@ def ripgrep_search(
 
     except Exception as e:
         error_msg = str(e)
-        
+
         # Record error in trajectory
-        trajectory_repo = get_trajectory_repository()
-        human_input_id = get_human_input_repository().get_most_recent_id()
-        trajectory_repo.create(
-            tool_name="ripgrep_search",
-            tool_parameters={
-                "pattern": pattern,
-                "before_context_lines": before_context_lines,
-                "after_context_lines": after_context_lines,
-                "file_type": file_type,
-                "case_sensitive": case_sensitive,
-                "include_hidden": include_hidden,
-                "follow_links": follow_links,
-                "exclude_dirs": exclude_dirs,
-                "fixed_string": fixed_string
-            },
-            step_data={
-                "search_pattern": pattern,
-                "display_title": "Ripgrep Search Error",
-                "error_message": error_msg
-            },
-            record_type="tool_execution",
-            human_input_id=human_input_id,
+        # No need to create a new one, just update the existing one
+        trajectory_repo.update_last_by_tool_name(
+            "ripgrep_search",
             is_error=True,
             error_message=error_msg,
-            error_type=type(e).__name__
+            error_type=type(e).__name__,
+            tool_output={"output": error_msg, "return_code": 1, "success": False}
         )
-        
+
         console_panel(error_msg, title="❌ Error", border_style="red")
         return {"output": error_msg, "return_code": 1, "success": False}
