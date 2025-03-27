@@ -26,14 +26,9 @@ class TestCiaynBundledTools(unittest.TestCase):
         self.validate_patcher = patch('ra_aid.agent_backends.ciayn_agent.validate_function_call_pattern', return_value=False)
         self.mock_validate = self.validate_patcher.start()
         
-        # Mock _extract_tool_call in case it's needed
-        self.extract_patcher = patch.object(self.agent, '_extract_tool_call', return_value="mocked_tool_call")
-        self.mock_extract = self.extract_patcher.start()
-
     def tearDown(self):
         """Clean up patches after the test."""
         self.validate_patcher.stop()
-        self.extract_patcher.stop()
 
     @patch('random.choice', side_effect=lambda chars: chars[0])  # Make random IDs predictable for testing
     def test_bundled_tool_calls(self, mock_random):
