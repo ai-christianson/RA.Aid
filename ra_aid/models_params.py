@@ -416,7 +416,7 @@ models_params = {
             "supports_temperature": True,
             "default_temperature": 1.0,
             "latency_coefficient": DEFAULT_BASE_LATENCY,
-            "default_backend": AgentBackendType.CIAYN
+            "default_backend": AgentBackendType.CREATE_REACT_AGENT
         },
     },
     "ollama": {
