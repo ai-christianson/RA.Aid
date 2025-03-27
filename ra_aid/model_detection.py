@@ -63,8 +63,11 @@ def normalize_model_name(model_name: str) -> str:
     Returns:
         str: The normalized model name
     """
+    # Specifically check for "models/" prefix
+    if model_name.startswith("models/"):
+        model_name = model_name[len("models/"):]
     # Remove provider prefix (e.g., "anthropic/", "google/")
-    if "/" in model_name:
+    elif "/" in model_name:
         model_name = model_name.split("/", 1)[1]
 
     # Remove version suffix (e.g., ":free", ":v1")
@@ -124,13 +127,14 @@ def should_use_react_agent(model: BaseChatModel) -> bool:
     try:
         provider = get_config_repository().get("provider", "anthropic")
         provider_config = models_params.get(provider, {})
-        model_config = provider_config.get(model_name, {})
+        model_config = provider_config.get(model_name, provider_config.get(normalized_model_name, {}))
 
         # If there's a specific backend configured, override the detection result
         if "default_backend" in model_config:
             configured_backend = model_config.get(
                 "default_backend", DEFAULT_AGENT_BACKEND
             )
+            
             use_react_agent = configured_backend == AgentBackendType.CREATE_REACT_AGENT
             logger.debug(
                 f"Overriding agent backend selection based on config: {use_react_agent}"

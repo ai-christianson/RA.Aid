@@ -22,6 +22,7 @@ from anthropic import APIError, APITimeoutError, InternalServerError, RateLimitE
 from openai import RateLimitError as OpenAIRateLimitError
 from litellm.exceptions import RateLimitError as LiteLLMRateLimitError
 from google.api_core.exceptions import ResourceExhausted
+from fireworks.client.error import ServiceUnavailableError, RateLimitError as FireworksRateLimitError
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import (
     BaseMessage,
@@ -40,7 +41,8 @@ from ra_aid.agent_context import (
 from ra_aid.agent_backends.ciayn_agent import CiaynAgent
 from ra_aid.agents_alias import RAgents
 from ra_aid.config import DEFAULT_MAX_TEST_CMD_RETRIES, DEFAULT_MODEL
-from ra_aid.console.formatting import cpm, print_error
+# Import the new function
+from ra_aid.console.formatting import cpm, print_error, print_rate_limit_info
 from ra_aid.console.output import print_agent_output
 from ra_aid.exceptions import (
     AgentInterrupt,
@@ -114,6 +116,7 @@ def build_agent_kwargs(
     agent_kwargs["name"] = model_name
 
     return agent_kwargs
+
 
 
 def create_agent(
@@ -260,6 +263,8 @@ def _execute_test_command_wrapper(original_prompt, config, test_attempts, auto_t
 
 
 def _handle_api_error(e, attempt, max_retries, base_delay):
+    is_rate_limit_error = False  # Initialize the flag
+
     # 1. Check if this is a ValueError with 429 code or rate limit phrases
     if isinstance(e, ValueError):
         error_str = str(e).lower()
@@ -273,38 +278,51 @@ def _handle_api_error(e, attempt, max_retries, base_delay):
             phrase in error_str for phrase in rate_limit_phrases
         ):
             raise e
+        else:
+            is_rate_limit_error = True # It's a rate limit related ValueError
 
-    # 2. Check for status_code or http_status attribute equal to 429
-    if hasattr(e, "status_code") and e.status_code == 429:
-        pass  # This is a rate limit error, continue with retry logic
+    # 2. Check for specific error types that should be retried
+    if isinstance(e, (RateLimitError, OpenAIRateLimitError, LiteLLMRateLimitError, ResourceExhausted, FireworksRateLimitError)):
+        is_rate_limit_error = True # Explicit rate limit exceptions
+    elif isinstance(e, ServiceUnavailableError):
+        pass # Retry but not necessarily a rate limit
+
+    # 3. Check for status_code or http_status attribute equal to 429
+    elif hasattr(e, "status_code") and e.status_code == 429:
+        is_rate_limit_error = True # HTTP 429 status code
     elif hasattr(e, "http_status") and e.http_status == 429:
-        pass  # This is a rate limit error, continue with retry logic
-    # 3. Check for rate limit phrases in error message
-    elif isinstance(e, Exception) and not isinstance(e, ValueError):
+        is_rate_limit_error = True # HTTP 429 status code
+
+    # 4. Check for rate limit phrases in error message for other exceptions
+    elif not is_rate_limit_error and isinstance(e, Exception):
         error_str = str(e).lower()
-        if not any(
-            phrase in error_str
-            for phrase in ["rate limit", "too many requests", "quota exceeded", "429"]
-        ) and not ("rate" in error_str and "limit" in error_str):
-            # This doesn't look like a rate limit error, but we'll still retry other API errors
-            pass
+        rate_limit_keywords = [
+            "rate limit", "too many requests", "quota exceeded", "429"
+        ]
+        if any(keyword in error_str for keyword in rate_limit_keywords) or \
+           ("rate" in error_str and "limit" in error_str):
+            is_rate_limit_error = True # Rate limit keywords found
 
     # Apply common retry logic for all identified errors
     if attempt == max_retries - 1:
         logger.error("Max retries reached, failing: %s", str(e))
         raise RuntimeError(f"Max retries ({max_retries}) exceeded. Last error: {e}")
 
-    logger.warning("API error (attempt %d/%d): %s", attempt + 1, max_retries, str(e))
+    # Change log level to info
+    logger.info("API error (attempt %d/%d): %s", attempt + 1, max_retries, str(e))
     delay = base_delay * (2**attempt)
     error_message = f"Encountered {e.__class__.__name__}: {e}. Retrying in {delay}s... (Attempt {attempt+1}/{max_retries})"
 
     trajectory_repo = get_trajectory_repository()
     human_input_id = get_human_input_repository().get_most_recent_id()
 
+    # Use a different display title for rate limit errors in trajectory
+    display_title = "Rate Limit Hit" if is_rate_limit_error else "Error"
+
     trajectory_repo.create(
         step_data={
             "error_message": error_message,
-            "display_title": "Error",
+            "display_title": display_title,
         },
         record_type="error",
         human_input_id=human_input_id,
@@ -312,7 +330,12 @@ def _handle_api_error(e, attempt, max_retries, base_delay):
         error_message=error_message,
     )
 
-    print_error(error_message)
+    # Conditional console output
+    if is_rate_limit_error:
+        print_rate_limit_info(error_message)
+    else:
+        print_error(error_message)
+
     start = time.monotonic()
     while time.monotonic() - start < delay:
         check_interrupt()
@@ -604,6 +627,8 @@ def run_agent_with_retry(
                     ResourceExhausted,
                     APIError,
                     ValueError,
+                    ServiceUnavailableError,
+                    FireworksRateLimitError,
                 ) as e:
                     # Check if this is a BadRequestError (HTTP 400) which is unretryable
                     error_str = str(e).lower()

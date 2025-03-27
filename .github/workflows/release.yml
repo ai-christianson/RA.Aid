@@ -59,7 +59,7 @@ jobs:
       - name: Extract Changelog for Version
         id: changelog
         run: |
-          python scripts/extract_changelog.py ${{ env.version }} > release_notes.txt
+          python ra_aid/scripts/extract_changelog.py ${{ env.version }} > release_notes.txt
           echo "changelog<<EOF" >> $GITHUB_ENV
           cat release_notes.txt >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV

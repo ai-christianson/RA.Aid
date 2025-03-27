@@ -13,6 +13,39 @@ DEFAULT_BASE_LATENCY = 240
 DEFAULT_AGENT_BACKEND = AgentBackendType.CIAYN
 
 models_params = {
+    "fireworks": {
+        "accounts/fireworks/models/deepseek-v3-0324": {
+            "token_limit": 163840,
+            "supports_temperature": True,
+            "default_temperature": DEFAULT_TEMPERATURE,
+            "latency_coefficient": DEFAULT_BASE_LATENCY,
+            "default_backend": AgentBackendType.CIAYN
+        },
+        "accounts/fireworks/models/llama-v3-70b-instruct": {
+            "token_limit": 8192,
+            "supports_temperature": True,
+            "default_temperature": DEFAULT_TEMPERATURE,
+            "latency_coefficient": DEFAULT_BASE_LATENCY,
+        },
+        "accounts/fireworks/models/llama-v3-8b-instruct": {
+            "token_limit": 8192,
+            "supports_temperature": True,
+            "default_temperature": DEFAULT_TEMPERATURE,
+            "latency_coefficient": DEFAULT_BASE_LATENCY,
+        },
+        "accounts/fireworks/models/mixtral-8x22b-instruct": {
+            "token_limit": 65536,
+            "supports_temperature": True,
+            "default_temperature": DEFAULT_TEMPERATURE,
+            "latency_coefficient": DEFAULT_BASE_LATENCY,
+        },
+        "accounts/fireworks/models/firefunction-v2": {
+            "token_limit": 16000,
+            "supports_temperature": True,
+            "default_temperature": DEFAULT_TEMPERATURE,
+            "latency_coefficient": DEFAULT_BASE_LATENCY,
+        },
+    },
     "openai": {
         "gpt-3.5-turbo-0125": {
             "token_limit": 16385,
@@ -365,6 +398,16 @@ models_params = {
             "supports_temperature": True,
             "default_temperature": DEFAULT_TEMPERATURE,
             "latency_coefficient": DEFAULT_BASE_LATENCY,
+        },
+    },
+    "gemini": {
+        "gemini-2.5-pro-exp-03-25": {
+            "token_limit": 1048576,
+            "max_tokens": 1048576,
+            "supports_temperature": True,
+            "default_temperature": 1.0,
+            "latency_coefficient": DEFAULT_BASE_LATENCY,
+            "default_backend": AgentBackendType.CIAYN
         },
     },
     "ollama": {
@@ -783,6 +826,14 @@ models_params = {
         },
     },
     "groq": {
+        "qwen-qwq-32b": {
+            "token_limit": 131072,
+            "supports_temperature": True,
+            "supports_think_tag": True,
+            "default_temperature": 0.6,
+            "latency_coefficient": DEFAULT_BASE_LATENCY,
+            "max_tokens": 131072,
+        },
         "llama3-8b-8192": {
             "token_limit": 8192,
             "supports_temperature": True,

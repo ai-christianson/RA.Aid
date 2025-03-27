@@ -4,7 +4,9 @@ from typing import Any, Dict, List, Optional
 from langchain_anthropic import ChatAnthropic
 from langchain_core.language_models import BaseChatModel
 from langchain_deepseek import ChatDeepSeek
+from langchain_fireworks import ChatFireworks
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_groq import ChatGroq
 from langchain_openai import ChatOpenAI
 from openai import OpenAI
 
@@ -68,6 +70,8 @@ known_temp_providers = {
     "gemini",
     "deepseek",
     "ollama",
+    "fireworks",
+    "groq",
 }
 
 # Constants for API request configuration
@@ -160,6 +164,72 @@ def create_openrouter_client(
     )
 
 
+def create_fireworks_client(
+    model_name: str,
+    api_key: str,
+    temperature: Optional[float] = None,
+    is_expert: bool = False,
+) -> BaseChatModel:
+    """Create a ChatFireworks client.
+
+    Args:
+        model_name: Name of the model to use
+        api_key: Fireworks API key
+        temperature: Temperature for generation
+        is_expert: Whether this is for an expert model
+
+    Returns:
+        ChatFireworks instance
+    """
+    # Default to temperature 0 for expert mode
+    temp_kwargs = {}
+    if temperature is not None:
+        temp_kwargs["temperature"] = temperature
+    elif is_expert:
+        temp_kwargs["temperature"] = 0
+
+    return ChatFireworks(
+        model=model_name,
+        fireworks_api_key=api_key,
+        timeout=int(get_env_var(name="LLM_REQUEST_TIMEOUT", default=LLM_REQUEST_TIMEOUT)),
+        max_retries=int(get_env_var(name="LLM_MAX_RETRIES", default=LLM_MAX_RETRIES)),
+        **temp_kwargs,
+    )
+
+
+def create_groq_client(
+    model_name: str,
+    api_key: str,
+    temperature: Optional[float] = None,
+    is_expert: bool = False,
+) -> BaseChatModel:
+    """Create a ChatGroq client.
+
+    Args:
+        model_name: Name of the model to use
+        api_key: Groq API key
+        temperature: Temperature for generation
+        is_expert: Whether this is for an expert model
+
+    Returns:
+        ChatGroq instance
+    """
+    # Default to temperature 0 for expert mode
+    temp_kwargs = {}
+    if temperature is not None:
+        temp_kwargs["temperature"] = temperature
+    elif is_expert:
+        temp_kwargs["temperature"] = 0
+
+    return ChatGroq(
+        model=model_name,
+        api_key=api_key,
+        timeout=int(get_env_var(name="LLM_REQUEST_TIMEOUT", default=LLM_REQUEST_TIMEOUT)),
+        max_retries=int(get_env_var(name="LLM_MAX_RETRIES", default=LLM_MAX_RETRIES)),
+        **temp_kwargs,
+    )
+
+
 def create_ollama_client(
     model_name: str,
     base_url: Optional[str] = None,
@@ -237,6 +307,14 @@ def get_provider_config(provider: str, is_expert: bool = False) -> Dict[str, Any
             "base_url": get_env_var(
                 "OLLAMA_BASE_URL", is_expert, "http://localhost:11434"
             ),
+        },
+        "fireworks": {
+            "api_key": get_env_var("FIREWORKS_API_KEY", is_expert),
+            "base_url": None,  # Using default API endpoint
+        },
+        "groq": {
+            "api_key": get_env_var("GROQ_API_KEY", is_expert),
+            "base_url": None,  # Using default API endpoint
         },
     }
     config = configs.get(provider, {})
@@ -474,6 +552,20 @@ def create_llm_client(
             is_expert=is_expert,
             num_ctx=num_ctx_value,
         )
+    elif provider == "fireworks":
+        return create_fireworks_client(
+            model_name=model_name,
+            api_key=config.get("api_key"),
+            temperature=temperature if temp_kwargs else None,
+            is_expert=is_expert,
+        )
+    elif provider == "groq":
+        return create_groq_client(
+            model_name=model_name,
+            api_key=config.get("api_key"),
+            temperature=temperature if temp_kwargs else None,
+            is_expert=is_expert,
+        )
     else:
         raise ValueError(f"Unsupported provider: {provider}")
 
@@ -500,6 +592,8 @@ def validate_provider_env(provider: str) -> bool:
         "gemini": "GEMINI_API_KEY",
         "deepseek": "DEEPSEEK_API_KEY",
         "ollama": None,  # Ollama doesn't require any environment variables to be set
+        "fireworks": "FIREWORKS_API_KEY",
+        "groq": "GROQ_API_KEY",
     }
 
     key = required_vars.get(provider.lower())

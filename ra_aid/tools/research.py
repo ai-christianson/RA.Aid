@@ -2,9 +2,10 @@ from langchain_core.tools import tool
 from rich.console import Console
 from rich.panel import Panel
 
-from ra_aid.console.formatting import console_panel
+from ra_aid.console.formatting import console_panel, cpm
 from ra_aid.database.repositories.trajectory_repository import get_trajectory_repository
 from ra_aid.database.repositories.human_input_repository import get_human_input_repository
+from ra_aid.agent_context import mark_should_exit, mark_task_completed
 
 console = Console()
 
@@ -123,3 +124,49 @@ def ui_detected() -> dict:
             "Your goal is to enhance the user interface without disrupting the cohesive look, feel, and functionality already established."
         )
     }
+
+
+@tool
+def mark_research_complete_no_implementation_required(message: str):
+    """Mark the current research task as complete with no implementation required.
+
+    Use this when research is complete and it has been determined that no implementation 
+    is needed or possible. The agent will exit after calling this tool.
+
+    Args:
+        message: Message explaining why no implementation is required.
+    """
+    # Try to get the latest human input
+    human_input_id = None
+    try:
+        human_input_repo = get_human_input_repository()
+        human_input_id = human_input_repo.get_most_recent_id()
+    except Exception as e:
+        console.print(f"Warning: Could not get human input ID: {str(e)}", style="yellow")
+
+    # Record to trajectory
+    try:
+        trajectory_repo = get_trajectory_repository()
+        trajectory_repo.create(
+            tool_name="mark_research_complete_no_implementation_required",
+            tool_parameters={"message": message},
+            step_data={
+                "completion_message": message,
+                "display_title": "Research Complete (No Implementation Required)",
+            },
+            record_type="task_completion",
+            human_input_id=human_input_id
+        )
+    except Exception as e:
+        console.print(f"Warning: Could not record trajectory: {str(e)}", style="yellow")
+    
+    # Mark task as completed
+    mark_task_completed(message)
+    
+    # Print confirmation message to console
+    cpm(f"🎯 Research complete (no implementation required): {message}", "Research Complete", "green")
+    
+    # Signal agent to exit
+    mark_should_exit()
+    
+    return f"Research task completed with no implementation required: {message}"
