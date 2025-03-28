@@ -58,11 +58,15 @@ class DefaultCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
 
     def __init__(self, model_name: str, provider: Optional[str] = None):
         super().__init__()
+        self._lock = threading.Lock()
+        self._initialize(model_name, provider)
+
+    def _initialize(self, model_name: str, provider: Optional[str] = None):
+        """Initialize or reinitialize the handler state."""
         if not isinstance(model_name, str) or not model_name.strip():
             raise ValueError("model_name must be non-empty string")
 
-        print(f"__init__ provider={provider}")
-        self._lock = threading.Lock()
+        print(f"Initializing provider={provider}")
         self.total_tokens: int = 0
         self.prompt_tokens: int = 0
         self.completion_tokens: int = 0

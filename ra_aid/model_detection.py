@@ -44,13 +44,18 @@ def get_model_name_from_chat_model(model: Optional[BaseChatModel]) -> str:
     if model is None:
         return DEFAULT_MODEL
 
+    if hasattr(model, "metadata") and isinstance(model.metadata, dict):
+        if "model_name" in model.metadata:
+            return model.metadata["model_name"]
+
+    # Fall back to other attributes
     if hasattr(model, "model"):
         return model.model
     elif hasattr(model, "model_name"):
         return model.model_name
-    else:
-        logger.debug(f"Could not extract model name from {model}, using DEFAULT_MODEL")
-        return DEFAULT_MODEL
+
+    logger.debug(f"Could not extract model name from {model}, using DEFAULT_MODEL")
+    return DEFAULT_MODEL
 
 
 def normalize_model_name(model_name: str) -> str:
