@@ -289,6 +289,10 @@ def create_ollama_client(
             get_env_var(name="LLM_REQUEST_TIMEOUT", default=LLM_REQUEST_TIMEOUT)
         ),
         max_retries=int(get_env_var(name="LLM_MAX_RETRIES", default=LLM_MAX_RETRIES)),
+        metadata={
+            "model_name": model_name,
+            "provider": "ollama"
+        },
         **temp_kwargs,
     )
 
@@ -580,10 +584,6 @@ def create_llm_client(
             with_thinking=bool(thinking_kwargs),
             is_expert=is_expert,
             num_ctx=num_ctx_value,
-            metadata={
-                "model_name": model_name,
-                "provider": "ollama"
-            }
         )
     elif provider == "fireworks":
         fireworks_client = create_fireworks_client(

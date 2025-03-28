@@ -63,6 +63,7 @@ def test_initialize_expert_defaults(clean_env, mock_openai, monkeypatch):
         reasoning_effort="high",
         timeout=180,
         max_retries=5,
+        metadata={"model_name": "o1", "provider": "openai"},
     )
 
 
@@ -77,6 +78,7 @@ def test_initialize_expert_openai_custom(clean_env, mock_openai, monkeypatch):
         temperature=0,
         timeout=180,
         max_retries=5,
+        metadata={"model_name": "gpt-4-preview", "provider": "openai"},
     )
 
 
@@ -91,6 +93,7 @@ def test_initialize_expert_gemini(clean_env, mock_gemini, monkeypatch):
         temperature=0,
         timeout=180,
         max_retries=5,
+        metadata={"model_name": "gemini-2.0-flash-thinking-exp-1219"},
     )
 
 
@@ -124,6 +127,7 @@ def test_initialize_expert_openrouter(clean_env, mock_openai, monkeypatch):
         timeout=180,
         max_retries=5,
         default_headers={"HTTP-Referer": "https://ra-aid.ai", "X-Title": "RA.Aid"},
+        metadata={"model_name": "models/mistral-large", "provider": "openrouter"},
     )
 
 
@@ -140,14 +144,13 @@ def test_initialize_expert_openai_compatible(clean_env, mock_openai, monkeypatch
         temperature=0,
         timeout=180,
         max_retries=5,
+        metadata={"model_name": "local-model", "provider": "openai-compatible"},
     )
 
 
 def test_initialize_expert_unsupported_provider(clean_env):
     """Test error handling for unsupported provider in expert mode."""
-    with pytest.raises(
-        ValueError, match=r"Unsupported provider: unknown"
-    ):
+    with pytest.raises(ValueError, match=r"Unsupported provider: unknown"):
         initialize_expert_llm("unknown", "model")
 
 
@@ -173,7 +176,12 @@ def test_initialize_openai(clean_env, mock_openai):
     _model = initialize_llm("openai", "gpt-4", temperature=0.7)
 
     mock_openai.assert_called_once_with(
-        api_key="test-key", model="gpt-4", temperature=0.7, timeout=180, max_retries=5
+        api_key="test-key",
+        model="gpt-4",
+        temperature=0.7,
+        timeout=180,
+        max_retries=5,
+        metadata={"model_name": "gpt-4", "provider": "openai"},
     )
 
 
@@ -190,6 +198,7 @@ def test_initialize_gemini(clean_env, mock_gemini):
         temperature=0.7,
         timeout=180,
         max_retries=5,
+        metadata={"model_name": "gemini-2.0-flash-thinking-exp-1219"},
     )
 
 
@@ -223,6 +232,7 @@ def test_initialize_openrouter(clean_env, mock_openai):
         timeout=180,
         max_retries=5,
         default_headers={"HTTP-Referer": "https://ra-aid.ai", "X-Title": "RA.Aid"},
+        metadata={"model_name": "mistral-large", "provider": "openrouter"},
     )
 
 
@@ -239,14 +249,13 @@ def test_initialize_openai_compatible(clean_env, mock_openai):
         temperature=0.3,
         timeout=180,
         max_retries=5,
+        metadata={"model_name": "local-model", "provider": "openai-compatible"},
     )
 
 
 def test_initialize_unsupported_provider(clean_env):
     """Test initialization with unsupported provider raises ValueError"""
-    with pytest.raises(
-        ValueError, match=r"Unsupported provider: unknown"
-    ):
+    with pytest.raises(ValueError, match=r"Unsupported provider: unknown"):
         initialize_llm("unknown", "model")
 
 
@@ -266,6 +275,7 @@ def test_temperature_defaults(clean_env, mock_openai, mock_anthropic, mock_gemin
         temperature=0.3,
         timeout=180,
         max_retries=5,
+        metadata={"model_name": "test-model", "provider": "openai-compatible"},
     )
 
     # Test default temperature when none is provided for models that support it
@@ -276,6 +286,7 @@ def test_temperature_defaults(clean_env, mock_openai, mock_anthropic, mock_gemin
         temperature=0.7,
         timeout=180,
         max_retries=5,
+        metadata={"model_name": "test-model", "provider": "openai"},
     )
 
     initialize_llm("anthropic", "test-model")
@@ -295,6 +306,7 @@ def test_temperature_defaults(clean_env, mock_openai, mock_anthropic, mock_gemin
         temperature=0.7,
         timeout=180,
         max_retries=5,
+        metadata={"model_name": "test-model"},
     )
 
     # Test expert models don't require temperature
@@ -305,6 +317,7 @@ def test_temperature_defaults(clean_env, mock_openai, mock_anthropic, mock_gemin
         reasoning_effort="high",
         timeout=180,
         max_retries=5,
+        metadata={"model_name": "o1", "provider": "openai"},
     )
 
     initialize_expert_llm("openai", "o1-mini")
@@ -314,6 +327,7 @@ def test_temperature_defaults(clean_env, mock_openai, mock_anthropic, mock_gemin
         reasoning_effort="high",
         timeout=180,
         max_retries=5,
+        metadata={"model_name": "o1-mini", "provider": "openai"},
     )
 
 
@@ -334,6 +348,7 @@ def test_explicit_temperature(clean_env, mock_openai, mock_anthropic, mock_gemin
         temperature=test_temp,
         timeout=180,
         max_retries=5,
+        metadata={"model_name": "test-model", "provider": "openai"},
     )
 
     # Test Gemini
@@ -344,6 +359,7 @@ def test_explicit_temperature(clean_env, mock_openai, mock_anthropic, mock_gemin
         temperature=test_temp,
         timeout=180,
         max_retries=5,
+        metadata={"model_name": "test-model"},
     )
 
     # Test Anthropic
@@ -367,6 +383,7 @@ def test_explicit_temperature(clean_env, mock_openai, mock_anthropic, mock_gemin
         timeout=180,
         max_retries=5,
         default_headers={"HTTP-Referer": "https://ra-aid.ai", "X-Title": "RA.Aid"},
+        metadata={"model_name": "test-model", "provider": "openrouter"},
     )
 
 
@@ -467,7 +484,12 @@ def test_initialize_llm_cross_provider(
     monkeypatch.setenv("OPENAI_API_KEY", "openai-key")
     _llm1 = initialize_llm("openai", "gpt-4", temperature=0.7)
     mock_openai.assert_called_with(
-        api_key="openai-key", model="gpt-4", temperature=0.7, timeout=180, max_retries=5
+        api_key="openai-key",
+        model="gpt-4",
+        temperature=0.7,
+        timeout=180,
+        max_retries=5,
+        metadata={"model_name": "gpt-4", "provider": "openai"},
     )
 
     # Initialize Anthropic
@@ -491,6 +513,7 @@ def test_initialize_llm_cross_provider(
         temperature=0.7,
         timeout=180,
         max_retries=5,
+        metadata={"model_name": "gemini-pro"},
     )
 
 
@@ -530,6 +553,7 @@ def test_environment_variable_precedence(clean_env, mock_openai, monkeypatch):
         reasoning_effort="high",
         timeout=180,
         max_retries=5,
+        metadata={"model_name": "o1", "provider": "openai"},
     )
 
     # Test environment validation
@@ -601,6 +625,7 @@ def test_reasoning_effort_only_passed_to_supported_models(
         temperature=0,
         timeout=180,
         max_retries=5,
+        metadata={"model_name": "gpt-4", "provider": "openai"},
     )
 
 
@@ -620,6 +645,7 @@ def test_reasoning_effort_passed_to_supported_models(
         reasoning_effort="high",
         timeout=180,
         max_retries=5,
+        metadata={"model_name": "o1", "provider": "openai"},
     )
 
 
@@ -638,6 +664,7 @@ def test_initialize_deepseek(
         temperature=0.7,
         timeout=180,
         max_retries=5,
+        metadata={"model_name": "deepseek-reasoner", "provider": "deepseek"},
     )
 
     # Test with deepseek-chat model (should use ChatDeepSeek)
@@ -648,6 +675,7 @@ def test_initialize_deepseek(
         temperature=0.7,
         timeout=180,
         max_retries=5,
+        metadata={"model_name": "deepseek-chat", "provider": "deepseek"},
     )
 
     # Test with OpenAI-compatible model (non-deepseek-chat)
@@ -659,6 +687,7 @@ def test_initialize_deepseek(
         temperature=0.7,
         timeout=180,
         max_retries=5,
+        metadata={"model_name": "other-model", "provider": "deepseek"},
     )
 
 
@@ -678,4 +707,5 @@ def test_initialize_openrouter_deepseek(
         timeout=180,
         max_retries=5,
         default_headers={"HTTP-Referer": "https://ra-aid.ai", "X-Title": "RA.Aid"},
+        metadata={"model_name": "deepseek/deepseek-r1", "provider": "openrouter"},
     )

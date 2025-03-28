@@ -1,5 +1,3 @@
-"""Default callback handler for tracking token usage and costs across different model providers."""
-
 import threading
 import time
 from langchain.chat_models.base import BaseChatModel
@@ -7,13 +5,11 @@ import litellm
 from contextlib import contextmanager
 from contextvars import ContextVar
 from typing import Dict, Optional, Union, Any, List
-from dataclasses import dataclass
 from decimal import Decimal, getcontext
 
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.outputs import LLMResult
 
-from ra_aid.config import DEFAULT_MODEL
 from ra_aid.model_detection import (
     get_model_name_from_chat_model,
     get_provider_from_chat_model,
@@ -25,7 +21,6 @@ from ra_aid.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-# Set decimal precision for financial calculations
 getcontext().prec = 16
 
 MODEL_COSTS = {
@@ -54,50 +49,35 @@ MODEL_COSTS = {
 
 
 class DefaultCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
-    """Callback Handler that tracks token usage and costs for various models.
-
-    This class uses the Singleton metaclass to ensure only one instance exists.
-    """
-
     def __init__(self, model_name: str, provider: Optional[str] = None):
         super().__init__()
         self._lock = threading.Lock()
         self._initialize(model_name, provider)
 
     def _initialize(self, model_name: str, provider: Optional[str] = None):
-        """Initialize or reinitialize the handler state."""
-        if not isinstance(model_name, str) or not model_name.strip():
-            raise ValueError("model_name must be non-empty string")
+        with self._lock:
+            self.total_tokens = 0
+            self.prompt_tokens = 0
+            self.completion_tokens = 0
+            self.successful_requests = 0
+            self.total_cost = Decimal("0.0")
+            self.model_name = model_name
+            self.provider = provider
+            self._last_request_time = None
+            self.__post_init__()
 
-        print(f"Initializing provider={provider}")
-        self.total_tokens: int = 0
-        self.prompt_tokens: int = 0
-        self.completion_tokens: int = 0
-        self.successful_requests: int = 0
-        self.total_cost: Decimal = Decimal("0.0")
-        self.model_name: str = model_name
-        self.provider: Optional[str] = provider
-        self._last_request_time: Optional[float] = None
-
-        # Initialize repositories and model costs
-        self.__post_init__()
-
-    # Track cumulative totals separately from last message
     cumulative_total_tokens: int = 0
     cumulative_prompt_tokens: int = 0
     cumulative_completion_tokens: int = 0
 
-    # Repositories for callback handling
     trajectory_repo = None
     session_repo = None
 
-    # Per-token costs from litellm (using Decimal for precision)
     input_cost_per_token: Decimal = Decimal("0.0")
     output_cost_per_token: Decimal = Decimal("0.0")
 
-    # Session totals to maintain consistency across agent switches
     session_totals = {
-        "cost": Decimal("0.0"),  # Already using Decimal
+        "cost": Decimal("0.0"),
         "tokens": 0,
         "input_tokens": 0,
         "output_tokens": 0,
@@ -106,7 +86,6 @@ class DefaultCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
     }
 
     def __post_init__(self):
-        """Initialize repositories and model costs. Called automatically from __init__."""
         try:
             if not hasattr(self, "trajectory_repo") or self.trajectory_repo is None:
                 self.trajectory_repo = get_trajectory_repository()
@@ -124,10 +103,7 @@ class DefaultCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
             logger.error(f"Failed to initialize callback handler: {e}", exc_info=True)
 
     def _initialize_model_costs(self) -> None:
-        """Initialize per-token costs from litellm or fallback to MODEL_COSTS."""
         try:
-            print(f"self.model_name={self.model_name}")
-            print(f"self.provider={self.provider}")
             model_info = litellm.get_model_info(
                 model=self.model_name, custom_llm_provider=self.provider
             )
@@ -136,18 +112,12 @@ class DefaultCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
                 input_cost = model_info.get("input_cost_per_token", 0.0)
                 output_cost = model_info.get("output_cost_per_token", 0.0)
                 self.input_cost_per_token = Decimal(str(input_cost))
-                print(f"input_cost_per_token={self.input_cost_per_token}")
                 self.output_cost_per_token = Decimal(str(output_cost))
-
-                # Only use these if both costs are valid
                 if self.input_cost_per_token and self.output_cost_per_token:
                     return
-
         except Exception as e:
-            print(f"e={e}")
             logger.debug(f"Could not get model info from litellm: {e}")
 
-        # Fallback to MODEL_COSTS
         model_cost = MODEL_COSTS.get(
             self.model_name, {"input": Decimal("0"), "output": Decimal("0")}
         )
@@ -165,13 +135,11 @@ class DefaultCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
 
     @property
     def always_verbose(self) -> bool:
-        """Whether to call verbose callbacks even if verbose is False."""
         return True
 
     def on_llm_start(
         self, serialized: Dict[str, Any], prompts: List[str], **kwargs
     ) -> None:
-        """Run when LLM starts running."""
         try:
             self._last_request_time = time.time()
             if "name" in serialized:
@@ -180,7 +148,6 @@ class DefaultCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
             logger.error(f"Error in on_llm_start: {e}", exc_info=True)
 
     def on_llm_end(self, response: LLMResult, **kwargs) -> None:
-        """Run when LLM ends running."""
         try:
             if self._last_request_time is None:
                 return
@@ -201,8 +168,6 @@ class DefaultCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
                         token_usage["completion_tokens"] = usage["output_tokens"]
                 if "model_name" in llm_output:
                     self.model_name = llm_output["model_name"]
-
-            # Try to get usage from response.usage
             elif hasattr(response, "usage"):
                 usage = response.usage
                 if hasattr(usage, "prompt_tokens"):
@@ -211,8 +176,6 @@ class DefaultCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
                     token_usage["completion_tokens"] = usage.completion_tokens
                 if hasattr(usage, "total_tokens"):
                     token_usage["total_tokens"] = usage.total_tokens
-
-            # Extract usage from generations if available
             elif hasattr(response, "generations") and response.generations:
                 for gen in response.generations:
                     if gen and hasattr(gen[0], "generation_info"):
@@ -227,12 +190,13 @@ class DefaultCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
                 completion_tokens = token_usage.get("completion_tokens", 0)
                 total_tokens = prompt_tokens + completion_tokens
 
-                # Update cumulative totals
-                self.cumulative_prompt_tokens += prompt_tokens
-                self.cumulative_completion_tokens += completion_tokens
-                self.cumulative_total_tokens += total_tokens
+                # Debug prints to see what's happening
+                print(f"Before update: DefaultCallbackHandler.cumulative_total_tokens = {DefaultCallbackHandler.cumulative_total_tokens}")
+                DefaultCallbackHandler.cumulative_prompt_tokens += prompt_tokens
+                DefaultCallbackHandler.cumulative_completion_tokens += completion_tokens
+                DefaultCallbackHandler.cumulative_total_tokens += total_tokens
+                print(f"After update: DefaultCallbackHandler.cumulative_total_tokens = {DefaultCallbackHandler.cumulative_total_tokens}")
 
-                # Set the current message tokens (non-cumulative)
                 self.prompt_tokens = prompt_tokens
                 self.completion_tokens = completion_tokens
                 self.total_tokens = total_tokens
@@ -266,7 +230,6 @@ class DefaultCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
         completion_tokens: int,
         duration: float,
     ) -> None:
-        """Handle callback updates and record trajectory data."""
         try:
             if not self.trajectory_repo:
                 return
@@ -292,21 +255,48 @@ class DefaultCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
             logger.error(f"Failed to store token usage data: {e}", exc_info=True)
 
     def reset_session_totals(self) -> None:
-        """Reset the session totals."""
         try:
+            current_session_id = self.session_totals.get("session_id")
             self.session_totals = {
-                "cost": 0.0,
+                "cost": Decimal("0.0"),
+                "tokens": 0,
+                "input_tokens": 0,
+                "output_tokens": 0,
+                "session_id": current_session_id,
+                "duration": 0.0,
+            }
+        except Exception as e:
+            logger.error(f"Error resetting session totals: {e}", exc_info=True)
+
+    def reset_all_totals(self) -> None:
+        with self._lock:
+            self.total_tokens = 0
+            self.prompt_tokens = 0
+            self.completion_tokens = 0
+            self.successful_requests = 0
+            self.total_cost = Decimal("0.0")
+            self._last_request_time = None
+
+            self.session_totals = {
+                "cost": Decimal("0.0"),
                 "tokens": 0,
                 "input_tokens": 0,
                 "output_tokens": 0,
                 "session_id": None,
                 "duration": 0.0,
             }
-        except Exception as e:
-            logger.error(f"Error resetting session totals: {e}", exc_info=True)
+
+            DefaultCallbackHandler.cumulative_total_tokens = 0
+            DefaultCallbackHandler.cumulative_prompt_tokens = 0
+            DefaultCallbackHandler.cumulative_completion_tokens = 0
+
+            self._initialize_model_costs()
+            if self.session_repo:
+                current_session = self.session_repo.get_current_session_record()
+                if current_session:
+                    self.session_totals["session_id"] = current_session.get_id()
 
     def get_stats(self) -> Dict[str, Union[int, float]]:
-        """Get current statistics including tokens and costs."""
         try:
             return {
                 "total_tokens": self.total_tokens,
@@ -327,7 +317,6 @@ class DefaultCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
             return {}
 
 
-# Create a context variable for our custom callback
 default_callback_var: ContextVar[Optional[DefaultCallbackHandler]] = ContextVar(
     "default_callback", default=None
 )
@@ -338,24 +327,6 @@ def get_default_callback(
     model_name: str,
     provider: Optional[str] = None,
 ) -> DefaultCallbackHandler:
-    """Get the default callback handler in a context manager.
-    which conveniently exposes token and cost information.
-
-    Args:
-        model_name: Required model name to use for cost calculation.
-        provider: Optional LLM provider name.
-
-    Returns:
-        Configured DefaultCallbackHandler instance.
-
-    Raises:
-        ValueError: If model_name is empty string.
-
-    Example:
-        >>> with get_default_callback("claude-3-sonnet") as cb:
-        ...     # Use the callback handler
-        ...     # cb.total_tokens, cb.total_cost will be available after
-    """
     cb = DefaultCallbackHandler(model_name=model_name, provider=provider)
     default_callback_var.set(cb)
     yield cb
@@ -363,11 +334,8 @@ def get_default_callback(
 
 
 def _initialize_callback_handler_internal(
-    model_name: str,
-    provider: Optional[str] = None,
-    track_cost: bool = True
+    model_name: str, provider: Optional[str] = None, track_cost: bool = True
 ) -> tuple[Optional[DefaultCallbackHandler], dict]:
-    """Internal implementation for callback handler initialization."""
     cb = None
     stream_config = {"callbacks": []}
 
@@ -381,20 +349,10 @@ def _initialize_callback_handler_internal(
 
     return cb, stream_config
 
+
 def initialize_callback_handler(
-    model: BaseChatModel, 
-    track_cost: bool = True
+    model: BaseChatModel, track_cost: bool = True
 ) -> tuple[Optional[DefaultCallbackHandler], dict]:
-    """
-    Initialize the callback handler for token tracking from a model instance.
-    
-    Args:
-        model: The model instance to extract model information from
-        track_cost: Whether to enable cost tracking
-        
-    Returns:
-        tuple: (callback_handler, stream_config)
-    """
     model_name = get_model_name_from_chat_model(model)
     provider = get_provider_from_chat_model(model)
     return _initialize_callback_handler_internal(model_name, provider, track_cost)

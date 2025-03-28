@@ -50,9 +50,9 @@ def test_token_usage_storage():
             "model": "claude-3-sonnet"
         }
         mock_config.return_value.get.return_value = True
-        
-        # Set the AnthropicCallbackHandler to our mock
-        with patch('ra_aid.agent_utils.AnthropicCallbackHandler', return_value=mock_cb):
+            
+        # Set the DefaultCallbackHandler to our mock
+        with patch('ra_aid.agent_utils.DefaultCallbackHandler', return_value=mock_cb):
                 # Force completion to happen after one iteration
                 with patch('ra_aid.agent_utils.is_completed', return_value=True):
                     # Replace the trajectory repository with our mock
@@ -123,8 +123,8 @@ def test_error_handling_repository_unavailable():
             }
             mock_config.return_value.get.return_value = True
             
-            # Set the AnthropicCallbackHandler to our mock
-            with patch('ra_aid.agent_utils.AnthropicCallbackHandler', return_value=mock_cb):
+            # Set the DefaultCallbackHandler to our mock
+            with patch('ra_aid.agent_utils.DefaultCallbackHandler', return_value=mock_cb):
                     # Force completion to happen after one iteration
                     with patch('ra_aid.agent_utils.is_completed', return_value=True):
                         # Replace the trajectory repository with our mock
