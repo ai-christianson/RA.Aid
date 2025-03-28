@@ -54,7 +54,7 @@ def get_model_name_from_chat_model(model: Optional[BaseChatModel]) -> str:
     elif hasattr(model, "model_name"):
         return model.model_name
 
-    logger.debug(f"Could not extract model name from {model}, using DEFAULT_MODEL")
+    logger.warning(f"Could not extract model name from {model}, using DEFAULT_MODEL")
     return DEFAULT_MODEL
 
 
@@ -73,6 +73,7 @@ def get_provider_from_chat_model(model: Optional[BaseChatModel]) -> Optional[str
     if hasattr(model, "metadata") and isinstance(model.metadata, dict):
         return model.metadata.get("provider")
 
+    logger.warning(f"Could not extract provider name from chatmodel {model}, returning None")
     return None
 
 

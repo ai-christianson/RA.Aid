@@ -187,7 +187,6 @@ class CiaynAgent:
         print(f"ciayn self.provider={self.provider}")
         self.callback_handler, self.stream_config = initialize_callback_handler(
             model=self.model,
-            provider=self.provider,
             track_cost=self.config.get("track_cost", True),
         )
 

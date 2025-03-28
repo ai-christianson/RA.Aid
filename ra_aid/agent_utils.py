@@ -8,7 +8,10 @@ from typing import Any, Dict, List, Literal, Optional
 import uuid
 
 from langgraph.graph.graph import CompiledGraph
-from ra_aid.callbacks.default_callback_handler import DefaultCallbackHandler
+from ra_aid.callbacks.default_callback_handler import (
+    DefaultCallbackHandler,
+    _initialize_callback_handler_internal,
+)
 from ra_aid.model_detection import (
     should_use_react_agent,
     get_model_name_from_chat_model,
@@ -414,47 +417,37 @@ def _handle_fallback_response(
 
 def initialize_callback_handler(agent: RAgents):
     """
-    Initialize the callback handler for token tracking.
+    Initialize the callback handler for token tracking from an agent instance.
 
     Args:
         agent: The agent instance to extract model information from
 
     Returns:
-        tuple: (callback_handler, stream_config) - The callback handler and updated stream config
+        tuple: (callback_handler, stream_config)
     """
     config = get_config_repository()
-    stream_config_dict = config.deep_copy().to_dict()
-    cb = None
-
-    if not config.get("track_cost", True):
-        logger.debug("Cost tracking is disabled, skipping callback handler")
-        return cb, stream_config_dict
-
+    stream_config = config.deep_copy().to_dict()
+    
     # Only supporting anthropic ReAct Agent for now
     if not isinstance(agent, CompiledGraph):
-        return cb, stream_config_dict
+        return None, stream_config
 
-    model_name = DEFAULT_MODEL
-
-    if agent is not None and hasattr(agent, "name"):
-        model_name = agent.name
-    else:
-        logger.warning(
-            "Agent is None or has no name attribute - the agent name is needed to determine enablement of callback handler."
-        )
-
-    # Always use the callback handler regardless of model name
-    logger.debug(f"Agent_utils Using callback handler for model {model_name}")
-
+    model_name = getattr(agent, "name", DEFAULT_MODEL)
     provider = config.get("provider", None)
-    cb = DefaultCallbackHandler(model_name, provider)
+    track_cost = config.get("track_cost", True)
 
-    # Add callback to callbacks list in the dictionary
-    if "callbacks" not in stream_config_dict:
-        stream_config_dict["callbacks"] = []
-    stream_config_dict["callbacks"].append(cb)
+    cb, _ = _initialize_callback_handler_internal(
+        model_name=model_name,
+        provider=provider,
+        track_cost=track_cost
+    )
 
-    return cb, stream_config_dict
+    if cb and "callbacks" not in stream_config:
+        stream_config["callbacks"] = []
+    if cb:
+        stream_config["callbacks"].append(cb)
+
+    return cb, stream_config
 
 
 def _prepare_state_config(config: Dict[str, Any]):

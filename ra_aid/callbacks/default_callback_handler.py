@@ -14,7 +14,10 @@ from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.outputs import LLMResult
 
 from ra_aid.config import DEFAULT_MODEL
-from ra_aid.model_detection import get_model_name_from_chat_model
+from ra_aid.model_detection import (
+    get_model_name_from_chat_model,
+    get_provider_from_chat_model,
+)
 from ra_aid.utils.singleton import Singleton
 from ra_aid.database.repositories.trajectory_repository import get_trajectory_repository
 from ra_aid.database.repositories.session_repository import get_session_repository
@@ -359,35 +362,39 @@ def get_default_callback(
     default_callback_var.set(None)
 
 
-def initialize_callback_handler(
-    model: BaseChatModel, provider: Optional[str] = None, track_cost: bool = True
+def _initialize_callback_handler_internal(
+    model_name: str,
+    provider: Optional[str] = None,
+    track_cost: bool = True
 ) -> tuple[Optional[DefaultCallbackHandler], dict]:
-    """
-    Initialize the callback handler for token tracking.
-
-    Args:
-        model: The model instance to extract model information from
-        provider: The provider name (e.g., "openai", "anthropic")
-        track_cost: Whether to enable cost tracking
-
-    Returns:
-        tuple: (callback_handler, stream_config) - The callback handler and stream config dict
-    """
+    """Internal implementation for callback handler initialization."""
     cb = None
     stream_config = {"callbacks": []}
 
     if not track_cost:
-        print(f"track_cost={track_cost}")
         logger.debug("Cost tracking is disabled, skipping callback handler")
         return cb, stream_config
 
-    model_name = model.model_name or DEFAULT_MODEL
-    base_model_name = get_model_name_from_chat_model(model)
-    print(f"base_model_name={base_model_name}")
     logger.debug(f"Using callback handler for model {model_name}")
-
-    print(f"initialize_callback_handler provider={provider}")
     cb = DefaultCallbackHandler(model_name, provider)
     stream_config["callbacks"].append(cb)
 
     return cb, stream_config
+
+def initialize_callback_handler(
+    model: BaseChatModel, 
+    track_cost: bool = True
+) -> tuple[Optional[DefaultCallbackHandler], dict]:
+    """
+    Initialize the callback handler for token tracking from a model instance.
+    
+    Args:
+        model: The model instance to extract model information from
+        track_cost: Whether to enable cost tracking
+        
+    Returns:
+        tuple: (callback_handler, stream_config)
+    """
+    model_name = get_model_name_from_chat_model(model)
+    provider = get_provider_from_chat_model(model)
+    return _initialize_callback_handler_internal(model_name, provider, track_cost)
