@@ -373,7 +373,6 @@ def initialize_callback_handler(
     Returns:
         tuple: (callback_handler, stream_config) - The callback handler and stream config dict
     """
-    print("initialize_callback_handler called")
     cb = None
     stream_config = {"callbacks": []}
 

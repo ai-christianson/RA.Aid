@@ -97,7 +97,6 @@ def build_agent_kwargs(
 
     limit_tokens = get_config_repository().get("limit_tokens", True)
     model_name = get_model_name_from_chat_model(model)
-    print(f"model={model}")
 
     if limit_tokens and model is not None:
 
@@ -447,7 +446,7 @@ def initialize_callback_handler(agent: RAgents):
     # Always use the callback handler regardless of model name
     logger.debug(f"Agent_utils Using callback handler for model {model_name}")
 
-    provider = get_config_repository().get("provider", None)
+    provider = config.get("provider", None)
     cb = DefaultCallbackHandler(model_name, provider)
 
     # Add callback to callbacks list in the dictionary

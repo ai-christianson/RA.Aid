@@ -58,6 +58,24 @@ def get_model_name_from_chat_model(model: Optional[BaseChatModel]) -> str:
     return DEFAULT_MODEL
 
 
+def get_provider_from_chat_model(model: Optional[BaseChatModel]) -> Optional[str]:
+    """Extract the provider from a BaseChatModel instance's metadata if available.
+
+    Args:
+        model: The BaseChatModel instance
+
+    Returns:
+        Optional[str]: The provider name if found in metadata, None otherwise
+    """
+    if model is None:
+        return None
+
+    if hasattr(model, "metadata") and isinstance(model.metadata, dict):
+        return model.metadata.get("provider")
+
+    return None
+
+
 def normalize_model_name(model_name: str) -> str:
     """
     Normalize a model name by removing provider prefixes and version suffixes.
@@ -70,7 +88,7 @@ def normalize_model_name(model_name: str) -> str:
     """
     # Specifically check for "models/" prefix
     if model_name.startswith("models/"):
-        model_name = model_name[len("models/"):]
+        model_name = model_name[len("models/") :]
     # Remove provider prefix (e.g., "anthropic/", "google/")
     elif "/" in model_name:
         model_name = model_name.split("/", 1)[1]
@@ -107,12 +125,16 @@ def should_use_react_agent(model: BaseChatModel) -> bool:
     """
     use_react_agent = False
     model_name = get_model_name_from_chat_model(model)
-    normalized_model_name = normalize_model_name(model_name)
+    # normalized_model_name = normalize_model_name(model_name)
+    normalized_model_name = model_name
+    provider = get_provider_from_chat_model(model)
+    print(f"provider={provider}")
+    print(f"normalized_model_name={normalized_model_name}")
+
 
     try:
-        supports_function_calling = litellm.supports_function_calling(
-            model=normalized_model_name
-        )
+        supports_function_calling = litellm.supports_function_calling(model=normalize_model_name, custom_llm_provider=provider)
+        print(f"supports_function_calling={supports_function_calling}")
         use_react_agent = supports_function_calling
         logger.debug(
             f"Model {model_name} (normalized: {normalized_model_name}) supports_function_calling: {supports_function_calling}"
@@ -123,14 +145,16 @@ def should_use_react_agent(model: BaseChatModel) -> bool:
     try:
         provider = get_config_repository().get("provider", "anthropic")
         provider_config = models_params.get(provider, {})
-        model_config = provider_config.get(model_name, provider_config.get(normalized_model_name, {}))
+        model_config = provider_config.get(
+            model_name, provider_config.get(normalized_model_name, {})
+        )
 
         # If there's a specific backend configured, override the detection result
         if "default_backend" in model_config:
             configured_backend = model_config.get(
                 "default_backend", DEFAULT_AGENT_BACKEND
             )
-            
+
             use_react_agent = configured_backend == AgentBackendType.CREATE_REACT_AGENT
             logger.debug(
                 f"Overriding agent backend selection based on config: {use_react_agent}"

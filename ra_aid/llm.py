@@ -118,6 +118,10 @@ def create_deepseek_client(
         "max_retries": int(
             get_env_var(name="LLM_MAX_RETRIES", default=LLM_MAX_RETRIES)
         ),
+        "metadata": {
+            "model_name": model_name,
+            "provider": "deepseek"
+        }
     }
 
     if model_name.lower() == "deepseek-reasoner":
@@ -154,6 +158,10 @@ def create_openrouter_client(
             get_env_var(name="LLM_MAX_RETRIES", default=LLM_MAX_RETRIES)
         ),
         "default_headers": default_headers,
+        "metadata": {
+            "model_name": model_name,
+            "provider": "openrouter"
+        }
     }
 
     # Use ChatDeepseekReasoner for DeepSeek Reasoner models
@@ -208,6 +216,7 @@ def create_groq_client(
     api_key: str,
     temperature: Optional[float] = None,
     is_expert: bool = False,
+    metadata: Optional[Dict[str, str]] = None,
 ) -> BaseChatModel:
     """Create a ChatGroq client.
 
@@ -234,6 +243,7 @@ def create_groq_client(
             get_env_var(name="LLM_REQUEST_TIMEOUT", default=LLM_REQUEST_TIMEOUT)
         ),
         max_retries=int(get_env_var(name="LLM_MAX_RETRIES", default=LLM_MAX_RETRIES)),
+        metadata=metadata,
         **temp_kwargs,
     )
 
@@ -505,6 +515,10 @@ def create_llm_client(
                 "max_retries": int(
                     get_env_var(name="LLM_MAX_RETRIES", default=LLM_MAX_RETRIES)
                 ),
+                "metadata": {
+                    "model_name": model_name,
+                    "provider": "openai"
+                }
             }
         )
     elif provider == "anthropic":
@@ -517,6 +531,10 @@ def create_llm_client(
             max_retries=int(
                 get_env_var(name="LLM_MAX_RETRIES", default=LLM_MAX_RETRIES)
             ),
+            metadata={
+                "model_name": model_name,
+                "provider": "anthropic"
+            },
             **temp_kwargs,
             **thinking_kwargs,
             **other_kwargs,
@@ -532,6 +550,10 @@ def create_llm_client(
             max_retries=int(
                 get_env_var(name="LLM_MAX_RETRIES", default=LLM_MAX_RETRIES)
             ),
+            metadata={
+                "model_name": model_name,
+                "provider": "openai-compatible"
+            },
             **temp_kwargs,
             **thinking_kwargs,
         )
@@ -558,21 +580,34 @@ def create_llm_client(
             with_thinking=bool(thinking_kwargs),
             is_expert=is_expert,
             num_ctx=num_ctx_value,
+            metadata={
+                "model_name": model_name,
+                "provider": "ollama"
+            }
         )
     elif provider == "fireworks":
-        return create_fireworks_client(
+        fireworks_client = create_fireworks_client(
             model_name=model_name,
             api_key=config.get("api_key"),
             temperature=temperature if temp_kwargs else None,
             is_expert=is_expert,
             num_ctx=num_ctx_value,
         )
+        fireworks_client.metadata = {
+            "model_name": model_name,
+            "provider": "fireworks"
+        }
+        return fireworks_client
     elif provider == "groq":
         return create_groq_client(
             model_name=model_name,
             api_key=config.get("api_key"),
             temperature=temperature if temp_kwargs else None,
             is_expert=is_expert,
+            metadata={
+                "model_name": model_name,
+                "provider": "groq"
+            }
         )
     else:
         raise ValueError(f"Unsupported provider: {provider}")
