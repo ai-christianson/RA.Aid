@@ -125,28 +125,27 @@ def should_use_react_agent(model: BaseChatModel) -> bool:
     """
     use_react_agent = False
     model_name = get_model_name_from_chat_model(model)
-    # normalized_model_name = normalize_model_name(model_name)
-    normalized_model_name = model_name
     provider = get_provider_from_chat_model(model)
     print(f"provider={provider}")
-    print(f"normalized_model_name={normalized_model_name}")
-
 
     try:
-        supports_function_calling = litellm.supports_function_calling(model=normalize_model_name, custom_llm_provider=provider)
+        supports_function_calling = litellm.supports_function_calling(
+            model=model_name, custom_llm_provider=provider
+        )
         print(f"supports_function_calling={supports_function_calling}")
         use_react_agent = supports_function_calling
         logger.debug(
-            f"Model {model_name} (normalized: {normalized_model_name}) supports_function_calling: {supports_function_calling}"
+            f"Model {model_name} (normalized: {model_name}) supports_function_calling: {supports_function_calling}"
         )
     except Exception as e:
         logger.warning(f"Error checking function calling support: {e}.")
 
     try:
-        provider = get_config_repository().get("provider", "anthropic")
+        if not provider:
+            provider = get_config_repository().get("provider", "anthropic")
         provider_config = models_params.get(provider, {})
         model_config = provider_config.get(
-            model_name, provider_config.get(normalized_model_name, {})
+            model_name, provider_config.get(model_name, {})
         )
 
         # If there's a specific backend configured, override the detection result
