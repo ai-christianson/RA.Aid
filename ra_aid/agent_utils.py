@@ -8,9 +8,7 @@ from typing import Any, Dict, List, Literal, Optional
 import uuid
 
 from langgraph.graph.graph import CompiledGraph
-from ra_aid.callbacks.anthropic_callback_handler import (
-    AnthropicCallbackHandler,
-)
+from ra_aid.callbacks.default_callback_handler import DefaultCallbackHandler
 from ra_aid.model_detection import (
     should_use_react_agent,
     get_model_name_from_chat_model,
@@ -21,7 +19,10 @@ from anthropic import APIError, APITimeoutError, InternalServerError, RateLimitE
 from openai import RateLimitError as OpenAIRateLimitError
 from litellm.exceptions import RateLimitError as LiteLLMRateLimitError
 from google.api_core.exceptions import ResourceExhausted
-from fireworks.client.error import ServiceUnavailableError, RateLimitError as FireworksRateLimitError
+from fireworks.client.error import (
+    ServiceUnavailableError,
+    RateLimitError as FireworksRateLimitError,
+)
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import (
     BaseMessage,
@@ -40,6 +41,7 @@ from ra_aid.agent_context import (
 from ra_aid.agent_backends.ciayn_agent import CiaynAgent
 from ra_aid.agents_alias import RAgents
 from ra_aid.config import DEFAULT_MAX_TEST_CMD_RETRIES, DEFAULT_MODEL
+
 # Import the new function
 from ra_aid.console.formatting import cpm, print_error, print_rate_limit_info
 from ra_aid.console.output import print_agent_output
@@ -115,7 +117,6 @@ def build_agent_kwargs(
     agent_kwargs["name"] = model_name
 
     return agent_kwargs
-
 
 
 def create_agent(
@@ -278,29 +279,42 @@ def _handle_api_error(e, attempt, max_retries, base_delay):
         ):
             raise e
         else:
-            is_rate_limit_error = True # It's a rate limit related ValueError
+            is_rate_limit_error = True  # It's a rate limit related ValueError
 
     # 2. Check for specific error types that should be retried
-    if isinstance(e, (RateLimitError, OpenAIRateLimitError, LiteLLMRateLimitError, ResourceExhausted, FireworksRateLimitError)):
-        is_rate_limit_error = True # Explicit rate limit exceptions
+    if isinstance(
+        e,
+        (
+            RateLimitError,
+            OpenAIRateLimitError,
+            LiteLLMRateLimitError,
+            ResourceExhausted,
+            FireworksRateLimitError,
+        ),
+    ):
+        is_rate_limit_error = True  # Explicit rate limit exceptions
     elif isinstance(e, ServiceUnavailableError):
-        pass # Retry but not necessarily a rate limit
+        pass  # Retry but not necessarily a rate limit
 
     # 3. Check for status_code or http_status attribute equal to 429
     elif hasattr(e, "status_code") and e.status_code == 429:
-        is_rate_limit_error = True # HTTP 429 status code
+        is_rate_limit_error = True  # HTTP 429 status code
     elif hasattr(e, "http_status") and e.http_status == 429:
-        is_rate_limit_error = True # HTTP 429 status code
+        is_rate_limit_error = True  # HTTP 429 status code
 
     # 4. Check for rate limit phrases in error message for other exceptions
     elif not is_rate_limit_error and isinstance(e, Exception):
         error_str = str(e).lower()
         rate_limit_keywords = [
-            "rate limit", "too many requests", "quota exceeded", "429"
+            "rate limit",
+            "too many requests",
+            "quota exceeded",
+            "429",
         ]
-        if any(keyword in error_str for keyword in rate_limit_keywords) or \
-           ("rate" in error_str and "limit" in error_str):
-            is_rate_limit_error = True # Rate limit keywords found
+        if any(keyword in error_str for keyword in rate_limit_keywords) or (
+            "rate" in error_str and "limit" in error_str
+        ):
+            is_rate_limit_error = True  # Rate limit keywords found
 
     # Apply common retry logic for all identified errors
     if attempt == max_retries - 1:
@@ -432,7 +446,7 @@ def initialize_callback_handler(agent: RAgents):
     # Always use the callback handler regardless of model name
     logger.debug(f"Using callback handler for model {model_name}")
 
-    cb = AnthropicCallbackHandler(model_name)
+    cb = DefaultCallbackHandler(model_name)
 
     # Add callback to callbacks list in the dictionary
     if "callbacks" not in stream_config_dict:

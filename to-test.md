@@ -42,5 +42,8 @@ ra-aid --cowboy-mode -m "Go look through ra_aid/agent_utils.py and look at corre
 ra-aid --cowboy-mode -m "Go look through ra_aid/agent_utils.py and look at corresponding test and add tests that are missing." --provider "deepseek" --model "deepseek-chat" --expert-provider "openrouter" --expert-model "deepseek/deepseek-r1" --log-level debug --show-cost
 ```
 
-## Openrouter flash gemeni 2.5 pro
+## Openrouter Models
+```bash
+# Openrouter Gemini 2.5 Pro
 ra-aid --cowboy-mode -m "Go look through ra_aid/agent_utils.py and look at corresponding test and add tests that are missing." --provider "openrouter" --model "google/gemini-2.5-pro-exp-03-25:free" --log-level debug --show-cost
+```

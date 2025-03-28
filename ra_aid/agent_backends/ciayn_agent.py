@@ -9,7 +9,9 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_core.tools import BaseTool
 
-from ra_aid.config import DEFAULT_MAX_TOOL_FAILURES
+from ra_aid.callbacks.default_callback_handler import DefaultCallbackHandler
+from ra_aid.config import DEFAULT_MAX_TOOL_FAILURES, DEFAULT_MODEL
+from ra_aid.database.repositories.config_repository import get_config_repository
 from ra_aid.exceptions import ToolExecutionError
 from ra_aid.fallback_handler import FallbackHandler
 from ra_aid.logging_config import get_logger
@@ -177,6 +179,9 @@ class CiaynAgent:
             self.available_functions.append(get_function_info(t.func))
 
         self.fallback_handler = FallbackHandler(config, tools)
+        
+        # Initialize callback handler during initialization
+        self.callback_handler, self.stream_config = initialize_callback_handler(self.model, self.provider)
 
         # Include the functions list in the system prompt
         functions_list = "\\n\\n".join(self.available_functions)
@@ -786,8 +791,9 @@ class CiaynAgent:
             if base_prompt:  # Only add if non-empty
                 self.chat_history.append(HumanMessage(content=base_prompt))
             full_history = self._trim_chat_history(initial_messages, self.chat_history)
-            response = self.model.invoke([self.sys_message] + full_history)
-            print(f"response={response}")
+
+            response = self.model.invoke([self.sys_message] + full_history, self.stream_config)
+            # print(f"response={response}")
 
             # Check if model supports think tags
             provider = self.config.get("provider", "")
@@ -919,3 +925,40 @@ class CiaynAgent:
                     self.chat_history.append(HumanMessage(content=err_msg_content))
                     last_result = err_msg_content # Set last result for the next loop iteration
                     yield {} # Yield empty dict to allow stream to continue
+
+def initialize_callback_handler(model: BaseChatModel, provider: Optional[str] = None):
+    """
+    Initialize the callback handler for token tracking.
+
+    Args:
+        model: The model instance to extract model information from
+        provider: The provider name (e.g., "openai", "anthropic")
+
+    Returns:
+        tuple: (callback_handler, stream_config) - The callback handler and updated stream config
+    """
+    config = get_config_repository()
+    stream_config_dict = config.deep_copy().to_dict()
+    cb = None
+
+    if not config.get("track_cost", True):
+        logger.debug("Cost tracking is disabled, skipping callback handler")
+        return cb, stream_config_dict
+
+    model_name = DEFAULT_MODEL
+
+    model_name = model.model_name
+    print(f"model_name={model_name}")
+
+    # Always use the callback handler regardless of model name
+    logger.debug(f"Using callback handler for model {model_name}")
+
+    cb = DefaultCallbackHandler(model_name=model_name, provider=provider)
+
+    # Add callback to callbacks list in the dictionary
+    if "callbacks" not in stream_config_dict:
+        stream_config_dict["callbacks"] = []
+    stream_config_dict["callbacks"].append(cb)
+
+    return cb, stream_config_dict
+
