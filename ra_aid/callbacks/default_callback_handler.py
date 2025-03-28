@@ -2,6 +2,7 @@
 
 import threading
 import time
+from langchain.chat_models.base import BaseChatModel
 import litellm
 from contextlib import contextmanager
 from contextvars import ContextVar
@@ -13,6 +14,7 @@ from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.outputs import LLMResult
 
 from ra_aid.config import DEFAULT_MODEL
+from ra_aid.model_detection import get_model_name_from_chat_model
 from ra_aid.utils.singleton import Singleton
 from ra_aid.database.repositories.trajectory_repository import get_trajectory_repository
 from ra_aid.database.repositories.session_repository import get_session_repository
@@ -21,7 +23,7 @@ from ra_aid.logging_config import get_logger
 logger = get_logger(__name__)
 
 # Set decimal precision for financial calculations
-getcontext().prec = 8
+getcontext().prec = 16
 
 MODEL_COSTS = {
     "claude-3-7-sonnet-20250219": {
@@ -59,6 +61,7 @@ class DefaultCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
         if not isinstance(model_name, str) or not model_name.strip():
             raise ValueError("model_name must be non-empty string")
 
+        print(f"__init__ provider={provider}")
         self._lock = threading.Lock()
         self.total_tokens: int = 0
         self.prompt_tokens: int = 0
@@ -68,7 +71,7 @@ class DefaultCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
         self.model_name: str = model_name
         self.provider: Optional[str] = provider
         self._last_request_time: Optional[float] = None
-        
+
         # Initialize repositories and model costs
         self.__post_init__()
 
@@ -98,10 +101,10 @@ class DefaultCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
     def __post_init__(self):
         """Initialize repositories and model costs. Called automatically from __init__."""
         try:
-            if not hasattr(self, 'trajectory_repo') or self.trajectory_repo is None:
+            if not hasattr(self, "trajectory_repo") or self.trajectory_repo is None:
                 self.trajectory_repo = get_trajectory_repository()
-            
-            if not hasattr(self, 'session_repo') or self.session_repo is None:
+
+            if not hasattr(self, "session_repo") or self.session_repo is None:
                 self.session_repo = get_session_repository()
 
             if self.session_repo:
@@ -115,8 +118,9 @@ class DefaultCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
 
     def _initialize_model_costs(self) -> None:
         """Initialize per-token costs from litellm or fallback to MODEL_COSTS."""
-        print("_initialize_model_costs")
         try:
+            print(f"self.model_name={self.model_name}")
+            print(f"self.provider={self.provider}")
             model_info = litellm.get_model_info(
                 model=self.model_name, custom_llm_provider=self.provider
             )
@@ -349,3 +353,38 @@ def get_default_callback(
     default_callback_var.set(cb)
     yield cb
     default_callback_var.set(None)
+
+
+def initialize_callback_handler(
+    model: BaseChatModel, provider: Optional[str] = None, track_cost: bool = True
+) -> tuple[Optional[DefaultCallbackHandler], dict]:
+    """
+    Initialize the callback handler for token tracking.
+
+    Args:
+        model: The model instance to extract model information from
+        provider: The provider name (e.g., "openai", "anthropic")
+        track_cost: Whether to enable cost tracking
+
+    Returns:
+        tuple: (callback_handler, stream_config) - The callback handler and stream config dict
+    """
+    print("initialize_callback_handler called")
+    cb = None
+    stream_config = {"callbacks": []}
+
+    if not track_cost:
+        print(f"track_cost={track_cost}")
+        logger.debug("Cost tracking is disabled, skipping callback handler")
+        return cb, stream_config
+
+    model_name = model.model_name or DEFAULT_MODEL
+    base_model_name = get_model_name_from_chat_model(model)
+    print(f"base_model_name={base_model_name}")
+    logger.debug(f"Using callback handler for model {model_name}")
+
+    print(f"initialize_callback_handler provider={provider}")
+    cb = DefaultCallbackHandler(model_name, provider)
+    stream_config["callbacks"].append(cb)
+
+    return cb, stream_config

@@ -12,10 +12,10 @@ ra-aid --cowboy-mode -m "Go look through ra_aid/agent_utils.py and look at corre
 ## Google Models
 ```bash
 # Gemini 1.5 Flash
-ra-aid --cowboy-mode -m "Go look through ra_aid/agent_utils.py and look at corresponding test and add tests that are missing." --provider "google" --model "gemini-1.5-flash" --expert-provider "openai" --expert-model "gpt-4o" --log-level debug --show-cost
+ra-aid --cowboy-mode -m "Go look through ra_aid/agent_utils.py and look at corresponding test and add tests that are missing." --provider "gemini" --model "gemini-1.5-flash" --expert-provider "openai" --expert-model "gpt-4o" --log-level debug --show-cost
 
 # Gemini 1.5 Pro
-ra-aid --cowboy-mode -m "Go look through ra_aid/agent_utils.py and look at corresponding test and add tests that are missing." --provider "google" --model "gemini-1.5-pro" --expert-provider "openai" --expert-model "gpt-4o" --log-level debug --show-cost
+ra-aid --cowboy-mode -m "Go look through ra_aid/agent_utils.py and look at corresponding test and add tests that are missing." --provider "gemini" --model "gemini-exp-1206" --show-cost
 ```
 
 ## Anthropic Models
