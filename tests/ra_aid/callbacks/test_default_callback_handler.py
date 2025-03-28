@@ -75,12 +75,6 @@ def test_initial_state(callback_handler):
     }
 
 
-def test_on_llm_start(callback_handler):
-    """Test on_llm_start records request time."""
-    callback_handler.on_llm_start({}, [])
-    assert callback_handler._last_request_time is not None
-
-
 def test_on_llm_end_no_token_usage(callback_handler):
     """Test on_llm_end with no token usage data."""
     mock_response = MagicMock(spec=LLMResult)

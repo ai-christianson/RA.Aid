@@ -9,7 +9,6 @@ import uuid
 
 from langgraph.graph.graph import CompiledGraph
 from ra_aid.callbacks.default_callback_handler import (
-    DefaultCallbackHandler,
     _initialize_callback_handler_internal,
 )
 from ra_aid.model_detection import (
@@ -181,9 +180,10 @@ def create_agent(
             )
             cpm("Using ReAct Agent")
             agent_kwargs = build_agent_kwargs(checkpointer, model, max_input_tokens)
-            return create_react_agent(
+            agent = create_react_agent(
                 model, tools, interrupt_after=["tools"], **agent_kwargs
             )
+            return agent
         else:
             cpm("Using CIAYN Agent")
             logger.debug("Using CiaynAgent agent instance based on model capabilities.")
@@ -427,19 +427,18 @@ def initialize_callback_handler(agent: RAgents):
     """
     config = get_config_repository()
     stream_config = config.deep_copy().to_dict()
-    
+
     # Only supporting anthropic ReAct Agent for now
     if not isinstance(agent, CompiledGraph):
         return None, stream_config
 
     model_name = getattr(agent, "name", DEFAULT_MODEL)
     provider = config.get("provider", None)
+    print(f"provider={provider}")
     track_cost = config.get("track_cost", True)
 
     cb, _ = _initialize_callback_handler_internal(
-        model_name=model_name,
-        provider=provider,
-        track_cost=track_cost
+        model_name=model_name, provider=provider, track_cost=track_cost
     )
 
     if cb and "callbacks" not in stream_config:

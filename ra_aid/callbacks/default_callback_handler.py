@@ -190,12 +190,9 @@ class DefaultCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
                 completion_tokens = token_usage.get("completion_tokens", 0)
                 total_tokens = prompt_tokens + completion_tokens
 
-                # Debug prints to see what's happening
-                print(f"Before update: DefaultCallbackHandler.cumulative_total_tokens = {DefaultCallbackHandler.cumulative_total_tokens}")
-                DefaultCallbackHandler.cumulative_prompt_tokens += prompt_tokens
-                DefaultCallbackHandler.cumulative_completion_tokens += completion_tokens
-                DefaultCallbackHandler.cumulative_total_tokens += total_tokens
-                print(f"After update: DefaultCallbackHandler.cumulative_total_tokens = {DefaultCallbackHandler.cumulative_total_tokens}")
+                self.cumulative_prompt_tokens += prompt_tokens
+                self.cumulative_completion_tokens += completion_tokens
+                self.cumulative_total_tokens += total_tokens
 
                 self.prompt_tokens = prompt_tokens
                 self.completion_tokens = completion_tokens
@@ -286,9 +283,9 @@ class DefaultCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
                 "duration": 0.0,
             }
 
-            DefaultCallbackHandler.cumulative_total_tokens = 0
-            DefaultCallbackHandler.cumulative_prompt_tokens = 0
-            DefaultCallbackHandler.cumulative_completion_tokens = 0
+            self.cumulative_total_tokens = 0
+            self.cumulative_prompt_tokens = 0
+            self.cumulative_completion_tokens = 0
 
             self._initialize_model_costs()
             if self.session_repo:

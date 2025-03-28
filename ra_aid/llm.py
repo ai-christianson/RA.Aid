@@ -565,7 +565,7 @@ def create_llm_client(
         return ChatGoogleGenerativeAI(
             api_key=config.get("api_key"),
             model=model_name,
-            metadata={"model_name": model_name},
+            metadata={"model_name": model_name, "provider": "gemini"},
             timeout=int(
                 get_env_var(name="LLM_REQUEST_TIMEOUT", default=LLM_REQUEST_TIMEOUT)
             ),

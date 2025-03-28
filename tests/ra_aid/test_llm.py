@@ -93,7 +93,7 @@ def test_initialize_expert_gemini(clean_env, mock_gemini, monkeypatch):
         temperature=0,
         timeout=180,
         max_retries=5,
-        metadata={"model_name": "gemini-2.0-flash-thinking-exp-1219"},
+        metadata={"model_name": "gemini-2.0-flash-thinking-exp-1219", "provider": "gemini"},
     )
 
 
@@ -198,7 +198,7 @@ def test_initialize_gemini(clean_env, mock_gemini):
         temperature=0.7,
         timeout=180,
         max_retries=5,
-        metadata={"model_name": "gemini-2.0-flash-thinking-exp-1219"},
+        metadata={"model_name": "gemini-2.0-flash-thinking-exp-1219", "provider": "gemini" },
     )
 
 
@@ -306,7 +306,7 @@ def test_temperature_defaults(clean_env, mock_openai, mock_anthropic, mock_gemin
         temperature=0.7,
         timeout=180,
         max_retries=5,
-        metadata={"model_name": "test-model"},
+        metadata={"model_name": "test-model", "provider": "gemini"},
     )
 
     # Test expert models don't require temperature
@@ -359,7 +359,7 @@ def test_explicit_temperature(clean_env, mock_openai, mock_anthropic, mock_gemin
         temperature=test_temp,
         timeout=180,
         max_retries=5,
-        metadata={"model_name": "test-model"},
+        metadata={"model_name": "test-model", "provider": "gemini"},
     )
 
     # Test Anthropic
@@ -513,7 +513,7 @@ def test_initialize_llm_cross_provider(
         temperature=0.7,
         timeout=180,
         max_retries=5,
-        metadata={"model_name": "gemini-pro"},
+        metadata={"model_name": "gemini-pro", "provider": "gemini"},
     )
 
 
