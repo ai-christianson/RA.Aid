@@ -127,13 +127,11 @@ def should_use_react_agent(model: BaseChatModel) -> bool:
     use_react_agent = False
     model_name = get_model_name_from_chat_model(model)
     provider = get_provider_from_chat_model(model)
-    print(f"provider={provider}")
 
     try:
         supports_function_calling = litellm.supports_function_calling(
             model=model_name, custom_llm_provider=provider
         )
-        print(f"supports_function_calling={supports_function_calling}")
         use_react_agent = supports_function_calling
         logger.debug(
             f"Model {model_name} (normalized: {model_name}) supports_function_calling: {supports_function_calling}"

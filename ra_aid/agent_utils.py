@@ -434,7 +434,6 @@ def initialize_callback_handler(agent: RAgents):
 
     model_name = getattr(agent, "name", DEFAULT_MODEL)
     provider = config.get("provider", None)
-    print(f"provider={provider}")
     track_cost = config.get("track_cost", True)
 
     cb, _ = _initialize_callback_handler_internal(

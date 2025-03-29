@@ -135,7 +135,6 @@ class DefaultCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
             model_info = litellm.get_model_info(
                 model=self.model_name, custom_llm_provider=self.provider
             )
-            print(f"model_info={model_info}")
             if model_info:
                 input_cost = model_info.get("input_cost_per_token", 0.0)
                 output_cost = model_info.get("output_cost_per_token", 0.0)
