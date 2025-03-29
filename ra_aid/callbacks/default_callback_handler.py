@@ -184,11 +184,10 @@ class DefaultCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
     def _extract_token_usage(self, response: LLMResult) -> dict:
         """Extract token usage information from various response formats."""
         token_usage = {}
-        
+
         # Check in llm_output
         if hasattr(response, "llm_output") and response.llm_output:
             llm_output = response.llm_output
-            print(f"llm_output={llm_output}")
             if "token_usage" in llm_output:
                 token_usage = llm_output["token_usage"]
             elif "usage" in llm_output:
@@ -199,7 +198,7 @@ class DefaultCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
                     token_usage["completion_tokens"] = usage["output_tokens"]
             if "model_name" in llm_output:
                 self.model_name = llm_output["model_name"]
-        
+
         # Check in response.usage
         elif hasattr(response, "usage"):
             usage = response.usage
@@ -209,9 +208,13 @@ class DefaultCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
                 token_usage["completion_tokens"] = usage.completion_tokens
             if hasattr(usage, "total_tokens"):
                 token_usage["total_tokens"] = usage.total_tokens
-        
+
         # Check in generations
-        if not token_usage and hasattr(response, "generations") and response.generations:
+        if (
+            not token_usage
+            and hasattr(response, "generations")
+            and response.generations
+        ):
             for gen in response.generations:
                 # Check in generation_info
                 if gen and hasattr(gen[0], "generation_info"):
@@ -219,20 +222,32 @@ class DefaultCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
                     if "usage" in gen_info:
                         token_usage = gen_info["usage"]
                         break
-                
+
                 # Check in message.usage_metadata (for Gemini models)
-                if gen and hasattr(gen[0], "message") and hasattr(gen[0].message, "usage_metadata"):
+                if (
+                    gen
+                    and hasattr(gen[0], "message")
+                    and hasattr(gen[0].message, "usage_metadata")
+                ):
                     usage_metadata = gen[0].message.usage_metadata
                     if usage_metadata:
                         if "input_tokens" in usage_metadata:
-                            token_usage["prompt_tokens"] = usage_metadata["input_tokens"]
+                            token_usage["prompt_tokens"] = usage_metadata[
+                                "input_tokens"
+                            ]
                         if "output_tokens" in usage_metadata:
-                            token_usage["completion_tokens"] = usage_metadata["output_tokens"]
-                        if "total_tokens" in usage_metadata and not token_usage.get("prompt_tokens") and not token_usage.get("completion_tokens"):
+                            token_usage["completion_tokens"] = usage_metadata[
+                                "output_tokens"
+                            ]
+                        if (
+                            "total_tokens" in usage_metadata
+                            and not token_usage.get("prompt_tokens")
+                            and not token_usage.get("completion_tokens")
+                        ):
                             # If we only have total but not input/output breakdown
                             token_usage["total_tokens"] = usage_metadata["total_tokens"]
                         break
-        
+
         return token_usage
 
     def _update_token_counts(self, token_usage: dict, duration: float) -> None:
@@ -240,8 +255,10 @@ class DefaultCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
         with self._lock:
             prompt_tokens = token_usage.get("prompt_tokens", 0)
             completion_tokens = token_usage.get("completion_tokens", 0)
-            total_tokens = token_usage.get("total_tokens", prompt_tokens + completion_tokens)
-            
+            total_tokens = token_usage.get(
+                "total_tokens", prompt_tokens + completion_tokens
+            )
+
             # If we only have total_tokens but not the breakdown
             if total_tokens > 0 and prompt_tokens == 0 and completion_tokens == 0:
                 # Make a reasonable guess about the split (e.g., 90% prompt, 10% completion)
@@ -283,10 +300,9 @@ class DefaultCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
             else:
                 duration = time.time() - self._last_request_time
                 self._last_request_time = None
-            print(f"response={response}")
 
             token_usage = self._extract_token_usage(response)
-            
+
             self._update_token_counts(token_usage, duration)
 
         except Exception as e:
@@ -311,10 +327,13 @@ class DefaultCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
             output_cost = Decimal(completion_tokens) * self.output_cost_per_token
             cost = input_cost + output_cost
 
+            # Must Convert Decimal to float compatible JSON serialization in repository
+            cost_float = float(cost)
+
             self.trajectory_repo.create(
                 step_data={
                     "tokens": total_tokens,
-                    "cost": cost,
+                    "cost": cost_float,
                     "duration": duration,
                     "model": self.model_name,
                 },
