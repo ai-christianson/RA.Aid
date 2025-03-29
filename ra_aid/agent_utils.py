@@ -180,10 +180,9 @@ def create_agent(
             )
             cpm("Using ReAct Agent")
             agent_kwargs = build_agent_kwargs(checkpointer, model, max_input_tokens)
-            agent = create_react_agent(
+            return create_react_agent(
                 model, tools, interrupt_after=["tools"], **agent_kwargs
             )
-            return agent
         else:
             cpm("Using CIAYN Agent")
             logger.debug("Using CiaynAgent agent instance based on model capabilities.")
