@@ -45,6 +45,10 @@ MODEL_COSTS = {
         "input": Decimal("0.00000163"),
         "output": Decimal("0.00000551"),
     },
+    "google/gemini-2.5-pro-exp-03-25:free": {
+        "input": Decimal("0"),
+        "output": Decimal("0"),
+    },
 }
 
 
@@ -117,6 +121,12 @@ class DefaultCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
                     return
         except Exception as e:
             logger.debug(f"Could not get model info from litellm: {e}")
+            from ra_aid.console.formatting import cpm
+
+            cpm(
+                "Could not find model costs from litellm defaulting to MODEL_COSTS table or 0",
+                border_style="yellow",
+            )
 
         model_cost = MODEL_COSTS.get(
             self.model_name, {"input": Decimal("0"), "output": Decimal("0")}
@@ -150,14 +160,17 @@ class DefaultCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
     def on_llm_end(self, response: LLMResult, **kwargs) -> None:
         try:
             if self._last_request_time is None:
-                return
-
-            duration = time.time() - self._last_request_time
-            self._last_request_time = None
+                logger.debug("No request start time found, using default duration")
+                duration = 0.1  # Default duration in seconds
+            else:
+                duration = time.time() - self._last_request_time
+                self._last_request_time = None
+            print(f"response={response}")
 
             token_usage = {}
             if hasattr(response, "llm_output") and response.llm_output:
                 llm_output = response.llm_output
+                print(f"llm_output={llm_output}")
                 if "token_usage" in llm_output:
                     token_usage = llm_output["token_usage"]
                 elif "usage" in llm_output:
