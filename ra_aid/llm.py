@@ -118,6 +118,10 @@ def create_deepseek_client(
         "max_retries": int(
             get_env_var(name="LLM_MAX_RETRIES", default=LLM_MAX_RETRIES)
         ),
+        "metadata": {
+            "model_name": model_name,
+            "provider": "deepseek"
+        }
     }
 
     if model_name.lower() == "deepseek-reasoner":
@@ -154,6 +158,10 @@ def create_openrouter_client(
             get_env_var(name="LLM_MAX_RETRIES", default=LLM_MAX_RETRIES)
         ),
         "default_headers": default_headers,
+        "metadata": {
+            "model_name": model_name,
+            "provider": "openrouter"
+        }
     }
 
     # Use ChatDeepseekReasoner for DeepSeek Reasoner models
@@ -190,11 +198,13 @@ def create_fireworks_client(
         temp_kwargs["temperature"] = temperature
     elif is_expert:
         temp_kwargs["temperature"] = 0
-    
+
     return ChatFireworks(
         model=model_name,
         fireworks_api_key=api_key,
-        timeout=int(get_env_var(name="LLM_REQUEST_TIMEOUT", default=LLM_REQUEST_TIMEOUT)),
+        timeout=int(
+            get_env_var(name="LLM_REQUEST_TIMEOUT", default=LLM_REQUEST_TIMEOUT)
+        ),
         max_retries=int(get_env_var(name="LLM_MAX_RETRIES", default=LLM_MAX_RETRIES)),
         max_tokens=num_ctx,
         **temp_kwargs,
@@ -206,6 +216,7 @@ def create_groq_client(
     api_key: str,
     temperature: Optional[float] = None,
     is_expert: bool = False,
+    metadata: Optional[Dict[str, str]] = None,
 ) -> BaseChatModel:
     """Create a ChatGroq client.
 
@@ -228,8 +239,11 @@ def create_groq_client(
     return ChatGroq(
         model=model_name,
         api_key=api_key,
-        timeout=int(get_env_var(name="LLM_REQUEST_TIMEOUT", default=LLM_REQUEST_TIMEOUT)),
+        timeout=int(
+            get_env_var(name="LLM_REQUEST_TIMEOUT", default=LLM_REQUEST_TIMEOUT)
+        ),
         max_retries=int(get_env_var(name="LLM_MAX_RETRIES", default=LLM_MAX_RETRIES)),
+        metadata=metadata,
         **temp_kwargs,
     )
 
@@ -275,6 +289,10 @@ def create_ollama_client(
             get_env_var(name="LLM_REQUEST_TIMEOUT", default=LLM_REQUEST_TIMEOUT)
         ),
         max_retries=int(get_env_var(name="LLM_MAX_RETRIES", default=LLM_MAX_RETRIES)),
+        metadata={
+            "model_name": model_name,
+            "provider": "ollama"
+        },
         **temp_kwargs,
     )
 
@@ -404,10 +422,10 @@ def create_llm_client(
     other_kwargs = {}
     if is_claude_37(model_name):
         other_kwargs = {"max_tokens": 64000}
-    
+
     # Get the config repository through the context manager pattern
     config_repo = get_config_repository()
-        
+
     # Get the appropriate num_ctx value from config repository
     num_ctx_key = "expert_num_ctx" if is_expert else "num_ctx"
     num_ctx_value = config_repo.get(num_ctx_key, 262144)
@@ -501,6 +519,10 @@ def create_llm_client(
                 "max_retries": int(
                     get_env_var(name="LLM_MAX_RETRIES", default=LLM_MAX_RETRIES)
                 ),
+                "metadata": {
+                    "model_name": model_name,
+                    "provider": "openai"
+                }
             }
         )
     elif provider == "anthropic":
@@ -513,6 +535,10 @@ def create_llm_client(
             max_retries=int(
                 get_env_var(name="LLM_MAX_RETRIES", default=LLM_MAX_RETRIES)
             ),
+            metadata={
+                "model_name": model_name,
+                "provider": "anthropic"
+            },
             **temp_kwargs,
             **thinking_kwargs,
             **other_kwargs,
@@ -528,6 +554,10 @@ def create_llm_client(
             max_retries=int(
                 get_env_var(name="LLM_MAX_RETRIES", default=LLM_MAX_RETRIES)
             ),
+            metadata={
+                "model_name": model_name,
+                "provider": "openai-compatible"
+            },
             **temp_kwargs,
             **thinking_kwargs,
         )
@@ -535,6 +565,7 @@ def create_llm_client(
         return ChatGoogleGenerativeAI(
             api_key=config.get("api_key"),
             model=model_name,
+            metadata={"model_name": model_name, "provider": "gemini"},
             timeout=int(
                 get_env_var(name="LLM_REQUEST_TIMEOUT", default=LLM_REQUEST_TIMEOUT)
             ),
@@ -545,7 +576,7 @@ def create_llm_client(
             **thinking_kwargs,
         )
     elif provider == "ollama":
-        
+
         return create_ollama_client(
             model_name=model_name,
             base_url=config.get("base_url"),
@@ -555,19 +586,28 @@ def create_llm_client(
             num_ctx=num_ctx_value,
         )
     elif provider == "fireworks":
-        return create_fireworks_client(
+        fireworks_client = create_fireworks_client(
             model_name=model_name,
             api_key=config.get("api_key"),
             temperature=temperature if temp_kwargs else None,
             is_expert=is_expert,
             num_ctx=num_ctx_value,
         )
+        fireworks_client.metadata = {
+            "model_name": model_name,
+            "provider": "fireworks"
+        }
+        return fireworks_client
     elif provider == "groq":
         return create_groq_client(
             model_name=model_name,
             api_key=config.get("api_key"),
             temperature=temperature if temp_kwargs else None,
             is_expert=is_expert,
+            metadata={
+                "model_name": model_name,
+                "provider": "groq"
+            }
         )
     else:
         raise ValueError(f"Unsupported provider: {provider}")

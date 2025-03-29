@@ -74,6 +74,7 @@ class TestTemperatureHandling(unittest.TestCase):
                 timeout=180,
                 max_retries=5,
                 temperature=0.5,
+                metadata={'model_name': 'claude3', 'provider': 'anthropic'},
             )
             mock_cpm.assert_not_called()
             mock_chat_anthropic.reset_mock()
@@ -87,6 +88,7 @@ class TestTemperatureHandling(unittest.TestCase):
                 timeout=180,
                 max_retries=5,
                 temperature=0.8,  # Should use claude3's default_temperature
+                metadata={'model_name': 'claude3', 'provider': 'anthropic'},
             )
             mock_cpm.assert_called_once()
             mock_chat_anthropic.reset_mock()
@@ -103,8 +105,8 @@ class TestTemperatureHandling(unittest.TestCase):
                 temperature=1.0,  # Should use claude-3-7's default_temperature (1.0)
                 thinking={"type": "enabled", "budget_tokens": 12000},
                 max_tokens=64000,
+                metadata={'model_name': 'claude-3-7-sonnet-20250219', 'provider': 'anthropic'},
             )
-        
     def test_create_llm_client_without_default_temperature(self):
         """Test handling when model doesn't have default_temperature in models_params."""
         # Create a mock models_params without default_temperature
@@ -137,6 +139,7 @@ class TestTemperatureHandling(unittest.TestCase):
                 timeout=180,
                 max_retries=5,
                 temperature=0.7,  # Should use DEFAULT_TEMPERATURE
+                metadata={'model_name': 'claude3', 'provider': 'anthropic'},
             )
             mock_cpm.assert_called_once()
 

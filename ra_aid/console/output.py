@@ -5,7 +5,7 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 
 from ra_aid.exceptions import ToolExecutionError
-from ra_aid.callbacks.anthropic_callback_handler import AnthropicCallbackHandler
+from ra_aid.callbacks.default_callback_handler import DefaultCallbackHandler
 from ra_aid.database.repositories.config_repository import get_config_repository
 from ra_aid.config import DEFAULT_SHOW_COST
 from ra_aid.console.common import console
@@ -18,7 +18,7 @@ def get_cost_subtitle() -> Optional[str]:
         return None
 
     # Get the current singleton instance
-    callback = AnthropicCallbackHandler._instances.get(AnthropicCallbackHandler, None)
+    callback = DefaultCallbackHandler._instances.get(DefaultCallbackHandler, None)
 
     if not callback:
         return None

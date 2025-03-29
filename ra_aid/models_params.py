@@ -67,6 +67,16 @@ models_params = {
             "latency_coefficient": DEFAULT_BASE_LATENCY,
             "default_backend": AgentBackendType.CIAYN,
         },
+        "deepseek-reasoner": {
+            "token_limit": 65536,
+            "max_tokens": 8192,
+            "supports_temperature": True,
+            "default_temperature": DEFAULT_TEMPERATURE,
+            "supports_reasoning_effort": False,
+            "latency_coefficient": DEFAULT_BASE_LATENCY,
+            "default_backend": AgentBackendType.CIAYN,
+            "supports_function_calling": False,
+        },
     },
     "mock": {
         "mock_model": {

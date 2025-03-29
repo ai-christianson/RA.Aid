@@ -8,8 +8,8 @@ from typing import Any, Dict, List, Literal, Optional
 import uuid
 
 from langgraph.graph.graph import CompiledGraph
-from ra_aid.callbacks.anthropic_callback_handler import (
-    AnthropicCallbackHandler,
+from ra_aid.callbacks.default_callback_handler import (
+    _initialize_callback_handler_internal,
 )
 from ra_aid.model_detection import (
     should_use_react_agent,
@@ -21,7 +21,10 @@ from anthropic import APIError, APITimeoutError, InternalServerError, RateLimitE
 from openai import RateLimitError as OpenAIRateLimitError
 from litellm.exceptions import RateLimitError as LiteLLMRateLimitError
 from google.api_core.exceptions import ResourceExhausted
-from fireworks.client.error import ServiceUnavailableError, RateLimitError as FireworksRateLimitError
+from fireworks.client.error import (
+    ServiceUnavailableError,
+    RateLimitError as FireworksRateLimitError,
+)
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import (
     BaseMessage,
@@ -40,6 +43,7 @@ from ra_aid.agent_context import (
 from ra_aid.agent_backends.ciayn_agent import CiaynAgent
 from ra_aid.agents_alias import RAgents
 from ra_aid.config import DEFAULT_MAX_TEST_CMD_RETRIES, DEFAULT_MODEL
+
 # Import the new function
 from ra_aid.console.formatting import cpm, print_error, print_rate_limit_info
 from ra_aid.console.output import print_agent_output
@@ -115,7 +119,6 @@ def build_agent_kwargs(
     agent_kwargs["name"] = model_name
 
     return agent_kwargs
-
 
 
 def create_agent(
@@ -278,29 +281,42 @@ def _handle_api_error(e, attempt, max_retries, base_delay):
         ):
             raise e
         else:
-            is_rate_limit_error = True # It's a rate limit related ValueError
+            is_rate_limit_error = True  # It's a rate limit related ValueError
 
     # 2. Check for specific error types that should be retried
-    if isinstance(e, (RateLimitError, OpenAIRateLimitError, LiteLLMRateLimitError, ResourceExhausted, FireworksRateLimitError)):
-        is_rate_limit_error = True # Explicit rate limit exceptions
+    if isinstance(
+        e,
+        (
+            RateLimitError,
+            OpenAIRateLimitError,
+            LiteLLMRateLimitError,
+            ResourceExhausted,
+            FireworksRateLimitError,
+        ),
+    ):
+        is_rate_limit_error = True  # Explicit rate limit exceptions
     elif isinstance(e, ServiceUnavailableError):
-        pass # Retry but not necessarily a rate limit
+        pass  # Retry but not necessarily a rate limit
 
     # 3. Check for status_code or http_status attribute equal to 429
     elif hasattr(e, "status_code") and e.status_code == 429:
-        is_rate_limit_error = True # HTTP 429 status code
+        is_rate_limit_error = True  # HTTP 429 status code
     elif hasattr(e, "http_status") and e.http_status == 429:
-        is_rate_limit_error = True # HTTP 429 status code
+        is_rate_limit_error = True  # HTTP 429 status code
 
     # 4. Check for rate limit phrases in error message for other exceptions
     elif not is_rate_limit_error and isinstance(e, Exception):
         error_str = str(e).lower()
         rate_limit_keywords = [
-            "rate limit", "too many requests", "quota exceeded", "429"
+            "rate limit",
+            "too many requests",
+            "quota exceeded",
+            "429",
         ]
-        if any(keyword in error_str for keyword in rate_limit_keywords) or \
-           ("rate" in error_str and "limit" in error_str):
-            is_rate_limit_error = True # Rate limit keywords found
+        if any(keyword in error_str for keyword in rate_limit_keywords) or (
+            "rate" in error_str and "limit" in error_str
+        ):
+            is_rate_limit_error = True  # Rate limit keywords found
 
     # Apply common retry logic for all identified errors
     if attempt == max_retries - 1:
@@ -400,46 +416,35 @@ def _handle_fallback_response(
 
 def initialize_callback_handler(agent: RAgents):
     """
-    Initialize the callback handler for token tracking.
+    Initialize the callback handler for token tracking from an agent instance.
 
     Args:
         agent: The agent instance to extract model information from
 
     Returns:
-        tuple: (callback_handler, stream_config) - The callback handler and updated stream config
+        tuple: (callback_handler, stream_config)
     """
     config = get_config_repository()
-    stream_config_dict = config.deep_copy().to_dict()
-    cb = None
-
-    if not config.get("track_cost", True):
-        logger.debug("Cost tracking is disabled, skipping callback handler")
-        return cb, stream_config_dict
+    stream_config = config.deep_copy().to_dict()
 
     # Only supporting anthropic ReAct Agent for now
     if not isinstance(agent, CompiledGraph):
-        return cb, stream_config_dict
+        return None, stream_config
 
-    model_name = DEFAULT_MODEL
+    model_name = getattr(agent, "name", DEFAULT_MODEL)
+    provider = config.get("provider", None)
+    track_cost = config.get("track_cost", True)
 
-    if agent is not None and hasattr(agent, "name"):
-        model_name = agent.name
-    else:
-        logger.warning(
-            "Agent is None or has no name attribute - the agent name is needed to determine enablement of callback handler."
-        )
+    cb, _ = _initialize_callback_handler_internal(
+        model_name=model_name, provider=provider, track_cost=track_cost
+    )
 
-    # Always use the callback handler regardless of model name
-    logger.debug(f"Using callback handler for model {model_name}")
+    if cb and "callbacks" not in stream_config:
+        stream_config["callbacks"] = []
+    if cb:
+        stream_config["callbacks"].append(cb)
 
-    cb = AnthropicCallbackHandler(model_name)
-
-    # Add callback to callbacks list in the dictionary
-    if "callbacks" not in stream_config_dict:
-        stream_config_dict["callbacks"] = []
-    stream_config_dict["callbacks"].append(cb)
-
-    return cb, stream_config_dict
+    return cb, stream_config
 
 
 def _prepare_state_config(config: Dict[str, Any]):
