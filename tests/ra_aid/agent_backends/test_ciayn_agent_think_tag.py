@@ -6,15 +6,26 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from ra_aid.agent_backends.ciayn_agent import CiaynAgent
 
 
-@pytest.fixture
-def mock_get_model():
-    """Mock the get_model function to avoid database connection issues."""
-    with patch("ra_aid.agent_backends.ciayn_agent.get_model") as mock:
-        mock.return_value = MagicMock()
-        yield mock
+@pytest.fixture(autouse=True)
+def mock_trajectory_repository():
+    """Mock the trajectory repository to avoid database connection issues."""
+    with patch("ra_aid.callbacks.default_callback_handler.get_trajectory_repository") as mock:
+        mock_repo = MagicMock()
+        mock.return_value = mock_repo
+        yield mock_repo
 
 
-def test_stream_supports_think_tag(mock_get_model):
+@pytest.fixture(autouse=True)
+def mock_session_repository():
+    """Mock the session repository to avoid database connection issues."""
+    with patch("ra_aid.callbacks.default_callback_handler.get_session_repository") as mock:
+        mock_repo = MagicMock()
+        mock_repo.get_current_session_record.return_value = MagicMock(get_id=lambda: 1)
+        mock.return_value = mock_repo
+        yield mock_repo
+
+
+def test_stream_supports_think_tag():
     """Test that CiaynAgent.stream extracts think tags when the model supports them."""
     # Setup mock model
     mock_model = MagicMock()
@@ -30,8 +41,8 @@ def test_stream_supports_think_tag(mock_get_model):
     agent = CiaynAgent(mock_model, [], config=config)
     
     # Mock print_warning and print_error to avoid unwanted console output
-    with patch("ra_aid.agent_backends.ciayn_agent.print_warning"), \
-         patch("ra_aid.agent_backends.ciayn_agent.print_error"):
+    with patch("ra_aid.console.formatting.print_warning"), \
+         patch("ra_aid.console.formatting.print_error"):
         
         # We're not patching console.print to verify it's called with the panel
         # Mock _execute_tool to avoid actually executing tools
@@ -51,7 +62,7 @@ def test_stream_supports_think_tag(mock_get_model):
                 assert "<think>" not in mock_execute.call_args[0][0].content
 
 
-def test_stream_no_think_tag_support(mock_get_model):
+def test_stream_no_think_tag_support():
     """Test that CiaynAgent.stream doesn't extract think tags when not supported."""
     # Setup mock model
     mock_model = MagicMock()
@@ -66,15 +77,15 @@ def test_stream_no_think_tag_support(mock_get_model):
     agent = CiaynAgent(mock_model, [], config=config)
     
     # Mock print_warning and print_error to avoid unwanted console output
-    with patch("ra_aid.agent_backends.ciayn_agent.print_warning"), \
-         patch("ra_aid.agent_backends.ciayn_agent.print_error"):
+    with patch("ra_aid.console.formatting.print_warning"), \
+         patch("ra_aid.console.formatting.print_error"):
         
         # Mock _execute_tool to avoid actually executing tools
         with patch.object(agent, "_execute_tool") as mock_execute:
             mock_execute.return_value = "Tool result"
             
             # For console.print, we want to patch it to verify Panel with title="💭 Thoughts" is not used
-            with patch("ra_aid.agent_backends.ciayn_agent.Panel") as mock_panel:
+            with patch("rich.panel.Panel") as mock_panel:
                 # Call stream method
                 next(agent.stream({"messages": []}, {}))
                 
@@ -92,7 +103,7 @@ def test_stream_no_think_tag_support(mock_get_model):
                 assert "<think>These are my thoughts</think>Actual response" in mock_execute.call_args[0][0].content
 
 
-def test_stream_with_no_think_tags(mock_get_model):
+def test_stream_with_no_think_tags():
     """Test that CiaynAgent.stream works properly when no think tags are present."""
     # Setup mock model
     mock_model = MagicMock()
@@ -108,15 +119,15 @@ def test_stream_with_no_think_tags(mock_get_model):
     agent = CiaynAgent(mock_model, [], config=config)
     
     # Mock print_warning and print_error to avoid unwanted console output
-    with patch("ra_aid.agent_backends.ciayn_agent.print_warning"), \
-         patch("ra_aid.agent_backends.ciayn_agent.print_error"):
+    with patch("ra_aid.console.formatting.print_warning"), \
+         patch("ra_aid.console.formatting.print_error"):
         
         # Mock _execute_tool to avoid actually executing tools
         with patch.object(agent, "_execute_tool") as mock_execute:
             mock_execute.return_value = "Tool result"
             
             # For console.print, we want to verify it's not called with a thoughts panel
-            with patch("ra_aid.agent_backends.ciayn_agent.Panel") as mock_panel:
+            with patch("rich.panel.Panel") as mock_panel:
                 # Call stream method
                 next(agent.stream({"messages": []}, {}))
                 
