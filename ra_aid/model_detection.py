@@ -44,13 +44,37 @@ def get_model_name_from_chat_model(model: Optional[BaseChatModel]) -> str:
     if model is None:
         return DEFAULT_MODEL
 
+    if hasattr(model, "metadata") and isinstance(model.metadata, dict):
+        if "model_name" in model.metadata:
+            return model.metadata["model_name"]
+
+    # Fall back to other attributes
     if hasattr(model, "model"):
         return model.model
     elif hasattr(model, "model_name"):
         return model.model_name
-    else:
-        logger.debug(f"Could not extract model name from {model}, using DEFAULT_MODEL")
-        return DEFAULT_MODEL
+
+    logger.warning(f"Could not extract model name from {model}, using DEFAULT_MODEL")
+    return DEFAULT_MODEL
+
+
+def get_provider_from_chat_model(model: Optional[BaseChatModel]) -> Optional[str]:
+    """Extract the provider from a BaseChatModel instance's metadata if available.
+
+    Args:
+        model: The BaseChatModel instance
+
+    Returns:
+        Optional[str]: The provider name if found in metadata, None otherwise
+    """
+    if model is None:
+        return None
+
+    if hasattr(model, "metadata") and isinstance(model.metadata, dict):
+        return model.metadata.get("provider")
+
+    logger.warning(f"Could not extract provider name from chatmodel {model}, returning None")
+    return None
 
 
 def normalize_model_name(model_name: str) -> str:
@@ -65,7 +89,7 @@ def normalize_model_name(model_name: str) -> str:
     """
     # Specifically check for "models/" prefix
     if model_name.startswith("models/"):
-        model_name = model_name[len("models/"):]
+        model_name = model_name[len("models/") :]
     # Remove provider prefix (e.g., "anthropic/", "google/")
     elif "/" in model_name:
         model_name = model_name.split("/", 1)[1]
@@ -102,30 +126,33 @@ def should_use_react_agent(model: BaseChatModel) -> bool:
     """
     use_react_agent = False
     model_name = get_model_name_from_chat_model(model)
-    normalized_model_name = normalize_model_name(model_name)
+    provider = get_provider_from_chat_model(model)
 
     try:
         supports_function_calling = litellm.supports_function_calling(
-            model=normalized_model_name
+            model=model_name, custom_llm_provider=provider
         )
         use_react_agent = supports_function_calling
         logger.debug(
-            f"Model {model_name} (normalized: {normalized_model_name}) supports_function_calling: {supports_function_calling}"
+            f"Model {model_name} (normalized: {model_name}) supports_function_calling: {supports_function_calling}"
         )
     except Exception as e:
         logger.warning(f"Error checking function calling support: {e}.")
 
     try:
-        provider = get_config_repository().get("provider", "anthropic")
+        if not provider:
+            provider = get_config_repository().get("provider", "anthropic")
         provider_config = models_params.get(provider, {})
-        model_config = provider_config.get(model_name, provider_config.get(normalized_model_name, {}))
+        model_config = provider_config.get(
+            model_name, provider_config.get(model_name, {})
+        )
 
         # If there's a specific backend configured, override the detection result
         if "default_backend" in model_config:
             configured_backend = model_config.get(
                 "default_backend", DEFAULT_AGENT_BACKEND
             )
-            
+
             use_react_agent = configured_backend == AgentBackendType.CREATE_REACT_AGENT
             logger.debug(
                 f"Overriding agent backend selection based on config: {use_react_agent}"

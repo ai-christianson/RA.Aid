@@ -3,10 +3,6 @@ from rich.panel import Panel
 from typing import Optional
 
 from ra_aid.console.common import console
-from ra_aid.database.repositories.trajectory_repository import get_trajectory_repository
-from ra_aid.database.repositories.human_input_repository import (
-    get_human_input_repository,
-)
 
 
 def cpm(message: str, title: Optional[str] = None, border_style: str = "blue", subtitle: Optional[str] = None) -> None:

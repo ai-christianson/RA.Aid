@@ -83,23 +83,25 @@ def test_get_model_name_from_chat_model():
 @patch('ra_aid.model_detection.get_config_repository')
 def test_should_use_react_agent_function_calling(mock_get_config_repo, mock_supports_function_calling):
     """Test should_use_react_agent based on function calling support."""
-    # Setup
     model = MagicMock(spec=BaseChatModel)
     model.model = "claude-3.7-sonnet"
     
-    # Mock config repository
     mock_repo = MagicMock()
     mock_repo.get.return_value = "anthropic"
     mock_get_config_repo.return_value = mock_repo
     
-    # Test when model supports function calling
+    # --- Test when model SUPPORTS function calling ---
     mock_supports_function_calling.return_value = True
     assert should_use_react_agent(model) is True
-    mock_supports_function_calling.assert_called_with(model="claude-3.7-sonnet")
-    
-    # Test when model doesn't support function calling
-    mock_supports_function_calling.return_value = False
+    # Check the call arguments for the first call
+    mock_supports_function_calling.assert_called_with(model="claude-3.7-sonnet", custom_llm_provider=None)
+
+    # --- Test when model DOES NOT support function calling ---
+    mock_supports_function_calling.reset_mock() # Reset call history
+    mock_supports_function_calling.return_value = False # Set mock to return False for this case
     assert should_use_react_agent(model) is False
+    # Check the call arguments for the second call (optional, but good practice)
+    mock_supports_function_calling.assert_called_with(model="claude-3.7-sonnet", custom_llm_provider=None)
 
 
 @patch('litellm.supports_function_calling')
