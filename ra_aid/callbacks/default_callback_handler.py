@@ -40,7 +40,10 @@ MODEL_COSTS = {
         "input": Decimal("0.00000025"),
         "output": Decimal("0.00000125"),
     },
-    "claude-2": {"input": Decimal("0.00001102"), "output": Decimal("0.00003268")},
+    "claude-2": {
+        "input": Decimal("0.00001102"),
+        "output": Decimal("0.00003268"),
+    },
     "claude-instant-1": {
         "input": Decimal("0.00000163"),
         "output": Decimal("0.00000551"),
@@ -48,6 +51,27 @@ MODEL_COSTS = {
     "google/gemini-2.5-pro-exp-03-25:free": {
         "input": Decimal("0"),
         "output": Decimal("0"),
+    },
+    # Newly added models
+    "weaver-ai": {
+        "input": Decimal("0.001875"),
+        "output": Decimal("0.00225"),
+    },
+    "airoboros-v1": {
+        "input": Decimal("0.0005"),
+        "output": Decimal("0.0005"),
+    },
+    "mistral-nemo": {
+        "input": Decimal("0.00015"),
+        "output": Decimal("0.00015"),
+    },
+    "pixtral-12b": {
+        "input": Decimal("0.00015"),
+        "output": Decimal("0.00015"),
+    },
+    "mistral-large-24b11": {
+        "input": Decimal("0.002"),
+        "output": Decimal("0.006"),
     },
 }
 
