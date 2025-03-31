@@ -607,4 +607,3 @@ Copyright (c) 2024 AI Christianson
 - **Issues**: Please report bugs and feature requests on our [Issue Tracker](https://github.com/ai-christianson/RA.Aid/issues)
 - **Repository**: [https://github.com/ai-christianson/RA.Aid](https://github.com/ai-christianson/RA.Aid)
 - **Documentation**: [https://github.com/ai-christianson/RA.Aid#readme](https://github.com/ai-christianson/RA.Aid#readme)
-- This line was added by Repobird!
