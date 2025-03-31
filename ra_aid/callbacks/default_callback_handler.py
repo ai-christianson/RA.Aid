@@ -329,14 +329,16 @@ class DefaultCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
             # Must Convert Decimal to float compatible JSON serialization in repository
             cost_float = float(cost)
 
-            self.trajectory_repo.create(
+            trajectory_record = self.trajectory_repo.create(
+                record_type="model_usage",
+                current_cost=cost_float,
+                input_tokens=self.prompt_tokens,
+                output_tokens=self.completion_tokens,
+                session_id=self.session_totals["session_id"],
                 step_data={
-                    "tokens": total_tokens,
-                    "cost": cost_float,
                     "duration": duration,
                     "model": self.model_name,
                 },
-                record_type="token_usage",
             )
         except Exception as e:
             logger.error(f"Failed to store token usage data: {e}", exc_info=True)

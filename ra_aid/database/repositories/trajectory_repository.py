@@ -517,6 +517,7 @@ class TrajectoryRepository:
                 "total_input_tokens": int(query['total_input_tokens']),
                 "total_output_tokens": int(query['total_output_tokens'])
             }
+            print(f"totals={totals}")
             
             # Calculate total tokens from input and output tokens
             totals["total_tokens"] = (
