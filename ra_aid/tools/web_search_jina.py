@@ -3,9 +3,11 @@ from typing import Dict, Optional, List, Union
 import json
 import requests
 from datetime import datetime
+import sys
 
 from langchain_core.tools import tool
-from rich.console import Console
+from rich.console import Console, Group
+from rich.live import Live
 from rich.markdown import Markdown
 from rich.panel import Panel
 
@@ -23,71 +25,9 @@ class JinaDeepSearchClient:
             raise ValueError("JINA_API_KEY environment variable is not set")
         self.base_url = "https://deepsearch.jina.ai/v1/chat/completions"
         
-    def search(
-        self,
-        query: str,
-        reasoning_effort: str = "medium",
-        stream: bool = True,
-        no_direct_answer: bool = False,
-        max_returned_urls: int = 10,
-        good_domains: Optional[List[str]] = None,
-        bad_domains: Optional[List[str]] = None,
-        only_domains: Optional[List[str]] = None,
-    ) -> Dict:
-        """
-        Perform a search query using Jina DeepSearch.
-        
-        Args:
-            query: The search query
-            reasoning_effort: Level of reasoning effort ("low", "medium", "high")
-            stream: Whether to stream responses
-            no_direct_answer: Force deeper search even for simple queries
-            max_returned_urls: Maximum number of URLs to return
-            good_domains: Domains to prioritize
-            bad_domains: Domains to exclude
-            only_domains: Domains to exclusively include
-            
-        Returns:
-            Dict containing search results and metadata
-        """
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.api_key}"
-        }
-        
-        data = {
-            "model": "jina-deepsearch-v1",
-            "messages": [{"role": "user", "content": query}],
-            "stream": stream,
-            "reasoning_effort": reasoning_effort,
-            "no_direct_answer": no_direct_answer,
-            "max_returned_urls": max_returned_urls
-        }
-        
-        if good_domains:
-            data["good_domains"] = good_domains
-        if bad_domains:
-            data["bad_domains"] = bad_domains
-        if only_domains:
-            data["only_domains"] = only_domains
-            
-        response = requests.post(self.base_url, headers=headers, json=data)
-        response.raise_for_status()
-        
-        # Process streaming response
-        if stream:
-            final_response = None
-            for line in response.iter_lines():
-                if line:
-                    try:
-                        chunk = json.loads(line.decode('utf-8').replace('data: ', ''))
-                        if chunk.get("choices") and chunk["choices"][0].get("finish_reason") == "stop":
-                            final_response = chunk
-                    except json.JSONDecodeError:
-                        continue
-            return final_response
-        
-        return response.json()
+    # REMOVED: Search method logic moved to the tool function for live display
+    # def search(...) -> Dict:
+    #    ...
 
 
 @tool
@@ -100,7 +40,7 @@ def web_search_jina(
     only_domains: Optional[List[str]] = None,
 ) -> Dict:
     """
-    Perform a web search using Jina DeepSearch API.
+    Perform a web search using Jina DeepSearch API with live streaming output.
 
     Args:
         query: The search query string
@@ -111,12 +51,12 @@ def web_search_jina(
         only_domains: Domains to exclusively include
 
     Returns:
-        Dict containing search results from Jina DeepSearch
+        Dict containing final search results from Jina DeepSearch
     """
     # Record trajectory before displaying panel
     trajectory_repo = get_trajectory_repository()
     human_input_id = get_human_input_repository().get_most_recent_id()
-    trajectory_repo.create(
+    trajectory_id = trajectory_repo.create(
         tool_name="web_search_jina",
         tool_parameters={
             "query": query,
@@ -134,54 +74,150 @@ def web_search_jina(
         human_input_id=human_input_id
     )
     
-    # Display search query panel
-    console.print(
-        Panel(Markdown(query), title="🔍 Searching with Jina DeepSearch", border_style="bright_blue")
-    )
+    # --- Start Live Streaming Logic ---
+    console = Console()
+    api_key = os.environ.get("JINA_API_KEY")
+    if not api_key:
+         # Handle missing key error appropriately (maybe raise or return error dict)
+        error_msg = "JINA_API_KEY environment variable is not set"
+        console.print(Panel(error_msg, title="❌ Jina Search Error", border_style="red"))
+        # Update trajectory with error
+        trajectory_repo.update(trajectory_id, {
+            "is_error": True,
+            "error_message": error_msg,
+            "error_type": "ValueError",
+            "step_data": json.dumps({"query": query, "display_title": "Web Search Error", "error": error_msg})
+        })
+        return {"error": error_msg}
+
+    base_url = "https://deepsearch.jina.ai/v1/chat/completions"
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {api_key}"
+    }
+    data = {
+        "model": "jina-deepsearch-v1",
+        "messages": [{"role": "user", "content": query}],
+        "stream": True, # Ensure streaming is requested
+        "reasoning_effort": reasoning_effort,
+        "no_direct_answer": no_direct_answer,
+        "max_returned_urls": 10 # Keep a reasonable default
+    }
+    # Add optional domain filters
+    if good_domains: data["good_domains"] = good_domains
+    if bad_domains: data["bad_domains"] = bad_domains
+    if only_domains: data["only_domains"] = only_domains
+
+    query_panel = Panel(Markdown(f"**Query:** {query}"), title="🔍 Searching with Jina DeepSearch", border_style="bright_blue")
+    streamed_content_md = Markdown("", style="green") # Markdown object for streamed content
+    display_group = Group(query_panel, streamed_content_md)
     
+    final_response_chunk = None
+    streamed_buffer = ""
+    urls_buffer = []
+    usage_buffer = {}
+    annotations_buffer = []
+
     try:
-        client = JinaDeepSearchClient()
-        search_result = client.search(
-            query=query,
-            reasoning_effort=reasoning_effort,
-            no_direct_answer=no_direct_answer,
-            good_domains=good_domains,
-            bad_domains=bad_domains,
-            only_domains=only_domains
-        )
-        
-        # Extract relevant information from the response
-        if search_result and search_result.get("choices"):
-            choice = search_result["choices"][0]
-            result = {
-                "content": choice.get("delta", {}).get("content", ""),
-                "urls": search_result.get("visitedURLs", []),
-                "usage": search_result.get("usage", {}),
-                "timestamp": datetime.now().isoformat()
-            }
+        with Live(display_group, console=console, refresh_per_second=5, vertical_overflow="visible") as live:
+            response = requests.post(base_url, headers=headers, json=data, stream=True)
+            response.raise_for_status() # Check for HTTP errors immediately
+
+            for line in response.iter_lines():
+                if line:
+                    try:
+                        line_content = line.decode('utf-8').strip()
+                        if line_content.startswith('data: '):
+                            json_str = line_content[len('data: '):]
+                            if json_str == "[DONE]": continue
+                            
+                            chunk = json.loads(json_str)
+                            delta = chunk.get("choices", [{}])[0].get("delta", {})
+                            content_part = delta.get("content")
+                            
+                            if content_part:
+                                streamed_buffer += content_part
+                                # REVISED: Create new Markdown and Group for update
+                                streamed_content_md = Markdown(streamed_buffer, style="green")
+                                display_group = Group(query_panel, streamed_content_md)
+                                live.update(display_group)
+                                
+                            # Check for final chunk to store metadata
+                            if chunk.get("choices") and chunk["choices"][0].get("finish_reason") == "stop":
+                                final_response_chunk = chunk 
+                                # Extract final metadata if available in the last chunk
+                                urls_buffer = chunk.get("visitedURLs", [])
+                                usage_buffer = chunk.get("usage", {})
+                                if "annotations" in delta:
+                                     annotations_buffer = delta["annotations"]
+                                # Exit loop once final chunk is processed
+                                break 
+                                
+                    except json.JSONDecodeError as e:
+                        print(f"[Jina Stream Error] Failed to decode JSON: {e} - Line: '{line_content}'", file=sys.stderr)
+                        continue
+                    except Exception as e:
+                        print(f"[Jina Stream Error] Unexpected error processing line: {e} - Line: '{line_content}'", file=sys.stderr)
+                        continue
             
-            # Add any annotations if present
-            if "annotations" in choice.get("delta", {}):
-                result["annotations"] = choice["delta"]["annotations"]
-                
-            return result
-        return search_result
+            # Final update after loop
+            streamed_content_md = Markdown(streamed_buffer, style="green")
+            display_group = Group(query_panel, streamed_content_md)
+            live.update(display_group)
+
+        # --- End Live Streaming Logic ---
         
+        # Construct final result dictionary
+        if not streamed_buffer and final_response_chunk is None:
+             # Handle cases where stream might end abruptly or return no content
+             error_msg = "Jina search returned no content or stream ended unexpectedly."
+             console.print(Panel(error_msg, title="⚠️ Jina Search Warning", border_style="yellow"))
+             # Update trajectory
+             trajectory_repo.update(trajectory_id, {
+                 "is_error": True, # Mark as error or warning? Maybe just warning.
+                 "error_message": error_msg,
+                 "error_type": "EmptyResponseError",
+                 "step_data": json.dumps({"query": query, "display_title": "Web Search Warning", "error": error_msg})
+             })
+             return {"error": error_msg, "content": "", "urls": [], "usage": {}, "timestamp": datetime.now().isoformat()}
+             
+        # REVISED: Return a summary message instead of the full buffer
+        # result = {
+        #     "content": streamed_buffer,
+        #     "urls": urls_buffer,
+        #     "usage": usage_buffer,
+        #     "annotations": annotations_buffer,
+        #     "timestamp": datetime.now().isoformat()
+        # }
+        summary_message = f"Jina search completed. {len(streamed_buffer)} characters received. URLs found: {len(urls_buffer)}."
+        result = {
+            "content": summary_message,
+            "urls": urls_buffer,      # Keep URLs and usage for potential agent use
+            "usage": usage_buffer,
+            "annotations": annotations_buffer,
+            "timestamp": datetime.now().isoformat()
+        }
+        return result
+        
+    except requests.exceptions.RequestException as e:
+        error_msg = f"Jina API request failed: {e}"
+        console.print(Panel(error_msg, title="❌ Jina Search Error", border_style="red"))
+        trajectory_repo.update(trajectory_id, {
+            "is_error": True,
+            "error_message": error_msg,
+            "error_type": type(e).__name__,
+            "step_data": json.dumps({"query": query, "display_title": "Web Search Error", "error": error_msg})
+        })
+        return {"error": error_msg}
     except Exception as e:
-        # Record error in trajectory
-        trajectory_repo.create(
-            tool_name="web_search_jina",
-            tool_parameters={"query": query},
-            step_data={
-                "query": query,
-                "display_title": "Web Search Error",
-                "error": str(e)
-            },
-            record_type="tool_execution",
-            human_input_id=human_input_id,
-            is_error=True,
-            error_message=str(e),
-            error_type=type(e).__name__
-        )
-        # Re-raise the exception to maintain original behavior
-        raise 
+        error_msg = f"Error during Jina search: {str(e)}"
+        console.print(Panel(error_msg, title="❌ Jina Search Error", border_style="red"))
+        trajectory_repo.update(trajectory_id, {
+            "is_error": True,
+            "error_message": error_msg,
+            "error_type": type(e).__name__,
+            "step_data": json.dumps({"query": query, "display_title": "Web Search Error", "error": error_msg})
+        })
+        # Re-raise unexpected exceptions?
+        # For now, return error dict to prevent agent crash
+        return {"error": error_msg} 

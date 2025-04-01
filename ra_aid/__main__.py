@@ -294,15 +294,16 @@ Examples:
     parser.add_argument(
         "--provider",
         type=str,
-        default=(
-            "openai"
-            if (os.getenv("OPENAI_API_KEY") and not os.getenv("ANTHROPIC_API_KEY"))
-            else "anthropic"
-        ),
+        default="gemini",
         choices=VALID_PROVIDERS,
         help="The LLM provider to use",
     )
-    parser.add_argument("--model", type=str, help="The model name to use")
+    parser.add_argument(
+        "--model",
+        type=str,
+        default="gemini-2.0-flash",
+        help="The model name to use",
+    )
     parser.add_argument(
         "--num-ctx",
         type=int,
