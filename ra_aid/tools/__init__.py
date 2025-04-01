@@ -38,6 +38,8 @@ from .research import (
 from .ripgrep import ripgrep_search
 from .shell import run_shell_command
 from .web_search_jina import web_search_jina
+from .quick_web_search import quick_web_search # Added import
+from .select_web_search import select_web_search # Added import
 # Note: write_file.py contains file_write, using that import
 
 # Define tool lists - This structure seems to have been replaced in the previous edit, restoring a basic available tools dict
@@ -72,6 +74,8 @@ AVAILABLE_TOOLS: Dict[str, Any] = {
     "ripgrep_search": ripgrep_search,
     "run_shell_command": run_shell_command,
     "web_search_jina": web_search_jina,
+    "quick_web_search": quick_web_search, # Added tool
+    "select_web_search": select_web_search, # Add the router tool
 }
 
 __all__ = [
@@ -105,6 +109,8 @@ __all__ = [
     "ripgrep_search",
     "run_shell_command",
     "web_search_jina",
+    "quick_web_search", # Added tool
+    "select_web_search", # Add the router tool
     # Include ToolMetadata, ToolArgument, ToolType if they are defined below
     "ToolMetadata",
     "ToolArgument",

@@ -25,6 +25,8 @@ from ra_aid.tools import (
     run_shell_command,
     task_completed,
     web_search_jina,
+    quick_web_search,
+    select_web_search,
 )
 from ra_aid.tools.agent import (
     request_implementation,
@@ -193,7 +195,7 @@ RESEARCH_TOOLS = [
     # monorepo_detected,
     # ui_detected,
     mark_research_complete_no_implementation_required,
-    web_search_jina,
+    select_web_search,
 ]
 
 
@@ -271,7 +273,7 @@ def get_planning_tools(
         plan_implementation_completed,
         # *TEMPORARILY* disabled to improve tool calling perf.
         # emit_plan,
-        web_search_jina,
+        select_web_search,
     ]
     tools.extend(planning_tools)
 
@@ -309,7 +311,7 @@ def get_implementation_tools(
     # Add modification tools since it's not research-only
     tools.extend(MODIFICATION_TOOLS)
     tools.extend([task_completed])
-    tools.extend([web_search_jina])
+    tools.extend([select_web_search])
 
     # Add expert tools if enabled
     if expert_enabled:
@@ -322,24 +324,12 @@ def get_implementation_tools(
 
 
 def get_web_research_tools(expert_enabled: bool = True):
-    """Get the list of tools available for web research.
-
-    Args:
-        expert_enabled: Whether expert tools should be included
-        human_interaction: Whether to include human interaction tools
-        web_research_enabled: Whether to include web research tools
-
-    Returns:
-        list: List of tools configured for web research
-    """
-    tools = [web_search_jina, emit_research_notes, task_completed]
-
+    """Get the list of web research tools, optionally including expert tools."""
+    tools = [
+        select_web_search,
+    ]
     if expert_enabled:
-        tools.append(emit_expert_context)
-        tools.append(ask_expert)
-
-    tools.extend(get_custom_tools())
-
+        tools.extend(EXPERT_TOOLS)
     return tools
 
 
@@ -362,7 +352,7 @@ def get_chat_tools(expert_enabled: bool = True, web_research_enabled: bool = Fal
         # delete_key_facts,
         # delete_key_snippets,
         # deregister_related_files,
-        web_search_jina,
+        select_web_search,
     ]
 
     if web_research_enabled:

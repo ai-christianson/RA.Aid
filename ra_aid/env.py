@@ -11,23 +11,36 @@ from ra_aid.provider_strategy import ProviderFactory, ValidationResult
 @dataclass
 class WebResearchValidationResult:
     """Result of web research validation."""
-    valid: bool
+    jina_valid: bool  # Is Jina API Key present?
+    tavily_valid: bool # Is Tavily API Key present?
+    any_valid: bool   # Is at least one web search key present?
     missing_vars: List[str]
 
 
 def validate_web_research() -> WebResearchValidationResult:
-    """Validate web research environment variables.
-    
+    """Validate web research environment variables for Jina and Tavily.
+
     Returns:
-        WebResearchValidationResult containing validation status and any missing variables.
+        WebResearchValidationResult indicating which keys are valid and any missing variables.
     """
-    web_research_missing = []
-    key = "JINA_API_KEY"
-    if not os.environ.get(key):
-        web_research_missing.append(f"{key} environment variable is not set")
+    missing = []
+    jina_key = "JINA_API_KEY"
+    tavily_key = "TAVILY_API_KEY"
+
+    jina_valid = bool(os.environ.get(jina_key))
+    tavily_valid = bool(os.environ.get(tavily_key))
+    any_valid = jina_valid or tavily_valid
+
+    if not jina_valid:
+        missing.append(f"{jina_key} environment variable is not set (required for deep search)")
+    if not tavily_valid:
+        missing.append(f"{tavily_key} environment variable is not set (required for quick search)")
+
     return WebResearchValidationResult(
-        valid=len(web_research_missing) == 0,
-        missing_vars=web_research_missing
+        jina_valid=jina_valid,
+        tavily_valid=tavily_valid,
+        any_valid=any_valid,
+        missing_vars=missing if not any_valid else [] # Only report missing if *none* are valid for overall status
     )
 
 
@@ -111,11 +124,18 @@ def validate_expert_provider(provider: str) -> ValidationResult:
 
 
 def check_web_research_env() -> List[str]:
-    """Check if web research environment variables are set."""
+    """Check if web research environment variables are set (Jina or Tavily)."""
     web_research_missing = []
-    key = "JINA_API_KEY"
-    if not os.environ.get(key):
-        web_research_missing.append(f"{key} environment variable is not set")
+    jina_key = "JINA_API_KEY"
+    tavily_key = "TAVILY_API_KEY"
+
+    if not os.environ.get(jina_key) and not os.environ.get(tavily_key):
+        web_research_missing.append(f"Neither {jina_key} nor {tavily_key} environment variable is set. Web search disabled.")
+    elif not os.environ.get(jina_key):
+         web_research_missing.append(f"{jina_key} not set (deep search unavailable).") # Informative message
+    elif not os.environ.get(tavily_key):
+         web_research_missing.append(f"{tavily_key} not set (quick search unavailable).") # Informative message
+
     return web_research_missing
 
 
@@ -127,33 +147,50 @@ def check_env() -> Tuple[bool, List[str], bool, List[str]]:
         Tuple containing:
         - bool: Whether all required env vars are set
         - List[str]: List of missing required env vars
-        - bool: Whether all optional env vars are set  
+        - bool: Whether all optional env vars are set
         - List[str]: List of missing optional env vars
     """
     required_missing = []
     optional_missing = []
-    
+
     # Check required env vars
-    required_vars = ["OPENAI_API_KEY"]
-    for var in required_vars:
-        if not os.environ.get(var):
-            required_missing.append(f"{var} environment variable is not set")
-            
-    # Check optional env vars
-    optional_vars = ["ANTHROPIC_API_KEY"]
+    # Making OPENAI optional for now if other providers are primary
+    # required_vars = ["OPENAI_API_KEY"]
+    # for var in required_vars:
+    #     if not os.environ.get(var):
+    #         required_missing.append(f"{var} environment variable is not set")
+
+    # Check optional env vars (including various provider keys and web search keys)
+    optional_vars = [
+        "OPENAI_API_KEY", # Now optional
+        "ANTHROPIC_API_KEY",
+        "JINA_API_KEY",
+        "TAVILY_API_KEY",
+        # Add other provider keys as needed if they should be considered optional overall
+        "OPENROUTER_API_KEY",
+        "GEMINI_API_KEY",
+        "DEEPSEEK_API_KEY",
+        "FIREWORKS_API_KEY",
+        "GROQ_API_KEY",
+    ]
+    at_least_one_web_key = False
     for var in optional_vars:
         if not os.environ.get(var):
             optional_missing.append(f"{var} environment variable is not set")
-            
-    # Check web research env vars
-    jina_key = os.environ.get("JINA_API_KEY")
-    if not jina_key:
-        web_research_missing = ["JINA_API_KEY environment variable is not set"]
-        optional_missing.extend(web_research_missing)
-        
+        elif var == "JINA_API_KEY" or var == "TAVILY_API_KEY":
+            at_least_one_web_key = True
+
+    # Refine web search missing message based on combined check
+    web_research_specific_missing = check_web_research_env()
+    if "Neither" in "".join(web_research_specific_missing): # If neither key is set
+         # Remove individual key messages from optional_missing if the combined message exists
+         optional_missing = [m for m in optional_missing if "JINA_API_KEY" not in m and "TAVILY_API_KEY" not in m]
+         optional_missing.extend(web_research_specific_missing) # Add the combined "Neither..." message
+
+    # Consider required empty for now, adjust logic if specific providers *must* be present
     all_required = len(required_missing) == 0
     all_optional = len(optional_missing) == 0
-    
+
     return all_required, required_missing, all_optional, optional_missing
 
 
@@ -195,21 +232,28 @@ def validate_research_only(args: Any) -> tuple[bool, list[str], bool, list[str]]
         Tuple containing:
         - expert_enabled: Whether expert mode is enabled
         - expert_missing: List of missing expert dependencies
-        - web_research_enabled: Whether web research is enabled
+        - web_research_enabled: Whether web research is enabled (at least one key)
         - web_research_missing: List of missing web research dependencies
     """
     # Initialize results
-    expert_enabled = False
+    expert_enabled = False # Research-only typically doesn't use expert loop? Check this assumption.
     expert_missing = []
     web_research_enabled = False
     web_research_missing = []
 
     # Validate web research dependencies
+    jina_key = os.environ.get("JINA_API_KEY")
     tavily_key = os.environ.get("TAVILY_API_KEY")
-    if not tavily_key:
-        web_research_missing.append("TAVILY_API_KEY environment variable is not set")
-    else:
+
+    if jina_key or tavily_key:
         web_research_enabled = True
+        if not jina_key:
+             web_research_missing.append("JINA_API_KEY environment variable is not set (deep search unavailable)")
+        if not tavily_key:
+             web_research_missing.append("TAVILY_API_KEY environment variable is not set (quick search unavailable)")
+    else:
+         web_research_missing.append("Neither JINA_API_KEY nor TAVILY_API_KEY environment variable is set.")
+
 
     return expert_enabled, expert_missing, web_research_enabled, web_research_missing
 
@@ -277,7 +321,7 @@ def validate_environment(args: Any) -> tuple[bool, list[str], bool, list[str]]:
 
     # Validate web research dependencies
     web_result = validate_web_research()
-    web_research_enabled = web_result.valid
+    web_research_enabled = web_result.any_valid
     web_research_missing = web_result.missing_vars
 
     return expert_enabled, expert_missing, web_research_enabled, web_research_missing

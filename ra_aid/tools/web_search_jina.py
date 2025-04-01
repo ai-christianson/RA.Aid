@@ -40,18 +40,22 @@ def web_search_jina(
     only_domains: Optional[List[str]] = None,
 ) -> Dict:
     """
-    Perform a web search using Jina DeepSearch API with live streaming output.
+    Perform a deep, comprehensive web search using Jina AI DeepSearch.
+
+    Use this tool for complex questions requiring detailed research, synthesis,
+    and potentially exploring multiple sources or perspectives. It provides streamed results.
 
     Args:
-        query: The search query string
-        reasoning_effort: Level of reasoning effort ("low", "medium", "high")
-        no_direct_answer: Force deeper search even for simple queries
-        good_domains: Domains to prioritize
-        bad_domains: Domains to exclude
-        only_domains: Domains to exclusively include
+        query (str): The primary search query.
+        reasoning_effort (str, optional): The level of reasoning effort ('low', 'medium', 'high'). Defaults to "medium".
+        no_direct_answer (bool, optional): If True, forces the API to avoid giving a direct answer. Defaults to False.
+        good_domains (Optional[List[str]], optional): List of preferred domains.
+        bad_domains (Optional[List[str]], optional): List of domains to exclude.
+        only_domains (Optional[List[str]], optional): List of domains to exclusively search within.
 
     Returns:
-        Dict containing final search results from Jina DeepSearch
+        Dict: A dictionary containing the search results summary, URLs, usage stats, annotations, and timestamp.
+               On error, returns a dictionary with an 'error' key.
     """
     # Record trajectory before displaying panel
     trajectory_repo = get_trajectory_repository()
