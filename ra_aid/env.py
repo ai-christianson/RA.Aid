@@ -2,9 +2,33 @@
 
 import os
 import sys
-from typing import Any, List
+from typing import Any, List, Tuple
+from dataclasses import dataclass
 
 from ra_aid.provider_strategy import ProviderFactory, ValidationResult
+
+
+@dataclass
+class WebResearchValidationResult:
+    """Result of web research validation."""
+    valid: bool
+    missing_vars: List[str]
+
+
+def validate_web_research() -> WebResearchValidationResult:
+    """Validate web research environment variables.
+    
+    Returns:
+        WebResearchValidationResult containing validation status and any missing variables.
+    """
+    web_research_missing = []
+    key = "JINA_API_KEY"
+    if not os.environ.get(key):
+        web_research_missing.append(f"{key} environment variable is not set")
+    return WebResearchValidationResult(
+        valid=len(web_research_missing) == 0,
+        missing_vars=web_research_missing
+    )
 
 
 def validate_provider(provider: str) -> ValidationResult:
@@ -86,15 +110,51 @@ def validate_expert_provider(provider: str) -> ValidationResult:
     return ValidationResult(valid=len(missing) == 0, missing_vars=missing)
 
 
-def validate_web_research() -> ValidationResult:
-    """Validate web research configuration."""
-    key = "TAVILY_API_KEY"
-    return ValidationResult(
-        valid=bool(os.environ.get(key)),
-        missing_vars=[]
-        if os.environ.get(key)
-        else [f"{key} environment variable is not set"],
-    )
+def check_web_research_env() -> List[str]:
+    """Check if web research environment variables are set."""
+    web_research_missing = []
+    key = "JINA_API_KEY"
+    if not os.environ.get(key):
+        web_research_missing.append(f"{key} environment variable is not set")
+    return web_research_missing
+
+
+def check_env() -> Tuple[bool, List[str], bool, List[str]]:
+    """
+    Check if required environment variables are set.
+    
+    Returns:
+        Tuple containing:
+        - bool: Whether all required env vars are set
+        - List[str]: List of missing required env vars
+        - bool: Whether all optional env vars are set  
+        - List[str]: List of missing optional env vars
+    """
+    required_missing = []
+    optional_missing = []
+    
+    # Check required env vars
+    required_vars = ["OPENAI_API_KEY"]
+    for var in required_vars:
+        if not os.environ.get(var):
+            required_missing.append(f"{var} environment variable is not set")
+            
+    # Check optional env vars
+    optional_vars = ["ANTHROPIC_API_KEY"]
+    for var in optional_vars:
+        if not os.environ.get(var):
+            optional_missing.append(f"{var} environment variable is not set")
+            
+    # Check web research env vars
+    jina_key = os.environ.get("JINA_API_KEY")
+    if not jina_key:
+        web_research_missing = ["JINA_API_KEY environment variable is not set"]
+        optional_missing.extend(web_research_missing)
+        
+    all_required = len(required_missing) == 0
+    all_optional = len(optional_missing) == 0
+    
+    return all_required, required_missing, all_optional, optional_missing
 
 
 def print_missing_dependencies(missing_vars: List[str]) -> None:

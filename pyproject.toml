@@ -85,3 +85,7 @@ path = "ra_aid/__version__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["ra_aid"]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+requests = "^2.31.0"  # For Jina DeepSearch API

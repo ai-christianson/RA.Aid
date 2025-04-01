@@ -24,7 +24,7 @@ from ra_aid.tools import (
     run_programming_task,
     run_shell_command,
     task_completed,
-    web_search_tavily,
+    web_search_jina,
 )
 from ra_aid.tools.agent import (
     request_implementation,
@@ -193,6 +193,7 @@ RESEARCH_TOOLS = [
     # monorepo_detected,
     # ui_detected,
     mark_research_complete_no_implementation_required,
+    web_search_jina,
 ]
 
 
@@ -270,6 +271,7 @@ def get_planning_tools(
         plan_implementation_completed,
         # *TEMPORARILY* disabled to improve tool calling perf.
         # emit_plan,
+        web_search_jina,
     ]
     tools.extend(planning_tools)
 
@@ -307,6 +309,7 @@ def get_implementation_tools(
     # Add modification tools since it's not research-only
     tools.extend(MODIFICATION_TOOLS)
     tools.extend([task_completed])
+    tools.extend([web_search_jina])
 
     # Add expert tools if enabled
     if expert_enabled:
@@ -329,7 +332,7 @@ def get_web_research_tools(expert_enabled: bool = True):
     Returns:
         list: List of tools configured for web research
     """
-    tools = [web_search_tavily, emit_research_notes, task_completed]
+    tools = [web_search_jina, emit_research_notes, task_completed]
 
     if expert_enabled:
         tools.append(emit_expert_context)
@@ -359,6 +362,7 @@ def get_chat_tools(expert_enabled: bool = True, web_research_enabled: bool = Fal
         # delete_key_facts,
         # delete_key_snippets,
         # deregister_related_files,
+        web_search_jina,
     ]
 
     if web_research_enabled:
