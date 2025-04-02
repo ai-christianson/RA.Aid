@@ -219,7 +219,10 @@ def ripgrep_search(
         )
 
         if return_code != 0:
-            console_panel(truncate_output(decoded_output), title="🚨 Error", border_style="red")
+            # Only show the panel if there's actual output
+            if decoded_output and decoded_output.strip():
+                console_panel(truncate_output(decoded_output), title="🚨 Error", border_style="red")
+            # Always return failure on non-zero exit code
             return {"output": truncate_output(decoded_output), "return_code": return_code, "success": False}
 
         return {
