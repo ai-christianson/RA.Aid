@@ -4,7 +4,8 @@ import subprocess
 import sys
 from abc import ABC, abstractmethod
 
-from ra_aid import print_error
+# Corrected import from formatting module
+from ra_aid.console.formatting import print_error
 
 
 class Dependency(ABC):

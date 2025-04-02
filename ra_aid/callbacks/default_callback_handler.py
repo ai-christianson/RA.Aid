@@ -19,6 +19,11 @@ from ra_aid.database.repositories.trajectory_repository import get_trajectory_re
 from ra_aid.database.repositories.session_repository import get_session_repository
 from ra_aid.logging_config import get_logger
 
+# Added imports
+from ra_aid.config import DEFAULT_SHOW_COST
+from ra_aid.database.repositories.config_repository import get_config_repository
+from ra_aid.console.formatting import cpm
+
 logger = get_logger(__name__)
 
 getcontext().prec = 16
@@ -144,13 +149,17 @@ class DefaultCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
                     return
         except Exception as e:
             logger.debug(f"Could not get model info from litellm: {e}")
-            from ra_aid.console.formatting import cpm
+            # --- START MODIFICATION ---
+            config_repo = get_config_repository()
+            show_cost = config_repo.get("show_cost", DEFAULT_SHOW_COST)
+            if show_cost:
+                cpm(
+                    "Could not find model costs from litellm defaulting to MODEL_COSTS table or 0",
+                    border_style="yellow",
+                )
+            # --- END MODIFICATION ---
 
-            cpm(
-                "Could not find model costs from litellm defaulting to MODEL_COSTS table or 0",
-                border_style="yellow",
-            )
-
+        # Fallback logic remains the same
         model_cost = MODEL_COSTS.get(
             self.model_name, {"input": Decimal("0"), "output": Decimal("0")}
         )

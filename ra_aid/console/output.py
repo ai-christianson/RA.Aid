@@ -5,7 +5,7 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 
 from ra_aid.exceptions import ToolExecutionError
-from ra_aid.callbacks.default_callback_handler import DefaultCallbackHandler
+# Removed top-level import: from ra_aid.callbacks.default_callback_handler import DefaultCallbackHandler
 from ra_aid.database.repositories.config_repository import get_config_repository
 from ra_aid.config import DEFAULT_SHOW_COST
 from ra_aid.console.common import console
@@ -16,6 +16,9 @@ def get_cost_subtitle() -> Optional[str]:
 
     if not get_config_repository().get("show_cost", DEFAULT_SHOW_COST):
         return None
+
+    # Local import to break circular dependency
+    from ra_aid.callbacks.default_callback_handler import DefaultCallbackHandler
 
     # Get the current singleton instance
     callback = DefaultCallbackHandler._instances.get(DefaultCallbackHandler, None)

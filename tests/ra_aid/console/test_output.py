@@ -13,7 +13,7 @@ class TestGetCostSubtitle:
     """Tests for the get_cost_subtitle function."""
 
     @patch("ra_aid.console.output.get_config_repository")
-    @patch("ra_aid.console.output.DefaultCallbackHandler")
+    @patch("ra_aid.callbacks.default_callback_handler.DefaultCallbackHandler")
     def test_no_cost_subtitle_when_show_cost_false(self, mock_callback_class, mock_get_config_repo):
         # Setup
         mock_config_repo = MagicMock()
@@ -33,7 +33,7 @@ class TestGetCostSubtitle:
         mock_config_repo.get.assert_called_once_with("show_cost", False)
 
     @patch("ra_aid.console.output.get_config_repository")
-    @patch("ra_aid.console.output.DefaultCallbackHandler")
+    @patch("ra_aid.callbacks.default_callback_handler.DefaultCallbackHandler")
     def test_no_cost_subtitle_when_no_callback(self, mock_callback_class, mock_get_config_repo):
         # Setup
         mock_config_repo = MagicMock()
