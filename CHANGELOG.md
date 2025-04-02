@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Support for Anthropic's `claude-3.7` series models (`ra_aid/models_params.py`, `tests/ra_aid/test_anthropic_token_limiter.py`).
+- Support for Fireworks AI provider and models (`fireworks/firefunction-v2`, `fireworks/dbrx-instruct`) (`ra_aid/models_params.py`, `ra_aid/llm.py`).
+- Implicit think tag detection: `process_thinking_content` now checks for `<think>` tags even if `supports_think_tag` is not explicitly `True` in model config, provided it's not `False` and the content starts with the tag (`ra_aid/text/processing.py`, `tests/ra_aid/text/test_process_thinking.py`).
+- Command-line arguments `--project-dir` and `--db-path` added to `ra-aid usage latest` and `ra-aid usage all` subcommands for specifying database location (`ra_aid/scripts/cli.py`, `ra_aid/scripts/all_sessions_usage.py`, `ra_aid/scripts/last_session_usage.py`).
+- Reinitialization capability for Singleton classes via `_initialize` method (`ra_aid/utils/singleton.py`).
+- Metadata tracking (`model_name`, `provider`) added during LLM initialization (`ra_aid/llm.py`, `tests/ra_aid/test_llm.py`).
+
+### Changed
+
+- **Refactored Callback Handling:** Replaced `AnthropicCallbackHandler` with a generalized `DefaultCallbackHandler` located in `ra_aid/callbacks/default_callback_handler.py`. This new handler supports multiple providers, improves cost/token tracking logic, standardizes initialization, enhances database interaction for trajectory logging, and provides better context management (`ra_aid/callbacks/default_callback_handler.py`, `ra_aid/agent_utils.py`, `ra_aid/console/output.py`, `tests/ra_aid/callbacks/test_default_callback_handler.py`, `tests/ra_aid/test_token_usage_tracking.py`).
+- **Refactored Thinking Processing:** Significantly updated `process_thinking_content` in `ra_aid/text/processing.py` for clearer logic flow. It now explicitly handles structured thinking (list format) separately from string-based `<think>` tag extraction. The logic for tag extraction now depends on the `supports_think_tag` configuration value (True: always check, False: never check, None: check only if content starts with `<think>`) (`ra_aid/text/processing.py`, `tests/ra_aid/text/test_process_thinking.py`, `tests/ra_aid/agent_backends/test_ciayn_agent_think_tag.py`).
+- **Refactored Token Limiting:** Renamed `sonnet_35_state_modifier` to `base_state_modifier` in `ra_aid/anthropic_token_limiter.py` for broader applicability and adjusted associated logic (`ra_aid/anthropic_token_limiter.py`, `ra_aid/agent_utils.py`, `tests/ra_aid/test_anthropic_token_limiter.py`).
+- Updated LLM initialization (`initialize_llm` in `ra_aid/llm.py`) to include provider/model metadata and refine DeepSeek provider logic for different DeepSeek models (`ra_aid/llm.py`, `tests/ra_aid/test_llm.py`).
+- Improved rate limit error handling and retry logic in `_handle_api_error` (`ra_aid/agent_utils.py`).
+- Removed redundant console output from `ripgrep_search` tool; results are now only in the returned dictionary (`ra_aid/tools/ripgrep.py`).
+- Updated numerous unit tests across the codebase to reflect the extensive refactoring in callbacks, thinking processing, token limiting, and LLM initialization.
+- Updated project dependencies as recorded in `uv.lock` and `pyproject.toml`.
+
+### Fixed
+
+- Corrected an import path typo in `ra_aid/dependencies.py`.
+- Ensured the correct callback handler instance (`DefaultCallbackHandler`) is used for fetching cost information for display (`ra_aid/console/output.py`).
+- Addressed various test failures arising from the refactoring of core components.
+
+### Removed
+
+- Removed the dedicated `ra_aid/callbacks/anthropic_callback_handler.py` file. Its functionality has been merged and generalized into `ra_aid/callbacks/default_callback_handler.py`.
+
 
 ## [0.21.0] 2025-03-27
 
@@ -334,7 +366,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Enforce byte limit in interactive commands
 - Normalize/dedupe related file paths
-- Relax aider version requirement for SWE-bench compatibility 
+- Relax aider version requirement for SWE-bench compatibility
 - Upgrade langchain/langgraph dependencies
 
 ### Fixed
@@ -399,7 +431,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Added Deepseek Provider Support and Custom Deepseek Reasoner Chat Model (#50)
-- Added Aider config File Argument Support (#43) 
+- Added Aider config File Argument Support (#43)
 - Added configurable --recursion-limit argument (#46)
 - Set Default Max Token Limit with Provider/Model Dictionary (#45)
 
