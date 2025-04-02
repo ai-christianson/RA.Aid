@@ -260,7 +260,7 @@ class CiaynAgent:
         # Additional check for simple code blocks without language
         elif code.startswith("```"):
             code = code[3:].strip()
-        # Check for code surrounded with single backticks
+        # Check for code surrounded with single backticks (`)
         elif code.startswith("`") and not code.startswith("``"):
             code = code[1:].strip()
 
@@ -927,12 +927,20 @@ class CiaynAgent:
             )
             # print(f"response={response}")
 
-            # Check if model supports think tags
+            # Get settings from config and models_params
             provider = self.config.get("provider", "")
             model_name = self.config.get("model", "")
-            model_config = models_params.get(provider, {}).get(model_name, {})
-            supports_think_tag = model_config.get("supports_think_tag", False)
-            supports_thinking = model_config.get("supports_thinking", False)
+            model_config_from_params = models_params.get(provider, {}).get(model_name, {})
+
+            # Determine supports_think_tag: prioritize self.config, then models_params
+            if "supports_think_tag" in self.config:
+                supports_think_tag = self.config.get("supports_think_tag")
+            else:
+                supports_think_tag = model_config_from_params.get("supports_think_tag") # Defaults to None if not in either
+
+            supports_thinking = model_config_from_params.get("supports_thinking", False)
+            # show_thoughts defaults to True if not specified (matching process_thinking_content default)
+            show_thoughts = self.config.get("show_thoughts", True)
 
             # Process thinking content if supported
             response.content, _ = process_thinking_content(
@@ -940,7 +948,7 @@ class CiaynAgent:
                 supports_think_tag=supports_think_tag,
                 supports_thinking=supports_thinking,
                 panel_title=" Thoughts",
-                show_thoughts=self.config.get("show_thoughts", False),
+                show_thoughts=show_thoughts,
             )
 
             # Check if the response is empty or doesn't contain a valid tool call
