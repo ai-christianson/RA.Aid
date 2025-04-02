@@ -224,18 +224,21 @@ class OpenRouterStrategy(ProviderStrategy):
             and hasattr(args, "expert_provider")
             and args.expert_provider == "openrouter"
         ):
-            key = os.environ.get("EXPERT_OPENROUTER_API_KEY")
-            if not key or key == "":
-                # Try to copy from base if not set
-                base_key = os.environ.get("OPENROUTER_API_KEY")
-                if base_key:
-                    os.environ["EXPERT_OPENROUTER_API_KEY"] = base_key
-                    key = base_key
-            if not key:
+            expert_key = os.environ.get("EXPERT_OPENROUTER_API_KEY")
+            base_key = os.environ.get("OPENROUTER_API_KEY")
+
+            if not expert_key and not base_key:
+                # Only report missing if BOTH expert and base keys are absent
                 missing.append(
-                    "EXPERT_OPENROUTER_API_KEY environment variable is not set"
+                    "EXPERT_OPENROUTER_API_KEY environment variable is not set (and OPENROUTER_API_KEY fallback is also missing)"
                 )
-        else:
+            elif not expert_key and base_key:
+                 # If expert key is missing but base key exists, attempt to copy for subsequent use
+                 # This prevents errors later if code relies on EXPERT_* var being set.
+                 os.environ["EXPERT_OPENROUTER_API_KEY"] = base_key
+                 # No error appended here, validation passes using the fallback
+
+        else: # Original logic for non-expert validation
             key = os.environ.get("OPENROUTER_API_KEY")
             if not key:
                 missing.append("OPENROUTER_API_KEY environment variable is not set")

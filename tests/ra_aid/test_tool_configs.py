@@ -112,3 +112,26 @@ def test_set_modification_tools():
 
     # Reset to default for other tests
     set_modification_tools(use_aider=False)
+
+EXPECTED_RESEARCH_TOOLS = {
+    "web_search_jina",
+    "emit_research_notes",
+    "task_completed"
+}
+
+EXPECTED_PLANNING_TOOLS = {
+    "web_search_jina",
+    "create_plan",
+    "task_completed"
+}
+
+EXPECTED_IMPLEMENTATION_TOOLS = {
+    "web_search_jina",
+    "emit_code_block",
+    "task_completed"
+}
+
+EXPECTED_CHAT_TOOLS = {
+    "web_search_jina",
+    "task_completed"
+}
