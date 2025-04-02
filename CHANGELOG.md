@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.22.0] 2025-04-03
 
 ### Added
 
@@ -36,7 +36,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 - Removed the dedicated `ra_aid/callbacks/anthropic_callback_handler.py` file. Its functionality has been merged and generalized into `ra_aid/callbacks/default_callback_handler.py`.
-
 
 ## [0.21.0] 2025-03-27
 
