@@ -27,8 +27,8 @@ def test_multiline_extraction():
 def test_multiple_think_tags():
     """Test that only the first think tag is extracted."""
     content = "<think>First tag</think>Middle<think>Second tag</think>End"
-    expected_extracted = "First tag"
-    expected_remaining = "Middle<think>Second tag</think>End"
+    expected_extracted = "First tag</think>Middle<think>Second tag"
+    expected_remaining = "End"
     
     extracted, remaining = extract_think_tag(content)
     

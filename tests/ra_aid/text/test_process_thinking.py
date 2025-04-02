@@ -1,7 +1,7 @@
 
 import pytest
 from unittest.mock import MagicMock, patch, call
-from ra_aid.text.processing import process_thinking_content
+from ra_aid.text.processing import process_thinking_content, extract_think_tag # Added import
 
 
 class TestProcessThinkingContent:
@@ -275,3 +275,18 @@ class TestProcessThinkingContent:
             assert args[0] == "Custom thinking" # Check content passed to cpm
             assert kwargs.get('title') == "Custom Title"
             assert kwargs.get('border_style') == "red"
+
+# Renamed from test_multiple_think_tags, updated for greedy extraction
+def test_greedy_extraction():
+    """Test that extract_think_tag uses greedy matching with multiple tags."""
+    # Input string designed to test greedy matching across multiple tags
+    test_input = "<think>First tag</think>Middle<think>Second tag</think>End"
+    # Expected result for greedy matching: extracts everything between the first <think> and the last </think>
+    expected_extracted = "First tag</think>Middle<think>Second tag"
+    # Expected remaining: the content after the last </think>
+    expected_remaining = "End"
+
+    extracted, remaining = extract_think_tag(test_input)
+
+    assert extracted == expected_extracted
+    assert remaining == expected_remaining

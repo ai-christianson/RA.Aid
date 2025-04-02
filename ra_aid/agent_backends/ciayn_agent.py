@@ -940,7 +940,7 @@ class CiaynAgent:
 
             supports_thinking = model_config_from_params.get("supports_thinking", False)
             # show_thoughts defaults to True if not specified (matching process_thinking_content default)
-            show_thoughts = self.config.get("show_thoughts", True)
+            show_thoughts = self.config.get("show_thoughts", None)
 
             # Process thinking content if supported
             response.content, _ = process_thinking_content(
