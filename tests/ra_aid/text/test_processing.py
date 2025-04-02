@@ -25,7 +25,8 @@ def test_multiline_extraction():
     assert remaining == expected_remaining
 
 def test_multiple_think_tags():
-    """Test that only the first think tag is extracted."""
+    """Test that only the first think tag is extracted (greedy matching)."""
+    # This tests the greedy nature: it matches from the first <think> to the last </think>
     content = "<think>First tag</think>Middle<think>Second tag</think>End"
     expected_extracted = "First tag</think>Middle<think>Second tag"
     expected_remaining = "End"
@@ -57,7 +58,7 @@ def test_empty_think_tag():
 
 def test_whitespace_handling():
     """Test whitespace handling in think tag extraction."""
-    content = "<think>  \n  Content with whitespace  \n  </think>Remaining content"
+    content = "  \n  <think>  \n  Content with whitespace  \n  </think>Remaining content"
     expected_extracted = "  \n  Content with whitespace  \n  "
     expected_remaining = "Remaining content"
     
@@ -74,6 +75,15 @@ def test_tag_not_at_start():
     
     assert extracted is None
     assert remaining == content
+
+def test_extract_think_tag_nested_in_tool_call():
+    """Test that think tag is not extracted when nested inside a tool call."""
+    input_string = "tool_call(arg='<think>nested thought</think>')"
+    
+    extracted, remaining = extract_think_tag(input_string)
+    
+    assert extracted is None
+    assert remaining == input_string
 
 def test_sample_data():
     """Test extraction using sample data from tests/data/think-tag/sample_1.txt."""

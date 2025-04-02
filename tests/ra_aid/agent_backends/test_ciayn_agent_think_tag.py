@@ -63,16 +63,15 @@ def test_stream_supports_think_tag():
                 assert "<think>" not in mock_execute.call_args[0][0].content
 
 
-def test_stream_implicit_think_tag_support(): # Renamed in previous step
-    """Test that CiaynAgent.stream extracts think tags implicitly when not explicitly disabled.""" # Updated docstring
+def test_stream_implicit_think_tag_support():
+    """Test that CiaynAgent.stream extracts think tags implicitly and displays them if show_thoughts is globally True."""
     # Setup mock model
     mock_model = MagicMock()
     mock_response = AIMessage(content="<think>These are my thoughts</think>Actual response")
     mock_model.invoke.return_value = mock_response
 
     # Setup agent with config where supports_think_tag is absent (implicitly None)
-    # We'll use a model known not to have the flag set in models_params.py
-    # show_thoughts defaults to True, so we don't need to set it explicitly for the panel check
+    # And show_thoughts is absent in the agent config (will cause lookup)
     config = {
         "provider": "openai",
         "model": "gpt-4" # This model has no supports_think_tag in models_params.py
@@ -83,21 +82,30 @@ def test_stream_implicit_think_tag_support(): # Renamed in previous step
     with patch("ra_aid.console.formatting.print_warning"), \
          patch("ra_aid.console.formatting.print_error"):
 
-        # We need to patch console.print because show_thoughts defaults to True
-        # and implicit detection will trigger the thoughts panel
-        with patch("rich.console.Console.print") as mock_console_print:
-            # Mock _execute_tool to avoid actually executing tools
-            with patch.object(agent, "_execute_tool") as mock_execute:
-                mock_execute.return_value = "Tool result"
+        # Mock _execute_tool to avoid actually executing tools
+        with patch.object(agent, "_execute_tool") as mock_execute:
+            mock_execute.return_value = "Tool result"
+
+            # Mock the config repository lookup within process_thinking_content
+            # to simulate show_thoughts being globally enabled.
+            # Patch where it's imported: ra_aid.database.repositories.config_repository
+            with patch("ra_aid.database.repositories.config_repository.get_config_repository") as mock_get_repo, \
+                 patch("rich.console.Console.print") as mock_console_print:
+
+                # Configure the mock repository and its get method
+                mock_repo_instance = MagicMock()
+                # Simulate get("show_thoughts", False) returning True
+                mock_repo_instance.get.side_effect = lambda key, default: True if key == "show_thoughts" else default
+                mock_get_repo.return_value = mock_repo_instance
 
                 # Call stream method
                 next(agent.stream({"messages": []}, {}))
 
-                # Verify console.print was called (because show_thoughts defaults to True)
+                # Verify console.print was called (because show_thoughts was mocked to True)
                 mock_console_print.assert_called()
 
                 # Check that the response content WAS modified due to implicit detection
-                assert mock_execute.call_args[0][0].content == "Actual response" # CORRECTED assertion
+                assert mock_execute.call_args[0][0].content == "Actual response"
 
 
 def test_stream_explicitly_disabled_think_tag_support(): # Added in previous step
