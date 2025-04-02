@@ -679,6 +679,7 @@ def build_status():
             [fb_handler._format_model(m) for m in fb_handler.fallback_tool_models]
         )
         status.append(msg)
+        status.append("\n")
 
     # Add memory statistics
     # Get counts of key facts, snippets, and research notes with error handling
@@ -703,7 +704,7 @@ def build_status():
 
     # Add memory statistics line with reset option note
     status.append(
-        f"\n💾 Memory: {fact_count} facts, {snippet_count} snippets, {note_count} notes"
+        f"💾 Memory: {fact_count} facts, {snippet_count} snippets, {note_count} notes"
     )
     if fact_count > 0 or snippet_count > 0 or note_count > 0:
         status.append(" (use --wipe-project-memory to reset)")
