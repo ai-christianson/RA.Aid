@@ -723,7 +723,7 @@ class CiaynAgent:
                 )
 
             ra_aid.console.formatting.print_warning(
-                f"Tool execution failed for `{tool_name if tool_name else "unknown"}`:\nError: {str(e)}\n\nCode:\n\n````\n{code}\n````",
+                f"Tool execution failed for `{tool_name if tool_name else 'unknown'}`:\nError: {str(e)}\n\nCode:\n\n````\n{code}\n````",
                 title="Tool Error",
             )
             # Re-raise the original error if it's already a ToolExecutionError and we didn't modify it
