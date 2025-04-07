@@ -526,7 +526,7 @@ Examples:
         # Use default model for Anthropic only if not specified
         parsed_args.model = parsed_args.model or ANTHROPIC_DEFAULT_MODEL
     elif parsed_args.provider == "gemini":
-        parsed_args.model = parsed_args.model or "gemini-2.5-pro-exp-03-25"
+        parsed_args.model = parsed_args.model or "gemini-2.5-pro-preview-03-25"
     elif not parsed_args.model and not parsed_args.research_only:
         # Require model for other providers unless in research mode
         parser.error(
@@ -538,7 +538,7 @@ Examples:
         # Check for Gemini API key first
         if os.environ.get("GEMINI_API_KEY"):
             parsed_args.expert_provider = "gemini"
-            parsed_args.expert_model = "gemini-2.5-pro-exp-03-25"
+            parsed_args.expert_model = "gemini-2.5-pro-preview-03-25"
         # Check for OpenAI API key next
         elif os.environ.get("OPENAI_API_KEY"):
             parsed_args.expert_provider = "openai"
