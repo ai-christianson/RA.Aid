@@ -65,6 +65,13 @@ from ra_aid.prompts.ciayn_prompts import (
     NO_TOOL_CALL_PROMPT,
 )
 
+# Multi-agent prompts
+from ra_aid.prompts.multi_agent_prompts import (
+    MULTI_AGENT_REQUEST_SCHEMA,
+    MULTI_AGENT_QUERY_HANDLER_PROMPT,
+    MULTI_AGENT_IMPLEMENTATION_SCHEMA,
+)
+
 # Add an __all__ list with all the exported names
 __all__ = [
     # Common prompts
@@ -112,4 +119,9 @@ __all__ = [
     "CIAYN_AGENT_HUMAN_PROMPT",
     "EXTRACT_TOOL_CALL_PROMPT",
     "NO_TOOL_CALL_PROMPT",
+    
+    # Multi-agent prompts
+    "MULTI_AGENT_REQUEST_SCHEMA",
+    "MULTI_AGENT_QUERY_HANDLER_PROMPT",
+    "MULTI_AGENT_IMPLEMENTATION_SCHEMA",
 ]

@@ -47,6 +47,15 @@ Behavior:
        - After receiving the user's initial input, use the given tools to fulfill their request.
        - If you are uncertain about the user's requirements, run ask_human to clarify.
        - If any logic or debugging checks are needed, consult the expert (if available) to get deeper analysis.
+       - **Web Search Handling:** When a web search is needed:
+         - Analyze the search requirement to determine the search depth needed.
+         - If the requirement is to find simple information that can be answered in a few sentences from under 5 sources, use `search_type='quick'`.
+         - If the requirement is to find detailed information that requires multiple sources and a comprehensive research, use `search_type='deep'`.
+         - If you are unsure about the search depth, run ask_human to clarify.
+         - Formulate the core search query.
+         - Call the `select_web_search` tool, providing *both* the core `query` and the determined `search_type` argument ('quick' or 'deep').
+       - **Handling Quick Search Results:** If you called `select_web_search` with `search_type='quick'` and it successfully returns a string result, your *immediate next action* MUST be to call `ask_human` with that exact result string as the message to deliver the answer to the user. Do NOT perform other actions like writing notes or marking research complete before delivering the answer via `ask_human`.
+       - **IMMEDIATE STOP CONDITION:** If ANY call to `select_web_search` (regardless of `search_type`) returns a non-error result containing a direct answer to the user's factual query, you MUST HALT all further tool calls or reasoning steps related to that query and IMMEDIATELY call `ask_human` with the retrieved answer. Do not try to verify further or perform additional searches.
        - Continue this pattern: research, propose a next step, and if needed, ask_human for confirmation or guidance.
 
     3. Final Confirmation:
