@@ -295,9 +295,13 @@ Examples:
         "--provider",
         type=str,
         default=(
-            "openai"
-            if (os.getenv("OPENAI_API_KEY") and not os.getenv("ANTHROPIC_API_KEY"))
-            else "anthropic"
+            "gemini"
+            if os.getenv("GEMINI_API_KEY")
+            else (
+                "openai"
+                if (os.getenv("OPENAI_API_KEY") and not os.getenv("ANTHROPIC_API_KEY"))
+                else "anthropic"
+            )
         ),
         choices=VALID_PROVIDERS,
         help="The LLM provider to use",
@@ -521,6 +525,8 @@ Examples:
     elif parsed_args.provider == "anthropic":
         # Use default model for Anthropic only if not specified
         parsed_args.model = parsed_args.model or ANTHROPIC_DEFAULT_MODEL
+    elif parsed_args.provider == "gemini":
+        parsed_args.model = parsed_args.model or "gemini-2.5-pro-exp-03-25"
     elif not parsed_args.model and not parsed_args.research_only:
         # Require model for other providers unless in research mode
         parser.error(
@@ -529,8 +535,12 @@ Examples:
 
     # Handle expert provider/model defaults
     if not parsed_args.expert_provider:
-        # Check for OpenAI API key first
-        if os.environ.get("OPENAI_API_KEY"):
+        # Check for Gemini API key first
+        if os.environ.get("GEMINI_API_KEY"):
+            parsed_args.expert_provider = "gemini"
+            parsed_args.expert_model = "gemini-2.5-pro-exp-03-25"
+        # Check for OpenAI API key next
+        elif os.environ.get("OPENAI_API_KEY"):
             parsed_args.expert_provider = "openai"
             parsed_args.expert_model = None  # Will be auto-selected
         # If no OpenAI key but DeepSeek key exists, use DeepSeek
