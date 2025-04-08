@@ -1,10 +1,17 @@
-
 import React, { useState, useEffect, useRef, useCallback } from 'react'; // Added useCallback
 import { createPortal } from 'react-dom';
-import { PanelLeft, Plus, X } from 'lucide-react';
+import { PanelLeft, Plus, X, MoreHorizontal } from 'lucide-react';
 import {
   Button,
-  Layout
+  Layout,
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
+  Card,
+  CardHeader,
+  CardContent,
+  CardTitle,
+  CardDescription,
 } from './ui';
 import { SessionDrawer } from './SessionDrawer';
 import { SessionList } from './SessionList';
@@ -162,6 +169,10 @@ export const DefaultAgentScreen: React.FC = () => {
     localStorage.setItem('theme', newIsDark ? 'dark' : 'light');
   };
 
+  // Get selected session name
+  const selectedSession = sessions.find(s => s.id === selectedSessionId);
+  const sessionName = selectedSession?.name || 'Unknown';
+
   // Render header content
   const headerContent = (
     <div className="w-full flex items-center justify-between h-full px-4">
@@ -221,40 +232,46 @@ export const DefaultAgentScreen: React.FC = () => {
   const mainContent = selectedSessionId ? (
     // Existing session view
     <div className="flex flex-col h-full w-full">
-      <div className="flex-1 overflow-auto w-full px-4">
-        <h2 className="text-xl font-semibold mb-4">
-          Session: {sessions.find(s => s.id === selectedSessionId)?.name || 'Unknown'}
-        </h2>
+      <div className="flex-1 overflow-auto w-full">
+        {/* Session title with minimal spacing */}
+        <div className="px-6 pt-4 pb-2 border-b border-border/30">
+          <h2 className="text-xl font-medium">{sessionName}</h2>
+        </div>
+        {/* Trajectory panel with consistent spacing */}
         <TrajectoryPanel
-          sessionId={selectedSessionId} // Pass string ID
+          sessionId={selectedSessionId}
           addBottomPadding={true}
+          customClassName="px-6 pt-3 pb-4" // Reduced top padding to minimize gap
         />
       </div>
     </div>
   ) : newSession ? (
     // New session composition view
     <div className="flex flex-col h-full w-full">
-      <div className="flex-1 overflow-auto w-full px-4">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">Create New Session</h2>
+      <div className="flex-1 overflow-auto w-full">
+        {/* Session title with minimal spacing */}
+        <div className="px-6 pt-4 pb-2 border-b border-border/30">
+          <h2 className="text-xl font-medium">Create New Session</h2>
         </div>
-        <p className="text-muted-foreground mb-4">
-          Type your message in the input box below to start a new conversation with the agent.
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-          <div className="p-4 rounded-md border border-border bg-background/50">
-            <h4 className="text-sm font-medium mb-2">Research Mode</h4>
-            <p className="text-xs text-muted-foreground">
-              The agent will gather information about your request and provide a summary
-              without implementing any solutions.
-            </p>
-          </div>
-          <div className="p-4 rounded-md border border-border bg-background/50">
-            <h4 className="text-sm font-medium mb-2">Implementation Mode</h4>
-            <p className="text-xs text-muted-foreground">
-              The agent will analyze your request, create a plan, and implement a solution
-              based on your requirements.
-            </p>
+        <div className="px-6 pt-3 pb-4">
+          <p className="text-muted-foreground mb-6">
+            Type your message in the input box below to start a new conversation with the agent.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+            <div className="p-4 rounded-md border border-border bg-background/50">
+              <h4 className="text-sm font-medium mb-2">Research Mode</h4>
+              <p className="text-xs text-muted-foreground">
+                The agent will gather information about your request and provide a summary
+                without implementing any solutions.
+              </p>
+            </div>
+            <div className="p-4 rounded-md border border-border bg-background/50">
+              <h4 className="text-sm font-medium mb-2">Implementation Mode</h4>
+              <p className="text-xs text-muted-foreground">
+                The agent will analyze your request, create a plan, and implement a solution
+                based on your requirements.
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -334,4 +351,3 @@ const setupTheme = () => {
   }
   return isDark;
 };
-

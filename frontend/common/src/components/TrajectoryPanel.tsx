@@ -26,6 +26,11 @@ interface TrajectoryPanelProps {
    * Set to true when used in the main content area.
    */
   addBottomPadding?: boolean;
+  
+  /**
+   * Optional custom className to override default styling
+   */
+  customClassName?: string;
 }
 
 /**
@@ -38,7 +43,8 @@ interface TrajectoryPanelProps {
 export const TrajectoryPanel: React.FC<TrajectoryPanelProps> = ({
   sessionId,
   maxHeight,
-  addBottomPadding = false // Default to false when not specified
+  addBottomPadding = false, // Default to false when not specified
+  customClassName = ''
 }) => {
   // Get trajectory store data
   const { 
@@ -110,9 +116,9 @@ export const TrajectoryPanel: React.FC<TrajectoryPanelProps> = ({
   
   // Render trajectories
   return (
-    <div className="w-full rounded-md bg-background">
+    <div className={`w-full rounded-md bg-background ${customClassName}`}>
       <div 
-        className={`px-3 py-3 space-y-4 overflow-auto ${addBottomPadding ? 'pb-32' : ''}`}
+        className={`space-y-4 overflow-auto ${addBottomPadding ? 'pb-32' : ''}`}
         style={{ maxHeight: maxHeight || undefined }}
       >
         {trajectories.map(renderTrajectory)}

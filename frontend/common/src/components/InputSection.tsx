@@ -56,9 +56,9 @@ export const InputSection: React.FC<InputSectionProps> = ({
   
   // If no sessionId is provided and not in new session mode, or drawer is open on mobile, don't render
   // Also, don't render if we're in new session mode but the newSession state is submitting
-  if ((!sessionId && !isNewSession) || 
-      (isDrawerOpen && isMobile) || 
-      (isNewSession && newSession?.isSubmitting)) return null;
+  if (!isNewSession || sessionId || (isDrawerOpen && isMobile) || (isNewSession && newSession?.isSubmitting)) {
+    return null;
+  }
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
