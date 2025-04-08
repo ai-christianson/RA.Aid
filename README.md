@@ -323,9 +323,9 @@ Enable with `--chat` to transform ra-aid into an interactive assistant that guid
 ### Server with Web Interface
 
 RA.Aid includes a modern server with web interface that provides:
+
 - Beautiful dark-themed chat interface
-- Real-time streaming of command output
-- Request history with quick resubmission
+- Real-time streaming of agent trajectory
 - Responsive design that works on all devices
 
 To launch the server with web interface:
@@ -343,14 +343,7 @@ Command line options for server with web interface:
 - `--server-host`: Host to listen on (default: 0.0.0.0)
 - `--server-port`: Port to listen on (default: 1818)
 
-After starting the server, open your web browser to the displayed URL (e.g., http://localhost:1818). The interface provides:
-- Left sidebar showing request history
-- Main chat area with real-time output
-- Input box for typing requests
-- Automatic reconnection handling
-- Error reporting and status messages
-
-All ra-aid commands sent through the web interface automatically use cowboy mode for seamless execution.
+After starting the server, open your web browser to the displayed URL (e.g., http://localhost:1818).
 
 ### Command Interruption and Feedback
 
