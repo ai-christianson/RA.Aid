@@ -27,6 +27,9 @@ export interface WebSocketConfig {
   heartbeatTimeoutMs?: number; // e.g., 5000ms (5 seconds)
   pingMessage?: string | (() => string); // Default: 'ping'
   pongMessage?: string; // Default: 'pong'
+
+  // Custom message handler (Task 1 - Frontend Update)
+  onMessage?: (data: any) => void;
 }
 
 /**
@@ -36,6 +39,7 @@ export class WebSocketConnection {
   private ws: WebSocket | null = null;
   private state: WebSocketState = WebSocketState.CLOSED;
   private config: WebSocketConfig;
+  private _onMessage: ((data: any) => void) | undefined; // Task 1: Add handler member
 
   // Heartbeat properties (Task 2)
   private heartbeatIntervalTimer: ReturnType<typeof setInterval> | null = null;
@@ -58,6 +62,7 @@ export class WebSocketConnection {
 
   constructor(config: WebSocketConfig) {
     this.config = config;
+    this._onMessage = config.onMessage; // Task 1: Store handler
 
     // Initialize heartbeat config with defaults (Task 2)
     this.heartbeatIntervalMs = config.heartbeatIntervalMs;
@@ -85,6 +90,8 @@ export class WebSocketConnection {
       maxReconnectIntervalMs: this.maxReconnectIntervalMs,
       reconnectDecay: this.reconnectDecay,
       maxReconnectAttempts: this.maxReconnectAttempts,
+      // Indicate if handler is present
+      onMessage: this._onMessage ? '[Function]' : undefined,
     });
   }
 
@@ -116,7 +123,6 @@ export class WebSocketConnection {
 
     try {
       // Clear any lingering timers *before* creating a new connection
-      // This specifically clears any pending reconnect timer if connect() is called manually
       this._clearTimers();
       this.ws = new WebSocket(this.config.url);
       this.ws.onopen = this._handleOpen.bind(this);
@@ -126,7 +132,6 @@ export class WebSocketConnection {
     } catch (error) {
       console.error('[WebSocket] Instantiation failed:', error);
       this.state = WebSocketState.CLOSED; // Ensure state is CLOSED on instant failure
-      // Don't clear timers here as they wouldn't have been set
       // Trigger reconnection logic directly if instantiation fails and autoReconnect is enabled
       this._handleClose(new CloseEvent('error', { reason: 'WebSocket instantiation failed' }));
     }
@@ -160,15 +165,14 @@ export class WebSocketConnection {
         this.ws.close(code ?? 1000, reason);
     } catch (error) {
         console.error('[WebSocket] Error during close:', error);
-        // If closing throws, the 'onclose' event should still fire eventually.
-        // We've already set the state and cleared timers.
-        // We'll force state to CLOSED just in case 'onclose' never fires.
+        // Force state to CLOSED just in case 'onclose' never fires.
         this.state = WebSocketState.CLOSED;
         this.ws = null; // Ensure instance is released
     }
   }
 
   // --- Private Event Handlers ---
+
 
   private _handleOpen(event: Event): void {
     this.state = WebSocketState.OPEN;
@@ -187,9 +191,27 @@ export class WebSocketConnection {
         return; // Don't pass pong messages to the application's message handler
     }
 
-    // Pass other messages to a user-defined handler (or log for now)
-    console.log('[WebSocket] Received Data:', messageData);
-    // TODO: Add a mechanism to register a message handler (e.g., this.onMessageHandler(messageData))
+    // Task 1: Call registered message handler or log if none exists
+    if (this._onMessage) {
+        try {
+            // Attempt to parse if it looks like JSON
+            let parsedData = messageData;
+            if (typeof messageData === 'string') {
+                try {
+                    parsedData = JSON.parse(messageData);
+                } catch (e) {
+                    // Keep as string if parsing fails, maybe log warning
+                    // console.warn('[WebSocket] Received non-JSON string message:', messageData);
+                }
+            }
+            this._onMessage(parsedData); // Pass potentially parsed data
+        } catch (error) {
+            console.error('[WebSocket] Error in onMessage handler:', error);
+        }
+    } else {
+        // Log if no handler is registered and it's not a pong
+        console.log('[WebSocket] Received unhandled message:', messageData);
+    }
   }
 
   private _handleError(event: Event): void {
@@ -262,6 +284,7 @@ export class WebSocketConnection {
 
   // --- Private Heartbeat Methods (Task 2) ---
 
+
   private _startHeartbeat(): void {
     this._clearHeartbeatInterval(); // Clear existing interval timer just in case
 
@@ -277,7 +300,6 @@ export class WebSocketConnection {
 
   private _sendPing(): void {
     if (this.state !== WebSocketState.OPEN) {
-      //console.log('[WebSocket] Skipping ping, connection not open.');
       // Stop sending pings if the connection is no longer open
       this._clearHeartbeatInterval();
       return;
@@ -286,7 +308,6 @@ export class WebSocketConnection {
     // Clear previous timeout timer before setting a new one
     this._clearHeartbeatTimeout();
 
-    //console.log('[WebSocket] Sending Ping.');
     this.heartbeatTimeoutTimer = setTimeout(() => {
       this._handleHeartbeatTimeout();
     }, this.heartbeatTimeoutMs);
@@ -302,12 +323,11 @@ export class WebSocketConnection {
 
   private _handleHeartbeatTimeout(): void {
     if (this.state !== WebSocketState.OPEN) {
-        //console.log('[WebSocket] Heartbeat timeout occurred, but connection already closing/closed. Ignoring.');
         return;
     }
     console.warn(`[WebSocket] Heartbeat timeout after ${this.heartbeatTimeoutMs}ms. No Pong received. Closing connection.`);
     this.heartbeatTimeoutTimer = null; // Ensure timer ID is cleared
-    // Force close the connection. The `_handleClose` handler will manage state and cleanup, including potential reconnection.
+    // Force close the connection. The `_handleClose` handler will manage state and cleanup.
     this.ws?.close(1001, "Heartbeat timeout");
   }
 
@@ -327,13 +347,11 @@ export class WebSocketConnection {
 
   // Centralized timer clearing
   private _clearTimers(): void {
-    //console.log('[WebSocket] Clearing all timers.');
     this._clearHeartbeatInterval();
     this._clearHeartbeatTimeout();
 
     // Clear reconnection timer (Task 3)
     if (this.reconnectTimer !== null) {
-      //console.log('[WebSocket] Clearing reconnect timer.');
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
     }
