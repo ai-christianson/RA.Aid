@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Button } from "./ui/button";
 import { Send, X } from "lucide-react";
 import { cn } from "../utils";
@@ -22,6 +22,7 @@ export const InputSection: React.FC<InputSectionProps> = ({
   const [message, setMessage] = useState("");
   const [isMobile, setIsMobile] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null); // Ref for the textarea
   
   // Get session store state and actions for new session handling
   const { 
@@ -53,6 +54,13 @@ export const InputSection: React.FC<InputSectionProps> = ({
     // Cleanup
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Autofocus textarea when isNewSession becomes true
+  useEffect(() => {
+    if (isNewSession && textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }, [isNewSession]); // Dependency: only run when isNewSession changes
   
   // If no sessionId is provided and not in new session mode, or drawer is open on mobile, don't render
   // Also, don't render if we're in new session mode but the newSession state is submitting
@@ -141,6 +149,7 @@ export const InputSection: React.FC<InputSectionProps> = ({
           )}
           <form onSubmit={handleSubmit}>
             <textarea
+              ref={textareaRef} // Attach the ref here
               value={message}
               onChange={(e) => {
                 setMessage(e.target.value);
