@@ -1,3 +1,4 @@
+
 """
 Tests for the Sessions API v1 endpoints.
 
@@ -26,7 +27,8 @@ def mock_session():
         start_time=datetime.datetime(2025, 1, 1, 0, 0, 0),
         command_line="ra-aid test",
         program_version="1.0.0",
-        machine_info={"os": "test"}
+        machine_info={"os": "test"},
+        status='test_status'
     )
 
 
@@ -41,7 +43,8 @@ def mock_sessions():
             start_time=datetime.datetime(2025, 1, 1, 0, 0, 0),
             command_line="ra-aid test1",
             program_version="1.0.0",
-            machine_info={"os": "test"}
+            machine_info={"os": "test"},
+            status='test_status'
         ),
         SessionModel(
             id=2,
@@ -50,7 +53,8 @@ def mock_sessions():
             start_time=datetime.datetime(2025, 1, 2, 0, 0, 0),
             command_line="ra-aid test2",
             program_version="1.0.0",
-            machine_info={"os": "test"}
+            machine_info={"os": "test"},
+            status='test_status'
         )
     ]
 
@@ -217,7 +221,8 @@ def test_get_session_trajectories(client, mock_repo, mock_trajectory_repo, mock_
         start_time=datetime.datetime(2025, 1, 1, 0, 0, 0),
         command_line="ra-aid test",
         program_version="1.0.0",
-        machine_info={"os": "test"}
+        machine_info={"os": "test"},
+        status='test_status'
     )
     
     response = client.get("/v1/session/1/trajectory")

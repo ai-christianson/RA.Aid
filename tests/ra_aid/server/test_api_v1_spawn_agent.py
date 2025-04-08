@@ -1,3 +1,4 @@
+
 """
 Tests for the Spawn Agent API v1 endpoint.
 
@@ -29,7 +30,8 @@ def mock_session():
         start_time=datetime.datetime(2025, 1, 1, 0, 0, 0),
         command_line="ra-aid test",
         program_version="1.0.0",
-        machine_info={"agent_type": "research", "expert_enabled": True, "web_research_enabled": False}
+        machine_info={"agent_type": "research", "expert_enabled": True, "web_research_enabled": False},
+        status='test_status'
     )
 
 
@@ -218,5 +220,4 @@ def test_temperature_handling_in_agent_spawn(client, mock_repository, mock_threa
     
     # Verify that Thread was called with the right temperature in kwargs
     _, kwargs = thread_spy.call_args
-    assert kwargs.get('kwargs', {}).get('temperature') == 0.9, \
-        f"Expected temperature 0.9, got {kwargs.get('kwargs', {}).get('temperature')}"
+    assert kwargs.get('kwargs', {}).get('temperature') == 0.9,         f"Expected temperature 0.9, got {kwargs.get('kwargs', {}).get('temperature')}"

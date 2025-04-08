@@ -1,3 +1,4 @@
+
 """
 Tests for the Pydantic models in ra_aid.database.pydantic_models
 """
@@ -25,7 +26,8 @@ class TestSessionModel:
             start_time=now,
             command_line="ra-aid run",
             program_version="1.0.0",
-            machine_info=json.dumps(metadata)
+            machine_info=json.dumps(metadata),
+            status="test_status",
         )
         
         # Convert to Pydantic model
@@ -53,7 +55,8 @@ class TestSessionModel:
             start_time=now,
             command_line="ra-aid --debug",
             program_version="1.0.1",
-            machine_info=metadata
+            machine_info=metadata,
+            status='test_status'
         )
         
         # Verify fields
@@ -71,7 +74,8 @@ class TestSessionModel:
             start_time=now,
             command_line="ra-aid",
             program_version="1.0.0",
-            machine_info=None
+            machine_info=None,
+            status='test_status'
         )
         
         assert session_model.id == 3
@@ -90,7 +94,8 @@ class TestSessionModel:
                 start_time=now,
                 command_line="ra-aid",
                 program_version="1.0.0",
-                machine_info="{invalid json}"
+                machine_info="{invalid json}",
+                status='test_status'
             )
     
     def test_unexpected_type_machine_info(self):
@@ -106,5 +111,6 @@ class TestSessionModel:
                 start_time=now,
                 command_line="ra-aid",
                 program_version="1.0.0",
-                machine_info=123  # Not a dict or string
+                machine_info=123,  # Not a dict or string
+                status='test_status'
             )
