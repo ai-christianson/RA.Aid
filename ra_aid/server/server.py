@@ -31,13 +31,12 @@ if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
 from ra_aid.database.pydantic_models import TrajectoryModel
-# Import get_trajectory_repository as well
-from ra_aid.database.repositories.trajectory_repository import TrajectoryRepository, get_trajectory_repository
+# Removed: from ra_aid.database.repositories.trajectory_repository import TrajectoryRepository, get_trajectory_repository
 from ra_aid.server.api_v1_sessions import router as sessions_router
 from ra_aid.server.api_v1_spawn_agent import router as spawn_agent_router
 from ra_aid.server.connection_manager import ConnectionManager
 
-# Global variable to hold the app instance, needed by the hook
+# Global variable to hold the app instance, needed by the hook (Now likely unused by hooks, but might be used elsewhere)
 # This is a simple way, alternatives include passing app context differently.
 _app_instance: FastAPI = None
 
@@ -57,30 +56,14 @@ async def broadcast_consumer(queue: asyncio.Queue[TrajectoryModel], manager: Con
             logger.exception("Error in broadcast consumer task.")
             # Avoid breaking the loop on non-cancellation errors
 
-def trajectory_create_hook(trajectory: TrajectoryModel):
-    """Hook function called after a trajectory is created."""
-    global _app_instance
-    if _app_instance and hasattr(_app_instance.state, 'loop') and hasattr(_app_instance.state, 'broadcast_queue'):
-        loop = _app_instance.state.loop
-        queue = _app_instance.state.broadcast_queue
-        if loop and queue:
-            try:
-                # Use call_soon_threadsafe as this hook might be called from a different thread
-                loop.call_soon_threadsafe(queue.put_nowait, trajectory)
-                logger.debug(f"Queued trajectory for broadcast: {trajectory.trajectory_id}")
-            except Exception:
-                logger.exception(f"Failed to queue trajectory {trajectory.trajectory_id} for broadcast.")
-        else:
-             logger.error("Event loop or broadcast queue not found in app state for hook.")
-    else:
-        logger.error("App instance or state not available for trajectory create hook.")
+# Removed: trajectory_create_hook function
 
 
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Manages application startup and shutdown events."""
     global _app_instance
-    _app_instance = app # Store app instance globally for the hook
+    _app_instance = app # Store app instance globally
 
     logger.info("Application startup: Initializing resources.")
     # Store the running event loop
@@ -94,36 +77,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         broadcast_consumer(app.state.broadcast_queue, app.state.connection_manager)
     )
 
-    # Register the trajectory creation hook on the specific instance
-    try:
-        # Assuming lifespan runs within the context where the repo is set up by launch_server
-        trajectory_repo = get_trajectory_repository()
-        if trajectory_repo: # Check if repo was successfully retrieved
-            trajectory_repo.register_create_hook(trajectory_create_hook)
-            logger.info("Trajectory broadcast hook registered on repository instance.")
-        else:
-             logger.error("Failed to get TrajectoryRepository instance for hook registration (returned None).")
-    except RuntimeError as e:
-        # This might happen if the contextvar is not set when lifespan runs
-        logger.error(f"Failed to get TrajectoryRepository instance for hook registration (RuntimeError): {e}")
-    except Exception as e:
-        logger.error(f"An unexpected error occurred during hook registration: {e}")
-
     yield  # Application is running
 
     logger.info("Application shutdown: Cleaning up resources.")
-    # Unregister hook (optional, good practice if hooks can be removed)
-    # Requires an unregister_create_hook instance method on TrajectoryRepository
-    try:
-        trajectory_repo = get_trajectory_repository()
-        if trajectory_repo and hasattr(trajectory_repo, 'unregister_create_hook'):
-            trajectory_repo.unregister_create_hook(trajectory_create_hook)
-            logger.info("Trajectory broadcast hook unregistered from repository instance.")
-    except RuntimeError as e:
-        logger.warning(f"Could not get TrajectoryRepository instance during shutdown to unregister hook: {e}")
-    except Exception as e:
-        logger.exception("Error during trajectory hook unregistration.")
-
 
     # Cancel the consumer task
     if hasattr(app.state, 'broadcast_task') and app.state.broadcast_task:
