@@ -32,6 +32,9 @@ export * from './store';
 export * from './models/session';
 export * from './models/trajectory';
 
+// Export WebSocket connection management
+export * from './websocket/connection'; // Added export
+
 // Export the hello function (temporary example)
 export const hello = (): void => {
   console.log("Hello from @ra-aid/common");

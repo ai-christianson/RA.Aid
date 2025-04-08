@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { PanelLeft, Plus, X } from 'lucide-react';
 import { 
@@ -9,7 +10,8 @@ import { SessionDrawer } from './SessionDrawer';
 import { SessionList } from './SessionList';
 import { TrajectoryPanel } from './TrajectoryPanel';
 import { InputSection } from './InputSection';
-import { useSessionStore } from '../store';
+import { useSessionStore, useClientConfigStore } from '../store';
+import { WebSocketConnection, WebSocketConfig } from '../websocket/connection';
 import logoBlack from '../assets/logo-black-transparent.png';
 import logoWhite from '../assets/logo-white-transparent.gif';
 
@@ -25,18 +27,45 @@ export const DefaultAgentScreen: React.FC = () => {
   
   // State for theme (dark is default)
   const [isDarkTheme, setIsDarkTheme] = useState(true);
-  
+
+  // WebSocket connection management
+  const wsConnectionRef = useRef<WebSocketConnection | null>(null);
+  const { host, port } = useClientConfigStore();
+
+  // Establish WebSocket connection on mount
+  useEffect(() => {
+    // Prevent multiple connections
+    if (wsConnectionRef.current) return;
+
+    const url = `ws://${host}:${port}/v1/ws`;
+    const config: WebSocketConfig = { url }; // Use default heartbeat/reconnection
+
+    console.log(`Attempting WebSocket connection to ${url}`);
+    wsConnectionRef.current = new WebSocketConnection(config);
+    wsConnectionRef.current.connect();
+
+    // Cleanup function on component unmount
+    return () => {
+      if (wsConnectionRef.current) {
+        console.log('Closing WebSocket connection');
+        wsConnectionRef.current.close();
+        wsConnectionRef.current = null;
+      }
+    };
+  }, [host, port]); // Reconnect if host/port changes
+
   // Handle message submission for existing sessions
   const handleSubmit = async (message: string) => {
     if (!selectedSessionId || !message.trim()) return;
     
     try {
-      // TODO: Implement reply to existing session
-      // This will need a different endpoint for continuing conversations
+      // TODO: Implement reply to existing session via WebSocket
+      // This will need a specific message format or API call
       console.log('Message submitted to existing session:', message, 'sessionId:', selectedSessionId);
+      // Example: wsConnectionRef.current?.send({ type: 'reply', sessionId: selectedSessionId, message });
       
-      // Refresh sessions to get updated data
-      await fetchSessions();
+      // Assuming immediate UI update or confirmation via WebSocket
+      // await fetchSessions(); // May not be needed if WebSocket pushes updates
       
       return true; // Success
     } catch (error) {
@@ -56,11 +85,11 @@ export const DefaultAgentScreen: React.FC = () => {
     newSession,
     startNewSession,
     cancelNewSession,
-    updateNewSessionMessage,
-    submitNewSession
+    updateNewSessionMessage, // Likely remove if using InputSection state
+    submitNewSession // Likely trigger via WebSocket in InputSection
   } = useSessionStore();
   
-  // Fetch sessions on component mount
+  // Fetch initial sessions on component mount
   useEffect(() => {
     fetchSessions();
   }, [fetchSessions]);
@@ -93,14 +122,14 @@ export const DefaultAgentScreen: React.FC = () => {
     setIsDrawerOpen(false); // Close drawer on selection (mobile)
   };
   
-  // Handle new session message submit - no longer needed as we handle this directly in the form
-  // This function is kept for compatibility but is no longer used in the UI
-  const handleNewSessionSubmit = (message: string) => {
-    if (!message.trim()) return;
+  // Handle new session message submit - Handled within InputSection now
+  // const handleNewSessionSubmit = (message: string) => {
+  //   if (!message.trim()) return;
     
-    updateNewSessionMessage(message);
-    submitNewSession();
-  };
+  //   // TODO: Send new session request via WebSocket
+  //   // wsConnectionRef.current?.send({ type: 'new_session', message });
+  //   // Update store based on WebSocket response
+  // };
   
   // Toggle theme function
   const toggleTheme = () => {
@@ -221,9 +250,10 @@ export const DefaultAgentScreen: React.FC = () => {
           addBottomPadding={true}
         />
       </div>
+      {/* Pass WebSocket ref or send function to InputSection if needed */}
       <InputSection 
         sessionId={parseInt(selectedSessionId)}
-        onSubmit={handleSubmit}
+        onSubmit={handleSubmit} // This now handles replies via console log
         isDrawerOpen={isDrawerOpen}
       />
     </div>
@@ -262,10 +292,11 @@ export const DefaultAgentScreen: React.FC = () => {
         </div>
       </div>
       
-      {/* Use the same InputSection for new sessions */}
+      {/* Use the same InputSection for new sessions - Pass WebSocket ref/send if needed */}
       <InputSection 
         isNewSession={true}
         isDrawerOpen={isDrawerOpen}
+        // onSubmit={handleNewSessionSubmit} // Submit handled within InputSection via WebSocket
       />
     </div>
   ) : (
@@ -333,7 +364,7 @@ export const DefaultAgentScreen: React.FC = () => {
         <Button
           variant="default"
           size="sm"
-          onClick={startNewSession}
+          onClick={startNewSession} // Still uses store action for UI state
           aria-label="Create new session"
           className={buttonStyle}
         >
