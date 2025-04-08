@@ -5,7 +5,9 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import AsyncGenerator, Callable
+from typing import AsyncGenerator, Callable, Any
+import queue
+import json
 
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,9 +19,9 @@ import uvicorn
 logger = logging.getLogger(__name__)
 # Only configure this specific logger, not the root logger
 if not logger.handlers:  # Avoid adding handlers multiple times
-    logger.setLevel(logging.INFO) # Changed level to INFO to see connection logs
-    handler = logging.StreamHandler(sys.__stderr__)  # Use the real stderr
-    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s") # Added name to formatter
+    logger.setLevel(logging.INFO)
+    handler = logging.StreamHandler(sys.__stderr__)
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     handler.setFormatter(formatter)
     logger.addHandler(handler)
     # Prevent propagation to avoid affecting the root logger configuration
@@ -30,26 +32,54 @@ project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(_
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-from ra_aid.database.pydantic_models import TrajectoryModel
-# Import get_trajectory_repository as well
-from ra_aid.database.repositories.trajectory_repository import TrajectoryRepository, get_trajectory_repository
 from ra_aid.server.api_v1_sessions import router as sessions_router
 from ra_aid.server.api_v1_spawn_agent import router as spawn_agent_router
 from ra_aid.server.connection_manager import ConnectionManager
+from ra_aid.server.broadcast_sender import set_broadcast_queue
 
-# Global variable to hold the app instance, needed by the hook
+# Global variable to hold the app instance, needed by the hook (Now likely unused by hooks, but might be used elsewhere)
 # This is a simple way, alternatives include passing app context differently.
 _app_instance: FastAPI = None
 
-async def broadcast_consumer(queue: asyncio.Queue[TrajectoryModel], manager: ConnectionManager):
-    """Consumes trajectories from the queue and broadcasts them."""
+async def broadcast_consumer(q: queue.Queue[Any], manager: ConnectionManager):
+    """Consumes items (wrapped messages) from the queue, serializes the payload, and broadcasts the wrapper."""
     while True:
         try:
-            trajectory = await queue.get()
-            logger.debug(f"Broadcasting trajectory: {trajectory.trajectory_id}")
-            message = trajectory.model_dump_json()
-            await manager.broadcast(message)
-            queue.task_done()
+            wrapper = await asyncio.to_thread(q.get) # Assume item is the wrapper dict
+            if not isinstance(wrapper, dict) or 'type' not in wrapper or 'payload' not in wrapper:
+                 logger.warning(f"Received unexpected item format from broadcast queue: {type(wrapper)}. Expected {{'type': ..., 'payload': ...}}. Item: {str(wrapper)[:200]}...")
+                 continue
+
+            payload = wrapper['payload']
+            message_type = wrapper['type']
+            serializable_payload = None # Initialize for clarity
+
+            try:
+                # Check if the payload has a model_dump method (likely a Pydantic model)
+                if hasattr(payload, 'model_dump') and callable(payload.model_dump):
+                    # Convert Pydantic model to dict suitable for JSON
+                    serializable_payload = payload.model_dump(mode='json')
+                else:
+                    # Assume payload is already JSON serializable
+                    serializable_payload = payload
+
+                # Update the payload within the wrapper
+                wrapper['payload'] = serializable_payload
+
+                # Attempt to serialize the entire wrapper
+                message_str = json.dumps(wrapper)
+
+            except TypeError:
+                # Log if serialization fails even after potential payload conversion
+                logger.warning(f"Could not JSON serialize wrapped message with type '{message_type}'. Payload type: {type(payload)}, Original Payload Preview: {str(payload)[:100]}... Wrapper Preview: {str(wrapper)[:200]}...")
+                continue
+            except Exception as e:
+                 # Log other unexpected serialization errors
+                 logger.error(f"Error during serialization of wrapper in broadcast_consumer: {e}. Wrapper Preview: {str(wrapper)[:200]}...")
+                 continue
+
+            # logger.debug(f"Broadcasting wrapped message of type: {message_type}")
+            await manager.broadcast(message_str)
         except asyncio.CancelledError:
             logger.info("Broadcast consumer task cancelled.")
             break
@@ -57,36 +87,22 @@ async def broadcast_consumer(queue: asyncio.Queue[TrajectoryModel], manager: Con
             logger.exception("Error in broadcast consumer task.")
             # Avoid breaking the loop on non-cancellation errors
 
-def trajectory_create_hook(trajectory: TrajectoryModel):
-    """Hook function called after a trajectory is created."""
-    global _app_instance
-    if _app_instance and hasattr(_app_instance.state, 'loop') and hasattr(_app_instance.state, 'broadcast_queue'):
-        loop = _app_instance.state.loop
-        queue = _app_instance.state.broadcast_queue
-        if loop and queue:
-            try:
-                # Use call_soon_threadsafe as this hook might be called from a different thread
-                loop.call_soon_threadsafe(queue.put_nowait, trajectory)
-                logger.debug(f"Queued trajectory for broadcast: {trajectory.trajectory_id}")
-            except Exception:
-                logger.exception(f"Failed to queue trajectory {trajectory.trajectory_id} for broadcast.")
-        else:
-             logger.error("Event loop or broadcast queue not found in app state for hook.")
-    else:
-        logger.error("App instance or state not available for trajectory create hook.")
-
 
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Manages application startup and shutdown events."""
     global _app_instance
-    _app_instance = app # Store app instance globally for the hook
+    _app_instance = app # Store app instance globally
 
     logger.info("Application startup: Initializing resources.")
     # Store the running event loop
     app.state.loop = asyncio.get_running_loop()
-    # Create the broadcast queue
-    app.state.broadcast_queue = asyncio.Queue()
+
+    # Thread-safe queue for broadcasting messages to WebSocket clients.
+    # Use app.state.broadcast_queue.put(item) from any thread.
+    app.state.broadcast_queue = queue.Queue()
+    set_broadcast_queue(app.state.broadcast_queue)
+
     # Instantiate the ConnectionManager
     app.state.connection_manager = ConnectionManager()
     # Start the consumer task
@@ -94,36 +110,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         broadcast_consumer(app.state.broadcast_queue, app.state.connection_manager)
     )
 
-    # Register the trajectory creation hook on the specific instance
-    try:
-        # Assuming lifespan runs within the context where the repo is set up by launch_server
-        trajectory_repo = get_trajectory_repository()
-        if trajectory_repo: # Check if repo was successfully retrieved
-            trajectory_repo.register_create_hook(trajectory_create_hook)
-            logger.info("Trajectory broadcast hook registered on repository instance.")
-        else:
-             logger.error("Failed to get TrajectoryRepository instance for hook registration (returned None).")
-    except RuntimeError as e:
-        # This might happen if the contextvar is not set when lifespan runs
-        logger.error(f"Failed to get TrajectoryRepository instance for hook registration (RuntimeError): {e}")
-    except Exception as e:
-        logger.error(f"An unexpected error occurred during hook registration: {e}")
-
     yield  # Application is running
 
     logger.info("Application shutdown: Cleaning up resources.")
-    # Unregister hook (optional, good practice if hooks can be removed)
-    # Requires an unregister_create_hook instance method on TrajectoryRepository
-    try:
-        trajectory_repo = get_trajectory_repository()
-        if trajectory_repo and hasattr(trajectory_repo, 'unregister_create_hook'):
-            trajectory_repo.unregister_create_hook(trajectory_create_hook)
-            logger.info("Trajectory broadcast hook unregistered from repository instance.")
-    except RuntimeError as e:
-        logger.warning(f"Could not get TrajectoryRepository instance during shutdown to unregister hook: {e}")
-    except Exception as e:
-        logger.exception("Error during trajectory hook unregistration.")
-
 
     # Cancel the consumer task
     if hasattr(app.state, 'broadcast_task') and app.state.broadcast_task:
@@ -194,7 +183,7 @@ async def get_root(request: Request):
     """Return basic info about RA.Aid API."""
     # Same HTML content as before...
     return HTMLResponse(
-        """
+        '''
         <html>
             <head>
                 <title>RA.Aid API</title>
@@ -209,7 +198,7 @@ async def get_root(request: Request):
                 <p>See the <a href="/docs">API documentation</a> for more information on REST endpoints.</p>
             </body>
         </html>
-        """
+        '''
     )
 
 
@@ -243,14 +232,3 @@ def custom_openapi():
     return app.openapi_schema
 
 app.openapi = custom_openapi
-
-
-def run_server(host: str = "0.0.0.0", port: int = 1818):
-    """Run the FastAPI server."""
-    # Note: Reload=True might cause issues with lifespan state in some complex scenarios.
-    # It's generally fine for development but be mindful.
-    uvicorn.run("ra_aid.server.server:app", host=host, port=port, reload=True, log_level="info")
-
-if __name__ == "__main__":
-    # This allows running the server directly for testing
-    run_server()

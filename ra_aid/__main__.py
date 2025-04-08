@@ -6,6 +6,7 @@ import uuid
 from datetime import datetime
 
 import litellm
+import uvicorn
 
 from langgraph.checkpoint.memory import MemorySaver
 from rich.console import Console
@@ -76,6 +77,7 @@ from ra_aid.project_info import format_project_info, get_project_info
 from ra_aid.prompts.chat_prompts import CHAT_PROMPT
 from ra_aid.prompts.web_research_prompts import WEB_RESEARCH_PROMPT_SECTION_CHAT
 from ra_aid.prompts.custom_tools_prompts import DEFAULT_CUSTOM_TOOLS_PROMPT
+from ra_aid.server.server import app as fastapi_app
 from ra_aid.tool_configs import get_chat_tools, set_modification_tools, get_custom_tools
 from ra_aid.tools.human import ask_human
 
@@ -99,7 +101,6 @@ if hasattr(litellm, "_logging") and hasattr(litellm._logging, "_disable_debuggin
 
 def launch_server(host: str, port: int, args):
     """Launch the RA.Aid web interface."""
-    from ra_aid.server import run_server
     from ra_aid.database.connection import DatabaseManager
     from ra_aid.database.repositories.session_repository import SessionRepositoryManager
     from ra_aid.database.repositories.key_fact_repository import (
@@ -242,8 +243,7 @@ def launch_server(host: str, port: int, args):
             }
         )
 
-        # Run the server within the context managers
-        run_server(host=host, port=port)
+        uvicorn.run(fastapi_app, host=host, port=port, log_level="info")
 
 
 def parse_arguments(args=None):

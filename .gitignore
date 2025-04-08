@@ -20,3 +20,4 @@ node_modules/
 /frontend/common/dist
 /frontend/web/dist/
 /.vscode
+/frontend/common/dist/

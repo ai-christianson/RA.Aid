@@ -1,6 +1,6 @@
 /**
  * Trajectory model with Zod validation
- * 
+ *
  * This module provides:
  * 1. Schema definitions for backend and frontend trajectory models
  * 2. Type definitions using Zod inference
@@ -12,7 +12,7 @@ import { z } from 'zod';
 
 /**
  * Schema for the backend trajectory model format received from the API
- * 
+ *
  * Uses union types to accept both JSON strings and records for certain fields
  */
 export const BackendTrajectorySchema = z.object({
@@ -57,7 +57,7 @@ export type BackendTrajectory = z.infer<typeof BackendTrajectorySchema>;
  * Schema for the frontend trajectory model
  */
 export const TrajectorySchema = z.object({
-  id: z.string().optional(),
+  id: z.number().optional(), // Changed from z.string()
   created: z.string(),
   updated: z.string(),
   toolName: z.string(),
@@ -72,7 +72,7 @@ export const TrajectorySchema = z.object({
   errorMessage: z.string().nullable().optional(),
   errorType: z.string().nullable().optional(),
   errorDetails: z.record(z.any()).nullable().optional(),
-  sessionId: z.string().nullable().optional(),
+  sessionId: z.number().nullable().optional(), // Changed from z.string()
 });
 
 /**
@@ -82,9 +82,9 @@ export type Trajectory = z.infer<typeof TrajectorySchema>;
 
 /**
  * Converts a backend trajectory model to a frontend trajectory model
- * 
+ *
  * Handles JSON string parsing for object fields if they are still strings after validation
- * 
+ *
  * @param backendTrajectory The backend trajectory model to convert
  * @returns The converted frontend trajectory model
  */
@@ -94,7 +94,7 @@ export function backendToTrajectory(backendTrajectory: BackendTrajectory): Traje
     if (field === null || field === undefined) {
       return field;
     }
-    
+
     if (typeof field === 'string') {
       try {
         return JSON.parse(field);
@@ -103,12 +103,12 @@ export function backendToTrajectory(backendTrajectory: BackendTrajectory): Traje
         return {}; // Return empty object as fallback
       }
     }
-    
+
     return field; // Already an object
   };
 
   return {
-    id: backendTrajectory.id?.toString(),
+    id: backendTrajectory.id, // Removed .toString()
     created: backendTrajectory.created_at,
     updated: backendTrajectory.updated_at,
     toolName: backendTrajectory.tool_name,
@@ -123,19 +123,19 @@ export function backendToTrajectory(backendTrajectory: BackendTrajectory): Traje
     errorMessage: backendTrajectory.error_message,
     errorType: backendTrajectory.error_type,
     errorDetails: parseJsonField(backendTrajectory.error_details),
-    sessionId: backendTrajectory.session_id?.toString(),
+    sessionId: backendTrajectory.session_id, // Removed .toString()
   };
 }
 
 /**
  * Converts a frontend trajectory model to a backend trajectory model
- * 
+ *
  * @param trajectory The frontend trajectory model to convert
  * @returns The converted backend trajectory model
  */
 export function trajectoryToBackend(trajectory: Trajectory): BackendTrajectory {
   return {
-    id: trajectory.id ? parseInt(trajectory.id) : undefined,
+    id: trajectory.id, // Removed parseInt()
     created_at: trajectory.created,
     updated_at: trajectory.updated,
     tool_name: trajectory.toolName,
@@ -150,13 +150,13 @@ export function trajectoryToBackend(trajectory: Trajectory): BackendTrajectory {
     error_message: trajectory.errorMessage,
     error_type: trajectory.errorType,
     error_details: trajectory.errorDetails,
-    session_id: trajectory.sessionId ? parseInt(trajectory.sessionId) : null,
+    session_id: trajectory.sessionId, // Removed parseInt()
   };
 }
 
 /**
  * Validates a backend trajectory object against the schema
- * 
+ *
  * @param data The data to validate
  * @returns The validated backend trajectory
  * @throws If validation fails
@@ -164,10 +164,10 @@ export function trajectoryToBackend(trajectory: Trajectory): BackendTrajectory {
 export function validateBackendTrajectory(data: unknown): BackendTrajectory {
   // Pre-process the data to parse JSON strings
   const preprocessed = data as Record<string, any>;
-  
+
   // Create a copy to avoid mutating the original
   const processedData = { ...preprocessed };
-  
+
   // Parse JSON fields if they are strings
   if (processedData.tool_parameters && typeof processedData.tool_parameters === 'string') {
     try {
@@ -176,7 +176,7 @@ export function validateBackendTrajectory(data: unknown): BackendTrajectory {
       console.error('Failed to parse tool_parameters JSON string:', error);
     }
   }
-  
+
   if (processedData.tool_result && typeof processedData.tool_result === 'string') {
     try {
       processedData.tool_result = JSON.parse(processedData.tool_result);
@@ -184,7 +184,7 @@ export function validateBackendTrajectory(data: unknown): BackendTrajectory {
       console.error('Failed to parse tool_result JSON string:', error);
     }
   }
-  
+
   if (processedData.step_data && typeof processedData.step_data === 'string') {
     try {
       processedData.step_data = JSON.parse(processedData.step_data);
@@ -192,7 +192,7 @@ export function validateBackendTrajectory(data: unknown): BackendTrajectory {
       console.error('Failed to parse step_data JSON string:', error);
     }
   }
-  
+
   if (processedData.error_details && typeof processedData.error_details === 'string') {
     try {
       processedData.error_details = JSON.parse(processedData.error_details);
@@ -200,13 +200,13 @@ export function validateBackendTrajectory(data: unknown): BackendTrajectory {
       console.error('Failed to parse error_details JSON string:', error);
     }
   }
-  
+
   return BackendTrajectorySchema.parse(processedData);
 }
 
 /**
  * Validates a frontend trajectory object against the schema
- * 
+ *
  * @param data The data to validate
  * @returns The validated frontend trajectory
  * @throws If validation fails
@@ -217,21 +217,21 @@ export function validateTrajectory(data: unknown): Trajectory {
 
 /**
  * Safely converts backend trajectory data to a frontend trajectory
- * 
+ *
  * Validates the backend data before conversion and handles errors.
  * Includes pre-processing for JSON string fields.
- * 
+ *
  * @param data The backend data to convert
  * @returns The converted trajectory or null if validation fails
  */
 export function safeBackendToTrajectory(data: unknown): Trajectory | null {
   // Log the raw data being passed in for conversion
   console.log('Converting backend trajectory data:', JSON.stringify(data, null, 2));
-  
+
   // Pre-check if JSON string fields exist to help with debugging
   if (data && typeof data === 'object') {
     const rawData = data as Record<string, any>;
-    
+
     // Log the data types of relevant fields to help with debugging
     console.log('Field data types:', {
       tool_parameters: rawData.tool_parameters && typeof rawData.tool_parameters,
@@ -239,7 +239,7 @@ export function safeBackendToTrajectory(data: unknown): Trajectory | null {
       step_data: rawData.step_data && typeof rawData.step_data,
       error_details: rawData.error_details && typeof rawData.error_details
     });
-    
+
     // Show raw string content for string fields that should be objects
     if (rawData.tool_parameters && typeof rawData.tool_parameters === 'string') {
       console.log('tool_parameters string content:', rawData.tool_parameters);
@@ -248,7 +248,7 @@ export function safeBackendToTrajectory(data: unknown): Trajectory | null {
       console.log('step_data string content:', rawData.step_data);
     }
   }
-  
+
   try {
     // Add detailed logging around validation
     try {
@@ -256,26 +256,26 @@ export function safeBackendToTrajectory(data: unknown): Trajectory | null {
       const validatedBackend = validateBackendTrajectory(data);
       // Log the validated backend data
       console.log('Successfully validated backend trajectory:', JSON.stringify(validatedBackend, null, 2));
-      
+
       // Convert and log the result
       const result = backendToTrajectory(validatedBackend);
       console.log('Successfully converted to frontend trajectory:', JSON.stringify(result, null, 2));
-      
+
       return result;
     } catch (validationError) {
       // Detailed validation error logging
       console.error('Validation error details:', validationError);
-      
+
       // Try to get more specific information about the validation error
       if (validationError instanceof z.ZodError) {
         console.error('Zod validation errors:', JSON.stringify(validationError.errors, null, 2));
-        
+
         // Log the specific fields that failed validation
         validationError.errors.forEach(err => {
-          console.error(`Field "${err.path.join('.')}": ${err.message}`);
+          console.error(`Field "${err.path.join('.') }": ${err.message}`);
         });
       }
-      
+
       throw validationError; // Re-throw for the outer catch
     }
   } catch (error) {
@@ -286,7 +286,7 @@ export function safeBackendToTrajectory(data: unknown): Trajectory | null {
 
 /**
  * Safely validates if an object is a valid trajectory
- * 
+ *
  * @param data The data to validate
  * @returns true if the data is a valid trajectory, false otherwise
  */
@@ -301,12 +301,12 @@ export function isValidTrajectory(data: unknown): data is Trajectory {
 
 /**
  * Creates a sample trajectory for testing or placeholder purposes
- * 
+ *
  * @returns A sample trajectory object
  */
 export function getSampleTrajectory(): Trajectory {
   return {
-    id: '1',
+    id: 1, // Changed from '1'
     created: new Date().toISOString(),
     updated: new Date().toISOString(),
     toolName: 'sample_tool',
@@ -318,6 +318,6 @@ export function getSampleTrajectory(): Trajectory {
     inputTokens: 100,
     outputTokens: 50,
     isError: false,
-    sessionId: '1',
+    sessionId: 1, // Changed from '1'
   };
 }
