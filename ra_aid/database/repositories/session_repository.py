@@ -18,6 +18,7 @@ import peewee
 from ra_aid.config import DEFAULT_MODEL
 from ra_aid.database.models import Session, HumanInput
 from ra_aid.database.pydantic_models import SessionModel
+from ra_aid.exceptions import SessionNotFoundError # Import exception
 from ra_aid.__version__ import __version__
 from ra_aid.logging_config import get_logger
 
@@ -96,8 +97,7 @@ def get_session_repository() -> "SessionRepository":
     repo = session_repo_var.get()
     if repo is None:
         raise RuntimeError(
-            "No SessionRepository available. "
-            "Make sure to initialize one with SessionRepositoryManager first."
+            "No SessionRepository available. "            "Make sure to initialize one with SessionRepositoryManager first."
         )
     return repo
 
@@ -138,7 +138,7 @@ class SessionRepository:
             session = Session.get_by_id(session_id)
             if not session:
                 return None
-            
+
             # Try to get the oldest human input for this session
             oldest_input = (
                 HumanInput.select()
@@ -146,16 +146,16 @@ class SessionRepository:
                 .order_by(HumanInput.id)
                 .first()
             )
-            
+
             # Use human input content if available, otherwise use command line
             if oldest_input:
                 content = oldest_input.content
                 if len(content) > 80:
                     return content[:80] + "..."
                 return content
-            
+
             # Fallback to command line
-            if len(session.command_line) > 80:
+            if session.command_line and len(session.command_line) > 80:
                 return session.command_line[:80] + "..."
             return session.command_line
         except Exception as e:
@@ -187,13 +187,14 @@ class SessionRepository:
                 machine_info=session_dict.get("machine_info"),
                 created_at=session_dict.get("created_at"),
                 updated_at=session_dict.get("updated_at"),
+                status=session_dict.get("status"), # Added status mapping
                 display_name=session_dict.get("display_name"),
             )
         else:
             # Handle regular model object
             # Extract display_name if available as attribute
             display_name = getattr(session, "display_name", None)
-            
+
             # Create the Pydantic model
             return SessionModel(
                 id=session.id,
@@ -203,12 +204,14 @@ class SessionRepository:
                 machine_info=session.machine_info,
                 created_at=session.created_at,
                 updated_at=session.updated_at,
+                status=session.status, # Added status mapping
                 display_name=display_name,
             )
 
     def create_session(self, metadata: Optional[Dict[str, Any]] = None) -> SessionModel:
         """
         Create a new session record in the database.
+        The session is initially created with status 'pending'.
 
         Args:
             metadata: Optional dictionary of additional metadata to store with the session
@@ -229,6 +232,7 @@ class SessionRepository:
             # JSON encode metadata if provided
             machine_info = json.dumps(metadata) if metadata is not None else None
 
+            # Create session - status defaults to 'pending' from the model definition
             session = Session.create(
                 start_time=datetime.datetime.now(),
                 command_line=command_line,
@@ -239,23 +243,44 @@ class SessionRepository:
             # Store the current session
             self.current_session = session
 
-            logger.debug(f"Created new session with ID {session.id}")
-            
+            logger.debug(f"Created new session with ID {session.id} and status {session.status}")
+
             # Get the session with display_name computed
             result = self.get(session.id)
             if result is None:
                 # Fallback to direct conversion if get() fails for some reason
                 result = self._to_model(session)
                 # Set display_name to command_line (truncated if needed)
-                if result.command_line and len(result.command_line) > 80:
-                    result.display_name = result.command_line[:80] + "..."
-                else:
-                    result.display_name = result.command_line
+                if result and result.command_line:
+                    if len(result.command_line) > 80:
+                        result.display_name = result.command_line[:80] + "..."
+                    else:
+                        result.display_name = result.command_line
             
             return result
         except peewee.DatabaseError as e:
             logger.error(f"Failed to create session record: {str(e)}")
             raise
+
+    def update_session_status(self, session_id: int, status: str) -> SessionModel:
+        """Updates the status of a specific session."""
+        try:
+            session = Session.get_by_id(session_id)
+            session.status = status
+            session.save()
+            logger.info(f"Updated session {session_id} status to '{status}'")
+            # Fetch the updated session again to ensure consistency and include display_name
+            updated_session_model = self.get(session_id)
+            if updated_session_model is None:
+                 # Should ideally not happen if we just updated it, but handle defensively
+                 raise SessionNotFoundError(f"Session with ID {session_id} not found after update.")
+            return updated_session_model
+        except Session.DoesNotExist:
+            logger.error(f"Attempted to update status for non-existent session ID {session_id}")
+            raise SessionNotFoundError(f"Session with ID {session_id} not found.")
+        except peewee.DatabaseError as e:
+            logger.error(f"Database error updating session {session_id} status: {str(e)}")
+            raise # Re-raise database errors
 
     def get_current_session(self) -> Optional[SessionModel]:
         """
@@ -270,7 +295,7 @@ class SessionRepository:
         current_session = self.get_current_session_record()
         if current_session is None:
             return None
-            
+
         try:
             return self.get(current_session.id)
         except peewee.DatabaseError as e:
@@ -296,7 +321,21 @@ class SessionRepository:
             Optional[Session]: The current session Peewee record or None if no sessions exist
         """
         if self.current_session is not None:
-            return self.current_session
+            # Ensure the cached session is up-to-date if needed,
+            # but for now, just return the cached one.
+            # If status updates are frequent, might need to re-fetch here.
+             try:
+                 # Refresh the cached session instance from DB
+                 self.current_session = Session.get_by_id(self.current_session.id)
+             except Session.DoesNotExist:
+                 logger.warning(f"Cached current session ID {self.current_session.id} no longer exists in DB.")
+                 self.current_session = None # Invalidate cache
+                 return None # Or try fetching the latest again
+             except peewee.DatabaseError as e:
+                 logger.error(f"Error refreshing cached session: {e}")
+                 # Proceed with potentially stale cache or handle error
+             return self.current_session
+
 
         try:
             # Find the most recent session
@@ -333,10 +372,12 @@ class SessionRepository:
             session = Session.get_or_none(Session.id == session_id)
             if session is None:
                 return None
-            
-            # Convert to model
+
+            # Convert to model (includes status)
             model = self._to_model(session)
-            
+            if model is None: # Should not happen if session is not None, but check
+                return None
+
             # Get display name directly
             display_name = self._get_display_name_for_session(session_id)
             if display_name:
@@ -347,9 +388,12 @@ class SessionRepository:
                     model.display_name = model.command_line[:80] + "..."
                 else:
                     model.display_name = model.command_line
-            
+
             return model
-            
+
+        except Session.DoesNotExist: # Added specific exception handling
+             logger.warning(f"Session with ID {session_id} not found during get operation.")
+             return None
         except peewee.DatabaseError as e:
             logger.error(f"Database error getting session {session_id}: {str(e)}")
             return None
@@ -378,12 +422,13 @@ class SessionRepository:
                 .offset(offset)
                 .limit(limit)
             )
-            
+
             # Process sessions and add display_name
             result = []
             for session in sessions:
                 model = self._to_model(session)
-                
+                if model is None: continue # Skip if conversion fails
+
                 # Get display name directly
                 display_name = self._get_display_name_for_session(session.id)
                 if display_name:
@@ -394,11 +439,11 @@ class SessionRepository:
                         model.display_name = model.command_line[:80] + "..."
                     else:
                         model.display_name = model.command_line
-                
+
                 result.append(model)
-                
+
             return result, total_count
-            
+
         except peewee.DatabaseError as e:
             logger.error(f"Failed to get all sessions with pagination: {str(e)}")
             return [], 0
@@ -418,12 +463,13 @@ class SessionRepository:
             sessions = list(
                 Session.select().order_by(Session.created_at.desc()).limit(limit)
             )
-            
+
             # Process sessions and add display_name
             result = []
             for session in sessions:
                 model = self._to_model(session)
-                
+                if model is None: continue # Skip if conversion fails
+
                 # Get display name directly
                 display_name = self._get_display_name_for_session(session.id)
                 if display_name:
@@ -434,11 +480,11 @@ class SessionRepository:
                         model.display_name = model.command_line[:80] + "..."
                     else:
                         model.display_name = model.command_line
-                
+
                 result.append(model)
-                
+
             return result
-            
+
         except peewee.DatabaseError as e:
             logger.error(f"Failed to get recent sessions: {str(e)}")
             return []
@@ -459,10 +505,11 @@ class SessionRepository:
             session = Session.select().order_by(Session.created_at.desc()).first()
             if session is None:
                 return None
-                
+
             # Convert to model
             model = self._to_model(session)
-            
+            if model is None: return None # Handle potential conversion failure
+
             # Get display name directly
             display_name = self._get_display_name_for_session(session.id)
             if display_name:
@@ -473,17 +520,17 @@ class SessionRepository:
                     model.display_name = model.command_line[:80] + "..."
                 else:
                     model.display_name = model.command_line
-            
+
             return model
-            
+
         except peewee.DatabaseError as e:
             logger.error(f"Failed to get latest session: {str(e)}")
             return None
-            
+
     def get_all_session_ids(self) -> List[int]:
         """
         Get all session IDs from the database.
-        
+
         Returns:
             List[int]: List of all session IDs ordered by creation time (newest first)
         """
@@ -510,8 +557,8 @@ class SessionRepository:
         # We need to use the actual table name "session" instead of any aliases
         display_name_sql = """
             COALESCE(
-                (SELECT 
-                    CASE 
+                (SELECT
+                    CASE
                         WHEN LENGTH(hi.content) > 80 THEN SUBSTR(hi.content, 1, 80) || '...'
                         ELSE hi.content
                     END
@@ -519,7 +566,7 @@ class SessionRepository:
                 WHERE hi.session_id = t1.id
                 ORDER BY hi.id ASC
                 LIMIT 1),
-                CASE 
+                CASE
                     WHEN LENGTH(t1.command_line) > 80 THEN SUBSTR(t1.command_line, 1, 80) || '...'
                     ELSE t1.command_line
                 END

@@ -163,7 +163,6 @@ INDEX_HTML_PATH = PREBUILT_DIR / "index.html"
 # Mount static assets directory if it exists
 if ASSETS_DIR.exists() and ASSETS_DIR.is_dir():
     app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
-    logger.info(f"Mounted static assets from: {ASSETS_DIR}")
 else:
     logger.warning(f"Assets directory not found or not a directory, skipping mount: {ASSETS_DIR}")
 

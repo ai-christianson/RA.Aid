@@ -22,6 +22,7 @@ import { Trajectory, safeBackendToTrajectory, BackendTrajectory } from '../model
 import { WebSocketConnection, WebSocketConfig } from '../websocket/connection';
 import logoBlack from '../assets/logo-black-transparent.png';
 import logoWhite from '../assets/logo-white-transparent.gif';
+import { SessionStatus } from '../models/session'; // <-- Import SessionStatus
 
 /**
  * DefaultAgentScreen component
@@ -41,6 +42,7 @@ export const DefaultAgentScreen: React.FC = () => {
   const { host, port } = useClientConfigStore();
 
   const addOrUpdateTrajectory = useTrajectoryStore((state) => state.addOrUpdateTrajectory);
+  const updateSessionStatus = useSessionStore((state) => state.updateSessionStatus); // <-- Get action from store
 
   const handleWebSocketMessage = useCallback((messageData: any) => {
     console.log('[DefaultAgentScreen] handleWebSocketMessage received:', messageData);
@@ -52,9 +54,7 @@ export const DefaultAgentScreen: React.FC = () => {
 
     if (messageData.type === 'trajectory' && messageData.payload) {
       console.log('[DefaultAgentScreen] Received trajectory message:', messageData.payload);
-      // Assume payload adheres to BackendTrajectory structure, but validation is good
-      const backendTrajectory = messageData.payload as BackendTrajectory; // Casting for type safety
-
+      const backendTrajectory = messageData.payload as BackendTrajectory;
       const convertedTrajectory = safeBackendToTrajectory(backendTrajectory);
 
       if (convertedTrajectory) {
@@ -63,13 +63,24 @@ export const DefaultAgentScreen: React.FC = () => {
       } else {
         console.error('[DefaultAgentScreen] Failed to convert backend trajectory:', backendTrajectory);
       }
+    } else if (messageData.type === 'session_update' && messageData.payload) { // <-- Add handler for session_update
+      console.log('[DefaultAgentScreen] Received session_update message:', messageData.payload);
+      const sessionPayload = messageData.payload as { id: string; status: string /* other fields */ };
+      // Basic validation for status before calling store
+      if (sessionPayload.id && sessionPayload.status && ['pending', 'running', 'completed', 'error'].includes(sessionPayload.status)) {
+         console.log(`[DefaultAgentScreen] Processing session_update for ${sessionPayload.id} with status ${sessionPayload.status}`)
+         // Ensure ID is passed as string if that's what the store expects
+         updateSessionStatus(String(sessionPayload.id), sessionPayload.status as SessionStatus);
+      } else {
+         console.warn("[DefaultAgentScreen] Received invalid session_update payload:", sessionPayload);
+      }
     } else if (messageData.type) {
-       console.log(`[DefaultAgentScreen] Received non-trajectory message type: ${messageData.type}`);
+       console.log(`[DefaultAgentScreen] Received non-trajectory/session_update message type: ${messageData.type}`);
        // Handle other message types here if needed in the future
     } else {
         console.warn('[DefaultAgentScreen] Received message without a type:', messageData);
     }
-  }, [addOrUpdateTrajectory]); // Dependency array includes the store action
+  }, [addOrUpdateTrajectory, updateSessionStatus]); // <-- Add updateSessionStatus to dependency array
 
   // Establish WebSocket connection on mount
   useEffect(() => {
@@ -95,7 +106,11 @@ export const DefaultAgentScreen: React.FC = () => {
         wsConnectionRef.current = null;
       }
     };
-  }, [host, port, handleWebSocketMessage]); // Reconnect if host/port changes, recreate if handler changes
+  // }, [host, port, handleWebSocketMessage]); // Reconnect if host/port changes, recreate if handler changes
+  // NOTE: Including handleWebSocketMessage might cause excessive reconnects if it's redefined often.
+  // Let's only depend on host and port for reconnection, but keep the handler up-to-date via ref or ensure stability.
+  // Using useCallback above helps ensure stability if dependencies are correct.
+  }, [host, port, handleWebSocketMessage]); // <-- Keep handleWebSocketMessage if stable via useCallback
 
   // Handle message submission for existing sessions
   const handleSubmit = async (message: string) => {
@@ -127,6 +142,7 @@ export const DefaultAgentScreen: React.FC = () => {
     cancelNewSession,
     updateNewSessionMessage, // Likely remove if using InputSection state
     submitNewSession // Likely trigger via WebSocket in InputSection
+    // updateSessionStatus is already obtained above
   } = useSessionStore();
 
   // Fetch initial sessions on component mount

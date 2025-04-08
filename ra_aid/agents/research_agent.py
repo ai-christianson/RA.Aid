@@ -1,3 +1,4 @@
+
 """
 Research agent implementation.
 
@@ -97,13 +98,12 @@ def run_research_agent(
         )
     """
     thread_id = thread_id or str(uuid.uuid4())
-    logger.debug("Starting research agent with thread_id=%s", thread_id)
-    logger.debug(
-        "Research configuration: expert=%s, research_only=%s, hil=%s, web=%s",
-        expert_enabled,
-        research_only,
-        hil,
-        web_research_enabled,
+    logger.info(
+        f"[{thread_id}] Starting research agent. Task: '{base_task_or_query[:50]}...'"
+    )
+    logger.info(
+        f"[{thread_id}] Config: expert={expert_enabled}, research_only={research_only}, "
+        f"hil={hil}, web_research={web_research_enabled}"
     )
 
     if memory is None:
@@ -123,26 +123,48 @@ def run_research_agent(
             recent_input = human_input_repository.get(most_recent_id)
             if recent_input and recent_input.content != base_task_or_query:
                 last_human_input = recent_input.content
+                logger.debug(f"[{thread_id}] Appending last human input to base task.")
                 base_task = f"<last human input>{last_human_input}</last human input>\n{base_task}"
     except RuntimeError as e:
-        logger.error(f"Failed to access human input repository: {str(e)}")
+        logger.error(f"[{thread_id}] Failed to access human input repository: {str(e)}")
         # Continue without appending last human input
 
     try:
         key_facts = format_key_facts_dict(get_key_fact_repository().get_facts_dict())
+        logger.debug(f"[{thread_id}] Retrieved {len(key_facts)} chars of key facts.")
     except RuntimeError as e:
-        logger.error(f"Failed to access key fact repository: {str(e)}")
+        logger.error(f"[{thread_id}] Failed to access key fact repository: {str(e)}")
         key_facts = ""
-    key_snippets = format_key_snippets_dict(
-        get_key_snippet_repository().get_snippets_dict()
-    )
-    related_files = get_related_files()
+
+    try:
+        key_snippets = format_key_snippets_dict(
+            get_key_snippet_repository().get_snippets_dict()
+        )
+        logger.debug(
+            f"[{thread_id}] Retrieved {len(key_snippets)} chars of key snippets."
+        )
+    except RuntimeError as e:
+        logger.error(f"[{thread_id}] Failed to access key snippet repository: {str(e)}")
+        key_snippets = ""
+
+    try:
+        related_files_list = get_related_files()
+        related_files = "\n".join(related_files_list)
+        logger.debug(
+            f"[{thread_id}] Retrieved {len(related_files_list)} related files."
+        )
+    except Exception as e:
+        logger.warning(f"[{thread_id}] Failed to get related files: {e}")
+        related_files = ""
 
     try:
         project_info = get_project_info(".", file_limit=2000)
         formatted_project_info = format_project_info(project_info)
+        logger.debug(
+            f"[{thread_id}] Retrieved project info ({len(formatted_project_info)} chars)."
+        )
     except Exception as e:
-        logger.warning(f"Failed to get project info: {e}")
+        logger.warning(f"[{thread_id}] Failed to get project info: {e}")
         formatted_project_info = ""
 
     tools = get_research_tools(
@@ -151,6 +173,8 @@ def run_research_agent(
         human_interaction=hil,
         web_research_enabled=get_config_repository().get("web_research_enabled", False),
     )
+    tool_names = [tool.func.__name__ for tool in tools]
+    logger.debug(f"[{thread_id}] Tools selected for agent: {tool_names}")
 
     # Get model info for reasoning assistance configuration
     provider = get_config_repository().get("expert_provider", "")
@@ -175,7 +199,7 @@ def run_research_agent(
         # Fall back to model default
         reasoning_assist_enabled = model_config.get("reasoning_assist_default", False)
 
-    logger.debug("Reasoning assist enabled: %s", reasoning_assist_enabled)
+    logger.debug(f"[{thread_id}] Reasoning assist enabled: {reasoning_assist_enabled}")
     expert_guidance = ""
 
     # Get research note information for reasoning assistance
@@ -183,16 +207,18 @@ def run_research_agent(
         research_notes = format_research_notes_dict(
             get_research_note_repository().get_notes_dict()
         )
+        logger.debug(
+            f"[{thread_id}] Retrieved {len(research_notes)} chars of research notes."
+        )
     except Exception as e:
-        logger.warning(f"Failed to get research notes: {e}")
+        logger.warning(f"[{thread_id}] Failed to get research notes: {e}")
         research_notes = ""
 
     # If reasoning assist is enabled, make a one-off call to the expert model
     if reasoning_assist_enabled:
         try:
             logger.info(
-                "Reasoning assist enabled for model %s, getting expert guidance",
-                model_name,
+                f"[{thread_id}] Reasoning assist enabled for model {model_name}, getting expert guidance"
             )
 
             # Collect tool descriptions
@@ -208,7 +234,7 @@ def run_research_agent(
                         f"Tool: {tool_info}\nDescription: {description}\n"
                     )
                 except Exception as e:
-                    logger.warning(f"Error getting tool info for {tool}: {e}")
+                    logger.warning(f"[{thread_id}] Error getting tool info for {tool}: {e}")
 
             # Format tool metadata
             formatted_tool_metadata = "\n".join(tool_metadata)
@@ -237,7 +263,7 @@ def run_research_agent(
                 border_style="yellow",
             )
 
-            logger.debug("Invoking expert model for reasoning assist")
+            logger.debug(f"[{thread_id}] Invoking expert model for reasoning assist")
             # Make the call to the expert model
             response = expert_model.invoke(reasoning_assist_prompt)
 
@@ -266,18 +292,18 @@ def run_research_agent(
                         # Extract thinking content
                         if item.get("type") == "thinking" and "thinking" in item:
                             thinking_content = item["thinking"]
-                            logger.debug("Found structured thinking content")
+                            logger.debug(f"[{thread_id}] Found structured thinking content")
                         # Extract response text
                         elif item.get("type") == "text" and "text" in item:
                             response_text = item["text"]
-                            logger.debug("Found structured response text")
+                            logger.debug(f"[{thread_id}] Found structured response text")
 
                 # Display thinking content in a separate panel if available
                 if thinking_content and get_config_repository().get(
                     "show_thoughts", False
                 ):
                     logger.debug(
-                        f"Displaying structured thinking content ({len(thinking_content)} chars)"
+                        f"[{thread_id}] Displaying structured thinking content ({len(thinking_content)} chars)"
                     )
                     cpm(
                         thinking_content,
@@ -291,7 +317,7 @@ def run_research_agent(
                 else:
                     # Fallback: join list items if structured extraction failed
                     logger.debug(
-                        "No structured response text found, joining list items"
+                        f"[{thread_id}] No structured response text found, joining list items"
                     )
                     content = "\n".join(str(item) for item in content)
             elif supports_think_tag or supports_thinking:
@@ -313,14 +339,21 @@ def run_research_agent(
                 content + "\n\nCONSULT WITH THE EXPERT FREQUENTLY DURING RESEARCH"
             )
 
-            logger.info("Received expert guidance for research")
+            logger.info(f"[{thread_id}] Received expert guidance for research")
         except Exception as e:
-            logger.error("Error getting expert guidance for research: %s", e)
+            logger.error(f"[{thread_id}] Error getting expert guidance for research: {e}")
             expert_guidance = ""
 
+    logger.debug(f"[{thread_id}] Creating research agent with model: {model}")
     agent = agent_utils.create_agent(
         model, tools, checkpointer=memory, agent_type="research"
     )
+
+    if agent:
+        logger.info(f"[{thread_id}] Research agent created successfully.")
+    else:
+        logger.info(f"[{thread_id}] Research agent creation returned None (likely web research only).")
+
 
     expert_section = EXPERT_PROMPT_SECTION_RESEARCH if expert_enabled else ""
     human_section = HUMAN_PROMPT_SECTION_RESEARCH if hil else ""
@@ -372,6 +405,15 @@ YOU MUST FOLLOW THE EXPERT'S GUIDANCE OR ELSE BE TERMINATED!
         expert_guidance_section=expert_guidance_section,
     )
 
+    # Log the prompt, trimming if it's too long
+    prompt_log_limit = 1000
+    trimmed_prompt = (
+        prompt[:prompt_log_limit] + "... (trimmed)"
+        if len(prompt) > prompt_log_limit
+        else prompt
+    )
+    logger.debug(f"[{thread_id}] Prompt for agent:\n{trimmed_prompt}")
+
     recursion_limit = get_config_repository().get("recursion_limit", 100)
     run_config = {
         "configurable": {"thread_id": thread_id},
@@ -389,17 +431,20 @@ YOU MUST FOLLOW THE EXPERT'S GUIDANCE OR ELSE BE TERMINATED!
             display_project_status(project_info)
 
         if agent is not None:
-            logger.debug("Research agent created successfully")
+            logger.debug(f"[{thread_id}] Invoking research agent...")
             none_or_fallback_handler = agent_utils.init_fallback_handler(agent, tools)
             _result = agent_utils.run_agent_with_retry(
                 agent, prompt, none_or_fallback_handler
             )
             if _result:
                 # Log research completion
+                logger.info(f"[{thread_id}] Research agent completed successfully.")
                 log_work_event(f"Completed research phase for: {base_task_or_query}")
+            else:
+                 logger.info(f"[{thread_id}] Research agent finished without returning a final message.")
             return _result
         else:
-            logger.debug("No model provided, running web research tools directly")
+            logger.debug(f"[{thread_id}] No agent created, running web research tools directly")
             return run_web_research_agent(
                 base_task_or_query,
                 model=None,
@@ -411,9 +456,10 @@ YOU MUST FOLLOW THE EXPERT'S GUIDANCE OR ELSE BE TERMINATED!
                 console_message=console_message,
             )
     except (KeyboardInterrupt, AgentInterrupt):
+        logger.info(f"[{thread_id}] Research agent interrupted.")
         raise
     except Exception as e:
-        logger.error("Research agent failed: %s", str(e), exc_info=True)
+        logger.error(f"[{thread_id}] Research agent failed: {str(e)}", exc_info=True)
         raise
 
 
@@ -451,12 +497,9 @@ def run_web_research_agent(
         )
     """
     thread_id = thread_id or str(uuid.uuid4())
-    logger.debug("Starting web research agent with thread_id=%s", thread_id)
+    logger.debug(f"[{thread_id}] Starting web research agent.")
     logger.debug(
-        "Web research configuration: expert=%s, hil=%s, web=%s",
-        expert_enabled,
-        hil,
-        web_research_enabled,
+        f"[{thread_id}] Web research configuration: expert={expert_enabled}, hil={hil}, web={web_research_enabled}"
     )
 
     if memory is None:
@@ -479,14 +522,14 @@ def run_web_research_agent(
     try:
         key_facts = format_key_facts_dict(get_key_fact_repository().get_facts_dict())
     except RuntimeError as e:
-        logger.error(f"Failed to access key fact repository: {str(e)}")
+        logger.error(f"[{thread_id}] Failed to access key fact repository: {str(e)}")
         key_facts = ""
     try:
         key_snippets = format_key_snippets_dict(
             get_key_snippet_repository().get_snippets_dict()
         )
     except RuntimeError as e:
-        logger.error(f"Failed to access key snippet repository: {str(e)}")
+        logger.error(f"[{thread_id}] Failed to access key snippet repository: {str(e)}")
         key_snippets = ""
     related_files = get_related_files()
 
@@ -504,7 +547,7 @@ def run_web_research_agent(
         key_facts=key_facts,
         work_log=get_work_log_repository().format_work_log(),
         key_snippets=key_snippets,
-        related_files=related_files,
+        related_files="\n".join(related_files),
         env_inv=get_env_inv(),
     )
 
@@ -521,18 +564,22 @@ def run_web_research_agent(
         if console_message:
             cpm(console_message, title="🔬 Researching...")
 
-        logger.debug("Web research agent completed successfully")
+        logger.debug(f"[{thread_id}] Invoking web research agent.")
         none_or_fallback_handler = agent_utils.init_fallback_handler(agent, tools)
         _result = agent_utils.run_agent_with_retry(
             agent, prompt, none_or_fallback_handler
         )
         if _result:
             # Log web research completion
+            logger.info(f"[{thread_id}] Web research agent completed successfully.")
             log_work_event(f"Completed web research phase for: {query}")
+        else:
+            logger.info(f"[{thread_id}] Web research agent finished without returning a final message.")
         return _result
 
     except (KeyboardInterrupt, AgentInterrupt):
+        logger.info(f"[{thread_id}] Web research agent interrupted.")
         raise
     except Exception as e:
-        logger.error("Web research agent failed: %s", str(e), exc_info=True)
+        logger.error(f"[{thread_id}] Web research agent failed: {str(e)}", exc_info=True)
         raise

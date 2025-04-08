@@ -15,11 +15,11 @@ from pydantic import BaseModel, ConfigDict, field_serializer, field_validator
 class SessionModel(BaseModel):
     """
     Pydantic model representing a Session.
-    
+
     This model corresponds to the Session Peewee ORM model and provides
     validation and serialization capabilities. It handles the conversion
     between JSON-encoded strings and Python dictionaries for the machine_info field.
-    
+
     Attributes:
         id: Unique identifier for the session
         created_at: When the session record was created
@@ -28,6 +28,7 @@ class SessionModel(BaseModel):
         command_line: Command line arguments used to start the program
         program_version: Version of the program
         machine_info: Dictionary containing machine-specific metadata
+        status: The current lifecycle state of the session (e.g., 'pending', 'running', 'completed', 'error')
         display_name: Display name for the session (derived from human input or command line)
     """
     id: Optional[int] = None
@@ -37,64 +38,65 @@ class SessionModel(BaseModel):
     command_line: Optional[str] = None
     program_version: Optional[str] = None
     machine_info: Optional[Dict[str, Any]] = None
+    status: str # Added status field
     display_name: Optional[str] = None
-    
+
     # Configure the model to work with ORM objects
     model_config = ConfigDict(from_attributes=True)
-    
+
     @field_validator("machine_info", mode="before")
     @classmethod
     def parse_machine_info(cls, value: Any) -> Optional[Dict[str, Any]]:
         """
         Parse the machine_info field from a JSON string to a dictionary.
-        
+
         Args:
             value: The value to parse, can be a string, dict, or None
-            
+
         Returns:
             Optional[Dict[str, Any]]: The parsed dictionary or None
-            
+
         Raises:
             ValueError: If the JSON string is invalid
         """
         if value is None:
             return None
-        
+
         if isinstance(value, dict):
             return value
-            
+
         if isinstance(value, str):
             try:
                 return json.loads(value)
             except json.JSONDecodeError as e:
                 raise ValueError(f"Invalid JSON in machine_info: {e}")
-        
+
         raise ValueError(f"Unexpected type for machine_info: {type(value)}")
-    
+
     @field_serializer("machine_info")
     def serialize_machine_info(self, machine_info: Optional[Dict[str, Any]]) -> Optional[str]:
         """
         Serialize the machine_info dictionary to a JSON string for storage.
-        
+
         Args:
             machine_info: Dictionary to serialize
-            
+
         Returns:
             Optional[str]: JSON-encoded string or None
         """
         if machine_info is None:
             return None
-        
+
         return json.dumps(machine_info)
 
 
 class HumanInputModel(BaseModel):
     """
     Pydantic model representing a HumanInput.
-    
+
     This model corresponds to the HumanInput Peewee ORM model and provides
     validation and serialization capabilities.
-    
+
     Attributes:
         id: Unique identifier for the human input
         created_at: When the record was created
@@ -109,7 +111,7 @@ class HumanInputModel(BaseModel):
     content: str
     source: str
     session_id: Optional[int] = None
-    
+
     # Configure the model to work with ORM objects
     model_config = ConfigDict(from_attributes=True)
 
@@ -117,10 +119,10 @@ class HumanInputModel(BaseModel):
 class KeyFactModel(BaseModel):
     """
     Pydantic model representing a KeyFact.
-    
+
     This model corresponds to the KeyFact Peewee ORM model and provides
     validation and serialization capabilities.
-    
+
     Attributes:
         id: Unique identifier for the key fact
         created_at: When the record was created
@@ -135,7 +137,7 @@ class KeyFactModel(BaseModel):
     content: str
     human_input_id: Optional[int] = None
     session_id: Optional[int] = None
-    
+
     # Configure the model to work with ORM objects
     model_config = ConfigDict(from_attributes=True)
 
@@ -143,10 +145,10 @@ class KeyFactModel(BaseModel):
 class KeySnippetModel(BaseModel):
     """
     Pydantic model representing a KeySnippet.
-    
+
     This model corresponds to the KeySnippet Peewee ORM model and provides
     validation and serialization capabilities.
-    
+
     Attributes:
         id: Unique identifier for the key snippet
         created_at: When the record was created
@@ -167,7 +169,7 @@ class KeySnippetModel(BaseModel):
     description: Optional[str] = None
     human_input_id: Optional[int] = None
     session_id: Optional[int] = None
-    
+
     # Configure the model to work with ORM objects
     model_config = ConfigDict(from_attributes=True)
 
@@ -175,10 +177,10 @@ class KeySnippetModel(BaseModel):
 class ResearchNoteModel(BaseModel):
     """
     Pydantic model representing a ResearchNote.
-    
+
     This model corresponds to the ResearchNote Peewee ORM model and provides
     validation and serialization capabilities.
-    
+
     Attributes:
         id: Unique identifier for the research note
         created_at: When the record was created
@@ -193,7 +195,7 @@ class ResearchNoteModel(BaseModel):
     content: str
     human_input_id: Optional[int] = None
     session_id: Optional[int] = None
-    
+
     # Configure the model to work with ORM objects
     model_config = ConfigDict(from_attributes=True)
 
@@ -201,12 +203,12 @@ class ResearchNoteModel(BaseModel):
 class TrajectoryModel(BaseModel):
     """
     Pydantic model representing a Trajectory.
-    
+
     This model corresponds to the Trajectory Peewee ORM model and provides
     validation and serialization capabilities. It handles the conversion
     between JSON-encoded strings and Python dictionaries for the tool_parameters,
     tool_result, and step_data fields.
-    
+
     Attributes:
         id: Unique identifier for the trajectory
         created_at: When the record was created
@@ -243,138 +245,138 @@ class TrajectoryModel(BaseModel):
     error_type: Optional[str] = None
     error_details: Optional[str] = None
     session_id: Optional[int] = None
-    
+
     # Configure the model to work with ORM objects
     model_config = ConfigDict(from_attributes=True)
-    
+
     @field_validator("tool_parameters", mode="before")
     @classmethod
     def parse_tool_parameters(cls, value: Any) -> Optional[Dict[str, Any]]:
         """
         Parse the tool_parameters field from a JSON string to a dictionary.
-        
+
         Args:
             value: The value to parse, can be a string, dict, or None
-            
+
         Returns:
             Optional[Dict[str, Any]]: The parsed dictionary or None
-            
+
         Raises:
             ValueError: If the JSON string is invalid
         """
         if value is None:
             return None
-        
+
         if isinstance(value, dict):
             return value
-            
+
         if isinstance(value, str):
             try:
                 return json.loads(value)
             except json.JSONDecodeError as e:
                 raise ValueError(f"Invalid JSON in tool_parameters: {e}")
-        
+
         raise ValueError(f"Unexpected type for tool_parameters: {type(value)}")
-    
+
     @field_validator("tool_result", mode="before")
     @classmethod
     def parse_tool_result(cls, value: Any) -> Optional[Any]:
         """
         Parse the tool_result field from a JSON string to a Python object.
-        
+
         Args:
             value: The value to parse, can be a string, dict, list, or None
-            
+
         Returns:
             Optional[Any]: The parsed object or None
-            
+
         Raises:
             ValueError: If the JSON string is invalid
         """
         if value is None:
             return None
-        
+
         if not isinstance(value, str):
             return value
-            
+
         try:
             return json.loads(value)
         except json.JSONDecodeError as e:
             raise ValueError(f"Invalid JSON in tool_result: {e}")
-    
+
     @field_validator("step_data", mode="before")
     @classmethod
     def parse_step_data(cls, value: Any) -> Optional[Dict[str, Any]]:
         """
         Parse the step_data field from a JSON string to a dictionary.
-        
+
         Args:
             value: The value to parse, can be a string, dict, or None
-            
+
         Returns:
             Optional[Dict[str, Any]]: The parsed dictionary or None
-            
+
         Raises:
             ValueError: If the JSON string is invalid
         """
         if value is None:
             return None
-        
+
         if isinstance(value, dict):
             return value
-            
+
         if isinstance(value, str):
             try:
                 return json.loads(value)
             except json.JSONDecodeError as e:
                 raise ValueError(f"Invalid JSON in step_data: {e}")
-        
+
         raise ValueError(f"Unexpected type for step_data: {type(value)}")
-    
+
     @field_serializer("tool_parameters")
     def serialize_tool_parameters(self, tool_parameters: Optional[Dict[str, Any]]) -> Optional[str]:
         """
         Serialize the tool_parameters dictionary to a JSON string for storage.
-        
+
         Args:
             tool_parameters: Dictionary to serialize
-            
+
         Returns:
             Optional[str]: JSON-encoded string or None
         """
         if tool_parameters is None:
             return None
-        
+
         return json.dumps(tool_parameters)
-    
+
     @field_serializer("tool_result")
     def serialize_tool_result(self, tool_result: Optional[Any]) -> Optional[str]:
         """
         Serialize the tool_result object to a JSON string for storage.
-        
+
         Args:
             tool_result: Object to serialize
-            
+
         Returns:
             Optional[str]: JSON-encoded string or None
         """
         if tool_result is None:
             return None
-        
+
         return json.dumps(tool_result)
-    
+
     @field_serializer("step_data")
     def serialize_step_data(self, step_data: Optional[Dict[str, Any]]) -> Optional[str]:
         """
         Serialize the step_data dictionary to a JSON string for storage.
-        
+
         Args:
             step_data: Dictionary to serialize
-            
+
         Returns:
             Optional[str]: JSON-encoded string or None
         """
         if step_data is None:
             return None
-        
+
         return json.dumps(step_data)

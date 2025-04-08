@@ -37,3 +37,9 @@ class FallbackToolExecutionError(Exception):
     """Exception raised when a fallback tool execution fails."""
 
     pass
+
+
+class SessionNotFoundError(Exception):
+    """Exception raised when a requested session ID is not found in the database."""
+
+    pass
