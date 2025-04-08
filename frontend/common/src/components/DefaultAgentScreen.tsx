@@ -65,12 +65,12 @@ export const DefaultAgentScreen: React.FC = () => {
       }
     } else if (messageData.type === 'session_update' && messageData.payload) { // <-- Add handler for session_update
       console.log('[DefaultAgentScreen] Received session_update message:', messageData.payload);
-      const sessionPayload = messageData.payload as { id: string; status: string /* other fields */ };
+      const sessionPayload = messageData.payload as { id: number; status: string /* other fields */ }; // <-- Change id type to number
       // Basic validation for status before calling store
       if (sessionPayload.id && sessionPayload.status && ['pending', 'running', 'completed', 'error'].includes(sessionPayload.status)) {
          console.log(`[DefaultAgentScreen] Processing session_update for ${sessionPayload.id} with status ${sessionPayload.status}`)
-         // Ensure ID is passed as string if that's what the store expects
-         updateSessionStatus(String(sessionPayload.id), sessionPayload.status as SessionStatus);
+         // Ensure ID is passed as number as expected by the store
+         updateSessionStatus(sessionPayload.id, sessionPayload.status as SessionStatus); // <-- Remove String() conversion
       } else {
          console.warn("[DefaultAgentScreen] Received invalid session_update payload:", sessionPayload);
       }

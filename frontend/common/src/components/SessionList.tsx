@@ -6,8 +6,8 @@ import { Card, CardContent } from './ui/card';
 import { RefreshCw } from 'lucide-react';
 
 interface SessionListProps {
-  onSelectSession?: (sessionId: string) => void;
-  currentSessionId?: string;
+  onSelectSession?: (sessionId: number) => void; // Changed from string to number
+  currentSessionId?: number | null | undefined; // Changed from string to number | null | undefined
   sessions?: AgentSession[];
   className?: string;
   wrapperComponent?: React.ElementType;
@@ -17,8 +17,8 @@ interface SessionListProps {
   onRefresh?: () => void;
 }
 
-export const SessionList: React.FC<SessionListProps> = ({ 
-  onSelectSession, 
+export const SessionList: React.FC<SessionListProps> = ({
+  onSelectSession,
   currentSessionId,
   sessions = getSampleAgentSessions(), // Note: Sample data might still use 'updated'. Real data should use 'updatedAt'.
   className = '',
@@ -61,11 +61,11 @@ export const SessionList: React.FC<SessionListProps> = ({
         return 'Invalid Date';
     }
 
-    return date.toLocaleDateString([], { 
-      month: 'short', 
-      day: 'numeric', 
-      hour: '2-digit', 
-      minute: '2-digit' 
+    return date.toLocaleDateString([], {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
     });
   };
 
@@ -78,10 +78,10 @@ export const SessionList: React.FC<SessionListProps> = ({
             <div className="flex flex-col space-y-2">
               <p>{error}</p>
               {onRefresh && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={onRefresh} 
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onRefresh}
                   className="self-start mt-1 text-xs h-7"
                 >
                   Try Again
@@ -145,8 +145,9 @@ export const SessionList: React.FC<SessionListProps> = ({
               WrapperComponent,
               {
                 key: session.id,
-                onClick: () => onSelectSession?.(session.id),
+                onClick: () => onSelectSession?.(session.id), // session.id is number, matches prop type
                 className: `w-full flex items-start px-3 py-2.5 text-left rounded-md transition-colors hover:bg-accent/50 ${
+                  // Comparison should now work correctly when currentSessionId is a number
                   currentSessionId === session.id ? 'bg-accent' : ''
                 }`
               },
@@ -154,10 +155,10 @@ export const SessionList: React.FC<SessionListProps> = ({
                 <>
                   {buttonContent}
                   <div className="ml-2 flex-shrink-0 self-center">
-                    {React.cloneElement(closeAction as React.ReactElement, { 
+                    {React.cloneElement(closeAction as React.ReactElement, {
                       onClick: (e: React.MouseEvent) => {
                         e.stopPropagation();
-                        onSelectSession?.(session.id);
+                        onSelectSession?.(session.id); // Pass number session.id
                       }
                     })}
                   </div>

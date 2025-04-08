@@ -137,7 +137,7 @@ def run_agent_thread(
             session_repo.update_session_status(session_id, 'running')
             running_session_model = session_repo.get(session_id)
             if running_session_model:
-                send_broadcast({'type': 'session_update', 'payload': running_session_model.model_dump()})
+                send_broadcast({'type': 'session_update', 'payload': running_session_model.model_dump(mode='json')})
                 logger.debug(f"Broadcasted session {session_id} status: running")
             else:
                 logger.error(f"Could not retrieve session {session_id} after updating status to running.")
@@ -214,7 +214,7 @@ def run_agent_thread(
                 session_repo_instance.update_session_status(session_id, final_status)
                 final_session_model = session_repo_instance.get(session_id)
                 if final_session_model:
-                    send_broadcast({'type': 'session_update', 'payload': final_session_model.model_dump()})
+                    send_broadcast({'type': 'session_update', 'payload': final_session_model.model_dump(mode='json')})
                     # Log after broadcast confirmation
                     logger.debug(f"Broadcasted session {session_id} final status update: {final_status}")
                 else:
