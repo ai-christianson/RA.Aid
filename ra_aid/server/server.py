@@ -19,9 +19,9 @@ import uvicorn
 logger = logging.getLogger(__name__)
 # Only configure this specific logger, not the root logger
 if not logger.handlers:  # Avoid adding handlers multiple times
-    logger.setLevel(logging.INFO) # Changed level to INFO to see connection logs
-    handler = logging.StreamHandler(sys.__stderr__)  # Use the real stderr
-    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s") # Added name to formatter
+    logger.setLevel(logging.INFO)
+    handler = logging.StreamHandler(sys.__stderr__)
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     handler.setFormatter(formatter)
     logger.addHandler(handler)
     # Prevent propagation to avoid affecting the root logger configuration
@@ -41,22 +41,33 @@ from ra_aid.server.broadcast_sender import set_broadcast_queue
 # This is a simple way, alternatives include passing app context differently.
 _app_instance: FastAPI = None
 
-async def broadcast_consumer(q: queue.Queue[Any], manager: ConnectionManager): # Changed type hint to Any
-    """Consumes items from the queue and broadcasts them, attempting JSON serialization.""" # Updated docstring
+async def broadcast_consumer(q: queue.Queue[Any], manager: ConnectionManager):
+    """Consumes items from the queue and broadcasts them, handling Pydantic model serialization."""
     while True:
         try:
             item = await asyncio.to_thread(q.get)
+            serializable_item = None # Initialize for clarity
             try:
-                # Attempt to serialize the item using json.dumps
-                message_str = json.dumps(item)
-            except TypeError:
-                logger.warning(f"Could not JSON serialize message item of type {type(item)}.")
-                continue
-            except Exception as exc:
-                logger.warning(f"Could not convert item to string for broadcast: {exc}")
-                continue # Skip broadcasting this item
+                # Check if the item has a model_dump method (likely a Pydantic model)
+                if hasattr(item, 'model_dump') and callable(item.model_dump):
+                    # Convert Pydantic model to dict suitable for JSON
+                    serializable_item = item.model_dump(mode='json')
+                else:
+                    # Assume item is already JSON serializable
+                    serializable_item = item
 
-            logger.debug(f"Broadcasting item of type: {type(item)}")
+                # Attempt to serialize the potentially converted item
+                message_str = json.dumps(serializable_item)
+            except TypeError:
+                # Log if serialization fails even after potential conversion
+                logger.warning(f"Could not JSON serialize message item of type {type(item)} even after potential conversion. Item: {str(item)[:200]}...")
+                continue
+            except Exception as e:
+                 # Log other unexpected serialization errors
+                 logger.error(f"Error during serialization in broadcast_consumer: {e}. Item: {str(item)[:200]}...")
+                 continue
+
+            # logger.debug(f"Broadcasting item of type: {type(item)}") # Keep original log location if needed
             await manager.broadcast(message_str)
         except asyncio.CancelledError:
             logger.info("Broadcast consumer task cancelled.")
@@ -161,7 +172,7 @@ async def get_root(request: Request):
     """Return basic info about RA.Aid API."""
     # Same HTML content as before...
     return HTMLResponse(
-        """
+        '''
         <html>
             <head>
                 <title>RA.Aid API</title>
@@ -176,7 +187,7 @@ async def get_root(request: Request):
                 <p>See the <a href="/docs">API documentation</a> for more information on REST endpoints.</p>
             </body>
         </html>
-        """
+        '''
     )
 
 
@@ -210,14 +221,3 @@ def custom_openapi():
     return app.openapi_schema
 
 app.openapi = custom_openapi
-
-
-def run_server(host: str = "0.0.0.0", port: int = 1818):
-    """Run the FastAPI server."""
-    # Note: Reload=True might cause issues with lifespan state in some complex scenarios.
-    # It's generally fine for development but be mindful.
-    uvicorn.run("ra_aid.server.server:app", host=host, port=port, reload=True, log_level="info")
-
-if __name__ == "__main__":
-    # This allows running the server directly for testing
-    run_server()
