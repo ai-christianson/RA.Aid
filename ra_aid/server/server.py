@@ -9,10 +9,11 @@ from typing import AsyncGenerator, Callable, Any
 import queue
 import json
 
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 import uvicorn
 
 # Configure module-specific logging without affecting root logger
@@ -153,8 +154,18 @@ app.add_middleware(
 app.include_router(sessions_router)
 app.include_router(spawn_agent_router)
 
-# Directory for the current file
+# Directory for the current file and prebuilt UI
 CURRENT_DIR = Path(__file__).parent
+PREBUILT_DIR = CURRENT_DIR / "prebuilt"
+ASSETS_DIR = PREBUILT_DIR / "assets"
+INDEX_HTML_PATH = PREBUILT_DIR / "index.html"
+
+# Mount static assets directory if it exists
+if ASSETS_DIR.exists() and ASSETS_DIR.is_dir():
+    app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
+    logger.info(f"Mounted static assets from: {ASSETS_DIR}")
+else:
+    logger.warning(f"Assets directory not found or not a directory, skipping mount: {ASSETS_DIR}")
 
 # WebSocket API endpoint using the ConnectionManager from app state
 @app.websocket("/v1/ws")
@@ -178,28 +189,34 @@ async def websocket_endpoint(websocket: WebSocket):
         logger.info(f"WebSocket connection closed for client: {websocket.client}")
 
 
-@app.get("/", response_class=HTMLResponse)
-async def get_root(request: Request):
-    """Return basic info about RA.Aid API."""
-    # Same HTML content as before...
-    return HTMLResponse(
-        '''
-        <html>
-            <head>
-                <title>RA.Aid API</title>
-                <style>
-                    body { font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
-                    pre { background: #f4f4f4; padding: 10px; border-radius: 5px; }
-                </style>
-            </head>
-            <body>
-                <h1>RA.Aid API</h1>
-                <p>A WebSocket API is available at /v1/ws for real-time updates (e.g., trajectory events).</p>
-                <p>See the <a href="/docs">API documentation</a> for more information on REST endpoints.</p>
-            </body>
-        </html>
-        '''
-    )
+@app.get("/", response_class=Response) # Changed response_class to base Response
+async def get_root(request: Request) -> Response: # Changed return type annotation
+    """Serve the prebuilt index.html or a fallback message."""
+    if INDEX_HTML_PATH.exists() and INDEX_HTML_PATH.is_file():
+        logger.debug(f"Serving index.html from: {INDEX_HTML_PATH}")
+        return FileResponse(INDEX_HTML_PATH)
+    else:
+        logger.warning(f"index.html not found at: {INDEX_HTML_PATH}. Serving fallback HTML.")
+        return HTMLResponse(
+            '''
+            <html>
+                <head>
+                    <title>RA.Aid API</title>
+                    <style>
+                        body { font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+                        pre { background: #f4f4f4; padding: 10px; border-radius: 5px; }
+                    </style>
+                </head>
+                <body>
+                    <h1>RA.Aid Server</h1>
+                    <p>Web UI not built or not found. Run 'npm run build:web' in 'frontend/' directory.</p>
+                    <p>A WebSocket API is available at /v1/ws for real-time updates (e.g., trajectory events).</p>
+                    <p>See the <a href="/docs">API documentation</a> for more information on REST endpoints.</p>
+                </body>
+            </html>
+            ''',
+            status_code=200
+        )
 
 
 @app.get("/config")
@@ -216,7 +233,7 @@ def custom_openapi():
         title="RA.Aid API",
         summary="RA.Aid API OpenAPI Spec",
         version="1.0.0", # Consider dynamic version
-        description="RA.Aid's API provides REST endpoints for managing sessions and agents, and a WebSocket endpoint (/v1/ws) for real-time communication of events like new trajectories.",
+        description="RA.Aid's API provides REST endpoints for managing sessions and agents, and a WebSocket endpoint (/v1/ws) for real-time communication of events like new trajectories. The root endpoint serves the static web UI if available.",
         routes=app.routes,
         license_info={
             "name": "Apache 2.0",
