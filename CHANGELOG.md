@@ -1,3 +1,30 @@
+## [0.24.0] 2025-04-08
+
+### Added
+- Web UI is now available at localhost:1818 when ra-aid is started with `--server`
+- Session status tracking (pending, running, completed, failed) in the database and API.
+- Robust WebSocket connection handling in the frontend with auto-reconnect and heartbeats (`frontend/common/src/websocket/connection.ts`).
+- Serve prebuilt web UI static files directly from the backend server (`ra_aid/server/server.py`, `ra_aid/server/prebuilt/`).
+- `broadcast_sender.py` module for decoupled WebSocket message broadcasting via a queue (`ra_aid/server/broadcast_sender.py`).
+- `SessionNotFoundError` custom exception (`ra_aid/exceptions.py`).
+- `build:prebuilt` npm script to build frontend assets into the backend distribution (`frontend/package.json`).
+
+### Changed
+- Refactored backend WebSocket broadcasting to use the new `broadcast_sender` queue, improving reliability and decoupling (`ra_aid/server/server.py`, `ra_aid/server/api_v1_spawn_agent.py`).
+- Updated various frontend components and stores to integrate with the new WebSocket logic and session status (`frontend/common/`).
+- Enhanced logging in `ra_aid/agents/research_agent.py` with thread IDs.
+
+### Fixed
+- Resolved WebSocket message serialization error for `session_update` payloads by ensuring proper JSON serialization (`mode='json'`) before queuing messages in the new broadcast sender mechanism (`ra_aid/server/api_v1_spawn_agent.py`, `ra_aid/server/broadcast_sender.py`).
+
+### Build
+- Added script (`frontend/package.json#build:prebuilt`) to build and copy frontend assets to `ra_aid/server/prebuilt/` for server distribution.
+
+### Internal
+- Added database migration for the new session `status` field (`ra_aid/migrations/015_20250408_140800_add_session_status.py`).
+- Updated `.gitignore`.
+
+
 # Changelog
 
 All notable changes to this project will be documented in this file.
@@ -21,9 +48,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Support for Anthropic's `claude-3.7` series models (`ra_aid/models_params.py`, `tests/ra_aid/test_anthropic_token_limiter.py`).
+- Support for Anthropic\'s `claude-3.7` series models (`ra_aid/models_params.py`, `tests/ra_aid/test_anthropic_token_limiter.py`).
 - Support for Fireworks AI provider and models (`fireworks/firefunction-v2`, `fireworks/dbrx-instruct`) (`ra_aid/models_params.py`, `ra_aid/llm.py`).
-- Implicit think tag detection: `process_thinking_content` now checks for `<think>` tags even if `supports_think_tag` is not explicitly `True` in model config, provided it's not `False` and the content starts with the tag (`ra_aid/text/processing.py`, `tests/ra_aid/text/test_process_thinking.py`).
+- Implicit think tag detection: `process_thinking_content` now checks for `<think>` tags even if `supports_think_tag` is not explicitly `True` in model config, provided it\'s not `False` and the content starts with the tag (`ra_aid/text/processing.py`, `tests/ra_aid/text/test_process_thinking.py`).
 - Command-line arguments `--project-dir` and `--db-path` added to `ra-aid usage latest` and `ra-aid usage all` subcommands for specifying database location (`ra_aid/scripts/cli.py`, `ra_aid/scripts/all_sessions_usage.py`, `ra_aid/scripts/last_session_usage.py`).
 - Reinitialization capability for Singleton classes via `_initialize` method (`ra_aid/utils/singleton.py`).
 - Metadata tracking (`model_name`, `provider`) added during LLM initialization (`ra_aid/llm.py`, `tests/ra_aid/test_llm.py`).
@@ -57,7 +84,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add support for `--msg-file` argument to read task/message from a file (`a827742`).
 
 ### Changed
-- Improve CIAYN agent's robust code handling (`ac5abb3`, `38340b2`).
+- Improve CIAYN agent\'s robust code handling (`ac5abb3`, `38340b2`).
 - Optimize LLM-based tool call extraction for specific models (`67b268f`).
 - Set max context for Fireworks models (`44cbe84`).
 - Update model parameters for R1 on Fireworks (`328d49d`).
@@ -196,7 +223,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Replaced thread-local storage with contextvars in agent_context.py for better context isolation
-- Improved React agent execution with LangGraph's interrupt mechanism
+- Improved React agent execution with LangGraph\'s interrupt mechanism
 - Enhanced _run_agent_stream function to properly handle agent state and continuation
 
 ### Fixed
@@ -262,9 +289,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added support for "thinking" budget parameter for Claude 3.7 Sonnet
 
 ### Changed
-- Updated dependencies:
-  - langchain-anthropic from 0.3.7 to 0.3.8
-  - langchain-google-genai from 2.0.10 to 2.0.11
+- Updated dependencies:\n  - langchain-anthropic from 0.3.7 to 0.3.8\n  - langchain-google-genai from 2.0.10 to 2.0.11
 - Improved shell command tool description to recommend keeping commands under 300 words
 - Enhanced binary file filtering to include detailed reporting of skipped files
 - Updated test assertions to be more flexible with parameter checking
@@ -564,7 +589,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix one shot completion signaling.
 - Clean up error outputs.
 - Update prompt for better performance on large/monorepo projects.
-- Update programmer prompt so we don't use it to delete files.
+- Update programmer prompt so we don\'t use it to delete files.
 
 ## [0.6.2] - 2024-12-18
 - Allow shell commands to be run in read-only mode.
