@@ -5,7 +5,8 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import AsyncGenerator, Callable
+from typing import AsyncGenerator, Callable, Any
+import queue
 
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -30,33 +31,34 @@ project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(_
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-from ra_aid.database.pydantic_models import TrajectoryModel
-# Removed: from ra_aid.database.repositories.trajectory_repository import TrajectoryRepository, get_trajectory_repository
 from ra_aid.server.api_v1_sessions import router as sessions_router
 from ra_aid.server.api_v1_spawn_agent import router as spawn_agent_router
 from ra_aid.server.connection_manager import ConnectionManager
+from ra_aid.server.broadcast_sender import set_broadcast_queue
 
 # Global variable to hold the app instance, needed by the hook (Now likely unused by hooks, but might be used elsewhere)
 # This is a simple way, alternatives include passing app context differently.
 _app_instance: FastAPI = None
 
-async def broadcast_consumer(queue: asyncio.Queue[TrajectoryModel], manager: ConnectionManager):
-    """Consumes trajectories from the queue and broadcasts them."""
+async def broadcast_consumer(q: queue.Queue[Any], manager: ConnectionManager): # Changed type hint to Any
+    """Consumes items from the queue and broadcasts them.""" # Updated docstring
     while True:
         try:
-            trajectory = await queue.get()
-            logger.debug(f"Broadcasting trajectory: {trajectory.trajectory_id}")
-            message = trajectory.model_dump_json()
-            await manager.broadcast(message)
-            queue.task_done()
+            item = await asyncio.to_thread(q.get)
+            try:
+                message_str = str(item)
+            except Exception as exc:
+                logger.warning(f"Could not convert item to string for broadcast: {exc}")
+                continue
+
+            logger.debug(f"Broadcasting item of type: {type(item)}")
+            await manager.broadcast(message_str)
         except asyncio.CancelledError:
             logger.info("Broadcast consumer task cancelled.")
             break
         except Exception:
             logger.exception("Error in broadcast consumer task.")
             # Avoid breaking the loop on non-cancellation errors
-
-# Removed: trajectory_create_hook function
 
 
 @contextlib.asynccontextmanager
@@ -68,8 +70,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("Application startup: Initializing resources.")
     # Store the running event loop
     app.state.loop = asyncio.get_running_loop()
-    # Create the broadcast queue
-    app.state.broadcast_queue = asyncio.Queue()
+
+    # Thread-safe queue for broadcasting messages to WebSocket clients.
+    # Use app.state.broadcast_queue.put(item) from any thread.
+    app.state.broadcast_queue = queue.Queue()
+    set_broadcast_queue(app.state.broadcast_queue)
+
     # Instantiate the ConnectionManager
     app.state.connection_manager = ConnectionManager()
     # Start the consumer task
