@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 from typing import AsyncGenerator, Callable, Any
 import queue
+import json
 
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -41,15 +42,19 @@ from ra_aid.server.broadcast_sender import set_broadcast_queue
 _app_instance: FastAPI = None
 
 async def broadcast_consumer(q: queue.Queue[Any], manager: ConnectionManager): # Changed type hint to Any
-    """Consumes items from the queue and broadcasts them.""" # Updated docstring
+    """Consumes items from the queue and broadcasts them, attempting JSON serialization.""" # Updated docstring
     while True:
         try:
             item = await asyncio.to_thread(q.get)
             try:
-                message_str = str(item)
+                # Attempt to serialize the item using json.dumps
+                message_str = json.dumps(item)
+            except TypeError:
+                logger.warning(f"Could not JSON serialize message item of type {type(item)}.")
+                continue
             except Exception as exc:
                 logger.warning(f"Could not convert item to string for broadcast: {exc}")
-                continue
+                continue # Skip broadcasting this item
 
             logger.debug(f"Broadcasting item of type: {type(item)}")
             await manager.broadcast(message_str)
