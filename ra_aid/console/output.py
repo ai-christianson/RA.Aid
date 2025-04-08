@@ -14,7 +14,14 @@ from ra_aid.console.common import console
 def get_cost_subtitle() -> Optional[str]:
     """Generate a subtitle with cost information if cost tracking is enabled and show_cost is enabled."""
 
-    if not get_config_repository().get("show_cost", DEFAULT_SHOW_COST):
+    try:
+        config = get_config_repository()
+        show_cost = config.get("show_cost", DEFAULT_SHOW_COST)
+    except Exception:
+        # Failsafe for early initialization before config repository is available
+        show_cost = DEFAULT_SHOW_COST
+
+    if not show_cost:
         return None
 
     # Local import to break circular dependency
