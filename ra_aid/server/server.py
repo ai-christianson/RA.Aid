@@ -42,32 +42,43 @@ from ra_aid.server.broadcast_sender import set_broadcast_queue
 _app_instance: FastAPI = None
 
 async def broadcast_consumer(q: queue.Queue[Any], manager: ConnectionManager):
-    """Consumes items from the queue and broadcasts them, handling Pydantic model serialization."""
+    """Consumes items (wrapped messages) from the queue, serializes the payload, and broadcasts the wrapper."""
     while True:
         try:
-            item = await asyncio.to_thread(q.get)
-            serializable_item = None # Initialize for clarity
-            try:
-                # Check if the item has a model_dump method (likely a Pydantic model)
-                if hasattr(item, 'model_dump') and callable(item.model_dump):
-                    # Convert Pydantic model to dict suitable for JSON
-                    serializable_item = item.model_dump(mode='json')
-                else:
-                    # Assume item is already JSON serializable
-                    serializable_item = item
+            wrapper = await asyncio.to_thread(q.get) # Assume item is the wrapper dict
+            if not isinstance(wrapper, dict) or 'type' not in wrapper or 'payload' not in wrapper:
+                 logger.warning(f"Received unexpected item format from broadcast queue: {type(wrapper)}. Expected {{'type': ..., 'payload': ...}}. Item: {str(wrapper)[:200]}...")
+                 continue
 
-                # Attempt to serialize the potentially converted item
-                message_str = json.dumps(serializable_item)
+            payload = wrapper['payload']
+            message_type = wrapper['type']
+            serializable_payload = None # Initialize for clarity
+
+            try:
+                # Check if the payload has a model_dump method (likely a Pydantic model)
+                if hasattr(payload, 'model_dump') and callable(payload.model_dump):
+                    # Convert Pydantic model to dict suitable for JSON
+                    serializable_payload = payload.model_dump(mode='json')
+                else:
+                    # Assume payload is already JSON serializable
+                    serializable_payload = payload
+
+                # Update the payload within the wrapper
+                wrapper['payload'] = serializable_payload
+
+                # Attempt to serialize the entire wrapper
+                message_str = json.dumps(wrapper)
+
             except TypeError:
-                # Log if serialization fails even after potential conversion
-                logger.warning(f"Could not JSON serialize message item of type {type(item)} even after potential conversion. Item: {str(item)[:200]}...")
+                # Log if serialization fails even after potential payload conversion
+                logger.warning(f"Could not JSON serialize wrapped message with type '{message_type}'. Payload type: {type(payload)}, Original Payload Preview: {str(payload)[:100]}... Wrapper Preview: {str(wrapper)[:200]}...")
                 continue
             except Exception as e:
                  # Log other unexpected serialization errors
-                 logger.error(f"Error during serialization in broadcast_consumer: {e}. Item: {str(item)[:200]}...")
+                 logger.error(f"Error during serialization of wrapper in broadcast_consumer: {e}. Wrapper Preview: {str(wrapper)[:200]}...")
                  continue
 
-            # logger.debug(f"Broadcasting item of type: {type(item)}") # Keep original log location if needed
+            # logger.debug(f"Broadcasting wrapped message of type: {message_type}")
             await manager.broadcast(message_str)
         except asyncio.CancelledError:
             logger.info("Broadcast consumer task cancelled.")
