@@ -20,6 +20,7 @@ from ra_aid.database.repositories.config_repository import ConfigRepositoryManag
 from ra_aid.env_inv_context import EnvInvManager
 from ra_aid.env_inv import EnvDiscovery
 from ra_aid.llm import initialize_llm, get_model_default_temperature
+from ra_aid.server.broadcast_sender import send_broadcast
 
 # Create logger
 logger = logging.getLogger(__name__)
@@ -111,6 +112,9 @@ def run_agent_thread(
              WorkLogRepositoryManager() as work_log_repo, \
              ConfigRepositoryManager(source_repo=source_config_repo) as config_repo, \
              EnvInvManager(env_data) as env_inv:
+
+            # Register broadcast hook for new trajectories
+            trajectory_repo.register_create_hook(send_broadcast)
             
             # Update config repo with values for this thread
             config_repo.set("research_only", research_only)
