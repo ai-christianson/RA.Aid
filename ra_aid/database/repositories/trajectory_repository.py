@@ -139,7 +139,6 @@ class TrajectoryRepository:
         self.db = db
         self._create_hooks: List[Callable[[TrajectoryModel], None]] = [] # Initialized instance variable
 
-    # @classmethod # Removed decorator
     def register_create_hook(self, hook: Callable[[TrajectoryModel], None]) -> None: # Changed cls to self
         """
         Register a hook to be called after a trajectory is created.
@@ -154,7 +153,7 @@ class TrajectoryRepository:
         """
         if not callable(hook):
             raise TypeError("Hook must be callable")
-        self._create_hooks.append(hook) # Changed cls._create_hooks to self._create_hooks
+        self._create_hooks.append(hook)
         logger.info(f"Registered trajectory create hook: {hook.__name__}")
 
 
