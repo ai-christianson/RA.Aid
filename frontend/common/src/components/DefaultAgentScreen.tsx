@@ -230,13 +230,6 @@ export const DefaultAgentScreen: React.FC = () => {
           addBottomPadding={true}
         />
       </div>
-      <InputSection
-        sessionId={parseInt(selectedSessionId)} // Pass number ID if needed by InputSection
-        onSubmit={handleSubmit}
-        isDrawerOpen={isDrawerOpen}
-        // Pass WebSocket sending capability if InputSection needs it
-        // sendWebSocketMessage={(msg) => wsConnectionRef.current?.send(JSON.stringify(msg))}
-      />
     </div>
   ) : newSession ? (
     // New session composition view
@@ -245,26 +238,23 @@ export const DefaultAgentScreen: React.FC = () => {
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold">Create New Session</h2>
         </div>
-        <div className="mb-20 px-4 py-6 rounded-lg border border-border bg-card/30">
-          <h3 className="text-lg font-medium mb-3">Getting Started</h3>
-          <p className="text-muted-foreground mb-4">
-            Type your message in the input box below to start a new conversation with the agent.
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-            <div className="p-4 rounded-md border border-border bg-background/50">
-              <h4 className="text-sm font-medium mb-2">Research Mode</h4>
-              <p className="text-xs text-muted-foreground">
-                The agent will gather information about your request and provide a summary
-                without implementing any solutions.
-              </p>
-            </div>
-            <div className="p-4 rounded-md border border-border bg-background/50">
-              <h4 className="text-sm font-medium mb-2">Implementation Mode</h4>
-              <p className="text-xs text-muted-foreground">
-                The agent will analyze your request, create a plan, and implement a solution
-                based on your requirements.
-              </p>
-            </div>
+        <p className="text-muted-foreground mb-4">
+          Type your message in the input box below to start a new conversation with the agent.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+          <div className="p-4 rounded-md border border-border bg-background/50">
+            <h4 className="text-sm font-medium mb-2">Research Mode</h4>
+            <p className="text-xs text-muted-foreground">
+              The agent will gather information about your request and provide a summary
+              without implementing any solutions.
+            </p>
+          </div>
+          <div className="p-4 rounded-md border border-border bg-background/50">
+            <h4 className="text-sm font-medium mb-2">Implementation Mode</h4>
+            <p className="text-xs text-muted-foreground">
+              The agent will analyze your request, create a plan, and implement a solution
+              based on your requirements.
+            </p>
           </div>
         </div>
       </div>
@@ -298,8 +288,8 @@ export const DefaultAgentScreen: React.FC = () => {
       };
     }, []);
 
-    const isInputVisible = (selectedSessionId || newSession) && !(isMobile && isDrawerOpen);
-    const buttonPosition = isInputVisible ? "bottom-[104px]" : "bottom-4"; // Adjust position based on input visibility
+    // Removed isInputVisible calculation
+    const buttonPosition = "bottom-4"; // Always position at bottom-4 when rendered
     const buttonStyle = "p-2 rounded-md shadow-md bg-zinc-800/90 hover:bg-zinc-700 text-zinc-100 flex items-center justify-center border border-zinc-700 dark:border-zinc-600";
 
     if (!mounted || newSession) return null; // Don't show if creating new session
