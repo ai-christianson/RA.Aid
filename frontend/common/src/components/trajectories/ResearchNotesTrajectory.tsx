@@ -69,16 +69,12 @@ export const ResearchNotesTrajectory: React.FC<ResearchNotesTrajectoryProps> = (
                 {/* Use static title */}
                 <span>Research Notes</span>
               </div>
-              {/* Right side: Timestamp and Chevron */}
+              {/* Right side: Timestamp (Chevron removed) */}
               <div className="flex items-center space-x-2">
                 <div className="text-xs text-muted-foreground">
                   {formattedTime}
                 </div>
-                {isOpen ? (
-                  <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                ) : (
-                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                )}
+                {/* Chevron icon rendering block removed */}
               </div>
             </div>
           </CardHeader>
