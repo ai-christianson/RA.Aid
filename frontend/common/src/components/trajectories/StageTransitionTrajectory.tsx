@@ -43,7 +43,6 @@ export const StageTransitionTrajectory: React.FC<StageTransitionTrajectoryProps>
         <CardHeader className="py-3 px-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-3">
-              <div className={`w-3 h-3 rounded-full bg-green-500 ring-1 ring-ring/20`} />
               <div className="flex-shrink-0 text-lg">{stageIcon}</div>
               <CardTitle className="text-base font-medium">
                 {title}

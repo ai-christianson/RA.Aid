@@ -34,7 +34,6 @@ export const GenericTrajectory: React.FC<GenericTrajectoryProps> = ({ trajectory
         <CardHeader className="py-3 px-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-3">
-              <div className={`w-3 h-3 rounded-full ${isError ? 'bg-red-500' : 'bg-gray-500'} ring-1 ring-ring/20`} />
               <div className="flex-shrink-0 text-lg">📋</div>
               <CardTitle className="text-base font-medium">
                 {recordType}
