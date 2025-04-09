@@ -5,6 +5,14 @@ import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '../ui/colla
 import { Trajectory } from '../../models/trajectory';
 import { KeyRound } from 'lucide-react'; // Import KeyRound icon
 
+// --- New Imports for Markdown ---
+import ReactMarkdown, { Components } from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+// Using a common style, adjust if needed
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+// --- End New Imports ---
+
 interface MemoryOperationTrajectoryProps {
   trajectory: Trajectory;
 }
@@ -40,6 +48,42 @@ export const MemoryOperationTrajectory: React.FC<MemoryOperationTrajectoryProps>
     return types[toolName] || toolName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()); // Capitalize title
   };
 
+  // --- Define Custom Components for Markdown (copied & adapted) ---
+  const components: Components = {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      code({ className, children, ...props }) { // Removed node and inline destructuring
+        const match = /language-(\w+)/.exec(className || '');
+        // Handle potential array children from parsing, join them, and trim trailing newline
+        const codeString = (Array.isArray(children) ? children.join('') : String(children))
+                          .replace(/\n$/, ''); 
+
+        // Check only for match to determine if it's a highlighted block
+        if (match) {
+          // For block code with language
+          return (
+            <SyntaxHighlighter
+              style={vscDarkPlus} // Apply the chosen style
+              language={match[1]}
+              PreTag="div"
+              // Added basic styling matching typical code blocks
+              className="text-sm rounded my-2"
+            >
+              {codeString}
+            </SyntaxHighlighter>
+          );
+        } else {
+          // For inline code or block code without language
+          return (
+            // Apply basic inline code styling
+            <code className={`bg-muted px-1 py-0.5 rounded text-sm font-mono ${className || ''}`}>
+              {children} 
+            </code>
+          );
+        }
+      },
+    }
+  // --- End Custom Components ---
+
   // Extract relevant data
   const toolName = trajectory.toolName;
   const toolParameters = trajectory.toolParameters || {};
@@ -64,16 +108,22 @@ export const MemoryOperationTrajectory: React.FC<MemoryOperationTrajectoryProps>
               {formatTime(trajectory.created)}
             </div>
           </div>
-          {/* Display fact text directly below header */} 
+          {/* --- Updated Rendering for Fact Text using Markdown --- */}
           {factText ? (
-            <div className="text-sm text-foreground mt-2 break-words">
-              {factText}
+            <div className="prose prose-sm dark:prose-invert max-w-none break-words mt-2">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={components} // Use the defined custom components
+              >
+                {factText}
+              </ReactMarkdown>
             </div>
           ) : (
             <div className="text-sm text-muted-foreground mt-2 italic">
               (No fact text available)
             </div>
           )}
+          {/* --- End Updated Rendering --- */}
         </CardHeader>
          {/* No CardContent needed as fact is in header/below */} 
       </Card>
@@ -158,4 +208,3 @@ export const MemoryOperationTrajectory: React.FC<MemoryOperationTrajectoryProps>
     </Collapsible>
   );
 };
-
