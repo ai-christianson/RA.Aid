@@ -4,3 +4,4 @@ export * from './StageTransitionTrajectory';
 export * from './InfoTrajectory';
 export * from './GenericTrajectory';
 export * from './ProjectStatusTrajectory';
+export * from './ReadFileTrajectory'; // Added export

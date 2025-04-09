@@ -5,7 +5,8 @@ import {
   StageTransitionTrajectory,
   InfoTrajectory,
   GenericTrajectory,
-  ProjectStatusTrajectory // Import the new component
+  ProjectStatusTrajectory,
+  ReadFileTrajectory // Import the new component
 } from './trajectories';
 import { useTrajectoryStore, useSessionStore } from '../store'; // <-- Import useSessionStore
 import { Trajectory } from '../models/trajectory';
@@ -21,7 +22,7 @@ interface TrajectoryPanelProps {
   /**
    * Optional maximum height for the container
    */
-  maxHeight?: string;
+  maxHeight?: string; // Kept for potential future use, but not used for scrolling now
 
   /**
    * Whether to add bottom padding to prevent content from being hidden
@@ -46,7 +47,7 @@ interface TrajectoryPanelProps {
  */
 export const TrajectoryPanel: React.FC<TrajectoryPanelProps> = ({
   sessionId,
-  maxHeight,
+  maxHeight, // Kept for potential future use, but not used for scrolling now
   addBottomPadding = false, // Default to false when not specified
   customClassName = ''
 }) => {
@@ -122,6 +123,8 @@ export const TrajectoryPanel: React.FC<TrajectoryPanelProps> = ({
         return <InfoTrajectory key={trajectory.id} trajectory={trajectory} />;
       case 'project_status': // Add case for project_status
         return <ProjectStatusTrajectory key={trajectory.id} trajectory={trajectory} />;
+      case 'read_file': // Add case for read_file
+        return <ReadFileTrajectory key={trajectory.id} trajectory={trajectory} />;
       case 'model_usage': // Hide model usage trajectories
         return null;
       default:
@@ -157,9 +160,8 @@ export const TrajectoryPanel: React.FC<TrajectoryPanelProps> = ({
 
       {trajectories.length > 0 && (
         // Render Trajectories List
-        // Use ScrollArea for consistent scrolling behavior if needed
-        // <ScrollArea className={`flex-grow ${addBottomPadding ? 'pb-32' : ''}`} style={{ maxHeight: maxHeight || undefined }}>
-        <div className={`flex-grow space-y-4 overflow-auto ${addBottomPadding ? 'pb-32' : ''}`} style={{ maxHeight: maxHeight || undefined }}>
+        // Removed overflow-auto and style={{ maxHeight }} to eliminate nested scrolling
+        <div className={`flex-grow space-y-4 ${addBottomPadding ? 'pb-32' : ''}`}>
             {trajectories.map(renderTrajectory)}
             {/* Add Spinner at the end of the list if running */}
             {isRunning && (
@@ -169,7 +171,6 @@ export const TrajectoryPanel: React.FC<TrajectoryPanelProps> = ({
               </div>
             )}
         </div>
-        // </ScrollArea>
       )}
     </div>
   );

@@ -150,8 +150,9 @@ def read_file_tool(filepath: str, encoding: str = "utf-8") -> Dict[str, str]:
                 "display_title": "File Read",
                 "line_count": line_count,
                 "total_bytes": total_bytes,
-                "elapsed_time": elapsed
-            }
+                "elapsed_time": elapsed,
+            },
+            record_type="read_file" # Changed from tool_execution, removed display field
         )
 
         console_panel(
