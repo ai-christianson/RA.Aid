@@ -8,3 +8,4 @@ export * from './ProjectStatusTrajectory';
 export * from './ReadFileTrajectory';
 export * from './RipgrepSearchTrajectory'; // Added export
 export * from './ResearchNotesTrajectory';
+export * from './TaskTrajectory'; // Added export for the new component

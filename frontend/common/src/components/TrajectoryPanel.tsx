@@ -9,7 +9,8 @@ import {
   ProjectStatusTrajectory,
   ReadFileTrajectory,
   RipgrepSearchTrajectory, // Import the new component
-  ResearchNotesTrajectory // <-- Import ResearchNotesTrajectory
+  ResearchNotesTrajectory, // <-- Import ResearchNotesTrajectory
+  TaskTrajectory // <-- Import the new TaskTrajectory component
 } from './trajectories';
 import { useTrajectoryStore, useSessionStore } from '../store'; // <-- Import useSessionStore
 import { Trajectory } from '../models/trajectory';
@@ -125,6 +126,9 @@ export const TrajectoryPanel: React.FC<TrajectoryPanelProps> = ({
         return <RipgrepSearchTrajectory key={trajectory.id} trajectory={trajectory} />;
       case 'emit_research_notes': // <-- Add case for emit_research_notes
         return <ResearchNotesTrajectory key={trajectory.id} trajectory={trajectory} />;
+      // Add case for task_display
+      case 'task_display':
+        return <TaskTrajectory key={trajectory.id} trajectory={trajectory} />;
       case 'model_usage': // Hide model usage trajectories
         return null;
       default:
