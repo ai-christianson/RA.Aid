@@ -31,15 +31,15 @@ export const RipgrepSearchTrajectory: React.FC<RipgrepSearchTrajectoryProps> = (
 
   return (
     <Card className="mb-4">
-      <Collapsible defaultOpen={true}>
+      <Collapsible defaultOpen={false}>
         <CollapsibleTrigger asChild>
             <CardHeader className="py-3 px-4 cursor-pointer hover:bg-muted/50">
               <div className="flex justify-between items-center">
                 {/* Left side: Icon and summary */}
-                <div className="flex items-center space-x-3 text-sm font-medium">
+                <div className="flex items-center space-x-3"> {/* Removed text-sm font-medium */}
                   <Search className="h-4 w-4 text-muted-foreground" />
                   <span>
-                      <b>{searchPattern}</b>
+                      Searched for <b>{searchPattern}</b> {/* Added "Searched for " */}
                       {includePaths.length > 0 && (
                           <>
                               <span className="mx-1">in</span>
