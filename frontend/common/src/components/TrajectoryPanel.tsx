@@ -122,6 +122,8 @@ export const TrajectoryPanel: React.FC<TrajectoryPanelProps> = ({
         return <InfoTrajectory key={trajectory.id} trajectory={trajectory} />;
       case 'project_status': // Add case for project_status
         return <ProjectStatusTrajectory key={trajectory.id} trajectory={trajectory} />;
+      case 'model_usage': // Hide model usage trajectories
+        return null;
       default:
         // console.warn("Rendering GenericTrajectory for unknown type:", trajectory.recordType, trajectory);
         return <GenericTrajectory key={trajectory.id} trajectory={trajectory} />;
