@@ -1,4 +1,4 @@
-"""API router for spawning an RA.Aid agent."""
+'''API router for spawning an RA.Aid agent.'''
 
 import threading
 import logging
@@ -37,7 +37,7 @@ router = APIRouter(
 )
 
 class SpawnAgentRequest(BaseModel):
-    """
+    '''
     Pydantic model for agent spawn requests.
 
     This model provides validation for spawning a new agent.
@@ -45,7 +45,7 @@ class SpawnAgentRequest(BaseModel):
     Attributes:
         message: The message or task for the agent to process
         research_only: Whether to use research-only mode (default: False)
-    """
+    '''
     message: str = Field(
         description="The message or task for the agent to process"
     )
@@ -55,14 +55,14 @@ class SpawnAgentRequest(BaseModel):
     )
 
 class SpawnAgentResponse(BaseModel):
-    """
+    '''
     Pydantic model for agent spawn responses.
 
     This model defines the response format for the spawn-agent endpoint.
 
     Attributes:
         session_id: The ID of the created session
-    """
+    '''
     session_id: int = Field(
         description="The ID of the created session"
     )
@@ -74,7 +74,7 @@ def run_agent_thread(
     research_only: bool = False,
     **kwargs
 ):
-    """
+    '''
     Run a research agent in a separate thread with proper repository initialization.
 
     Args:
@@ -86,7 +86,7 @@ def run_agent_thread(
     Note:
         Values for expert_enabled and web_research_enabled are retrieved from the
         config repository, which stores the values set during server startup.
-    """
+    '''
     logger = logging.getLogger(__name__)
     # Log entry point information
     logger.info(f"Initializing agent thread for session_id={session_id} (int), research_only={research_only}")
@@ -169,19 +169,43 @@ def run_agent_thread(
             logger.debug(f"Set and retrieved thread_id='{thread_id_str}' from config for session_id={session_id}")
 
             # Create a human input record with the message and associate it with the session
+            human_input_id = None # Initialize variable
             try:
                 # Log session_id before creation
                 logger.debug(f"Creating human input record for session_id={session_id} (int)")
                 # Using the repo from the context manager directly
-                human_input_repo.create(
+                human_input_record = human_input_repo.create(
                     content=message,
                     source="server",
                     session_id=session_id # Pass integer session_id
                 )
-                logger.debug(f"Created human input record for session {session_id}")
+                human_input_id = human_input_record.id # Store the ID
+                logger.debug(f"Created human input record for session {session_id} with ID {human_input_id}")
             except Exception as e:
                 # Log error but don't stop the agent thread
                 logger.error(f"Failed to create human input record for session {session_id}: {str(e)}")
+
+            # --- > Add Stage Transition Trajectory <--- START
+            if human_input_id: # Only proceed if human input was created successfully
+                try:
+                    logger.debug(f"Creating stage_transition trajectory record for session {session_id}, human_input_id {human_input_id}.")
+                    trajectory_repo.create(
+                        session_id=session_id,
+                        human_input_id=human_input_id,
+                        record_type="stage_transition",
+                        step_data={"stage": "research_stage", "display_title": "Research Stage"},
+                        tool_name=None,
+                        tool_parameters=None,
+                        tool_result=None,
+                        prompt_tokens=None,  # Stage transitions don't involve LLM calls directly
+                        response_tokens=None,
+                    )
+                    logger.info(f"Created research stage transition trajectory for session {session_id}.")
+                except Exception as e:
+                    logger.exception(f"Error creating stage transition trajectory for session {session_id}: {e}")
+            else:
+                logger.warning(f"Skipping stage transition trajectory creation for session {session_id} due to missing human_input_id.")
+            # --- > Add Stage Transition Trajectory <--- END
 
             # --- > Agent Execution Logic <--- START
             # Log parameters before calling run_research_agent
@@ -237,7 +261,7 @@ async def spawn_agent(
     request: SpawnAgentRequest,
     repo: SessionRepository = Depends(get_session_repository),
 ) -> SpawnAgentResponse:
-    """
+    '''
     Spawn a new RA.Aid agent to process a message or task.
 
     Args:
@@ -249,7 +273,7 @@ async def spawn_agent(
 
     Raises:
         HTTPException: With a 500 status code if there's an error spawning the agent
-    """
+    '''
     try:
         # Get configuration values from config repository
         config_repo = get_config_repository()
