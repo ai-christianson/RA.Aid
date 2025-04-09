@@ -1,9 +1,10 @@
 import React from 'react';
 import { Trajectory } from '../../models/trajectory'; // Corrected relative path
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Card, CardContent, CardHeader } from '../ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
 import { Badge } from '../ui/badge';
 import { ScrollArea } from '../ui/scroll-area';
+import { Search } from 'lucide-react'; // Import an icon if desired
 
 interface FuzzyFindStepData {
   search_term: string;
@@ -30,15 +31,32 @@ export const FuzzyFindTrajectory: React.FC<FuzzyFindTrajectoryProps> = ({ trajec
   const isError = !!stepData?.error_message;
   const title = stepData?.display_title || (isError ? 'Fuzzy Find Error' : 'Fuzzy Find Results');
   const searchTerm = stepData?.search_term || 'N/A';
+  const formattedTime = new Date(trajectory.created).toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 
   return (
     <Card className="mb-4">
       <Collapsible defaultOpen={true}>
         <CollapsibleTrigger asChild>
-          <CardHeader className="cursor-pointer p-4 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-t-lg">
-            <CardTitle className="text-lg font-medium">
-              {title}: <span className="font-mono text-sm bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded">{searchTerm}</span>
-            </CardTitle>
+          {/* Updated Header: Padding changed, hover removed, flex layout added, CardTitle replaced with span, timestamp added */}
+          <CardHeader className="py-3 px-4 cursor-pointer rounded-t-lg">
+            <div className="flex justify-between items-center">
+              {/* Left side: Icon and Title */}
+              <div className="flex items-center space-x-3">
+                 <Search className="h-4 w-4 text-muted-foreground" /> {/* Optional: Added Search icon */}
+                <span>
+                  {title}: <span className="font-mono text-sm bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded">{searchTerm}</span>
+                </span>
+              </div>
+              {/* Right side: Timestamp */}
+              <div className="flex items-center space-x-2">
+                <div className="text-xs text-muted-foreground">
+                  {formattedTime}
+                </div>
+              </div>
+            </div>
           </CardHeader>
         </CollapsibleTrigger>
         <CollapsibleContent>
@@ -51,7 +69,7 @@ export const FuzzyFindTrajectory: React.FC<FuzzyFindTrajectoryProps> = ({ trajec
             ) : (
               <div>
                 <div className="mb-3 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                  {/* Search Parameters - Add more as needed from stepData */}
+                  {/* Search Parameters */}
                   {stepData?.threshold !== undefined && (
                     <p><strong>Threshold:</strong> {stepData.threshold}</p>
                   )}
@@ -61,7 +79,7 @@ export const FuzzyFindTrajectory: React.FC<FuzzyFindTrajectoryProps> = ({ trajec
                    {stepData?.include_hidden !== undefined && (
                      <p><strong>Include Hidden:</strong> {stepData.include_hidden ? 'Yes' : 'No'}</p>
                   )}
-                   {/* Add include_paths and exclude_patterns if they are included in stepData */}
+                   {/* Add include_paths and exclude_patterns if needed */}
                 </div>
 
                 {/* Result Statistics */}
