@@ -18,15 +18,15 @@ interface ResearchNotesTrajectoryProps {
 export const ResearchNotesTrajectory: React.FC<ResearchNotesTrajectoryProps> = ({ trajectory }) => {
   const { toolParameters, created } = trajectory;
   const notes = toolParameters?.notes ?? '(No research notes)';
-  const [isOpen, setIsOpen] = React.useState(false);
+  // Set initial state to true so the collapsible is open by default
+  const [isOpen, setIsOpen] = React.useState(true);
 
   // Format timestamp
   const formattedTime = created
     ? new Date(created).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     : 'Invalid Date';
 
-  // Extract the first line or a title if available (e.g., from a heading)
-  const firstLine = notes.split('\n')[0].replace(/^#+\s*/, '') || 'Research Note';
+  // Removed firstLine calculation, using static title now
 
   return (
     <Card className="mb-4">
@@ -37,7 +37,8 @@ export const ResearchNotesTrajectory: React.FC<ResearchNotesTrajectoryProps> = (
               {/* Left side: Icon and summary */}
               <div className="flex items-center space-x-3">
                 <BookText className="h-4 w-4 text-muted-foreground" />
-                <span>{firstLine}</span>
+                {/* Use static title */}
+                <span>Research Notes</span>
               </div>
               {/* Right side: Timestamp and Chevron */}
               <div className="flex items-center space-x-2">
