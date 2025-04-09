@@ -1,11 +1,8 @@
 // Entry point for @ra-aid/common package
 import './styles/global.css';
 
-// Export types first to avoid circular references
-export * from './utils/types';
-
 // Export utility functions
-export * from './utils';
+export * from './utils'; // Includes cn
 
 // Export UI components
 export * from './components/ui';
@@ -21,6 +18,7 @@ export * from './components/trajectories';
 // Export session navigation components
 export * from './components/SessionDrawer';
 export * from './components/SessionSidebar';
+export * from './components/SessionList'; // Export SessionList as it's used directly
 
 // Export main screens
 export * from './components/DefaultAgentScreen';
@@ -31,17 +29,19 @@ export * from './store';
 // Export models
 export * from './models/session';
 export * from './models/trajectory';
+export * from './models/clientConfig'; // Added export for client config model
 
 // Export WebSocket connection management
-export * from './websocket/connection'; // Added export
+export * from './websocket/connection';
 
 // Export the hello function (temporary example)
 export const hello = (): void => {
   console.log("Hello from @ra-aid/common");
 };
 
-// Directly export sample data functions
-export { 
-  getSampleAgentSteps, 
-  getSampleAgentSessions
-} from './utils/sample-data';
+// Directly export sample data functions (if needed, but likely not for consumers)
+// Consider removing if not used externally
+// export { 
+//   getSampleAgentSteps, 
+//   getSampleAgentSessions
+// } from './utils/sample-data';

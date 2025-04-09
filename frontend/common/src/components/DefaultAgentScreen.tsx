@@ -22,7 +22,7 @@ import { Trajectory, safeBackendToTrajectory, BackendTrajectory } from '../model
 import { WebSocketConnection, WebSocketConfig } from '../websocket/connection';
 import logoBlack from '../assets/logo-black-transparent.png';
 import logoWhite from '../assets/logo-white-transparent.gif';
-import { SessionStatus } from '../models/session'; // <-- Import SessionStatus
+import { AgentSession, SessionStatus } from '../models/session'; // <-- Import AgentSession and SessionStatus
 
 /**
  * DefaultAgentScreen component
@@ -65,12 +65,15 @@ export const DefaultAgentScreen: React.FC = () => {
       }
     } else if (messageData.type === 'session_update' && messageData.payload) { // <-- Add handler for session_update
       console.log('[DefaultAgentScreen] Received session_update message:', messageData.payload);
-      const sessionPayload = messageData.payload as { id: number; status: string /* other fields */ }; // <-- Change id type to number
+      // Expecting id: number, status: SessionStatus
+      const sessionPayload = messageData.payload as { id: number; status: string /* other fields */ };
       // Basic validation for status before calling store
-      if (sessionPayload.id && sessionPayload.status && ['pending', 'running', 'completed', 'error'].includes(sessionPayload.status)) {
+      if (
+        sessionPayload.id && typeof sessionPayload.id === 'number' &&
+        sessionPayload.status && ['pending', 'running', 'completed', 'error'].includes(sessionPayload.status)
+      ) {
          console.log(`[DefaultAgentScreen] Processing session_update for ${sessionPayload.id} with status ${sessionPayload.status}`)
-         // Ensure ID is passed as number as expected by the store
-         updateSessionStatus(sessionPayload.id, sessionPayload.status as SessionStatus); // <-- Remove String() conversion
+         updateSessionStatus(sessionPayload.id, sessionPayload.status as SessionStatus);
       } else {
          console.warn("[DefaultAgentScreen] Received invalid session_update payload:", sessionPayload);
       }
@@ -106,11 +109,7 @@ export const DefaultAgentScreen: React.FC = () => {
         wsConnectionRef.current = null;
       }
     };
-  // }, [host, port, handleWebSocketMessage]); // Reconnect if host/port changes, recreate if handler changes
-  // NOTE: Including handleWebSocketMessage might cause excessive reconnects if it's redefined often.
-  // Let's only depend on host and port for reconnection, but keep the handler up-to-date via ref or ensure stability.
-  // Using useCallback above helps ensure stability if dependencies are correct.
-  }, [host, port, handleWebSocketMessage]); // <-- Keep handleWebSocketMessage if stable via useCallback
+  }, [host, port, handleWebSocketMessage]); // Reconnect if host/port changes
 
   // Handle message submission for existing sessions
   const handleSubmit = async (message: string) => {
@@ -140,9 +139,8 @@ export const DefaultAgentScreen: React.FC = () => {
     newSession,
     startNewSession,
     cancelNewSession,
-    updateNewSessionMessage, // Likely remove if using InputSection state
-    submitNewSession // Likely trigger via WebSocket in InputSection
-    // updateSessionStatus is already obtained above
+    updateNewSessionMessage,
+    submitNewSession
   } = useSessionStore();
 
   // Fetch initial sessions on component mount
@@ -167,8 +165,8 @@ export const DefaultAgentScreen: React.FC = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, [isDrawerOpen]);
 
-  // Handle session selection
-  const handleSessionSelect = (sessionId: string) => {
+  // Handle session selection - Accepts number
+  const handleSessionSelect = (sessionId: number) => {
     selectSession(sessionId);
     setIsDrawerOpen(false); // Close drawer on selection (mobile)
   };
@@ -223,8 +221,8 @@ export const DefaultAgentScreen: React.FC = () => {
     <div className="h-full flex flex-col p-4">
       <SessionList
         sessions={sessions}
-        onSelectSession={handleSessionSelect}
-        currentSessionId={selectedSessionId || undefined}
+        onSelectSession={handleSessionSelect} // Pass handleSessionSelect (now expects number)
+        currentSessionId={selectedSessionId} // Pass number | null
         className="flex-1 pr-1 -mr-1"
         isLoading={isLoading}
         error={error}
@@ -237,15 +235,15 @@ export const DefaultAgentScreen: React.FC = () => {
   const drawerContent = (
     <SessionDrawer
       sessions={sessions}
-      currentSessionId={selectedSessionId || undefined}
-      onSelectSession={handleSessionSelect}
+      currentSessionId={selectedSessionId} // Pass number | null
+      onSelectSession={handleSessionSelect} // Pass handleSessionSelect (now expects number)
       isOpen={isDrawerOpen}
       onClose={() => setIsDrawerOpen(false)}
     />
   );
 
   // Render main content based on the state
-  const mainContent = selectedSessionId ? (
+  const mainContent = selectedSessionId !== null ? (
     // Existing session view
     <div className="flex flex-col h-full w-full">
       <div className="flex-1 overflow-auto w-full">
@@ -255,11 +253,13 @@ export const DefaultAgentScreen: React.FC = () => {
         </div>
         {/* Trajectory panel with consistent spacing */}
         <TrajectoryPanel
-          sessionId={selectedSessionId}
+          sessionId={selectedSessionId} // Pass number | null
           addBottomPadding={true}
           customClassName="px-6 pt-3 pb-4" // Reduced top padding to minimize gap
         />
       </div>
+      {/* Input section for existing session (if needed) */}
+      {/* <InputSection onSubmit={handleSubmit} /> */}
     </div>
   ) : newSession ? (
     // New session composition view

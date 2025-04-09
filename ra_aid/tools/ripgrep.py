@@ -1,3 +1,4 @@
+
 from typing import Dict, List, Union, Optional
 
 from langchain_core.tools import tool
@@ -103,7 +104,7 @@ def ripgrep_search(
         fixed_string: Whether to treat pattern as a literal string instead of regex (default: False)
     """
     # Build rg command with options
-    cmd = ["rg", "--color", "always"]
+    cmd = ["rg", "--color", "always"] # Use '--color always' to capture colors
 
     if before_context_lines is not None:
         cmd.extend(["-B", str(before_context_lines)])
@@ -143,63 +144,40 @@ def ripgrep_search(
     if include_paths:
         cmd.extend(include_paths)
 
-    # Build info string for display
-    info_lines = []
-
-    # Search parameters section
-    params = [
-        "## Search Parameters",
-        f"**Pattern**: `{pattern}`",
-        f"**Case Sensitive**: {case_sensitive}",
-        f"**File Type**: {file_type or 'all'}",
-        f"**Fixed String**: {fixed_string}",
-    ]
-    if before_context_lines is not None:
-        params.append(f"**Before Context Lines**: {before_context_lines}")
-    if after_context_lines is not None:
-        params.append(f"**After Context Lines**: {after_context_lines}")
-
-    if include_hidden:
-        params.append("**Including Hidden Files**: yes")
-    if follow_links:
-        params.append("**Following Symlinks**: yes")
-    if exclude_dirs:
-        params.append("\n**Additional Exclusions**:")
-        for dir in exclude_dirs:
-            params.append(f"- `{dir}`")
-    # Use \n for Markdown line breaks
-    if include_paths:
-        params.append("\n**Included Paths**:") # Corrected newline
-        for path in include_paths:
-            params.append(f"- `{path}`")
-    info_lines.append("\n".join(params)) # Corrected newline join
-
-    # Execute command
-    # Record ripgrep search in trajectory
+    # --- Prepare Trajectory Data ---
     trajectory_repo = get_trajectory_repository()
     human_input_id = get_human_input_repository().get_most_recent_id()
-    trajectory_repo.create(
-        tool_name="ripgrep_search",
-        tool_parameters={
-            "pattern": pattern,
-            "before_context_lines": before_context_lines,
-            "after_context_lines": after_context_lines,
-            "file_type": file_type,
-            "case_sensitive": case_sensitive,
-            "include_hidden": include_hidden,
-            "follow_links": follow_links,
-            "exclude_dirs": exclude_dirs,
-            "include_paths": include_paths,
-            "fixed_string": fixed_string
-        },
-        step_data={
-            "search_pattern": pattern,
-            "display_title": "Ripgrep Search",
-        },
-        record_type="tool_execution",
-        human_input_id=human_input_id
-    )
 
+    tool_parameters = {
+        "pattern": pattern,
+        "before_context_lines": before_context_lines,
+        "after_context_lines": after_context_lines,
+        "file_type": file_type,
+        "case_sensitive": case_sensitive,
+        "include_hidden": include_hidden,
+        "follow_links": follow_links,
+        "exclude_dirs": exclude_dirs,
+        "include_paths": include_paths,
+        "fixed_string": fixed_string
+    }
+    step_data = {
+        "search_pattern": pattern,
+        "include_paths": include_paths,
+        "file_type": file_type,
+        "case_sensitive": case_sensitive,
+        "fixed_string": fixed_string,
+        "before_context_lines": before_context_lines,
+        "after_context_lines": after_context_lines,
+    }
+    # ----------------------------------
+
+    # Variables to store final results for trajectory and agent return
+    final_output = ""
+    final_return_code = 1 # Default to error
+    final_success = False
+    agent_return_value = {}
+
+    # --- Execute Command ---
     cpm(
         f"Searching for: **{pattern}**{' in ' + ', '.join(include_paths) if include_paths else ''}",
         title="🔎 Ripgrep Search",
@@ -209,40 +187,58 @@ def ripgrep_search(
         print()
         output, return_code = run_interactive_command(cmd)
         print()
-        decoded_output = output.decode() if output else ""
+        decoded_output = output.decode('utf-8', errors='replace') if output else "" # Ensure decoding
 
-        # Update trajectory with results
-        trajectory_repo.create(
-            tool_name="ripgrep_search",
-            tool_parameters={"pattern": pattern, "after_context_lines": after_context_lines, "before_context_lines": before_context_lines},
-            tool_result={"output": truncate_output(decoded_output), "return_code": return_code, "success": return_code == 0}
-        )
+        final_output = decoded_output # Store full output for trajectory
+        final_return_code = return_code
+        final_success = (return_code == 0)
+
+        # Prepare return value for agent (potentially truncated)
+        truncated_output_for_agent = truncate_output(decoded_output)
 
         if return_code != 0:
-            # Only show the panel if there's actual output
+            # Show error panel only if there's actual output content
             if decoded_output and decoded_output.strip():
-                console_panel(truncate_output(decoded_output), title="🚨 Error", border_style="red")
-            # Always return failure on non-zero exit code
-            return {"output": truncate_output(decoded_output), "return_code": return_code, "success": False}
-
-        return {
-            "output": truncate_output(decoded_output),
-            "return_code": return_code,
-            "success": return_code == 0,
-        }
+                 console_panel(truncated_output_for_agent, title="🚨 Search Error", border_style="red")
+            agent_return_value = {"output": truncated_output_for_agent, "return_code": return_code, "success": False}
+        else:
+            # Even if successful, output might be empty (no matches)
+            if not (decoded_output and decoded_output.strip()):
+                 console_panel("[grey50](No matches found)[/]", title="✅ Search Complete", border_style="green", style="italic")
+            agent_return_value = {"output": truncated_output_for_agent, "return_code": return_code, "success": True}
 
     except Exception as e:
+        # Handle exceptions during command execution (e.g., command not found)
         error_msg = str(e)
+        # Try to get return code from exception if available
+        final_return_code = getattr(e, 'returncode', 1)
+        final_output = error_msg # Store error message for trajectory
+        final_success = False
 
-        # Record error in trajectory
+        console_panel(error_msg, title="❌ Command Error", border_style="red")
+        agent_return_value = {"output": error_msg, "return_code": final_return_code, "success": False}
+    # ------------------------
+
+    # --- Record Trajectory (Single Call) ---
+    # Always record, regardless of success, failure, or exception
+    tool_result_for_trajectory = {
+        "output": final_output, # Use the full, non-truncated output/error
+        "return_code": final_return_code,
+        "success": final_success
+    }
+    try:
         trajectory_repo.create(
             tool_name="ripgrep_search",
-            tool_parameters={"pattern": pattern, "after_context_lines": after_context_lines, "before_context_lines": before_context_lines},
-            tool_result={"output": error_msg, "return_code": 1, "success": False},
-            is_error=True,
-            error_message=error_msg,
-            error_type=type(e).__name__
+            tool_parameters=tool_parameters,
+            step_data=step_data, # Include search parameters for display
+            tool_result=tool_result_for_trajectory, # Include full results
+            record_type="ripgrep_search", # Use specific record type
+            human_input_id=human_input_id
         )
+    except Exception as trajectory_error:
+        # Log or handle trajectory recording errors if necessary, but don't crash the tool
+        print(f"Warning: Failed to record ripgrep trajectory: {trajectory_error}")
+    # ---------------------------------------
 
-        console_panel(error_msg, title="❌ Error", border_style="red")
-        return {"output": error_msg, "return_code": 1, "success": False}
+    # Return the agent-facing result (potentially truncated)
+    return agent_return_value
