@@ -1,70 +1,107 @@
+
 import React from 'react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
-import { AgentStep } from '../utils/types';
+import { Trajectory } from '../models/trajectory';
+import { TaskCompletedTrajectory } from './trajectories/TaskCompletedTrajectory';
+import { PlanCompletedTrajectory } from './trajectories/PlanCompletedTrajectory';
+// Import other specific trajectory components if needed
+// import { GenericTrajectory } from './trajectories/GenericTrajectory'; 
+// import { ToolExecutionTrajectory } from './trajectories/ToolExecutionTrajectory'; 
 
 interface TimelineStepProps {
-  step: AgentStep;
+  trajectory: Trajectory;
 }
 
-export const TimelineStep: React.FC<TimelineStepProps> = ({ step }) => {
-  // Get status color
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return 'bg-green-500';
-      case 'in-progress':
-        return 'bg-blue-500';
-      case 'error':
-        return 'bg-red-500';
-      case 'pending':
-        return 'bg-yellow-500';
-      default:
-        return 'bg-gray-500';
-    }
-  };
+export const TimelineStep: React.FC<TimelineStepProps> = ({ trajectory }) => {
 
-  // Get icon based on step type
+  // Render specific components for certain record types
+  if (trajectory.record_type === 'task_completion') {
+    return <TaskCompletedTrajectory trajectory={trajectory} />;
+  }
+  if (trajectory.record_type === 'plan_completion') {
+    return <PlanCompletedTrajectory trajectory={trajectory} />;
+  }
+
+  // --- Fallback rendering for other record types using the original structure ---
+
+  // Get icon based on record type (adjust as needed)
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'tool-execution':
+      case 'tool_execution':
         return '🛠️';
       case 'thinking':
         return '💭';
-      case 'planning':
+      case 'planning': // Assuming a planning stage might exist
         return '📝';
-      case 'implementation':
+      case 'implementation': // Assuming an implementation stage
         return '💻';
-      case 'user-input':
+      case 'user_input':
         return '👤';
+      case 'stage_transition':
+          return '🔄';
+      case 'key_fact':
+        return '🔑';
+      case 'key_snippet':
+        return '📄';
+      case 'research_note':
+        return '🔍';
       default:
-        return '▶️';
+        return '▶️'; // Generic/Unknown
     }
   };
 
   // Format timestamp
-  const formatTime = (timestamp: Date) => {
-    return timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const formatTime = (timestamp: string) => {
+    // Assuming timestamp is an ISO string like "2023-10-27T10:30:00.123Z"
+    try {
+      return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch (e) {
+      return 'Invalid Date';
+    }
   };
+
+  // Try to get a sensible title
+  const getTitle = () => {
+    return trajectory.step_data?.display_title || trajectory.record_type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  // Try to get a preview content
+  const getContentPreview = () => {
+    if (trajectory.record_type === 'thinking' && trajectory.step_data?.thought) {
+      return trajectory.step_data.thought;
+    } 
+    // Add more specific previews if needed
+    return JSON.stringify(trajectory.step_data).substring(0, 100);
+  };
+
+  // Get full content for collapsible section
+  const getFullContent = () => {
+      // Provide more structured content based on type if needed
+      // For now, just stringify step_data
+      return <pre className="whitespace-pre-wrap break-all">{JSON.stringify(trajectory.step_data, null, 2)}</pre>;
+  }
+
+  // Status indicator removed as Trajectory doesn't have a direct status field
 
   return (
     <Collapsible className="w-full mb-5 border border-border rounded-md overflow-hidden shadow-sm hover:shadow-md transition-all duration-200">
       <CollapsibleTrigger className="w-full flex items-center justify-between p-4 text-left hover:bg-accent/30 cursor-pointer group">
         <div className="flex items-center space-x-3 min-w-0 flex-1 pr-3">
-          <div className={`flex-shrink-0 w-3 h-3 rounded-full ${getStatusColor(step.status)} ring-1 ring-ring/20`} />
-          <div className="flex-shrink-0 text-lg group-hover:scale-110 transition-transform">{getTypeIcon(step.type)}</div>
+          {/* Status indicator removed */}
+          <div className="flex-shrink-0 text-lg group-hover:scale-110 transition-transform">{getTypeIcon(trajectory.record_type)}</div>
           <div className="min-w-0 flex-1">
-            <div className="font-medium text-foreground break-words">{step.title}</div>
+            <div className="font-medium text-foreground break-words">{getTitle()}</div>
             <div className="text-sm text-muted-foreground line-clamp-2">
-              {step.type === 'tool-execution' ? 'Run tool' : step.content.substring(0, 60)}
-              {step.content.length > 60 ? '...' : ''}
+              {getContentPreview()}
+              {(getContentPreview()?.length ?? 0) > 100 ? '...' : ''}
             </div>
           </div>
         </div>
         <div className="text-xs text-muted-foreground flex flex-col items-end flex-shrink-0 min-w-[70px] text-right">
-          <span className="font-medium">{formatTime(step.timestamp)}</span>
-          {step.duration && (
+          <span className="font-medium">{formatTime(trajectory.created)}</span>
+          {trajectory.duration_ms != null && (
             <span className="mt-1 px-2 py-0.5 bg-secondary/50 rounded-full">
-              {(step.duration / 1000).toFixed(1)}s
+              {(trajectory.duration_ms / 1000).toFixed(1)}s
             </span>
           )}
         </div>
@@ -72,9 +109,9 @@ export const TimelineStep: React.FC<TimelineStepProps> = ({ step }) => {
       <CollapsibleContent>
         <div className="p-5 bg-card/50 border-t border-border">
           <div className="text-sm break-words text-foreground leading-relaxed">
-            {step.content}
+            {getFullContent()}
           </div>
-          {step.duration && (
+          {trajectory.duration_ms != null && (
             <div className="mt-4 pt-3 border-t border-border/50">
               <div className="text-xs text-muted-foreground flex items-center">
                 <svg 
@@ -88,7 +125,7 @@ export const TimelineStep: React.FC<TimelineStepProps> = ({ step }) => {
                   <circle cx="12" cy="12" r="10" />
                   <polyline points="12 6 12 12 16 14" />
                 </svg>
-                Duration: {(step.duration / 1000).toFixed(1)} seconds
+                Duration: {(trajectory.duration_ms / 1000).toFixed(1)} seconds
               </div>
             </div>
           )}
