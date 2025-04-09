@@ -4,7 +4,8 @@ import {
   MemoryOperationTrajectory,
   StageTransitionTrajectory,
   InfoTrajectory,
-  GenericTrajectory
+  GenericTrajectory,
+  ProjectStatusTrajectory // Import the new component
 } from './trajectories';
 import { useTrajectoryStore, useSessionStore } from '../store'; // <-- Import useSessionStore
 import { Trajectory } from '../models/trajectory';
@@ -119,6 +120,8 @@ export const TrajectoryPanel: React.FC<TrajectoryPanelProps> = ({
         return <StageTransitionTrajectory key={trajectory.id} trajectory={trajectory} />;
       case 'info':
         return <InfoTrajectory key={trajectory.id} trajectory={trajectory} />;
+      case 'project_status': // Add case for project_status
+        return <ProjectStatusTrajectory key={trajectory.id} trajectory={trajectory} />;
       default:
         // console.warn("Rendering GenericTrajectory for unknown type:", trajectory.recordType, trajectory);
         return <GenericTrajectory key={trajectory.id} trajectory={trajectory} />;

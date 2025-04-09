@@ -142,7 +142,7 @@ def display_project_status(info: ProjectInfo) -> None:
                 "total_files": info.total_files,
                 "display_title": "Project Status",
             },
-            record_type="info",
+            record_type="project_status",
             human_input_id=human_input_id,
         )
     except Exception as e:
