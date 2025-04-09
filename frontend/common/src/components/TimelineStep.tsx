@@ -52,23 +52,23 @@ export const TimelineStep: React.FC<TimelineStepProps> = ({ trajectory }) => {
 
   // Try to get a sensible title
   const getTitle = () => {
-    return trajectory.step_data?.display_title || trajectory.recordType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    return trajectory.stepData?.display_title || trajectory.recordType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
   // Try to get a preview content
   const getContentPreview = () => {
-    if (trajectory.recordType === 'thinking' && trajectory.step_data?.thought) {
-      return trajectory.step_data.thought;
+    if (trajectory.recordType === 'thinking' && trajectory.stepData?.thought) {
+      return trajectory.stepData.thought;
     } 
     // Add more specific previews if needed
-    return JSON.stringify(trajectory.step_data).substring(0, 100);
+    return JSON.stringify(trajectory.stepData).substring(0, 100);
   };
 
   // Get full content for collapsible section
   const getFullContent = () => {
       // Provide more structured content based on type if needed
       // For now, just stringify step_data
-      return <pre className="whitespace-pre-wrap break-all">{JSON.stringify(trajectory.step_data, null, 2)}</pre>;
+      return <pre className="whitespace-pre-wrap break-all">{JSON.stringify(trajectory.stepData, null, 2)}</pre>;
   }
 
   // Status indicator removed as Trajectory doesn't have a direct status field
@@ -89,9 +89,9 @@ export const TimelineStep: React.FC<TimelineStepProps> = ({ trajectory }) => {
         </div>
         <div className="text-xs text-muted-foreground flex flex-col items-end flex-shrink-0 min-w-[70px] text-right">
           <span className="font-medium">{formatTime(trajectory.created)}</span>
-          {trajectory.duration_ms != null && (
+          {trajectory.durationMs != null && (
             <span className="mt-1 px-2 py-0.5 bg-secondary/50 rounded-full">
-              {(trajectory.duration_ms / 1000).toFixed(1)}s
+              {(trajectory.durationMs / 1000).toFixed(1)}s
             </span>
           )}
         </div>
@@ -101,7 +101,7 @@ export const TimelineStep: React.FC<TimelineStepProps> = ({ trajectory }) => {
           <div className="text-sm break-words text-foreground leading-relaxed">
             {getFullContent()}
           </div>
-          {trajectory.duration_ms != null && (
+          {trajectory.durationMs != null && (
             <div className="mt-4 pt-3 border-t border-border/50">
               <div className="text-xs text-muted-foreground flex items-center">
                 <svg 
@@ -115,7 +115,7 @@ export const TimelineStep: React.FC<TimelineStepProps> = ({ trajectory }) => {
                   <circle cx="12" cy="12" r="10" />
                   <polyline points="12 6 12 12 16 14" />
                 </svg>
-                Duration: {(trajectory.duration_ms / 1000).toFixed(1)} seconds
+                Duration: {(trajectory.durationMs / 1000).toFixed(1)} seconds
               </div>
             </div>
           )}
