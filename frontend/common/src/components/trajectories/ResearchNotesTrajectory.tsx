@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { BookText, ChevronDown, ChevronUp } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
+import ReactMarkdown, { Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 // Using a common style, adjust if needed
@@ -26,7 +26,36 @@ export const ResearchNotesTrajectory: React.FC<ResearchNotesTrajectoryProps> = (
     ? new Date(created).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     : 'Invalid Date';
 
-  // Removed firstLine calculation, using static title now
+  // Custom components for ReactMarkdown
+  const components: Components = {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      code({ className, children, ...props }) { // Removed node and inline destructuring
+        const match = /language-(\w+)/.exec(className || '');
+        const codeString = String(children).replace(/\n$/, ''); // Ensure children is a string
+
+        // Check only for match to determine if it's a highlighted block
+        if (match) {
+          // For block code with language
+          return (
+            <SyntaxHighlighter
+              style={vscDarkPlus}
+              language={match[1]}
+              PreTag="div"
+            >
+              {codeString}
+            </SyntaxHighlighter>
+          );
+        } else {
+          // For inline code or block code without language
+          return (
+            <code className={className}>
+              {children}
+            </code>
+          );
+        }
+      },
+    }
+
 
   return (
     <Card className="mb-4">
@@ -61,29 +90,7 @@ export const ResearchNotesTrajectory: React.FC<ResearchNotesTrajectoryProps> = (
               <ReactMarkdown
                 // className prop removed from ReactMarkdown component itself
                 remarkPlugins={[remarkGfm]}
-                components={{
-                  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                  code({ node, inline, className, children, ...props }) {
-                    const match = /language-(\w+)/.exec(className || '');
-                    return !inline && match ? (
-                      <SyntaxHighlighter
-                        {...props}
-                        style={vscDarkPlus} // Use the imported style
-                        language={match[1]}
-                        PreTag="div"
-                      >
-                        {String(children).replace(/\n$/, '')}
-                      </SyntaxHighlighter>
-                    ) : (
-                      // For inline code or code blocks without a language, DO NOT pass the className prop
-                      // to the native <code> element as react-markdown v9+ might handle it differently
-                      // or throw an error. The outer div's prose class handles basic code styling.
-                      <code {...props}>
-                        {children}
-                      </code>
-                    );
-                  },
-                }}
+                components={components} // Use the defined custom components
               >
                 {notes}
               </ReactMarkdown>
