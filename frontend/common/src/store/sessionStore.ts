@@ -10,8 +10,6 @@
  */
 
 import { create } from 'zustand';
-// Remove AgentSession import from utils/types, use the one from models
-// import { AgentSession as UtilAgentSession } from '../utils/types';
 import { getSampleAgentSessions } from '../utils/sample-data';
 import {
   AgentSession, // Import the updated interface
@@ -162,19 +160,22 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
     } catch (error) {
       console.error('Error fetching sessions:', error);
       // TODO: Update sample data generation if necessary to include status and number ID
-      const sampleSessions = getSampleAgentSessions().map(s => ({
-          ...s,
-          id: parseInt(s.id.replace('sample-',''), 10), // Convert sample string ID to number
-          status: 'unknown' as SessionStatus, // Add default status to sample data
-          commandLine: 'Sample Command', // Add missing fields if needed
-          createdAt: s.created,
-          updatedAt: s.updated,
-      }));
+      // Note: Sample data generation is now problematic due to type mismatches.
+      // Consider removing sample data fallback or creating a compatible sample generator.
+      // For now, let's return an empty array on fetch error.
+      // const sampleSessions = getSampleAgentSessions().map(s => ({
+      //     ...s,
+      //     id: parseInt(s.id.replace('sample-',''), 10), // Convert sample string ID to number
+      //     status: 'unknown' as SessionStatus, // Add default status to sample data
+      //     commandLine: 'Sample Command', // Add missing fields if needed
+      //     createdAt: s.created,
+      //     updatedAt: s.updated,
+      // }));
       set({
         error: error instanceof Error ? error.message : 'Failed to fetch sessions',
         isLoading: false,
-        // Fallback to sample data on error
-        sessions: sampleSessions // Use updated sample sessions
+        // Fallback to empty array on error instead of potentially incompatible sample data
+        sessions: []
       });
     }
   },
@@ -195,20 +196,24 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
    * Note: This creates a local-only session object. Real sessions are created via submitNewSession.
    */
   createSession: async (sessionData: Partial<AgentSession>) => {
-    // Generate default session object matching the AgentSession interface
     const now = new Date();
     // Use a temporary negative ID for local-only sessions to avoid collision with backend IDs
     const tempId = -Date.now();
+
+    // Define default values for an AgentSession
+    const defaults = {
+      name: 'New Optimistic Session',
+      commandLine: 'N/A',
+      createdAt: now,
+      updatedAt: now,
+      status: 'pending' as SessionStatus,
+    };
+
+    // Construct the new session ensuring the temporary ID is used
     const newSession: AgentSession = {
-      id: tempId,
-      name: sessionData.name || 'New Optimistic Session',
-      commandLine: sessionData.commandLine || 'N/A',
-      createdAt: sessionData.createdAt || now,
-      updatedAt: sessionData.updatedAt || now,
-      status: sessionData.status || 'pending', // Default to pending status
-      // Merging provided data, ensuring required fields have defaults
-      ...sessionData,
-      id: tempId, // Ensure ID is the temporary one
+      ...defaults,
+      ...sessionData, // Apply overrides from sessionData
+      id: tempId, // Ensure ID is always the tempId, overriding any ID in sessionData
     };
 
     // No backend call here, just update local state optimistically
@@ -300,12 +305,18 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
         research_only: researchOnly
       }); // Assuming spawnAgent returns { session_id: number, ... }
 
+      // Validate the session_id from the response
+      if (typeof data?.session_id !== 'number') {
+        throw new Error('Invalid response from spawnAgent: missing or invalid session_id');
+      }
+      const newSessionId: number = data.session_id;
+
       // Refresh the sessions to get the newly created one with its status
       await get().fetchSessions();
 
-      // Select the new session using the ID from the API response (number)
+      // Select the new session using the validated ID (number)
       set({
-        selectedSessionId: data.session_id,
+        selectedSessionId: newSessionId,
         newSession: null // Clear new session state after successful submission
       });
 

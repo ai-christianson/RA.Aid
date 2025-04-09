@@ -81,7 +81,7 @@ def emit_research_notes(notes: str) -> str:
                     "note_id": note_id,
                     "display_title": "Research Notes",
                 },
-                record_type="memory_operation",
+                record_type="emit_research_notes",
                 human_input_id=human_input_id
             )
         except RuntimeError as e:

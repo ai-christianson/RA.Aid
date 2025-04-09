@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import {
   ToolExecutionTrajectory,
@@ -6,7 +7,9 @@ import {
   InfoTrajectory,
   GenericTrajectory,
   ProjectStatusTrajectory,
-  ReadFileTrajectory // Import the new component
+  ReadFileTrajectory,
+  RipgrepSearchTrajectory, // Import the new component
+  ResearchNotesTrajectory // <-- Import ResearchNotesTrajectory
 } from './trajectories';
 import { useTrajectoryStore, useSessionStore } from '../store'; // <-- Import useSessionStore
 import { Trajectory } from '../models/trajectory';
@@ -17,7 +20,7 @@ interface TrajectoryPanelProps {
   /**
    * The ID of the session to display trajectories for
    */
-  sessionId: string;
+  sessionId: number | null; // Changed from string to number | null
 
   /**
    * Optional maximum height for the container
@@ -68,21 +71,8 @@ export const TrajectoryPanel: React.FC<TrajectoryPanelProps> = ({
 
   // Fetch trajectories when sessionId changes
   useEffect(() => {
-    if (sessionId) {
-      // Fetch immediately
-      fetchSessionTrajectories(parseInt(sessionId));
-
-      // Optional: Refetch periodically if status is running?
-      // const intervalId = setInterval(() => {
-      //   const updatedSession = useSessionStore.getState().sessions.find(s => s.id === sessionId);
-      //   if (updatedSession?.status === 'running') {
-      //     fetchSessionTrajectories(parseInt(sessionId));
-      //   } else {
-      //     clearInterval(intervalId); // Stop polling if not running
-      //   }
-      // }, 5000); // e.g., every 5 seconds
-
-      // return () => clearInterval(intervalId); // Cleanup interval on unmount/change
+    if (sessionId !== null) { // Check if sessionId is not null before fetching
+      fetchSessionTrajectories(sessionId); // Pass number directly
     }
   }, [sessionId, fetchSessionTrajectories]); // Dependency array
 
@@ -112,6 +102,12 @@ export const TrajectoryPanel: React.FC<TrajectoryPanelProps> = ({
 
   // Render the appropriate component based on record type
   const renderTrajectory = (trajectory: Trajectory) => {
+    // Ensure trajectory and id exist before rendering
+    if (!trajectory || typeof trajectory.id !== 'number') {
+      console.warn("Attempted to render invalid trajectory:", trajectory);
+      return null;
+    }
+
     switch (trajectory.recordType) {
       case 'tool_execution':
         return <ToolExecutionTrajectory key={trajectory.id} trajectory={trajectory} />;
@@ -121,10 +117,14 @@ export const TrajectoryPanel: React.FC<TrajectoryPanelProps> = ({
         return <StageTransitionTrajectory key={trajectory.id} trajectory={trajectory} />;
       case 'info':
         return <InfoTrajectory key={trajectory.id} trajectory={trajectory} />;
-      case 'project_status': // Add case for project_status
+      case 'project_status':
         return <ProjectStatusTrajectory key={trajectory.id} trajectory={trajectory} />;
-      case 'read_file': // Add case for read_file
+      case 'read_file':
         return <ReadFileTrajectory key={trajectory.id} trajectory={trajectory} />;
+      case 'ripgrep_search': // Add case for ripgrep_search
+        return <RipgrepSearchTrajectory key={trajectory.id} trajectory={trajectory} />;
+      case 'emit_research_notes': // <-- Add case for emit_research_notes
+        return <ResearchNotesTrajectory key={trajectory.id} trajectory={trajectory} />;
       case 'model_usage': // Hide model usage trajectories
         return null;
       default:

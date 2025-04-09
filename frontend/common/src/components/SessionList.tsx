@@ -1,14 +1,12 @@
 import React from 'react';
-import { AgentSession } from '../models/session'; // Changed import source
-import { getSampleAgentSessions } from '../utils/sample-data';
+import { AgentSession } from '../models/session'; // Correct import source
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
-import { RefreshCw } from 'lucide-react';
 
 interface SessionListProps {
-  onSelectSession?: (sessionId: number) => void; // Changed from string to number
-  currentSessionId?: number | null | undefined; // Changed from string to number | null | undefined
-  sessions?: AgentSession[];
+  onSelectSession?: (sessionId: number) => void;
+  currentSessionId?: number | null | undefined;
+  sessions?: AgentSession[]; // Uses the correct AgentSession interface
   className?: string;
   wrapperComponent?: React.ElementType;
   closeAction?: React.ReactNode;
@@ -20,7 +18,7 @@ interface SessionListProps {
 export const SessionList: React.FC<SessionListProps> = ({
   onSelectSession,
   currentSessionId,
-  sessions = getSampleAgentSessions(), // Note: Sample data might still use 'updated'. Real data should use 'updatedAt'.
+  sessions = [], // Default to empty array instead of sample data
   className = '',
   wrapperComponent: WrapperComponent = 'button',
   closeAction,
@@ -28,37 +26,40 @@ export const SessionList: React.FC<SessionListProps> = ({
   error = null,
   onRefresh
 }) => {
-  // Get status color
-  const getStatusColor = (status: string) => {
+
+  // Get status color based on SessionStatus type
+  const getStatusColor = (status: string | undefined) => {
     switch (status) {
-      case 'active':
+      case 'running':
         return 'bg-blue-500';
       case 'completed':
         return 'bg-green-500';
       case 'error':
         return 'bg-red-500';
-      default:
+      case 'pending':
+        return 'bg-yellow-500';
+      default: // unknown or undefined
         return 'bg-gray-500';
     }
   };
 
   // Format timestamp
-  const formatDate = (date: Date | null | undefined) => { // Updated type hint
-    if (!date) { // Added check for null/undefined
-      return '-'; // Return placeholder
+  const formatDate = (dateValue: Date | string | null | undefined): string => {
+    if (!dateValue) {
+      return '-';
     }
-    // Ensure it's a Date object before calling methods
-    if (!(date instanceof Date)) {
-        try {
-            date = new Date(date);
-        } catch (e) {
-            console.error("Invalid date passed to formatDate:", date);
-            return 'Invalid Date'; // Handle cases where conversion fails
-        }
-    }
-    // Check if the date is valid after potential conversion
-    if (isNaN(date.getTime())) {
+    let date: Date;
+    try {
+      // Attempt to create a Date object if it's not already one
+      date = dateValue instanceof Date ? dateValue : new Date(dateValue);
+      // Check if the resulting date is valid
+      if (isNaN(date.getTime())) {
+        console.warn("Invalid date value received in formatDate:", dateValue);
         return 'Invalid Date';
+      }
+    } catch (e) {
+      console.error("Error parsing date in formatDate:", dateValue, e);
+      return 'Invalid Date';
     }
 
     return date.toLocaleDateString([], {
@@ -125,17 +126,27 @@ export const SessionList: React.FC<SessionListProps> = ({
       {!isLoading && sessions.length > 0 && (
         <div className="space-y-1.5">
           {sessions.map((session) => {
+            // Ensure session properties are accessed safely
+            const sessionId = session?.id;
+            const sessionName = session?.name || 'Unnamed Session';
+            const sessionStatus = session?.status;
+            const sessionUpdatedAt = session?.updatedAt;
+
+            if (sessionId === undefined || sessionId === null) {
+              console.warn("Rendering session with missing ID:", session);
+              return null; // Skip rendering if ID is missing
+            }
+
             const buttonContent = (
               <>
-                <div className={`w-2.5 h-2.5 rounded-full ${getStatusColor(session.status)} mt-1.5 mr-3 flex-shrink-0`} />
+                <div className={`w-2.5 h-2.5 rounded-full ${getStatusColor(sessionStatus)} mt-1.5 mr-3 flex-shrink-0`} />
                 <div className="flex-1 min-w-0 pr-1">
-                  <div className="font-medium text-sm+ break-words">{session.name}</div>
+                  <div className="font-medium text-sm+ break-words">{sessionName}</div>
                   <div className="text-xs text-muted-foreground mt-1 break-words">
-                    {/* Changed session.updated to session.updatedAt */}
-                    {formatDate(session.updatedAt)}
+                    {formatDate(sessionUpdatedAt)} {/* Use the correct property name */}
                   </div>
                   <div className="text-xs text-muted-foreground mt-0.5 break-words">
-                    <span className="capitalize">{session.status}</span>
+                    <span className="capitalize">{sessionStatus || 'Unknown'}</span>
                   </div>
                 </div>
               </>
@@ -144,11 +155,10 @@ export const SessionList: React.FC<SessionListProps> = ({
             return React.createElement(
               WrapperComponent,
               {
-                key: session.id,
-                onClick: () => onSelectSession?.(session.id), // session.id is number, matches prop type
+                key: sessionId,
+                onClick: () => onSelectSession?.(sessionId),
                 className: `w-full flex items-start px-3 py-2.5 text-left rounded-md transition-colors hover:bg-accent/50 ${
-                  // Comparison should now work correctly when currentSessionId is a number
-                  currentSessionId === session.id ? 'bg-accent' : ''
+                  currentSessionId === sessionId ? 'bg-accent' : ''
                 }`
               },
               closeAction ? (
@@ -158,7 +168,7 @@ export const SessionList: React.FC<SessionListProps> = ({
                     {React.cloneElement(closeAction as React.ReactElement, {
                       onClick: (e: React.MouseEvent) => {
                         e.stopPropagation();
-                        onSelectSession?.(session.id); // Pass number session.id
+                        onSelectSession?.(sessionId);
                       }
                     })}
                   </div>

@@ -4,6 +4,7 @@
 
 /**
  * Represents a single step in the agent process
+ * NOTE: This might be deprecated in favor of the Trajectory model.
  */
 export interface AgentStep {
   id: string;
@@ -17,12 +18,13 @@ export interface AgentStep {
 
 /**
  * Represents a session with multiple steps
+ * DEPRECATED: Use AgentSession from '../models/session' instead.
  */
-export interface AgentSession {
-  id: string;
-  name: string;
-  created: Date;
-  updated: Date;
-  status: 'active' | 'completed' | 'error';
-  steps: AgentStep[];
-}
+// export interface AgentSession {
+//   id: string;
+//   name: string;
+//   created: Date;
+//   updated: Date;
+//   status: 'active' | 'completed' | 'error';
+//   steps: AgentStep[];
+// }

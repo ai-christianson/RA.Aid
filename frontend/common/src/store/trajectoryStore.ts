@@ -129,7 +129,12 @@ export const useTrajectoryStore = create<TrajectoryStore>((set) => ({
 
       const trajectories = data.map(safeBackendToTrajectory).filter(Boolean) as Trajectory[];
       // Ensure sorting after fetch as well
-      trajectories.sort((a, b) => a.id - b.id);
+      trajectories.sort((a, b) => {
+        // Handle potential undefined/null IDs during sort
+        const idA = a?.id ?? -Infinity;
+        const idB = b?.id ?? -Infinity;
+        return idA - idB;
+      });
       console.log(`[TrajectoryStore] Converted & sorted trajectories (${trajectories.length}):`, trajectories);
 
       set({ trajectories, isLoading: false });
@@ -182,7 +187,12 @@ export const useTrajectoryStore = create<TrajectoryStore>((set) => ({
       console.log(`[TrajectoryStore] Adding new trajectory ID: ${trajectory.id}`);
       newTrajectories = [...state.trajectories, trajectory];
       // Sort only when adding a new item to maintain order
-      newTrajectories.sort((a, b) => a.id - b.id);
+      newTrajectories.sort((a, b) => {
+         // Handle potential undefined/null IDs during sort
+        const idA = a?.id ?? -Infinity;
+        const idB = b?.id ?? -Infinity;
+        return idA - idB;
+      });
     }
 
     return { trajectories: newTrajectories };
