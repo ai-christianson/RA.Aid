@@ -12,7 +12,8 @@ import {
   ResearchNotesTrajectory, // <-- Import ResearchNotesTrajectory
   TaskTrajectory, // <-- Import the new TaskTrajectory component
   FuzzyFindTrajectory, // <-- Import the new FuzzyFindTrajectory component
-  TaskCompletedTrajectory // <-- Import the new TaskCompletedTrajectory component
+  TaskCompletedTrajectory, // <-- Import the new TaskCompletedTrajectory component
+  PlanCompletedTrajectory
 } from './trajectories';
 import { useTrajectoryStore, useSessionStore } from '../store'; // <-- Import useSessionStore
 import { Trajectory } from '../models/trajectory';
@@ -119,6 +120,9 @@ export const TrajectoryPanel: React.FC<TrajectoryPanelProps> = ({
         break;
       case 'task_completion':
         component = <TaskCompletedTrajectory key={trajectory.id} trajectory={trajectory} />;
+        break;
+      case 'plan_completion':
+        component = <PlanCompletedTrajectory key={trajectory.id} trajectory={trajectory} />;
         break;
       case 'memory_operation':
         component = <MemoryOperationTrajectory key={trajectory.id} trajectory={trajectory} />;

@@ -14,16 +14,6 @@ interface TimelineStepProps {
 
 export const TimelineStep: React.FC<TimelineStepProps> = ({ trajectory }) => {
 
-  // Render specific components for certain record types
-  if (trajectory.record_type === 'task_completion') {
-    return <TaskCompletedTrajectory trajectory={trajectory} />;
-  }
-  if (trajectory.record_type === 'plan_completion') {
-    return <PlanCompletedTrajectory trajectory={trajectory} />;
-  }
-
-  // --- Fallback rendering for other record types using the original structure ---
-
   // Get icon based on record type (adjust as needed)
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -62,12 +52,12 @@ export const TimelineStep: React.FC<TimelineStepProps> = ({ trajectory }) => {
 
   // Try to get a sensible title
   const getTitle = () => {
-    return trajectory.step_data?.display_title || trajectory.record_type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    return trajectory.step_data?.display_title || trajectory.recordType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
   // Try to get a preview content
   const getContentPreview = () => {
-    if (trajectory.record_type === 'thinking' && trajectory.step_data?.thought) {
+    if (trajectory.recordType === 'thinking' && trajectory.step_data?.thought) {
       return trajectory.step_data.thought;
     } 
     // Add more specific previews if needed
@@ -88,7 +78,7 @@ export const TimelineStep: React.FC<TimelineStepProps> = ({ trajectory }) => {
       <CollapsibleTrigger className="w-full flex items-center justify-between p-4 text-left hover:bg-accent/30 cursor-pointer group">
         <div className="flex items-center space-x-3 min-w-0 flex-1 pr-3">
           {/* Status indicator removed */}
-          <div className="flex-shrink-0 text-lg group-hover:scale-110 transition-transform">{getTypeIcon(trajectory.record_type)}</div>
+          <div className="flex-shrink-0 text-lg group-hover:scale-110 transition-transform">{getTypeIcon(trajectory.recordType)}</div>
           <div className="min-w-0 flex-1">
             <div className="font-medium text-foreground break-words">{getTitle()}</div>
             <div className="text-sm text-muted-foreground line-clamp-2">
