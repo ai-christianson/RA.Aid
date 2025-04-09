@@ -10,7 +10,8 @@ import {
   ReadFileTrajectory,
   RipgrepSearchTrajectory, // Import the new component
   ResearchNotesTrajectory, // <-- Import ResearchNotesTrajectory
-  TaskTrajectory // <-- Import the new TaskTrajectory component
+  TaskTrajectory, // <-- Import the new TaskTrajectory component
+  FuzzyFindTrajectory // <-- Import the new FuzzyFindTrajectory component
 } from './trajectories';
 import { useTrajectoryStore, useSessionStore } from '../store'; // <-- Import useSessionStore
 import { Trajectory } from '../models/trajectory';
@@ -109,32 +110,47 @@ export const TrajectoryPanel: React.FC<TrajectoryPanelProps> = ({
       return null;
     }
 
+    let component = null; // Define component variable outside the switch
+
     switch (trajectory.recordType) {
       case 'tool_execution':
-        return <ToolExecutionTrajectory key={trajectory.id} trajectory={trajectory} />;
+        component = <ToolExecutionTrajectory key={trajectory.id} trajectory={trajectory} />;
+        break;
       case 'memory_operation':
-        return <MemoryOperationTrajectory key={trajectory.id} trajectory={trajectory} />;
+        component = <MemoryOperationTrajectory key={trajectory.id} trajectory={trajectory} />;
+        break;
       case 'stage_transition':
-        return <StageTransitionTrajectory key={trajectory.id} trajectory={trajectory} />;
+        component = <StageTransitionTrajectory key={trajectory.id} trajectory={trajectory} />;
+        break;
       case 'info':
-        return <InfoTrajectory key={trajectory.id} trajectory={trajectory} />;
+        component = <InfoTrajectory key={trajectory.id} trajectory={trajectory} />;
+        break;
       case 'project_status':
-        return <ProjectStatusTrajectory key={trajectory.id} trajectory={trajectory} />;
+        component = <ProjectStatusTrajectory key={trajectory.id} trajectory={trajectory} />;
+        break;
       case 'read_file':
-        return <ReadFileTrajectory key={trajectory.id} trajectory={trajectory} />;
+        component = <ReadFileTrajectory key={trajectory.id} trajectory={trajectory} />;
+        break;
       case 'ripgrep_search': // Add case for ripgrep_search
-        return <RipgrepSearchTrajectory key={trajectory.id} trajectory={trajectory} />;
+        component = <RipgrepSearchTrajectory key={trajectory.id} trajectory={trajectory} />;
+        break;
       case 'emit_research_notes': // <-- Add case for emit_research_notes
-        return <ResearchNotesTrajectory key={trajectory.id} trajectory={trajectory} />;
-      // Add case for task_display
-      case 'task_display':
-        return <TaskTrajectory key={trajectory.id} trajectory={trajectory} />;
+        component = <ResearchNotesTrajectory key={trajectory.id} trajectory={trajectory} />;
+        break;
+      case 'task_display': // Add case for task_display
+        component = <TaskTrajectory key={trajectory.id} trajectory={trajectory} />;
+        break;
+      case 'fuzzy_find_project_files': // <-- Add case for fuzzy_find_project_files
+        component = <FuzzyFindTrajectory key={trajectory.id} trajectory={trajectory} />;
+        break;
       case 'model_usage': // Hide model usage trajectories
-        return null;
+        return null; // Return null directly to skip rendering
       default:
         // console.warn("Rendering GenericTrajectory for unknown type:", trajectory.recordType, trajectory);
-        return <GenericTrajectory key={trajectory.id} trajectory={trajectory} />;
+        component = <GenericTrajectory key={trajectory.id} trajectory={trajectory} />;
+        break; // Ensure default case also breaks
     }
+     return component; // Return the assigned component
   };
 
   // Render trajectories or empty/running state
@@ -166,7 +182,7 @@ export const TrajectoryPanel: React.FC<TrajectoryPanelProps> = ({
         // Render Trajectories List
         // Removed overflow-auto and style={{ maxHeight }} to eliminate nested scrolling
         <div className={`flex-grow space-y-4 ${addBottomPadding ? 'pb-32' : ''}`}>
-            {trajectories.map(renderTrajectory)}
+            {trajectories.map(renderTrajectory).filter(Boolean) /* Filter out null values */}
             {/* Add Spinner at the end of the list if running */}
             {isRunning && (
               <div className="flex justify-center items-center pt-4 pb-2"> {/* Added pb-2 */}
