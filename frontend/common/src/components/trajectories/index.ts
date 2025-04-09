@@ -7,3 +7,4 @@ export * from './GenericTrajectory';
 export * from './ProjectStatusTrajectory';
 export * from './ReadFileTrajectory';
 export * from './RipgrepSearchTrajectory'; // Added export
+export * from './ResearchNotesTrajectory';

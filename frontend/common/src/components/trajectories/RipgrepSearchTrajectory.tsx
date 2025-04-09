@@ -1,6 +1,5 @@
 
 import React from 'react';
-import { AnsiUp } from 'ansi_up/ansi_up';
 import { Search } from 'lucide-react';
 
 import { Trajectory } from '../../models/trajectory';
@@ -10,8 +9,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/colla
 interface RipgrepSearchTrajectoryProps {
   trajectory: Trajectory;
 }
-
-const ansiUp = new AnsiUp();
 
 export const RipgrepSearchTrajectory: React.FC<RipgrepSearchTrajectoryProps> = ({ trajectory }) => {
   const { stepData, toolResult, created } = trajectory;
@@ -26,8 +23,7 @@ export const RipgrepSearchTrajectory: React.FC<RipgrepSearchTrajectoryProps> = (
     ? new Date(created).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     : 'Invalid Date';
 
-  // Convert ANSI to HTML
-  const htmlOutput = ansiUp.ansi_to_html(output);
+  const htmlOutput = output;
 
   return (
     <Card className="mb-4">
