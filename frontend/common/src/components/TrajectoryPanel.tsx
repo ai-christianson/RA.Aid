@@ -11,7 +11,8 @@ import {
   RipgrepSearchTrajectory, // Import the new component
   ResearchNotesTrajectory, // <-- Import ResearchNotesTrajectory
   TaskTrajectory, // <-- Import the new TaskTrajectory component
-  FuzzyFindTrajectory // <-- Import the new FuzzyFindTrajectory component
+  FuzzyFindTrajectory, // <-- Import the new FuzzyFindTrajectory component
+  TaskCompletedTrajectory // <-- Import the new TaskCompletedTrajectory component
 } from './trajectories';
 import { useTrajectoryStore, useSessionStore } from '../store'; // <-- Import useSessionStore
 import { Trajectory } from '../models/trajectory';
@@ -115,6 +116,9 @@ export const TrajectoryPanel: React.FC<TrajectoryPanelProps> = ({
     switch (trajectory.recordType) {
       case 'tool_execution':
         component = <ToolExecutionTrajectory key={trajectory.id} trajectory={trajectory} />;
+        break;
+      case 'task_completion':
+        component = <TaskCompletedTrajectory key={trajectory.id} trajectory={trajectory} />;
         break;
       case 'memory_operation':
         component = <MemoryOperationTrajectory key={trajectory.id} trajectory={trajectory} />;

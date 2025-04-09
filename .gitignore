@@ -21,3 +21,4 @@ node_modules/
 /frontend/web/dist/
 /.vscode
 /frontend/common/dist/
+/.ra-prompt

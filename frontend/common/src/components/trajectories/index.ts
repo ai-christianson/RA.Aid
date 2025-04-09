@@ -10,3 +10,4 @@ export * from './RipgrepSearchTrajectory'; // Added export
 export * from './ResearchNotesTrajectory';
 export * from './TaskTrajectory'; // Added export for the new component
 export * from './FuzzyFindTrajectory'; // Added export for the new component
+export * from './TaskCompletedTrajectory'; // Added export for task completion
