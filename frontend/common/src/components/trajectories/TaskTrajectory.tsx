@@ -19,8 +19,8 @@ interface TaskTrajectoryProps {
 // Renamed component from ResearchNotesTrajectory to TaskTrajectory
 export const TaskTrajectory: React.FC<TaskTrajectoryProps> = ({ trajectory }) => {
   // Updated data extraction logic: Use step_data.task instead of toolParameters.notes
-  const { step_data, created } = trajectory;
-  const taskContent = step_data?.task ?? '(No task specification)';
+  const { stepData, created } = trajectory;
+  const taskContent = stepData?.task ?? '(No task specification)';
   // Set initial state to true so the collapsible is open by default
   const [isOpen, setIsOpen] = React.useState(true);
 
