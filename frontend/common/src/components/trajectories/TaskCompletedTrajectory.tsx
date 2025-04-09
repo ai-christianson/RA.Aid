@@ -6,11 +6,13 @@ import remarkGfm from 'remark-gfm';
 
 // Import the new shared component
 import { MarkdownCodeBlock } from '../ui/MarkdownCodeBlock';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 import { Trajectory } from '../../models/trajectory';
 import { Card, CardContent, CardHeader } from '../ui/card';
 import { Collapsible, CollapsibleContent } from '../ui/collapsible';
 import { formatTimestamp } from '../../utils/index'; // Assuming formatTimestamp is here
+import SyntaxHighlighter from 'react-syntax-highlighter';
 
 interface TaskCompletedTrajectoryProps {
   trajectory: Trajectory;
@@ -25,7 +27,36 @@ export const TaskCompletedTrajectory: React.FC<TaskCompletedTrajectoryProps> = (
   // Format timestamp
   const formattedTime = formatTimestamp(created);
 
-  // Remove the old custom components object
+  
+  // Custom components for ReactMarkdown
+  const components: Components = {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    code({ className, children, ...props }) { // Removed node and inline destructuring
+      const match = /language-(\w+)/.exec(className || '');
+      const codeString = String(children).replace(/\n$/, ''); // Ensure children is a string
+
+      // Check only for match to determine if it's a highlighted block
+      if (match) {
+        // For block code with language
+        return (
+          <SyntaxHighlighter
+            style={vscDarkPlus}
+            language={match[1]}
+            PreTag="div"
+          >
+            {codeString}
+          </SyntaxHighlighter>
+        );
+      } else {
+        // For inline code or block code without language
+        return (
+          <code className={className}>
+            {children}
+          </code>
+        );
+      }
+    },
+  }
 
   return (
     <Card className="mb-4">
@@ -52,11 +83,11 @@ export const TaskCompletedTrajectory: React.FC<TaskCompletedTrajectoryProps> = (
             {/* Wrap ReactMarkdown with a div and apply classes here */}
             <div className="prose prose-sm dark:prose-invert max-w-none break-words">
               <ReactMarkdown
+                // className prop removed from ReactMarkdown component itself
                 remarkPlugins={[remarkGfm]}
-                // Use the imported component for code rendering
-                components={{ code: MarkdownCodeBlock }}
+                components={components} // Use the defined custom components
               >
-               {message}
+                {message}
               </ReactMarkdown>
             </div>
           </CardContent>
