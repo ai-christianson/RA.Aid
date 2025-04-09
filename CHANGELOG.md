@@ -1,3 +1,26 @@
+## [0.25.0] 2025-04-09
+
+### Backend Changes
+- Refactored `ra_aid/tools/ripgrep.py`:
+  - Removed old search parameter string construction.
+  - Introduced new variables: `final_output`, `final_return_code`, `final_success` for capturing command-line output and error handling.
+  - Updated trajectory recording logic using consolidated parameters (`tool_parameters` and `step_data`).
+  - Enhanced UTF-8 decoding with error replacement and improved error panel displays.
+- Updated backend modules:
+  - Modified `ra_aid/project_info.py` and `ra_aid/server/api_v1_spawn_agent.py` for improved logging, error handling, and user feedback.
+  - Updated server-side prebuilt assets (JavaScript, CSS, and `index.html`) for better asset management.
+
+### Frontend Changes
+- Updated several UI components in `frontend/common` including:
+  - `DefaultAgentScreen.tsx`, `SessionList.tsx`, `SessionSidebar.tsx`, `TimelineStep.tsx`, and `TrajectoryPanel.tsx`.
+- Adjusted state management and utility/store files to support updated UI displays for agent outputs, sessions, and trajectories.
+
+### Configuration & Minor Changes
+- Modified configuration files:
+  - Updated `.gitignore` and `.ra-prompt` with newer patterns.
+  - Revised `frontend/common/package.json` and `frontend/common/tailwind.preset.js` for improved dependency and styling management.
+  - Updated `package-lock.json` files and server-side asset references.
+
 ## [0.24.0] 2025-04-08
 
 ### Added
@@ -50,7 +73,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Support for Anthropic\'s `claude-3.7` series models (`ra_aid/models_params.py`, `tests/ra_aid/test_anthropic_token_limiter.py`).
 - Support for Fireworks AI provider and models (`fireworks/firefunction-v2`, `fireworks/dbrx-instruct`) (`ra_aid/models_params.py`, `ra_aid/llm.py`).
-- Implicit think tag detection: `process_thinking_content` now checks for `<think>` tags even if `supports_think_tag` is not explicitly `True` in model config, provided it\'s not `False` and the content starts with the tag (`ra_aid/text/processing.py`, `tests/ra_aid/text/test_process_thinking.py`).
+- Implicit think tag detection: `process_thinking_content` now checks for <think> tags even if `supports_think_tag` is not explicitly `True` in model config, provided it\'s not `False` and the content starts with the tag (`ra_aid/text/processing.py`, `tests/ra_aid/text/test_process_thinking.py`).
 - Command-line arguments `--project-dir` and `--db-path` added to `ra-aid usage latest` and `ra-aid usage all` subcommands for specifying database location (`ra_aid/scripts/cli.py`, `ra_aid/scripts/all_sessions_usage.py`, `ra_aid/scripts/last_session_usage.py`).
 - Reinitialization capability for Singleton classes via `_initialize` method (`ra_aid/utils/singleton.py`).
 - Metadata tracking (`model_name`, `provider`) added during LLM initialization (`ra_aid/llm.py`, `tests/ra_aid/test_llm.py`).
@@ -58,7 +81,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Refactored Callback Handling:** Replaced `AnthropicCallbackHandler` with a generalized `DefaultCallbackHandler` located in `ra_aid/callbacks/default_callback_handler.py`. This new handler supports multiple providers, improves cost/token tracking logic, standardizes initialization, enhances database interaction for trajectory logging, and provides better context management (`ra_aid/callbacks/default_callback_handler.py`, `ra_aid/agent_utils.py`, `ra_aid/console/output.py`, `tests/ra_aid/callbacks/test_default_callback_handler.py`, `tests/ra_aid/test_token_usage_tracking.py`).
-- **Refactored Thinking Processing:** Significantly updated `process_thinking_content` in `ra_aid/text/processing.py` for clearer logic flow. It now explicitly handles structured thinking (list format) separately from string-based `<think>` tag extraction. The logic for tag extraction now depends on the `supports_think_tag` configuration value (True: always check, False: never check, None: check only if content starts with `<think>`) (`ra_aid/text/processing.py`, `tests/ra_aid/text/test_process_thinking.py`, `tests/ra_aid/agent_backends/test_ciayn_agent_think_tag.py`).
+- **Refactored Thinking Processing:** Significantly updated `process_thinking_content` in `ra_aid/text/processing.py` for clearer logic flow. It now explicitly handles structured thinking (list format) separately from string-based <think> tag extraction. The logic for tag extraction now depends on the `supports_think_tag` configuration value (True: always check, False: never check, None: check only if content starts with <think>) (`ra_aid/text/processing.py`, `tests/ra_aid/text/test_process_thinking.py`, `tests/ra_aid/agent_backends/test_ciayn_agent_think_tag.py`).
 - **Refactored Token Limiting:** Renamed `sonnet_35_state_modifier` to `base_state_modifier` in `ra_aid/anthropic_token_limiter.py` for broader applicability and adjusted associated logic (`ra_aid/anthropic_token_limiter.py`, `ra_aid/agent_utils.py`, `tests/ra_aid/test_anthropic_token_limiter.py`).
 - Updated LLM initialization (`initialize_llm` in `ra_aid/llm.py`) to include provider/model metadata and refine DeepSeek provider logic for different DeepSeek models (`ra_aid/llm.py`, `tests/ra_aid/test_llm.py`).
 - Improved rate limit error handling and retry logic in `_handle_api_error` (`ra_aid/agent_utils.py`).
@@ -186,7 +209,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Fixed bug with `process_thinking_content` function by moving it from `agent_utils` to `ra_aid.text.processing` module
 - Fixed config parameter handling in research request functions
-- Updated development setup instructions in README to use `pip install -e \".[dev]\"` instead of `pip install -r requirements-dev.txt`
+- Updated development setup instructions in README to use `pip install -e "[dev]"` instead of `pip install -r requirements-dev.txt`
 
 ## [0.17.0] 2025-03-12
 
@@ -223,7 +246,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Replaced thread-local storage with contextvars in agent_context.py for better context isolation
-- Improved React agent execution with LangGraph\'s interrupt mechanism
+- Improved React agent execution with LangGraph's interrupt mechanism
 - Enhanced _run_agent_stream function to properly handle agent state and continuation
 
 ### Fixed
@@ -289,7 +312,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added support for "thinking" budget parameter for Claude 3.7 Sonnet
 
 ### Changed
-- Updated dependencies:\n  - langchain-anthropic from 0.3.7 to 0.3.8\n  - langchain-google-genai from 2.0.10 to 2.0.11
+- Updated dependencies:
+  - langchain-anthropic from 0.3.7 to 0.3.8
+  - langchain-google-genai from 2.0.10 to 2.0.11
 - Improved shell command tool description to recommend keeping commands under 300 words
 - Enhanced binary file filtering to include detailed reporting of skipped files
 - Updated test assertions to be more flexible with parameter checking
@@ -300,7 +325,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved programmer.py tool prompts for better clarity on related files visibility
 - Enhanced programmer tool to remind users to call emit_related_files on any new files created
 - Updated README.md to use media queries for showing different logos based on color scheme preference
-
 
 ## [0.14.7] - 2025-02-25
 
