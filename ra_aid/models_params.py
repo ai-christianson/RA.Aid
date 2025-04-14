@@ -445,6 +445,32 @@ models_params = {
             "latency_coefficient": DEFAULT_BASE_LATENCY,
         },
     },
+    "openrouter": {
+        "google/gemini-2.5-pro-preview-03-25": {
+            "token_limit": 1048576,
+            "max_tokens": 1048576,
+            "supports_temperature": True,
+            "default_temperature": 1.0,
+            "latency_coefficient": DEFAULT_BASE_LATENCY,
+            "default_backend": AgentBackendType.CIAYN,
+        },
+        "google/gemini-2.5-pro-exp-03-25:free": {
+            "token_limit": 1048576,
+            "max_tokens": 1048576,
+            "supports_temperature": True,
+            "default_temperature": 1.0,
+            "latency_coefficient": DEFAULT_BASE_LATENCY,
+            "default_backend": AgentBackendType.CIAYN,
+        },
+        "openrouter/optimus-alpha": {
+            "token_limit": 1048576,
+            "max_tokens": 1048576,
+            "supports_temperature": True,
+            "default_temperature": 1.0,
+            "latency_coefficient": DEFAULT_BASE_LATENCY,
+            "default_backend": AgentBackendType.CIAYN,
+        },
+    },
     "gemini": {
         "gemini-2.5-pro-exp-03-25": {
             "token_limit": 1048576,
