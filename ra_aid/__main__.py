@@ -1,3 +1,4 @@
+
 import argparse
 import logging
 import os
@@ -650,10 +651,18 @@ def build_status():
     web_research_enabled = config_repo.get("web_research_enabled", False)
     custom_tools_enabled = config_repo.get("custom_tools_enabled", False)
 
+    # Get planner and research config values
+    planner_provider = config_repo.get("planner_provider", "")
+    planner_model = config_repo.get("planner_model", "")
+    research_provider = config_repo.get("research_provider", "")
+    research_model = config_repo.get("research_model", "")
+
     # Get the expert enabled status
     expert_enabled = bool(expert_provider and expert_model)
+    planner_enabled = bool(planner_provider and planner_model)
+    research_enabled = bool(research_provider and research_model)
 
-    # Basic model information
+    # Base model information
     status.append("🤖 ")
     status.append(f"{provider}/{model}")
     if temperature is not None:
@@ -666,6 +675,24 @@ def build_status():
         status.append(f"{expert_provider}/{expert_model}")
     else:
         status.append("Expert: ")
+        status.append("Disabled", style="italic")
+    status.append("\n")
+
+    # Planner model information
+    status.append("📝 ")
+    if planner_enabled:
+        status.append(f"{planner_provider}/{planner_model}")
+    else:
+        status.append("Planner: ")
+        status.append("Disabled", style="italic")
+    status.append("\n")
+
+    # Research model information
+    status.append("🔬 ")
+    if research_enabled:
+        status.append(f"{research_provider}/{research_model}")
+    else:
+        status.append("Research: ")
         status.append("Disabled", style="italic")
     status.append("\n")
 
