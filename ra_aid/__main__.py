@@ -763,6 +763,7 @@ def fetch_openrouter_models():
     logger.debug("Models data updated at %s", cache_file)
 
 def insert_openrouter_data():
+    import json
     cache_dir = Path.home() / ".ra-aid" / "cache"
     cache_file = cache_dir / "models.openrouter.json"
     with open(cache_file) as user_file:
