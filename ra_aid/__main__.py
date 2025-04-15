@@ -1,3 +1,4 @@
+
 import argparse
 import logging
 import os
@@ -16,6 +17,7 @@ import uvicorn
 from langgraph.checkpoint.memory import MemorySaver
 from rich.console import Console
 from rich.panel import Panel
+from rich.markdown import Markdown
 from rich.text import Text
 
 from ra_aid import print_error, print_stage_header
@@ -650,22 +652,47 @@ def build_status():
     web_research_enabled = config_repo.get("web_research_enabled", False)
     custom_tools_enabled = config_repo.get("custom_tools_enabled", False)
 
+    # Get planner and research config values
+    planner_provider = config_repo.get("planner_provider", "")
+    planner_model = config_repo.get("planner_model", "")
+    research_provider = config_repo.get("research_provider", "")
+    research_model = config_repo.get("research_model", "")
+
     # Get the expert enabled status
     expert_enabled = bool(expert_provider and expert_model)
+    planner_enabled = bool(planner_provider and planner_model)
+    research_enabled = bool(research_provider and research_model)
 
-    # Basic model information
-    status.append("🤖 ")
+    # Base model information
+    status.append("🤖 Base:     ")
     status.append(f"{provider}/{model}")
     if temperature is not None:
         status.append(f" @ T{temperature}")
     status.append("\n")
 
+
+
+    # Planner model information
+    status.append("📝 Planner:  ")
+    if planner_enabled:
+        status.append(f"{planner_provider}/{planner_model}")
+    else:
+        status.append("Using base model", style="italic")
+    status.append("\n")
+
+    # Research model information
+    status.append("🔬 Research: ")
+    if research_enabled:
+        status.append(f"{research_provider}/{research_model}")
+    else:
+        status.append("Using base model", style="italic")
+    status.append("\n")
+
     # Expert model information
-    status.append("🤔 ")
+    status.append("🤔 Expert:   ")
     if expert_enabled:
         status.append(f"{expert_provider}/{expert_model}")
     else:
-        status.append("Expert: ")
         status.append("Disabled", style="italic")
     status.append("\n")
 
@@ -812,7 +839,11 @@ def insert_openrouter_data():
 
 
 def main():
-    """Main entry point for the ra-aid command line tool."""
+    """Main entry point for the ra-aid command line tool.
+
+    New behavior: After the status panel is printed, if --chat is not specified and a message is present (from -m/--msg-file),
+    the message is displayed as a rich Markdown Panel titled 'Task' before research/implementation begins.
+    """
     args = parse_arguments()
     setup_logging(
         args.log_mode,
@@ -932,6 +963,17 @@ def main():
                 config_repo.set("model", args.model)
                 config_repo.set("num_ctx", args.num_ctx)
                 config_repo.set("expert_provider", args.expert_provider)
+                # Store planner config with fallback to base values
+                config_repo.set(
+                    "planner_provider", args.planner_provider or args.provider
+                )
+                config_repo.set("planner_model", args.planner_model or args.model)
+
+                # Store research config with fallback to base values
+                config_repo.set(
+                    "research_provider", args.research_provider or args.provider
+                )
+                config_repo.set("research_model", args.research_model or args.model)
                 config_repo.set("expert_model", args.expert_model)
                 config_repo.set("expert_num_ctx", args.expert_num_ctx)
                 config_repo.set("temperature", args.temperature)
@@ -966,6 +1008,9 @@ def main():
                         padding=(0, 1),
                     )
                 )
+                # Print the CLI message as a Markdown panel if not in chat mode and message is present (from -m/--msg-file)
+                if not args.chat and args.message:
+                    console.print(Panel(Markdown(args.message), title='Task', border_style='magenta', padding=(0, 1)))
 
                 # Handle chat mode
                 if args.chat:
