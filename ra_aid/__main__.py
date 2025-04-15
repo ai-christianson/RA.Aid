@@ -4,6 +4,11 @@ import os
 import sys
 import uuid
 from datetime import datetime
+from pathlib import Path
+
+import time
+
+import requests
 
 import litellm
 import uvicorn
@@ -727,6 +732,78 @@ def build_status():
 
     return status
 
+def fetch_openrouter_models():
+    # Define the cache file path
+    cache_dir = Path.home() / ".ra-aid" / "cache"
+    cache_file = cache_dir / "models.openrouter.json"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    max_age_seconds = 12 * 60 * 60  # 12 hours
+
+    # Check file modification time
+    if cache_file.exists():
+        file_mtime = cache_file.stat().st_mtime
+        if (time.time() - file_mtime) < max_age_seconds:
+            logger.info("Openrouter Model Cache is fresh; no need to refetch")
+            return
+
+    logger.info("Fetching fresh model data from OpenRouter...")
+    url = "https://openrouter.ai/api/v1/models"
+    response = requests.get(url, timeout=20)
+    response.raise_for_status()  # Raise exception for HTTP errors
+
+    # j = response.json().get("data")
+    # for model in j:
+
+
+
+
+    with open(cache_file, "w", encoding="utf-8") as f:
+        f.write(response.text)
+    logger.debug("Models data updated at %s", cache_file)
+
+def insert_openrouter_data():
+    cache_dir = Path.home() / ".ra-aid" / "cache"
+    cache_file = cache_dir / "models.openrouter.json"
+    with open(cache_file) as user_file:
+        model_list = user_file.read()
+
+    from ra_aid.callbacks.default_callback_handler import MODEL_COSTS
+    from ra_aid.models_params import models_params, DEFAULT_TOKEN_LIMIT, DEFAULT_TEMPERATURE, DEFAULT_AGENT_BACKEND, DEFAULT_BASE_LATENCY
+
+    if model_list:
+        model_data: list = model_list.get("data")
+        logger.info("Adding %s openrouter models to database", len(model_data))
+        for model in model_data:
+            id = model.get("id")
+            context_length = model.get("context_length", DEFAULT_TOKEN_LIMIT)
+            reasoning = pricing.get("internal_reasoning", False)
+            pricing: dict = model.get("pricing")
+            if pricing:
+                prompt_price = pricing.get("prompt")
+                completion_price = pricing.get("completion")
+
+
+                MODEL_COSTS[id] = {
+                    "input": Decimal(str(prompt_price)),
+                    "output": Decimal(str(completion_price)),
+                }
+
+                # if context_length and context_length > 1000000:
+                #
+                #     models_params["openrouter"][id] = {
+                #         "token_limit": context_length,
+                #         "max_tokens": context_length,
+                #         "supports_temperature": True,
+                #         "default_temperature": DEFAULT_TEMPERATURE,
+                #         "supports_reasoning_effort": False,
+                #         "latency_coefficient": DEFAULT_BASE_LATENCY,
+                #         "default_backend": AgentBackendType.CIAYN,
+                #         "supports_function_calling": True,
+                #     }
+
+
+
+
 
 def main():
     """Main entry point for the ra-aid command line tool."""
@@ -749,6 +826,9 @@ def main():
     if args.server:
         launch_server(args.server_host, args.server_port, args)
         return
+
+    # Fetch openrouter model list
+    fetch_openrouter_models()
 
     try:
         with DatabaseManager(base_dir=args.project_state_dir) as db:
