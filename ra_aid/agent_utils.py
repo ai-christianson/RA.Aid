@@ -47,6 +47,7 @@ from ra_aid.config import DEFAULT_MAX_TEST_CMD_RETRIES, DEFAULT_MODEL
 # Import the new function
 from ra_aid.console.formatting import cpm, print_error, print_rate_limit_info
 from ra_aid.console.output import print_agent_output
+from ra_aid.console.common import console  # Import console for status spinner
 from ra_aid.exceptions import (
     AgentInterrupt,
     FallbackToolExecutionError,
@@ -510,15 +511,17 @@ def _run_agent_stream(agent: RAgents, msg_list: list[BaseMessage]):
 
     while True:
         logger.debug("Using stream_config for agent.stream(): %s", stream_config)
-        for chunk in agent.stream({"messages": msg_list}, stream_config):
-            logger.debug("Agent output: %s", chunk)
-            check_interrupt()
-            agent_type = get_agent_type(agent)
-            print_agent_output(chunk, agent_type)
+        # Wrap the streaming loop with the status context manager
+        with console.status("[bold green]Working...[/bold green]", spinner="dots"):
+            for chunk in agent.stream({"messages": msg_list}, stream_config):
+                logger.debug("Agent output: %s", chunk)
+                check_interrupt()
+                agent_type = get_agent_type(agent)
+                print_agent_output(chunk, agent_type)
 
-            if is_completed() or should_exit():
-                reset_completion_flags()
-                return True
+                if is_completed() or should_exit():
+                    reset_completion_flags()
+                    return True
 
         logger.debug("Stream iteration ended; checking agent state for continuation.")
 
