@@ -937,9 +937,21 @@ class CiaynAgent:
                 self.chat_history.append(HumanMessage(content=base_prompt))
             full_history = self._trim_chat_history(initial_messages, self.chat_history)
 
-            response = self.model.invoke(
-                [self.sys_message] + full_history, self.stream_config
-            )
+            response = None
+            retryi = 0
+            while True:
+                try:
+                    response = self.model.invoke(
+                        [self.sys_message] + full_history, self.stream_config
+                    )
+                    break
+                except Exception as e:
+                    print(f"Api Error: {e}, retrying in 10 seconds")
+                    import time
+                    time.sleep(10)
+                    retryi += 1
+
+
             # print(f"response={response}")
 
             # Get settings from config and models_params
