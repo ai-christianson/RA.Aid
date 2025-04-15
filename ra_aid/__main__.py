@@ -767,6 +767,7 @@ def insert_openrouter_data():
     cache_file = cache_dir / "models.openrouter.json"
     with open(cache_file) as user_file:
         model_list = user_file.read()
+        model_list: dict = json.loads(model_list)
 
     from ra_aid.callbacks.default_callback_handler import MODEL_COSTS
     from ra_aid.models_params import models_params, DEFAULT_TOKEN_LIMIT, DEFAULT_TEMPERATURE, DEFAULT_AGENT_BACKEND, DEFAULT_BASE_LATENCY
