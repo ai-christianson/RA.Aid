@@ -755,15 +755,17 @@ def fetch_openrouter_models():
     # j = response.json().get("data")
     # for model in j:
 
-
-
-
     with open(cache_file, "w", encoding="utf-8") as f:
         f.write(response.text)
+
     logger.debug("Models data updated at %s", cache_file)
 
 def insert_openrouter_data():
     import json
+    from decimal import Decimal
+
+    logger.debug("Loading openrouter model cache")
+
     cache_dir = Path.home() / ".ra-aid" / "cache"
     cache_file = cache_dir / "models.openrouter.json"
     with open(cache_file) as user_file:
@@ -779,11 +781,12 @@ def insert_openrouter_data():
         for model in model_data:
             id = model.get("id")
             context_length = model.get("context_length", DEFAULT_TOKEN_LIMIT)
-            reasoning = pricing.get("internal_reasoning", False)
+
             pricing: dict = model.get("pricing")
             if pricing:
                 prompt_price = pricing.get("prompt")
                 completion_price = pricing.get("completion")
+                reasoning = pricing.get("internal_reasoning", False)
 
 
                 MODEL_COSTS[id] = {
