@@ -23,3 +23,5 @@ node_modules/
 /frontend/common/dist/
 /.ra-prompt
 .ra/
+.mainclone/
+.devclone/
