@@ -747,6 +747,7 @@ def fetch_openrouter_models():
             return
 
     logger.info("Fetching fresh model data from OpenRouter...")
+    cpm("Updating OpenRouter model cache")
     url = "https://openrouter.ai/api/v1/models"
     response = requests.get(url, timeout=20)
     response.raise_for_status()  # Raise exception for HTTP errors
@@ -829,6 +830,7 @@ def main():
 
     # Fetch openrouter model list
     fetch_openrouter_models()
+    insert_openrouter_data()
 
     try:
         with DatabaseManager(base_dir=args.project_state_dir) as db:
