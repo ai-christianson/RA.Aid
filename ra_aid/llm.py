@@ -516,8 +516,13 @@ def create_llm_client(
             "model": model_name,
             **temp_kwargs,
         }
-        if is_expert and model_config.get("supports_reasoning_effort", False):
-            openai_kwargs["reasoning_effort"] = "high"
+        if is_expert:
+            if model_config.get("supports_reasoning_effort", False):
+                # If the model supports reasoning effort, we set it to high as default
+                openai_kwargs["reasoning_effort"] = "high"
+            if not model_config.get("supports_temperature", False):
+                # If the model doesn't support temperature, we remove it from the kwargs
+                openai_kwargs.pop("temperature", None)
 
         return ChatOpenAI(
             **{
