@@ -68,6 +68,7 @@ def print_agent_output(
                                     title="🤖 Assistant",
                                     subtitle=subtitle,
                                     subtitle_align="right",
+                                    padding=(0, 1),  # Added horizontal padding
                                 )
                             )
                 else:
@@ -80,6 +81,7 @@ def print_agent_output(
                                 title="🤖 Assistant",
                                 subtitle=subtitle,
                                 subtitle_align="right",
+                                padding=(0, 1),  # Added horizontal padding
                             )
                         )
     elif "tools" in chunk and "messages" in chunk["tools"]:
@@ -95,6 +97,7 @@ def print_agent_output(
                         subtitle=subtitle,
                         subtitle_align="right",
                         border_style="red bold",
+                        padding=(0, 1),  # Added horizontal padding
                     )
                 )
                 tool_name = getattr(msg, "name", None)

@@ -66,6 +66,7 @@ def read_file_tool(filepath: str, encoding: str = "utf-8") -> Dict[str, str]:
     
     DO NOT ATTEMPT TO READ BINARY FILES
     """
+    filepath = filepath.strip()
     start_time = time.time()
     try:
         if not os.path.exists(filepath):

@@ -19,6 +19,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.markdown import Markdown
 from rich.text import Text
+from rich.prompt import Confirm
 
 from ra_aid import print_error, print_stage_header
 from ra_aid.__version__ import __version__
@@ -59,6 +60,7 @@ from ra_aid.database.repositories.session_repository import SessionRepositoryMan
 from ra_aid.database.repositories.related_files_repository import (
     RelatedFilesRepositoryManager,
 )
+
 from ra_aid.database.repositories.work_log_repository import WorkLogRepositoryManager
 from ra_aid.database.repositories.config_repository import (
     ConfigRepositoryManager,
@@ -247,6 +249,7 @@ def launch_server(host: str, port: int, args):
                 "show_cost": args.show_cost,
                 "force_reasoning_assistance": args.reasoning_assistance,
                 "disable_reasoning_assistance": args.no_reasoning_assistance,
+                "cowboy_mode": args.cowboy_mode,
             }
         )
 
@@ -255,7 +258,7 @@ def launch_server(host: str, port: int, args):
 
 def parse_arguments(args=None):
     ANTHROPIC_DEFAULT_MODEL = DEFAULT_MODEL
-    OPENAI_DEFAULT_MODEL = "gpt-4o"
+    OPENAI_DEFAULT_MODEL = "o4-mini"
 
     # Case-insensitive log level argument type
     def log_level_type(value):
@@ -304,11 +307,7 @@ Examples:
         default=(
             "gemini"
             if os.getenv("GEMINI_API_KEY")
-            else (
-                "openai"
-                if (os.getenv("OPENAI_API_KEY") and not os.getenv("ANTHROPIC_API_KEY"))
-                else "anthropic"
-            )
+            else ("openai" if os.getenv("OPENAI_API_KEY") else "anthropic")
         ),
         choices=VALID_PROVIDERS,
         help="The LLM provider to use",
@@ -542,22 +541,41 @@ Examples:
 
     # Handle expert provider/model defaults
     if not parsed_args.expert_provider:
-        # Check for Gemini API key first
-        if os.environ.get("GEMINI_API_KEY"):
-            parsed_args.expert_provider = "gemini"
-            parsed_args.expert_model = "gemini-2.5-pro-preview-03-25"
-        # Check for OpenAI API key next
-        elif os.environ.get("OPENAI_API_KEY"):
+        # Priority: Explicit EXPERT_* -> Both Gemini/OpenAI -> Gemini -> Anthropic Expert -> DeepSeek -> Main Provider Fallback
+        if os.environ.get("EXPERT_OPENAI_API_KEY"):
             parsed_args.expert_provider = "openai"
-            parsed_args.expert_model = None  # Will be auto-selected
-        # If no OpenAI key but DeepSeek key exists, use DeepSeek
-        elif os.environ.get("DEEPSEEK_API_KEY"):
+            parsed_args.expert_model = None  # Will be auto-selected later
+        elif os.environ.get("EXPERT_ANTHROPIC_API_KEY"):
+             parsed_args.expert_provider = "anthropic"
+             # Use main anthropic model if expert model not specified
+             parsed_args.expert_model = parsed_args.expert_model or ANTHROPIC_DEFAULT_MODEL
+        # Add other explicit EXPERT_* checks here if needed in the future...
+
+        # NEW: Check if both base Gemini and OpenAI keys are present (and no specific EXPERT_* key was found)
+        elif os.environ.get("GEMINI_API_KEY") and os.environ.get("OPENAI_API_KEY"):
+            # Both keys present, default main to Gemini (already done) and expert to OpenAI
+            parsed_args.expert_provider = "openai"
+            # Let llm.py auto-select 'o3' unless user specified --expert-model
+            parsed_args.expert_model = parsed_args.expert_model or None
+
+        # Fallback checks for individual base keys (if the combined check didn't match or only one key exists)
+        elif os.environ.get("GEMINI_API_KEY"): # Check main Gemini key as fallback
+            parsed_args.expert_provider = "gemini"
+            # Use gemini-2.5-pro if not specified, matching main model default
+            parsed_args.expert_model = parsed_args.expert_model or "gemini-2.5-pro-preview-03-25"
+        elif os.environ.get("DEEPSEEK_API_KEY"): # Check main Deepseek key as fallback
             parsed_args.expert_provider = "deepseek"
-            parsed_args.expert_model = "deepseek-reasoner"
+            parsed_args.expert_model = "deepseek-reasoner" # Specific default for Deepseek expert
         else:
-            # Fall back to main provider if neither is available
-            parsed_args.expert_provider = parsed_args.provider
-            parsed_args.expert_model = parsed_args.model
+            # Final Fallback: Use main provider settings if none of the above conditions met
+            # Special-case OpenAI main provider: we want to use the provider but let later logic choose the best expert model.
+            if parsed_args.provider == "openai":
+                parsed_args.expert_provider = "openai"
+                parsed_args.expert_model = None  # trigger auto-selection later (prefer o3)
+            else:
+                # For other main providers, use their settings as the expert fallback
+                parsed_args.expert_provider = parsed_args.provider
+                parsed_args.expert_model = parsed_args.model
 
     # Validate temperature range if provided
     if parsed_args.temperature is not None and not (
@@ -861,6 +879,14 @@ def main():
 
     # Launch web interface if requested
     if args.server:
+        if args.cowboy_mode:
+            if not Confirm.ask(
+                "WARNING: Running in server mode with cowboy mode enabled allows the Web UI " \
+                "to execute shell commands without confirmation. Continue?", default=False
+            ):
+                print("Exiting due to user cancellation.")
+                sys.exit(0)
+
         launch_server(args.server_host, args.server_port, args)
         return
 
@@ -992,6 +1018,7 @@ def main():
                 config_repo.set(
                     "custom_tools_enabled", True if args.custom_tools else False
                 )
+                config_repo.set("cowboy_mode", args.cowboy_mode) # Also add here for non-server mode
 
                 # Validate custom tools function signatures
                 get_custom_tools()
@@ -1121,6 +1148,7 @@ def main():
                     config_repo.set(
                         "disable_reasoning_assistance", args.no_reasoning_assistance
                     )
+                    config_repo.set("cowboy_mode", args.cowboy_mode) # Chat mode also needs cowboy mode
 
                     # Set modification tools based on use_aider flag
                     set_modification_tools(args.use_aider)
@@ -1258,6 +1286,8 @@ def main():
                 config_repo.set(
                     "disable_reasoning_assistance", args.no_reasoning_assistance
                 )
+                # Store cowboy_mode for the main agent run
+                config_repo.set("cowboy_mode", args.cowboy_mode)
 
                 # Set modification tools based on use_aider flag
                 set_modification_tools(args.use_aider)

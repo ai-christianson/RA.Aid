@@ -54,7 +54,7 @@ def select_expert_model(provider: str, model: Optional[str] = None) -> Optional[
     available_models = get_available_openai_models()
 
     # Priority order for expert models
-    priority_models = ["o3-mini", "o1", "o1-preview"]
+    priority_models = ["o3"]
 
     # Return first available model from priority list
     for model_name in priority_models:
@@ -393,9 +393,18 @@ def create_llm_client(
         raise ValueError(f"Unsupported provider: {provider}")
 
     if is_expert and provider == "openai":
-        model_name = select_expert_model(provider, model_name)
-        if not model_name:
-            raise ValueError("No suitable expert model available")
+        # If no specific expert model is provided, try to select the default ('o3').
+        # The select_expert_model function handles the logic of checking availability.
+        # We pass the originally provided model_name to allow explicit overrides.
+        selected_expert_model = select_expert_model(provider, model_name)
+        if not selected_expert_model and model_name is None:
+             # Raise error only if no model was specified *and* the default ('o3') couldn't be found.
+             raise ValueError(f"Default expert model 'o3' not available via API key for provider '{provider}'. Please specify an expert model explicitly.")
+        elif selected_expert_model:
+             # Use the selected model (which will be 'o3' if model_name was None and 'o3' is available,
+             # or the explicitly passed model_name otherwise).
+             model_name = selected_expert_model
+        # If selected_expert_model is None but model_name was provided, we proceed with the provided model_name.
 
     logger.debug(
         "Creating LLM client with provider=%s, model=%s, temperature=%s, expert=%s",
@@ -507,8 +516,13 @@ def create_llm_client(
             "model": model_name,
             **temp_kwargs,
         }
-        if is_expert and model_config.get("supports_reasoning_effort", False):
-            openai_kwargs["reasoning_effort"] = "high"
+        if is_expert:
+            if model_config.get("supports_reasoning_effort", False):
+                # If the model supports reasoning effort, we set it to high as default
+                openai_kwargs["reasoning_effort"] = "high"
+            if not model_config.get("supports_temperature", False):
+                # If the model doesn't support temperature, we remove it from the kwargs
+                openai_kwargs.pop("temperature", None)
 
         return ChatOpenAI(
             **{

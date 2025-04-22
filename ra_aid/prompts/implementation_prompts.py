@@ -17,14 +17,6 @@ Working Directory: {working_directory}
 {project_info}
 </project info>
 
-<key facts>
-{key_facts}
-</key facts>
-
-<key snippets>
-{key_snippets}
-</key snippets>
-
 <relevant files>
 {related_files}
 </relevant files>
@@ -85,7 +77,9 @@ Instructions:
 {task}
 </task definition>
 
-KEEP IT SIMPLE
+CONSULT WITH THE EXPERT FREQUENTLY
+
+KEEP IT SIMPLE. DO IT RIGHT. NO HACK SOLUTIONS.
 
 FOLLOW TEST DRIVEN DEVELOPMENT (TDD) PRACTICES WHERE POSSIBLE. E.G. COMPILE CODE REGULARLY, WRITE/RUN UNIT TESTS BEFORE AND AFTER CODING (RED TO GREEN FOR THIS TASK), DO THROWAWAY INTERPRETER/TEST PROGRAMS IF NEEDED.
 

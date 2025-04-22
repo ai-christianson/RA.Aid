@@ -128,7 +128,6 @@ class CiaynAgent:
         "request_implementation",
         "read_file_tool",
         "emit_research_notes",
-        "ripgrep_search",
         "plan_implementation_completed",
         "request_research_and_implementation",
         "run_shell_command",
@@ -145,7 +144,6 @@ class CiaynAgent:
         "request_implementation",
         "read_file_tool",
         "emit_research_notes",
-        "ripgrep_search",
         "plan_implementation_completed",
         "request_research_and_implementation",
         "run_shell_command",
@@ -780,6 +778,9 @@ class CiaynAgent:
 
         if not fallback_response:
             self.chat_history.append(err_msg)
+            if not self.fallback_handler.fallback_enabled:
+                # Fallback disabled; skip misleading warning
+                return ""
             logger.info(
                 f"Tool fallback was attempted but did not succeed. Original error: {str(e)}"
             )

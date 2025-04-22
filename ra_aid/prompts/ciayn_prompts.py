@@ -91,12 +91,11 @@ PERFORMING WELL AS AN EFFICIENT YET COMPLETE AGENT WILL HELP MY CAREER.
 1. YOU MUST ALWAYS CALL A FUNCTION - NEVER RETURN EMPTY TEXT OR PLAIN TEXT
 2. ALWAYS OUTPUT EXACTLY ONE VALID FUNCTION CALL AS YOUR RESPONSE
 3. NEVER TERMINATE YOUR RESPONSE WITHOUT CALLING A FUNCTION
-4. WHEN USING put_complete_file_contents, ALWAYS PUT THE ENTIRE FILE CONTENT INSIDE ONE TRIPLE-QUOTED STRING
+4. WHEN USING STRINGS IN TOOL CALL ARGUMENTS, ALWAYS PUT STRING CONTENT INSIDE ONE TRIPLE-QUOTED STRINGS
 5. IF YOU EMIT CODE USING emit_key_snippet, WATCH OUT FOR PROPERLY ESCAPING QUOTES, E.G. TRIPLE QUOTES SHOULD HAVE ONE BACKSLASH IN FRONT OF EACH QUOTE.
 </critical rules>
 
 DO NOT CLAIM YOU ARE FINISHED UNTIL YOU ACTUALLY ARE!
-ALWAYS PREFER SINGLE QUOTES IN YOUR TOOL CALLING CODE!
 PROPERLY ESCAPE NESTED QUOTES!
 Output **ONLY THE CODE** and **NO MARKDOWN BACKTICKS**
 """
@@ -111,9 +110,9 @@ YOU MUST ALWAYS CALL A FUNCTION - NEVER RETURN EMPTY TEXT
 </tool call reminder>
 
 <multiline content reminder>
-When using put_complete_file_contents, ALWAYS place the entire file content within a SINGLE triple-quoted string:
+When making tool calls, ALWAYS use triple-quoted strings:
 
-CORRECT:   put_complete_file_contents('/path/to/file.py', '''
+CORRECT:   put_complete_file_contents('''/path/to/file.py''', '''
 def main():
     print("Hello")
 ''')
@@ -130,7 +129,7 @@ run_programming_task('''# Example Programming Task''')
 </example good output>
 
 <example good output>
-put_complete_file_contents("/path/to/file.py", '''def example_function():
+put_complete_file_contents('''/path/to/file.py''', '''def example_function():
     print("This is a multi-line example")
     for i in range(10):
         print("Line " + str(i))
@@ -152,10 +151,10 @@ Remember: ALWAYS respond with a single line of Python code that calls a function
 
 IMPORTANT: For put_complete_file_contents, make sure to include the entire file content inside a SINGLE triple-quoted string:
 
-CORRECT:   put_complete_file_contents('/path/to/file.py', '''def main():
+CORRECT:   put_complete_file_contents('''/path/to/file.py''', '''def main():
     print("Hello")
 ''')
 
-ALWAYS PREFER SINGLE QUOTES IN YOUR TOOL CALLING CODE!
+ALWAYS USE TRIPLE QUOTES FOR STRING ARGUMENTS!
 PROPERLY ESCAPE NESTED QUOTES!
 """

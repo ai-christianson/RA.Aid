@@ -28,6 +28,7 @@ def clean_env(monkeypatch):
     env_vars = [
         "ANTHROPIC_API_KEY",
         "OPENAI_API_KEY",
+        "GEMINI_API_KEY",  # Added this line
         "OPENROUTER_API_KEY",
         "OPENAI_API_BASE",
         "EXPERT_ANTHROPIC_API_KEY",
@@ -48,6 +49,33 @@ def test_default_anthropic_provider(clean_env, monkeypatch):
     assert (
         args.model == "claude-3-7-sonnet-20250219"
     )  # Updated to match current default
+
+
+def test_default_openai_provider(clean_env, monkeypatch):
+    """Test that OpenAI is the default provider when only OPENAI_API_KEY is set."""
+    monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
+    args = parse_arguments(["-m", "test message"])
+    assert args.provider == "openai"
+    assert args.model == "o4-mini"  # Default OpenAI model
+
+def test_default_openai_over_anthropic(clean_env, monkeypatch):
+    """Test that OpenAI is prioritized over Anthropic when both keys are set (and Gemini is not)."""
+    monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic-key")
+    # Ensure GEMINI_API_KEY is not set (handled by clean_env)
+    args = parse_arguments(["-m", "test message"])
+    assert args.provider == "openai"
+    assert args.model == "o4-mini"
+
+
+def test_default_gemini_provider(clean_env, monkeypatch):
+    """Test that Gemini is the default provider when GEMINI_API_KEY is set."""
+    monkeypatch.setenv("GEMINI_API_KEY", "test-gemini-key")
+    # Also set OpenAI key to ensure Gemini priority
+    monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
+    args = parse_arguments(["-m", "test message"])
+    assert args.provider == "gemini"
+    assert args.model == "gemini-2.5-pro-preview-03-25" # Default Gemini model
 
 
 def test_respects_user_specified_anthropic_model(clean_env):

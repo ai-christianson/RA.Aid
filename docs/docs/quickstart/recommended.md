@@ -4,11 +4,10 @@ sidebar_position: 2
 
 # Recommended Config
 
-This configuration combines the strengths of multiple AI models to provide the best experience:
+The simplest and recommended configuration uses Google's Gemini 2.5 Pro model, which provides a strong balance of reasoning, planning, and analysis capabilities for most tasks.
 
-- Anthropic Sonnet excels at driving the agent's core reasoning and planning
-- OpenAI's models provide robust debugging and logical analysis capabilities  
-- Tavily web search integration allows the agent to find relevant information online
+- **Primary Model:** Google Gemini 2.5 Pro (`gemini-2.5-pro-preview-03-25`) handles core agent functions and expert consultations by default when only the `GEMINI_API_KEY` is set.
+- **Web Search:** Tavily web search integration (optional) allows the agent to find relevant information online.
 
 :::info
 RA.Aid must be installed before using these configurations. If you haven't installed it yet, please see the [Installation Guide](installation).
@@ -16,30 +15,46 @@ RA.Aid must be installed before using these configurations. If you haven't insta
 
 ## Getting API Keys
 
-To use RA.Aid with the recommended configuration, you'll need to obtain API keys from the following services:
+To use RA.Aid with the recommended configuration, you'll need to obtain the following API key:
 
-1. **OpenAI API Key**: Create an account at [OpenAI's platform](https://platform.openai.com) and generate an API key from your dashboard.
+1.  **Gemini API Key**: Obtain a free API key from [Google AI Studio](https://aistudio.google.com/app/apikey).
 
-2. **Anthropic API Key**: Sign up at [Anthropic's Console](https://console.anthropic.com), then generate an API key from the API Keys section.
+You might also consider keys for other services if you want to explicitly configure different models or providers:
 
-3. **Tavily API Key** (optional): Create an account at [Tavily](https://app.tavily.com/sign-in) and get your API key from the dashboard.
+2.  **OpenAI API Key** (Optional): Create an account at [OpenAI's platform](https://platform.openai.com) and generate an API key. Useful if you want to use OpenAI models, perhaps for the expert model specifically (see [Expert Model Configuration](/configuration/expert-model.md)).
+3.  **Anthropic API Key** (Optional): Sign up at [Anthropic's Console](https://console.anthropic.com) and generate an API key. Useful if you prefer Anthropic models.
+4.  **Tavily API Key** (Optional): Create an account at [Tavily](https://app.tavily.com/sign-in) and get your API key for web search capabilities.
 
 Please keep your API keys secure and never share them publicly. Each service has its own pricing and usage terms.
 
 ## Configuration
 
-Configure your API keys:
+Configure your API keys as environment variables. For the recommended setup, you only need:
 
 ```bash
-# For OpenAI (required)
-export OPENAI_API_KEY=your_api_key_here
+# Recommended: For Google Gemini
+export GEMINI_API_KEY='your_gemini_api_key'
 
-# For Anthropic (required)
-export ANTHROPIC_API_KEY=your_api_key_here
-
-# For web search capability (optional)
-export TAVILY_API_KEY=your_api_key_here
+# Optional: For web search capability
+export TAVILY_API_KEY='your_tavily_api_key'
 ```
+
+If you want to use other providers, you can set their keys as well:
+
+```bash
+# Optional: For OpenAI
+export OPENAI_API_KEY='your_openai_api_key'
+
+# Optional: For Anthropic
+export ANTHROPIC_API_KEY='your_anthropic_api_key'
+
+# Optional: To use a specific expert model (see Expert Model Config)
+# export EXPERT_OPENAI_API_KEY='your_openai_api_key_for_expert'
+# export EXPERT_GEMINI_API_KEY='your_gemini_api_key_for_expert'
+# etc.
+```
+
+RA.Aid will automatically detect the available keys and select the default provider. If only `GEMINI_API_KEY` is set, it will use the `gemini` provider and the `gemini-2.5-pro-preview-03-25` model.
 
 ## Basic Usage
 

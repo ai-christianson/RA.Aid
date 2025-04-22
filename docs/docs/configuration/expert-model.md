@@ -30,25 +30,25 @@ You can configure the expert model through several command line arguments:
 
 | Argument | Description | Default |
 |----------|-------------|---------|
-| `--expert-provider` | AI provider to use for expert queries (openai, anthropic, etc.) | Falls back to available API keys |
+| `--expert-provider` | AI provider to use for expert queries (openai, anthropic, gemini, etc.) | Falls back to available API keys |
 | `--expert-model` | Specific model to use for expert queries | Provider-dependent |
 | `--expert-num-ctx` | Context window size (for Ollama) | 262144 |
 | `--show-thoughts` | Display thinking output from the model | False |
 
 Example usage:
 ```bash
-ra-aid --expert-provider anthropic --expert-model claude-3-opus-20240229
+ra-aid --expert-provider anthropic --expert-model claude-3-7-sonnet-20250219
 ```
 
 ### Provider Selection
 
-If you don't specify an expert provider, RA.Aid automatically selects one based on available API keys:
+If you don't specify an expert provider or model, RA.Aid automatically selects one based on available API keys, prioritizing dedicated expert keys (`EXPERT_...`) first:
 
-1. First checks for OpenAI access
-2. Then checks for DeepSeek 
-3. Falls back to the main provider and model if neither is available
-
-For OpenAI specifically, if no model is specified, it automatically selects the best available reasoning model.
+1.  Checks for OpenAI access (`OPENAI_API_KEY` or `EXPERT_OPENAI_API_KEY`)
+2.  Checks for Gemini access (`GEMINI_API_KEY` or `EXPERT_GEMINI_API_KEY`)
+3.  Checks for Anthropic access (`ANTHROPIC_API_KEY` or `EXPERT_ANTHROPIC_API_KEY`)
+4.  Checks for DeepSeek access (`DEEPSEEK_API_KEY` or `EXPERT_DEEPSEEK_API_KEY`)
+5.  Falls back to the main provider and model if none of the above are available.
 
 ### Environment Variables
 
@@ -59,9 +59,12 @@ The expert model can be configured through these environment variables:
 | `ANTHROPIC_API_KEY` | API key for Anthropic models |
 | `DEEPSEEK_API_KEY` | API key for DeepSeek models |
 | `EXPERT_ANTHROPIC_API_KEY` | API key specifically for expert (Anthropic) |
+| `EXPERT_DEEPSEEK_API_KEY` | API key specifically for expert (DeepSeek) |
 | `EXPERT_FIREWORKS_API_KEY` | API key specifically for expert (Fireworks) |
+| `EXPERT_GEMINI_API_KEY` | API key specifically for the expert model when using Gemini. |
 | `EXPERT_OPENAI_API_KEY` | API key specifically for expert (OpenAI) |
 | `FIREWORKS_API_KEY` | API key for Fireworks models |
+| `GEMINI_API_KEY` | API key for Google Gemini models. |
 | `OLLAMA_BASE_URL` | URL for Ollama API (default: http://localhost:11434) |
 | `OPENAI_API_KEY` | API key for OpenAI models |
 
@@ -105,12 +108,12 @@ Expert models are typically configured for consistency rather than creativity:
 
 To get the most out of the expert model feature:
 
-3. **Choose the Right Model**:
+1. **Choose the Right Model**:
    - Typically, it is best to use a reasoning model
-   - For complex reasoning tasks, use OpenAI's advanced models or Claude 3 Opus
+   - For complex reasoning tasks, use OpenAI's advanced models, Claude Sonnet 3.7, or Gemini 2.5 Pro
    - For offline work, configure Ollama with a suitable model
 
-4. **Review Thinking Output**:
+2. **Review Thinking Output**:
    - Enable `--show-thoughts` to see the model's reasoning process
    - Use this to understand complex solutions better
 

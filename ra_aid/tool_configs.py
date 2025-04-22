@@ -20,7 +20,6 @@ from ra_aid.tools import (
     mark_research_complete_no_implementation_required,
     put_complete_file_contents,
     read_file_tool,
-    ripgrep_search,
     run_programming_task,
     run_shell_command,
     task_completed,
@@ -133,19 +132,18 @@ def get_read_only_tools(
         List of tool functions
     """
     tools = [
-        emit_key_snippet,
         # Only include emit_related_files if use_aider is True
         *([emit_related_files] if use_aider else []),
-        emit_key_facts,
         # *TEMPORARILY* disabled to improve tool calling perf.
+        # emit_key_snippet,
+        # emit_key_facts,
         # delete_key_facts,
         # delete_key_snippets,
         # deregister_related_files,
-        list_directory_tree,
+        # list_directory_tree,
+        # fuzzy_find_project_files,
         read_file_tool,
-        fuzzy_find_project_files,
-        ripgrep_search,
-        run_shell_command,  # can modify files, but we still need it for read-only tasks.
+            run_shell_command,  # can modify files, but we still need it for read-only tasks.
     ]
 
     if web_research_enabled:
@@ -354,8 +352,8 @@ def get_chat_tools(expert_enabled: bool = True, web_research_enabled: bool = Fal
         ask_human,
         request_research,
         request_research_and_implementation,
-        emit_key_facts,
         # *TEMPORARILY* disabled to improve tool calling perf.
+        # emit_key_facts,
         # delete_key_facts,
         # delete_key_snippets,
         # deregister_related_files,

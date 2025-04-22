@@ -181,6 +181,21 @@ def run_agent_thread(
                 )
                 human_input_id = human_input_record.id # Store the ID
                 logger.debug(f"Created human input record for session {session_id} with ID {human_input_id}")
+
+                # --- > BROADCAST SESSION DETAILS UPDATE <--- START
+                # Retrieve the full session details *after* human input is added
+                # This ensures the display_name is calculated based on the human input.
+                updated_session_model = session_repo.get(session_id)
+                if updated_session_model:
+                    send_broadcast({
+                        'type': 'session_details_update', # Use a specific type
+                        'payload': updated_session_model.model_dump(mode='json')
+                    })
+                    logger.info(f"Broadcasted full session details update for session {session_id}")
+                else:
+                    logger.error(f"Could not retrieve session {session_id} after creating human input for broadcast.")
+                # --- > BROADCAST SESSION DETAILS UPDATE <--- END
+
             except Exception as e:
                 # Log error but don't stop the agent thread
                 logger.error(f"Failed to create human input record for session {session_id}: {str(e)}")

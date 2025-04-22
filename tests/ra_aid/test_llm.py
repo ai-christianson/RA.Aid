@@ -423,25 +423,48 @@ def test_select_expert_model_non_openai():
 
 
 def test_select_expert_model_priority():
-    """Test model selection follows priority order."""
-    available_models = ["gpt-4", "o1", "o3-mini"]
+    """Test model selection follows priority order (o3 first)."""
+    available_models = ["gpt-4", "o3", "o1"]
 
     with mock.patch(
         "ra_aid.llm.get_available_openai_models", return_value=available_models
     ):
         model = select_expert_model("openai")
-        assert model == "o3-mini"
+        assert model == "o3"
 
 
-def test_select_expert_model_no_match():
-    """Test model selection when no priority models available."""
-    available_models = ["gpt-4", "gpt-3.5"]
+def test_select_expert_model_priority_fallback_fails():
+    """Test that selection returns None if 'o3' is not available."""
+    available_models = ["gpt-4", "o1", "o1-preview"] # Does not contain 'o3'
 
     with mock.patch(
         "ra_aid.llm.get_available_openai_models", return_value=available_models
     ):
         model = select_expert_model("openai")
-        assert model is None
+        assert model is None # Should be None as 'o3' is the only priority
+
+
+def test_initialize_llm_default_expert_openai_selects_o3(clean_env, mock_openai, monkeypatch):
+    """Test that initialize_llm selects 'o3' as default expert if available."""
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key") # Use base key
+    available_models = ["gpt-4", "o3", "o4-mini"] # Mock 'o3' as available
+
+    with mock.patch(
+        "ra_aid.llm.get_available_openai_models", return_value=available_models
+    ):
+        # Call initialize_expert_llm without specifying an expert model.
+        # It should default to 'o3' because it's available.
+        # initialize_expert_llm implicitly calls create_llm_client with is_expert=True
+        _llm = initialize_expert_llm(provider="openai", model_name=None)
+
+        # Assert that ChatOpenAI was called with 'o3'
+        mock_openai.assert_called_once()
+        call_args, call_kwargs = mock_openai.call_args
+        assert call_kwargs.get("model") == "o3"
+        assert call_kwargs.get("api_key") == "test-key" # Should use base key if expert not set
+        # Expert models should default to temperature 0 / high reasoning effort
+        assert "temperature" not in call_kwargs or call_kwargs.get("temperature") == 0
+        assert call_kwargs.get("reasoning_effort") == "high"
 
 
 def test_temperature_validation(clean_env, mock_openai):

@@ -114,7 +114,12 @@ interface SessionActions {
   /**
    * Update the status of a specific session (e.g., based on WebSocket message)
    */
-  updateSessionStatus: (sessionId: number, status: SessionStatus) => void; // Added action
+  updateSessionStatus: (sessionId: number, status: SessionStatus) => void;
+
+  /**
+   * Update the full details of a specific session (e.g., based on WebSocket message)
+   */
+  updateSessionDetails: (updatedSession: AgentSession) => void; // New action
 }
 
 /**
@@ -312,6 +317,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
       const newSessionId: number = data.session_id;
 
       // Refresh the sessions to get the newly created one with its status
+      // This fetch should now get the session with the name derived from the human input
       await get().fetchSessions();
 
       // Select the new session using the validated ID (number)
@@ -319,6 +325,8 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
         selectedSessionId: newSessionId,
         newSession: null // Clear new session state after successful submission
       });
+
+      // NO LONGER NEED TO RELY ON FETCH. The backend should send a session_details_update message.
 
     } catch (error) {
       console.error('Error submitting new session:', error);
@@ -346,6 +354,24 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
     }));
     // Optional: Log the update
     console.log(`Store updated session ${sessionId} status to ${status}`);
+  },
+
+  /**
+   * Update the full details of a specific session
+   */
+  updateSessionDetails: (updatedSession: AgentSession) => {
+    // Ensure the incoming data is a valid AgentSession
+    if (!validateAgentSession(updatedSession)) {
+        console.warn('[SessionStore] Received invalid session details payload:', updatedSession);
+        return;
+    }
+
+    set((state) => ({
+        sessions: state.sessions.map((session) =>
+            session.id === updatedSession.id ? updatedSession : session
+        ),
+    }));
+    console.log(`Store updated session ${updatedSession.id} details. New name: ${updatedSession.name}`);
   },
 
 }));

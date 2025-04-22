@@ -69,9 +69,18 @@ type ClientConfigStore = ClientConfigState & ClientConfigActions;
 /**
  * Default configuration values
  */
+/**
+ * The default client configuration object, parsed using the `ClientConfigSchema`.
+ * 
+ * - `host`: Defaults to the current window's hostname, or 'localhost' if unavailable.
+ * - `port`: Determines the port based on the environment:
+ *   - In `vite dev` server, it uses the `VITE_BACKEND_PORT` environment variable, defaulting to `1818` if not set.
+ *   - In `vite build` (prebuilt production), it uses the current `window.location.port`, defaulting to `1818` if unavailable.
+ */
+const backend_port = import.meta.env.DEV ? Number.parseInt(import.meta.env.VITE_BACKEND_PORT || '1818') : Number.parseInt(window?.location?.port || '1818');
 const DEFAULT_CONFIG = ClientConfigSchema.parse({
-  host: 'localhost',
-  port: 1818
+  host: window?.location?.hostname || 'localhost',
+  port: backend_port
 });
 
 /**

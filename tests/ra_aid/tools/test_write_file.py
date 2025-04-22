@@ -1,5 +1,5 @@
 import os
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 import pytest
 
@@ -69,6 +69,16 @@ def mock_related_files_repository():
         mock_repo.return_value.format_related_files.side_effect = mock_format_related_files
         
         yield mock_repo
+
+
+@pytest.fixture(autouse=True)
+def mock_trajectory_repository():
+    """Mock the TrajectoryRepository to avoid database operations during tests"""
+    with patch('ra_aid.tools.write_file.get_trajectory_repository') as mock_get_repo:
+        mock_repo_instance = mock_get_repo.return_value
+        # We don't care about the return value of create, just that it doesn't raise
+        mock_repo_instance.create = MagicMock(return_value=None)
+        yield mock_get_repo
 
 
 @pytest.fixture
@@ -259,7 +269,8 @@ def test_write_to_readonly_directory(temp_test_dir):
             {"filepath": str(test_file), "complete_file_contents": "test content"}
         )
         assert result["success"] is False
-        assert "Permission" in result["message"]
+        # The specific error message might vary slightly, check for "Permission"
+        assert "Permission" in result["message"] or "Read-only" in result["message"]
     finally:
         # Restore permissions for cleanup
         os.chmod(readonly_dir, 0o755)

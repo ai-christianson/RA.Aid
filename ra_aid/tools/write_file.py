@@ -7,6 +7,7 @@ from langchain_core.tools import tool
 from rich.console import Console
 from rich.panel import Panel
 from ra_aid.console.formatting import console_panel
+from ra_aid.database.repositories.trajectory_repository import get_trajectory_repository  # Added import
 from ra_aid.tools.memory import emit_related_files
 
 console = Console()
@@ -65,12 +66,22 @@ def put_complete_file_contents(
 
         logging.debug(f"File write complete: {bytes_written} bytes in {elapsed:.2f}s")
 
+        # Create trajectory record for successful file write
+        trajectory_repo = get_trajectory_repository()
+        trajectory_repo.create(
+            record_type="file_write",
+            tool_name="put_complete_file_contents",
+            tool_parameters={"filepath": filepath, "encoding": encoding},
+            step_data={"filepath": filepath, "bytes_written": result["bytes_written"]},
+            is_error=False,
+        )
+
         console_panel(
             f"{'Initialized empty file' if not complete_file_contents else f'Wrote {bytes_written} bytes'} at {filepath} in {elapsed:.2f}s",
             title="💾 File Write",
             border_style="bright_green",
         )
-        
+
         # Add file to related files
         emit_related_files.invoke({"files": [filepath]})
 

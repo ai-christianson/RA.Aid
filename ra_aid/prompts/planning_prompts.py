@@ -21,14 +21,6 @@ KEEP IT SIMPLE
 {research_notes}
 </research notes>
 
-<key facts>
-{key_facts}
-</key facts>
-
-<key snippets>
-{key_snippets}
-</key snippets>
-
 <environment inventory>
 {env_inv}
 </environment inventory>
@@ -92,7 +84,13 @@ You have often been criticized for:
 {base_task}
 <base task>
 
+BREAK BIG JOBS INTO MANY SMALL TASKS.
+
+CONSULT WITH THE EXPERT FREQUENTLY
+
 YOU MUST FOCUS ON THIS BASE TASK. IT TAKES PRECEDENT OVER EVERYTHING ELSE.
+
+KEEP IT SIMPLE. DO IT RIGHT. NO HACKY SOLUTIONS.
 
 DO NOT WRITE ANY FILES YET. CODE WILL BE WRITTEN AS YOU CALL request_task_implementation.
 

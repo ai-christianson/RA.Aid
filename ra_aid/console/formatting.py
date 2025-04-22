@@ -35,7 +35,7 @@ def console_panel(
     border_style: str = "blue",
     subtitle: Optional[str] = None,
     subtitle_align: str = "right",
-    padding: tuple = (0, 0),
+    padding: tuple = (0, 1),
     expand: bool = True,
     safe_box: bool = True,
     width: Optional[int] = None,
@@ -103,7 +103,7 @@ def print_stage_header(stage: str) -> None:
     icon = icons.get(stage_key, "🚀")
 
     # Create styled panel with icon
-    panel_content = f" {icon} {stage_title}"
+    panel_content = f"{icon} {stage_title}"
     console_panel(panel_content, border_style="green bold", padding=(0, 1))
 
 

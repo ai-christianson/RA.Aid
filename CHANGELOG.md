@@ -1,3 +1,77 @@
+## [0.28.1] 2025-04-17
+
+- Update web prebuilt assets
+
+## [0.28.0] 2025-04-17
+
+### Documentation
+- Updated expert model API key environment variables (`EXPERT_GEMINI_API_KEY`, `EXPERT_DEEPSEEK_API_KEY`) and clarified selection priority in `docs/docs/configuration/expert-model.md`.
+- Updated recommendation to Google Gemini 1.5 Pro as the primary default model in `docs/docs/intro.md` & `docs/docs/quickstart/recommended.md`, explaining automatic detection via `GEMINI_API_KEY`.
+
+### Frontend
+- Improved autoscroll logic in `frontend/common/src/components/DefaultAgentScreen.tsx`.
+- Added new trajectory visualization components for file modifications: `FileStrReplaceTrajectory.tsx` and `FileWriteTrajectory.tsx` in `frontend/common/src/components/trajectories/`.
+- Integrated new trajectory components into `frontend/common/src/components/TrajectoryPanel.tsx` and `frontend/common/src/components/trajectories/index.ts`.
+
+### Backend Core & Configuration
+- Refined expert model provider selection logic in `ra_aid/__main__.py` with updated priority order based on API keys.
+- Minor cleanup in `ra_aid/agent_backends/ciayn_agent.py` (removed unused import, refined fallback warning).
+- Set default backend for `o4-mini` to `CIAYN` in `ra_aid/models_params.py`.
+
+### Tools & Prompts
+- Added `file_str_replace` tool (`ra_aid/tools/file_str_replace.py`) for replacing strings in files.
+- Replaced `write_file_tool` with `put_complete_file_contents` tool (`ra_aid/tools/write_file.py`) for writing complete file content.
+- Updated `read_file_tool` (`ra_aid/tools/read_file.py`) to strip whitespace from filepaths.
+- Added `file_str_replace` and `put_complete_file_contents` to tool configurations and removed old `write_file_tool` (`ra_aid/tool_configs.py`).
+- Removed `ripgrep_search` tool from default CIAYN tools (use `run_shell_command` instead) (`ra_aid/tool_configs.py`).
+- Updated core agent prompts (Research, Planning, Implementation) to emphasize using `rg` via `run_shell_command`, mandate `emit_research_notes`, and refine instructions (`ra_aid/prompts/`).
+
+### Testing
+- Added tests for fallback warning logic in `tests/ra_aid/agent_backends/test_ciayn_fallback_warning.py`.
+- Updated tests for `put_complete_file_contents` tool in `tests/ra_aid/tools/test_write_file.py`.
+
+## [0.27.0] 2025-04-16
+
+### Added
+- Support for `o4-mini` and `o3` models
+
+### Changed
+- **Default Model/Provider Logic (`ra_aid/__main__.py`):**
+    - Changed the default OpenAI model from `gpt-4o` to `o4-mini`.
+    - Updated the default LLM provider selection priority based on available API keys to: Gemini (`GEMINI_API_KEY`), then OpenAI (`OPENAI_API_KEY`), then Anthropic (`ANTHROPIC_API_KEY`).
+- **Expert Model Selection Logic (`ra_aid/__main__.py`, `ra_aid/llm.py`):**
+    - Introduced dedicated environment variables for expert model API keys (e.g., `EXPERT_OPENAI_API_KEY`, `EXPERT_ANTHROPIC_API_KEY`).
+    - Updated the priority order for selecting the *expert* provider when none is explicitly set: `EXPERT_OPENAI_API_KEY` > `GEMINI_API_KEY` > `EXPERT_ANTHROPIC_API_KEY` > `DEEPSEEK_API_KEY`.
+    - Refined fallback logic: If no specific expert key is found, it uses the main provider configuration. A special case ensures that if the main provider is OpenAI and no expert model is specified, the expert model defaults to auto-selection (prioritizing `o3`).
+    - Updated the default OpenAI *expert* model selection to prioritize only `"o3"`. An error is now raised if `"o3"` is unavailable via the API key and no specific expert model was requested by the user.
+- **Model Parameters (`ra_aid/models_params.py`):**
+    - Added configuration parameters (token limits, capabilities) for the `o4-mini` and `o3` models.
+
+### Testing (`tests/ra_aid/test_default_provider.py`, `tests/ra_aid/test_llm.py`)
+- Added/updated tests to verify the new default provider logic, ensuring correct prioritization.
+- Added/updated tests for expert model selection to reflect the new prioritization and the default selection of `o3` for OpenAI expert.
+
+## [0.26.0] 2025-04-16
+
+### Frontend
+- Implement improved autoscroll logic with user scroll detection in `DefaultAgentScreen.tsx`.
+- Add `Ctrl+Space` shortcut for new session and completion message in `DefaultAgentScreen.tsx`.
+- Make session title header sticky in `DefaultAgentScreen.tsx`.
+- Add `Ctrl+Enter` (submit) and `Ctrl+Shift+Enter` (research-only) shortcuts with visual key indicators in `InputSection.tsx`.
+- Create new `EnterKeySvg.tsx` component for shortcut key visuals.
+- Add `updateSessionDetails` action to `sessionStore.ts` for faster session name updates via WebSocket.
+
+### Backend
+- Add `--cowboy-mode` flag with server warning confirmation in `__main__.py`.
+- Adjust console output padding in `console/formatting.py` and `console/output.py`.
+- Refactor `research_notes_formatter.py` to return raw content.
+- Add model parameters for `gpt-4.1`, `gpt-4.1-mini`, `gpt-4.1-nano` in `models_params.py`.
+- Update CIAYN agent prompts to mandate triple quotes for all string tool arguments in `prompts/ciayn_prompts.py`.
+- Broadcast full session details immediately after creation via WebSocket in `server/api_v1_spawn_agent.py`.
+
+### Build
+- Update prebuilt frontend assets (`index-*.js`, `index-*.css`, `index.html`).
+
 ## [0.25.0] 2025-04-09
 
 ### Backend Changes
