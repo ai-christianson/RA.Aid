@@ -111,6 +111,8 @@ If you find this is an empty directory, you can stop research immediately and as
 {expert_section}
 {human_section}
 {web_research_section}
+{mcp_guidance}
+
 {custom_tools_section}
 
     You have often been criticized for:

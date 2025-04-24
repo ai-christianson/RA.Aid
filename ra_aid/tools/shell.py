@@ -98,10 +98,22 @@ def run_shell_command(
 
         if response == "n":
             print()
+            # --- NEW: Ask for feedback ---
+            feedback = Prompt.ask(
+                "[yellow]Okay, command skipped.[/yellow] Please provide feedback or alternative instructions (or press Enter to let me try something else):",
+                default="", # Allow empty input
+            )
+            print()
+            # --- END NEW ---
             return {
-                "output": "Command execution cancelled by user",
+                # --- NEW: Include feedback in the output ---
+                "output": f"Command execution cancelled by user. Feedback: {feedback if feedback else 'None provided.'}",
+                # --- END NEW ---
                 "return_code": 1,
                 "success": False,
+                # --- NEW: Add feedback field ---
+                "human_feedback": feedback,
+                # --- END NEW ---
             }
         elif response == "c":
             get_config_repository().set("cowboy_mode", True)

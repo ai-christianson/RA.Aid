@@ -17,6 +17,8 @@ from rich.console import Console
 
 # Import agent_utils functions at runtime to avoid circular imports
 from ra_aid import agent_utils
+import importlib.resources as pkg_resources
+
 from ra_aid.console.formatting import cpm
 from ra_aid.database.repositories.key_fact_repository import get_key_fact_repository
 from ra_aid.database.repositories.key_snippet_repository import (
@@ -367,6 +369,23 @@ def run_research_agent(
         if get_config_repository().get("custom_tools_enabled", False)
         else ""
     )
+    # Dynamically load MCP guidance based on active servers
+    active_mcp_servers = get_config_repository().get("active_mcp_servers", [])
+    mcp_guidance_parts = []
+    for server_name in active_mcp_servers:
+        # Skip Task Master guidance in Research agent
+        if server_name == "taskmaster-ai": 
+            continue 
+        try:
+            guidance_file = f"{server_name}.txt"
+            guidance_content = pkg_resources.read_text("ra_aid.prompts.mcp_guidance", guidance_file)
+            mcp_guidance_parts.append(guidance_content)
+        except FileNotFoundError:
+            logger.warning(f"Guidance file for active MCP server '{server_name}' not found, skipping.")
+        except Exception as e:
+            logger.error(f"Error loading guidance for MCP server '{server_name}': {e}")
+            
+    mcp_guidance = "\n".join(mcp_guidance_parts).strip()
 
     # Prepare expert guidance section if expert guidance is available
     expert_guidance_section = ""
@@ -395,6 +414,7 @@ YOU MUST FOLLOW THE EXPERT'S GUIDANCE OR ELSE BE TERMINATED!
         human_section=human_section,
         web_research_section=web_research_section,
         custom_tools_section=custom_tools_section,
+        mcp_guidance=mcp_guidance, # Combined MCP guidance
         key_facts=key_facts,
         work_log=get_work_log_repository().format_work_log(),
         key_snippets=key_snippets,

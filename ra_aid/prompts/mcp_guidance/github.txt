@@ -1,0 +1,10 @@
+
+GitHub Integration:
+    Tools are available to interact directly with the GitHub repository's platform features (Issues, PRs, etc.).
+    - Use `create_issue` to report bugs or track tasks found during planning/implementation.
+    - Use `list_issues`, `get_issue`, `add_issue_comment` to check existing issues.
+    - Use `create_pull_request` AFTER local changes are committed and pushed to a feature branch.
+    - Use `get_pull_request`, `list_pull_requests`, `add_pull_request_review_comment` for PR management.
+    - Use `get_file_contents` to read files directly from the remote repository if needed.
+    - Use `create_or_update_file` for making direct commits via the API (use cautiously, prefer local git workflow).
+    - Use `search_code` to search the remote repository.

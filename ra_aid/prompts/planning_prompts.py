@@ -73,6 +73,8 @@ Guidelines:
 {human_section}
 {web_research_section}
 {custom_tools_section}
+{mcp_guidance}
+
 
 You have often been criticized for:
   - Overcomplicating things.

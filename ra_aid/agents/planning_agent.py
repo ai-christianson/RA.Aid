@@ -16,6 +16,8 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 
 from ra_aid.agent_context import agent_context, is_completed, reset_completion_flags, should_exit
+import importlib.resources as pkg_resources
+
 # Import agent_utils functions at runtime to avoid circular imports
 from ra_aid import agent_utils
 from ra_aid.console.formatting import print_stage_header
@@ -336,6 +338,34 @@ def run_planning_agent(
 {expert_guidance}
 </expert guidance>"""
 
+    # Dynamically load MCP guidance based on active servers
+    active_mcp_servers = get_config_repository().get("active_mcp_servers", [])
+    mcp_guidance_parts = []
+    # Task Master guidance depends on planning flag AND server activity
+    if get_config_repository().get("task_master_planning_enabled", False):
+        try:
+            guidance_content = pkg_resources.read_text("ra_aid.prompts.mcp_guidance", "taskmaster-ai.txt")
+            mcp_guidance_parts.append(guidance_content)
+        except FileNotFoundError:
+            logger.warning("Task Master guidance file not found, skipping.")
+        except Exception as e:
+            logger.error(f"Error loading Task Master guidance: {e}")
+            
+    # Other servers just depend on activity
+    for server_name in active_mcp_servers:
+        if server_name == "taskmaster-ai": # Already handled above if planning enabled
+            continue 
+        try:
+            guidance_file = f"{server_name}.txt"
+            guidance_content = pkg_resources.read_text("ra_aid.prompts.mcp_guidance", guidance_file)
+            mcp_guidance_parts.append(guidance_content)
+        except FileNotFoundError:
+            logger.warning(f"Guidance file for active MCP server '{server_name}' not found, skipping.")
+        except Exception as e:
+            logger.error(f"Error loading guidance for MCP server '{server_name}': {e}")
+            
+    mcp_guidance = "\n".join(mcp_guidance_parts).strip()
+
     planning_prompt = PLANNING_PROMPT.format(
         current_date=current_date,
         working_directory=working_directory,
@@ -343,6 +373,7 @@ def run_planning_agent(
         human_section=human_section,
         web_research_section=web_research_section,
         custom_tools_section=custom_tools_section,
+        mcp_guidance=mcp_guidance, # Combined MCP guidance
         base_task=base_task,
         project_info=formatted_project_info,
         research_notes=formatted_research_notes,

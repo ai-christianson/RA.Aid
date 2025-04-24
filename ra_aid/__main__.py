@@ -2,6 +2,12 @@ import argparse
 import logging
 import os
 import sys
+import json
+import time # <-- ADDED IMPORT
+from typing import Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ra_aid.utils.mcp_use_client import MCPUseClientSync
 import uuid
 from datetime import datetime
 
@@ -41,6 +47,7 @@ from ra_aid.database.repositories.human_input_repository import (
     HumanInputRepositoryManager,
     get_human_input_repository,
 )
+from ra_aid.database.repositories.session_repository import get_session_repository
 from ra_aid.database.repositories.research_note_repository import (
     ResearchNoteRepositoryManager,
     get_research_note_repository,
@@ -80,8 +87,18 @@ from ra_aid.prompts.chat_prompts import CHAT_PROMPT
 from ra_aid.prompts.web_research_prompts import WEB_RESEARCH_PROMPT_SECTION_CHAT
 from ra_aid.prompts.custom_tools_prompts import DEFAULT_CUSTOM_TOOLS_PROMPT
 from ra_aid.server.server import app as fastapi_app
-from ra_aid.tool_configs import get_chat_tools, set_modification_tools, get_custom_tools
+from ra_aid.tool_configs import (
+    get_chat_tools,
+    set_modification_tools,
+    get_custom_tools,
+    get_planning_tools,
+    get_implementation_tools,
+)
 from ra_aid.tools.human import ask_human
+
+import importlib.resources as pkg_resources
+
+import atexit
 
 logger = get_logger(__name__)
 
@@ -270,6 +287,9 @@ Examples:
     ra-aid -m "Add error handling to the database module"
     ra-aid -m "Explain the authentication flow" --research-only
     ra-aid --msg-file task_description.txt
+    ra-aid -m "Use context7 to find latest pandas API for reading CSVs" # Context7 enabled by default
+    ra-aid -m "Implement feature X" --no-context7 # Disable default Context7
+    ra-aid -m "Use my custom browser tool" --mcp-use-config ./my_browser_mcp.json --no-context7 # Use specific MCP config
         """,
     )
     parser.add_argument(
@@ -293,6 +313,16 @@ Examples:
         "--research-only",
         action="store_true",
         help="Only perform research without implementation",
+    )
+    parser.add_argument(
+        "--web-research",
+        action="store_true",
+        help="Enable web research capabilities",
+    )
+    parser.add_argument(
+        "--search",
+        action="store_true",
+        help="Enable search capabilities",
     )
     parser.add_argument(
         "--provider",
@@ -343,6 +373,7 @@ Examples:
         default=None,
         choices=VALID_PROVIDERS,
         help="The LLM provider to use for expert knowledge queries",
+
     )
     parser.add_argument(
         "--expert-model",
@@ -496,9 +527,38 @@ Examples:
         type=str,
         help="File path of Python module containing custom tools (e.g. ./path/to_custom_tools.py)",
     )
+    parser.add_argument(
+        "--mcp-use-config",
+        type=str,
+        help="Path to MCP-Use JSON config file (enables MCP-Use tools)",
+    )
+    parser.add_argument(
+        "--disable-default-mcp",
+        nargs='*',
+        metavar='SERVER_NAME',
+        help="Disable specific default MCP servers (e.g., context7 taskmaster-ai tree_sitter) or all if no names are given.",
+        default=None # Default is None, meaning don't disable any unless flag is present
+    )
+    parser.add_argument(
+        "--disable-task-master-planning",
+        action="store_true",
+        help="Force RA.Aid to use its internal planner instead of Task Master tools, even if Task Master MCP is available.",
+    )
+
+
     if args is None:
         args = sys.argv[1:]
     parsed_args = parser.parse_args(args)
+
+    # Eagerly validate file paths provided via arguments
+    if parsed_args.msg_file and not os.path.isfile(parsed_args.msg_file):
+        parser.error(f"Message file not found: {parsed_args.msg_file}")
+    if parsed_args.custom_tools and not os.path.isfile(parsed_args.custom_tools):
+        parser.error(f"Custom tools file not found: {parsed_args.custom_tools}")
+    if parsed_args.mcp_use_config and not os.path.isfile(parsed_args.mcp_use_config):
+        parser.error(f"MCP-Use config file not found: {parsed_args.mcp_use_config}")
+    if parsed_args.aider_config and not os.path.isfile(parsed_args.aider_config):
+        parser.error(f"Aider config file not found: {parsed_args.aider_config}")
 
     # Validate message vs msg-file usage
     if parsed_args.message and parsed_args.msg_file:
@@ -611,6 +671,24 @@ def is_stage_requested(stage: str) -> bool:
     return False
 
 
+def display_welcome_message():
+    """Display a welcome message when starting in interactive mode."""
+    welcome_text = """
+Welcome to RA.Aid Interactive Mode!
+
+I can help you with:
+• Code analysis and understanding
+• Implementing new features
+• Fixing bugs
+• Refactoring code
+• Researching technical topics
+
+Just type your request and press Enter.
+Press Ctrl+C to exit.
+    """
+    console.print(Panel(welcome_text, title="RA.Aid Interactive", border_style="green"))
+
+
 def wipe_project_memory(custom_dir=None):
     """Delete the project database file to wipe all stored memory.
 
@@ -662,6 +740,8 @@ def build_status():
     )
     web_research_enabled = config_repo.get("web_research_enabled", False)
     custom_tools_enabled = config_repo.get("custom_tools_enabled", False)
+    active_mcp_servers = config_repo.get("active_mcp_servers", [])
+    logger.debug("MCP Servers read by build_status: %s", active_mcp_servers)
 
     # Get the expert enabled status
     expert_enabled = bool(expert_provider and expert_model)
@@ -697,6 +777,12 @@ def build_status():
             "Enabled" if custom_tools_enabled else "Disabled",
             style=None if custom_tools_enabled else "italic",
         )
+        status.append("\n")
+        
+    # MCP servers status
+    if active_mcp_servers:
+        status.append("🔌 MCP Servers: ")
+        status.append(", ".join(active_mcp_servers))
         status.append("\n")
 
     # Fallback handler status
@@ -746,6 +832,158 @@ def build_status():
     return status
 
 
+def process_task(args, mcp_use_client_instance=None):
+    """Process a single task with the given arguments."""
+    # This function will contain the core task processing logic
+    # that was previously in main()
+    
+    # Get or create config repository for storing runtime configuration
+    try:
+        # Try to get existing config repository
+        config_repo = get_config_repository()
+    except Exception as e:
+        # If it fails, initialize a new one
+        logger.debug(f"Config repository not found, initializing: {e}")
+        from ra_aid.database.repositories.config_repository import ConfigRepositoryManager
+        ConfigRepositoryManager.initialize()
+        config_repo = get_config_repository()
+    
+    # Store key arguments in config repository for access by tools
+    config_repo.set("provider", args.provider)
+    config_repo.set("model", args.model)
+    config_repo.set("temperature", args.temperature)
+    config_repo.set("expert_provider", args.expert_provider)
+    config_repo.set("expert_model", args.expert_model)
+    config_repo.set("research_only", args.research_only)
+    
+    # Safely set web_research and search flags
+    web_research_enabled = getattr(args, 'web_research', False)
+    search_enabled = getattr(args, 'search', False)
+    config_repo.set("web_research_enabled", web_research_enabled)
+    config_repo.set("search_enabled", search_enabled)
+    
+    config_repo.set("hil", args.hil)
+    config_repo.set("test_cmd_timeout", args.test_cmd_timeout)
+    config_repo.set("max_test_cmd_retries", args.max_test_cmd_retries)
+    
+    
+    # Validate message is provided
+    if not args.message:
+        error_message = "No task provided"
+        print_error(error_message)
+        return
+    
+    # Store the human input in the database
+    human_input_repo = get_human_input_repository()
+    session_id = get_session_repository().get_current_session_id()
+    human_input_repo.create(content=args.message, source="cli", session_id=session_id)
+    
+    # Run the appropriate agent based on the arguments
+    if args.research_only:
+        # Run research agent
+        research_model = initialize_llm(
+            args.provider, args.model or DEFAULT_MODEL, temperature=args.temperature
+        )
+        run_research_agent(
+            args.message,
+            research_model,
+            expert_enabled=False,
+            research_only=True,
+            hil=args.hil,
+            web_research_enabled=config_repo.get("web_research_enabled", False),
+            memory=research_memory,
+        )
+    else:
+        # Initialize the LLM
+        llm = initialize_llm(
+            args.provider, args.model, temperature=args.temperature
+        )
+        
+        # Initialize the expert LLM if needed
+        expert_llm = None
+        if args.expert_provider and args.expert_model:
+            expert_llm = initialize_llm(
+                args.expert_provider, args.expert_model, temperature=args.temperature
+            )
+        
+        # Get/Load custom tools (call might have side effects)
+        get_custom_tools(mcp_use_client=mcp_use_client_instance)
+        
+        # Create the planning agent
+        planning_agent = create_agent(
+            llm,
+            get_planning_tools(
+                expert_enabled=bool(expert_llm),
+                web_research_enabled=web_research_enabled,
+            ),
+            checkpointer=planning_memory,
+            agent_type="planning",
+        )
+        
+        # Run the planning agent
+        run_agent_with_retry(
+            planning_agent,
+            args.message,
+        )
+        
+        # Create and run the implementation agent if not in research-only mode
+        implementation_agent = create_agent(
+            llm,
+            get_implementation_tools(
+                expert_enabled=bool(expert_llm),
+                web_research_enabled=web_research_enabled,
+            ),
+            checkpointer=implementation_memory,
+            agent_type="implementation",
+        )
+        
+        run_agent_with_retry(
+            implementation_agent,
+            args.message,
+        )
+    
+    # Clean up MCP-Use client if it was initialized
+    if mcp_use_client_instance:
+        try:
+            mcp_use_client_instance.close()
+        except Exception as e:
+            logger.error(f"Error closing MCP-Use client: {e}")
+
+def run_interactive_mode(args, mcp_use_client_instance=None):
+    """Run RA.Aid in interactive mode with a command prompt."""
+    display_welcome_message()
+    
+    # Config repository is initialized within the main() context manager
+        
+    # --- Display initial status ---    
+    try:
+        console.print(Panel(build_status(), title="Status", border_style="blue"))
+    except Exception as e:
+        logger.debug(f"Initial status display failed: {e}")
+    # --- END NEW ---
+    
+    try:
+        while True:
+            try:
+                user_input = input("RA.Aid> ").strip()
+                if not user_input:
+                    continue
+                args.message = user_input
+                process_task(args, mcp_use_client_instance)
+                
+                # Show status after each task
+                console.print(Panel(build_status(), title="Status", border_style="blue"))
+                
+                # Clear message for next iteration
+                args.message = None
+            except (EOFError, KeyboardInterrupt):
+                print("\n👋 Goodbye!")
+                sys.exit(0)
+    except Exception as e:
+        logger.error(f"Error in interactive mode: {e}")
+        print_error(f"Error: {str(e)}")
+        sys.exit(1)
+
 def main():
     """Main entry point for the ra-aid command line tool."""
     args = parse_arguments()
@@ -757,11 +995,16 @@ def main():
     )
     logger.debug("Starting RA.Aid with arguments: %s", args)
 
+    # Initialize MCP client instance to None
+    mcp_use_client_instance = None
+
     # Check if we need to wipe project memory before starting
     if args.wipe_project_memory:
         result = wipe_project_memory(custom_dir=args.project_state_dir)
         logger.info(result)
         print(f"📋 {result}")
+        
+    # Let run_interactive_mode handle the welcome message
 
     # Launch web interface if requested
     if args.server:
@@ -810,6 +1053,53 @@ def main():
                 EnvInvManager(env_data) as env_inv,
             ):
                 # This initializes all repositories and makes them available via their respective get methods
+
+                # Initialize and register MCP-Use client for cleanup if enabled
+                # Note: mcp_use_client_instance was initialized to None earlier
+                active_mcp_servers = [] # Default to empty list
+                logger.debug("Attempting MCP initialization...")
+                if config_repo.get("mcp_use_enabled", False):
+                    try:
+                        mcp_use_config = config_repo.get("mcp_use_config")
+                        from ra_aid.utils.mcp_use_client import MCPUseClientSync 
+                        logger.info("Attempting to initialize MCP-Use client...")
+                        mcp_use_client_instance = MCPUseClientSync(mcp_use_config)
+                        atexit.register(mcp_use_client_instance.close)
+                        
+                        # --- NEW: Wait for servers and show message ---
+                        console.print("[yellow]Initializing MCP servers (waiting 20s)...[/yellow]")
+                        time.sleep(20)
+                        # --- END NEW ---
+                        
+                        logger.debug("MCPUseClientSync instance created. Getting active servers...")
+                        active_mcp_servers = mcp_use_client_instance.get_active_server_names()
+                        logger.info(f"MCP-Use client initialized. Active servers: {active_mcp_servers}")
+                    except Exception as e:
+                        logger.error(f"MCP-Use client initialization failed: {e}", exc_info=True)
+                        logger.warning("MCP-Use integration will be disabled for this run.")
+                        # Ensure flags reflect the failure
+                        config_repo.set("mcp_use_enabled", False)
+                        mcp_enabled = False # Update local var too
+                        active_mcp_servers = []
+                        mcp_use_client_instance = None # Reset instance on failure
+                else:
+                    logger.debug("MCP-Use is disabled in config.")
+                
+                config_repo.set("active_mcp_servers", active_mcp_servers) # Store active servers
+                logger.debug("MCP Servers list stored in config_repo: %s", active_mcp_servers)
+
+                # Determine if we should start in interactive mode
+                start_interactive = not args.message and not args.msg_file and not args.server and not args.chat
+
+                # Process initial task if provided
+                if not start_interactive:
+                    process_task(args, mcp_use_client_instance)
+                    # Show status after initial task
+                    console.print(Panel(build_status(), title="Status", border_style="blue"))
+
+                # Enter interactive mode if requested or after initial task
+                if start_interactive or (not args.server and not args.chat):
+                    run_interactive_mode(args, mcp_use_client_instance)
                 logger.debug("Initialized SessionRepository")
                 logger.debug("Initialized KeyFactRepository")
                 logger.debug("Initialized KeySnippetRepository")
@@ -889,10 +1179,123 @@ def main():
                 config_repo.set(
                     "custom_tools_enabled", True if args.custom_tools else False
                 )
+                # Handle MCP-Use config loading and filtering
+                logger.debug("Starting MCP config determination...") # <-- ADDED
+                user_mcp_config_path = args.mcp_use_config # User-specified path
+                disabled_defaults = args.disable_default_mcp # List of defaults to disable, or None
+                final_mcp_config_source = None # Will be dict or path string
+                mcp_enabled = False
+                logger.debug(f"User MCP config path: {user_mcp_config_path}") # <-- ADDED
+                logger.debug(f"Disabled defaults: {disabled_defaults}") # <-- ADDED
+
+                # Determine if we should attempt to load the default config
+                should_load_defaults = True
+                if user_mcp_config_path and disabled_defaults is None:
+                    # Case 1: User specified a config, didn't touch --disable-default-mcp.
+                    # Load ONLY the user's config.
+                    logger.info(
+                        f"--mcp-use-config ('{user_mcp_config_path}') provided without --disable-default-mcp. "
+                        "Loading only the specified config."
+                    )
+                    should_load_defaults = False
+                    final_mcp_config_source = user_mcp_config_path
+                # Else (Case 2: No user config OR --disable-default-mcp was used): 
+                # We will potentially load defaults (and maybe merge user config later).
+                logger.debug(f"Should load default MCP config? {should_load_defaults}") # <-- ADDED
+                
+                default_config_dict = {}
+                if should_load_defaults:
+                    logger.debug("Attempting to load default MCP config...")
+                    try:
+                        # Corrected path relative to project root
+                        default_config_file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../examples/default_mcp_servers.json')) 
+                        logger.debug(f"Looking for default config at: {default_config_file_path}")
+                        if os.path.isfile(default_config_file_path):
+                            logger.info(f"Loading default MCP server config: {default_config_file_path}")
+                            with open(default_config_file_path, 'r') as f:
+                                default_config_dict = json.load(f)
+                            logger.debug(f"Default config loaded: {list(default_config_dict.get('mcpServers', {}).keys())}")
+
+                            # Filter based on --disable-default-mcp list
+                            if isinstance(disabled_defaults, list):
+                                logger.debug(f"Filtering default servers based on: {disabled_defaults}") # <-- ADDED
+                                if not disabled_defaults: # Empty list means disable all
+                                    logger.info("--disable-default-mcp used with no arguments. Disabling all default MCP servers.")
+                                    default_config_dict["mcpServers"] = {}
+                                else:
+                                    servers_to_keep = {}
+                                    disabled_set = set(disabled_defaults)
+                                    logger.info(f"Disabling default MCP servers specified by flag: {disabled_set}")
+                                    for name, config in default_config_dict.get("mcpServers", {}).items():
+                                        if name not in disabled_set:
+                                            servers_to_keep[name] = config
+                                    default_config_dict["mcpServers"] = servers_to_keep
+                                    logger.debug(f"Filtered default config: {list(default_config_dict.get('mcpServers', {}).keys())}") # <-- ADDED
+                        else:
+                            logger.warning("Default MCP config file not found.") # <-- ADDED
+                    except (ImportError, FileNotFoundError, NotADirectoryError, json.JSONDecodeError) as e:
+                        logger.error(f"Error loading or parsing default MCP config: {e}", exc_info=True) # <-- ADDED exc_info
+                        default_config_dict = {} # Ensure it's empty on error
+                        logger.error(f"Error loading or processing default MCP config: {e}. Proceeding without defaults.")
+                        default_config_dict = {} # Ensure it's empty on error
+
+                # Now, determine the final config source (path or merged dict)
+                if user_mcp_config_path and should_load_defaults:
+                    # Case 2a: Merge user config with (potentially filtered) defaults
+                    logger.debug("Merging user MCP config with filtered defaults...") # <-- ADDED
+                    try:
+                        with open(user_mcp_config_path, 'r') as f:
+                            user_config_dict = json.load(f)
+                        merged_servers = default_config_dict.get("mcpServers", {})
+                        merged_servers.update(user_config_dict.get("mcpServers", {}))
+                        final_mcp_config_source = {"mcpServers": merged_servers}
+                        logger.info(f"Merged user MCP config '{user_mcp_config_path}' with loaded defaults.")
+                        logger.debug(f"Merged config: {list(final_mcp_config_source.get('mcpServers', {}).keys())}") # <-- ADDED
+                    except (FileNotFoundError, json.JSONDecodeError) as e:
+                        logger.error(f"Error loading user-specified MCP config '{user_mcp_config_path}': {e}. Using only defaults (if any).", exc_info=True)
+                        final_mcp_config_source = default_config_dict # Fallback to defaults
+                elif user_mcp_config_path: # Case 1: Only user config (defaults were skipped)
+                    final_mcp_config_source = user_mcp_config_path
+                elif should_load_defaults: # Case 2b: Only defaults (filtered or not)
+                    final_mcp_config_source = default_config_dict
+                # Else: No user config, no defaults loaded -> final_mcp_config_source remains None
+                logger.debug(f"Final MCP config source type: {type(final_mcp_config_source)}") # <-- ADDED
+                logger.debug(f"Final MCP config source value (partial): {str(final_mcp_config_source)[:200]}...") # <-- ADDED
+
+                # Set config repo based on the final source
+                if final_mcp_config_source and (isinstance(final_mcp_config_source, str) or final_mcp_config_source.get("mcpServers")):
+                    config_repo.set("mcp_use_config", final_mcp_config_source) # Store dict or path
+                    mcp_enabled = True
+                    logger.debug("MCP config source found, setting mcp_use_enabled=True") # <-- ADDED
+                else:
+                    logger.info("No MCP servers configured or enabled.")
+                    mcp_enabled = False
+                    logger.debug("No valid MCP config source found, mcp_use_enabled=False") # <-- ADDED
+                
+                config_repo.set("mcp_use_enabled", mcp_enabled)
+
                 config_repo.set("cowboy_mode", args.cowboy_mode) # Also add here for non-server mode
 
-                # Validate custom tools function signatures
-                get_custom_tools()
+
+                # Determine if Task Master planning integration should be enabled
+                task_master_active = "taskmaster-ai" in active_mcp_servers
+                task_master_planning_enabled = task_master_active and not args.disable_task_master_planning
+                config_repo.set("task_master_planning_enabled", task_master_planning_enabled)
+                logger.info(f"Task Master planning integration enabled: {task_master_planning_enabled}")
+
+                # Check for required API keys if Task Master planning is enabled
+                if task_master_planning_enabled:
+                    if not os.getenv("ANTHROPIC_API_KEY"):
+                        logger.warning("Task Master planning is enabled, but ANTHROPIC_API_KEY environment variable is not set. Task Master tools requiring it may fail.")
+
+
+                # Check for GitHub token if GitHub MCP server might be active
+                if "github" in active_mcp_servers:
+                     if not os.getenv("GITHUB_TOKEN"):
+                          logger.warning("GitHub MCP server is active, but GITHUB_TOKEN environment variable is not set. GitHub tools will likely fail.")
+
+                # Validate custom tools function signatures (this will now load MCP tools via the instance if available)
+                get_custom_tools(mcp_use_client=mcp_use_client_instance)
                 custom_tools_enabled = config_repo.get("custom_tools_enabled", False)
 
                 # Build status panel with memory statistics
@@ -1062,33 +1465,16 @@ def main():
                     return
 
                 # Validate message is provided
-                if (
-                    not args.message and not args.wipe_project_memory
-                ):  # Add check for wipe_project_memory flag
-                    error_message = "--message or --msg-file is required"
-                    try:
-                        trajectory_repo = get_trajectory_repository()
-                        human_input_id = (
-                            get_human_input_repository().get_most_recent_id()
-                        )
-                        trajectory_repo.create(
-                            step_data={
-                                "display_title": "Error",
-                                "error_message": error_message,
-                            },
-                            record_type="error",
-                            human_input_id=human_input_id,
-                            is_error=True,
-                            error_message=error_message,
-                        )
-                    except Exception as traj_error:
-                        # Swallow exception to avoid recursion
-                        logger.debug(f"Error recording trajectory: {traj_error}")
-                        pass
-                    print_error(error_message)
-                    sys.exit(1)
+                # (This check is no longer needed as interactive mode is handled within the main with block)
+                # if (
+                #     not args.message and not args.wipe_project_memory
+                # ):  # Add check for wipe_project_memory flag
+                #     # Instead of showing an error, set a flag to enter interactive mode later
+                #     args.enter_interactive_mode = True
 
-                if args.message:  # Only set base_task if message exists
+                # Initialize base_task with a default value
+                base_task = ""
+                if args.message:  # Set base_task if message exists
                     base_task = args.message
 
                 # Record CLI input in database
@@ -1192,6 +1578,19 @@ def main():
                 )
 
                 # for how long have we had a second planning agent triggered here?
+
+                # After task completion in normal mode, set flag to enter interactive mode
+                # (This logic is now handled within the main with block)
+                # if not args.server and not args.chat:
+                #     # Clear message args to prompt for next task
+                #     args.message = None
+                #     args.msg_file = None
+                #     
+                #     # Show status after task completion
+                #     console.print(Panel(build_status(), title="Status", border_style="blue"))
+                #     
+                #     # Set flag to enter interactive mode after completing the current task
+                #     args.enter_interactive_mode = True
 
     except (KeyboardInterrupt, AgentInterrupt):
         print()

@@ -58,6 +58,8 @@ dependencies = [
     "langchain-mcp-adapters>=0.0.5",
     "langchain-deepseek>=0.1.2",
     "langchain-text-splitters>=0.3.7",
+    "mcp-use",
+    "mcp-server-tree-sitter[languages]>=0.4.0",
 ]
 
 [project.optional-dependencies]
@@ -83,5 +85,10 @@ version = {attr = "ra_aid.version.__version__"}
 [tool.hatch.version]
 path = "ra_aid/__version__.py"
 
+[tool.hatch.build.targets.sdist]
+include = ["ra_aid", "examples", "ra_aid/prompts/mcp_guidance"]
+
 [tool.hatch.build.targets.wheel]
+include = ["ra_aid", "examples", "ra_aid/prompts/mcp_guidance"]
 packages = ["ra_aid"]
+

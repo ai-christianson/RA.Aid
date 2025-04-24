@@ -1,0 +1,7 @@
+
+Tree-sitter Tool Guidance:
+    Use tree-sitter tools (`get_ast`, `get_symbols`, `run_query`, `get_dependencies`) for structural code analysis. These complement text search (`run_shell_command` with `rg`). For example:
+    - Use `get_symbols` to list functions/classes in a file.
+    - Use `run_query` with specific tree-sitter queries to find patterns (e.g., function calls, class definitions).
+    - Use `get_dependencies` to understand relationships between code components.
+    Remember to use the project name (likely the directory name) identified during registration when calling these tools.

@@ -1,6 +1,6 @@
 """Tools for spawning and managing sub-agents."""
 
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
 import logging
 
 from langchain_core.tools import tool
@@ -369,13 +369,18 @@ def request_research_and_implementation(query: str) -> Dict[str, Any]:
 
 
 @tool("request_task_implementation")
-def request_task_implementation(task_spec: str) -> str:
+def request_task_implementation(task_spec: str, task_master_id: Optional[str] = None) -> Dict[str, Any]:
     """Spawn an implementation agent to execute the given task.
 
     Task specs should have the requirements. Generally, the spec will not include any code.
 
     Args:
         task_spec: REQUIRED The full task specification (markdown format, typically one part of the overall plan)
+        task_master_id: Optional ID of the corresponding task in Task Master (e.g., "3" or "5.2")
+    
+    Returns:
+        Dictionary containing the completion message, success status, reason for failure (if any),
+        and the original task_master_id if provided.
     """
     # Initialize model from config
     model = initialize_llm(
@@ -455,85 +460,20 @@ def request_task_implementation(task_spec: str) -> str:
     # Get and reset work log if at root depth
     work_log = get_work_log()
 
-    # Clear completion state
+    # Clear completion state before returning
     reset_completion_flags()
 
-    # Check if the agent has crashed
-    agent_crashed = is_crashed()
-    crash_message = get_crash_message() if agent_crashed else None
-
-    try:
-        key_facts = format_key_facts_dict(get_key_fact_repository().get_facts_dict())
-    except RuntimeError as e:
-        logger.error(f"Failed to access key fact repository: {str(e)}")
-        key_facts = ""
-        
-    try:
-        key_snippets = format_key_snippets_dict(get_key_snippet_repository().get_snippets_dict())
-    except RuntimeError as e:
-        logger.error(f"Failed to access key snippet repository: {str(e)}")
-        key_snippets = ""
-        
-    response_data = {
-        "key_facts": key_facts,
-        "related_files": get_related_files(),
-        "key_snippets": key_snippets,
+    # Prepare result dictionary
+    result_data = {
         "completion_message": completion_message,
-        "success": success and not agent_crashed,
+        "success": success,
         "reason": reason,
-        "agent_crashed": agent_crashed,
-        "crash_message": crash_message,
+        "task_master_id": task_master_id # Pass back the ID
     }
     if work_log is not None:
-        response_data["work_log"] = work_log
+        result_data["work_log"] = work_log
 
-    # Convert the response data to a markdown string
-    markdown_parts = []
-
-    # Add header and completion message
-    markdown_parts.append("# Task Implementation")
-    if response_data.get("completion_message"):
-        markdown_parts.append(
-            f"\n## Completion Message\n\n{response_data['completion_message']}"
-        )
-
-    # Add crash information if applicable
-    if response_data.get("agent_crashed"):
-        markdown_parts.append(
-            f"\n## ⚠️ Agent Crashed ⚠️\n\n**Error:** {response_data.get('crash_message', 'Unknown error')}"
-        )
-
-    # Add success status
-    status = "Success" if response_data.get("success", False) else "Failed"
-    reason_text = (
-        f": {response_data.get('reason')}" if response_data.get("reason") else ""
-    )
-    markdown_parts.append(f"\n## Status\n\n**{status}**{reason_text}")
-
-    # Add key facts
-    if response_data.get("key_facts"):
-        markdown_parts.append(f"\n## Key Facts\n\n{response_data['key_facts']}")
-
-    # Add related files
-    if response_data.get("related_files"):
-        files_list = "\n".join([f"- {file}" for file in response_data["related_files"]])
-        markdown_parts.append(f"\n## Related Files\n\n{files_list}")
-
-    # Add key snippets
-    if response_data.get("key_snippets"):
-        markdown_parts.append(f"\n## Key Snippets\n\n{response_data['key_snippets']}")
-
-    # Add work log
-    if response_data.get("work_log"):
-        markdown_parts.append(f"\n## Work Log\n\n{response_data['work_log']}")
-        markdown_parts.append(
-            "\n\nTHE ABOVE WORK HAS BEEN COMPLETED"
-        )
-
-    # Join all parts into a single markdown string
-    markdown_output = "".join(markdown_parts)
-
-    return markdown_output
+    return result_data
 
 
 @tool("request_implementation")
