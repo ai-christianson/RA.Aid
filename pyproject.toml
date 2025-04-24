@@ -70,6 +70,7 @@ dev = [
 
 [project.scripts]
 ra-aid = "ra_aid.__main__:main"
+lilraaid = "lilraaid.__main__:main"
 
 [project.urls]
 Homepage = "https://github.com/ai-christianson/RA.Aid"
@@ -84,4 +85,4 @@ version = {attr = "ra_aid.version.__version__"}
 path = "ra_aid/__version__.py"
 
 [tool.hatch.build.targets.wheel]
-packages = ["ra_aid"]
+packages = ["ra_aid", "lilraaid"]
