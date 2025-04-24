@@ -1,3 +1,21 @@
+## [0.29.0] 2025-04-24
+
+### Changed
+- **Frontend Port Configuration:**
+    - Frontend development server port is now configurable via `VITE_FRONTEND_PORT` environment variable (defaults to 5173) (`frontend/web/vite.config.js`).
+    - Frontend now dynamically determines the backend port using `VITE_BACKEND_PORT` in dev (default 1818) and `window.location.port` in production (`frontend/common/src/store/clientConfigStore.ts`).
+- **Expert Model Temperature Handling:** The backend (`ra_aid/llm.py`) now checks if an expert model supports the `temperature` parameter before passing it, preventing errors with models like newer OpenAI versions that don't. It continues to set `reasoning_effort` to `"high"` where supported.
+- **OpenAI Model Definitions:** Updated definitions for `o4-mini` and `o3` in `ra_aid/models_params.py` to set `supports_temperature=False` and `supports_reasoning_effort=True`.
+
+### Added
+- **Frontend Development Documentation:** Added instructions to `docs/docs/contributing.md` on running the frontend dev server and configuring ports using environment variables.
+- **New OpenAI Model Definitions:** Added definitions for `o4-mini-2025-04-16`, `o3-2025-04-16`, and `o3-mini-2025-01-31` to `ra_aid/models_params.py`.
+
+### Fixed
+- **Custom Tool Result Handling:** Ensured results from custom tools are always wrapped in a Langchain `BaseMessage` (`AIMessage`) to maintain consistency (`ra_aid/agent_backends/ciayn_agent.py`).
+- **Custom Tool Console Output:** Corrected minor formatting issues (escaped newlines) in the console output message when executing custom tools (`ra_aid/agent_backends/ciayn_agent.py`).
+
+
 ## [0.28.1] 2025-04-17
 
 - Update web prebuilt assets
