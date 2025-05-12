@@ -31,15 +31,27 @@ const setupTheme = () => {
 
 
 /**
- * Checks if a session is a haltable state
+ * Checks if a session is in a haltable state
  *
  * @param {AgentSession} session
+ * @returns {boolean} True if the session can be halted
  */
-const isHaltable = (session: AgentSession) => {
+const isHaltable = (session: AgentSession | undefined | null) => {
+  if (!session) return false;
   console.log(`[isHaltable] Checking if session ${session.id} is haltable; status = '${session.status}'`);
-  console.log("[isHaltable] returning", session.status === 'running' || session.status === 'pending' || session.status === 'unknown');
-
   return session.status === 'running' || session.status === 'pending' || session.status === 'unknown';
+}
+
+/**
+ * Checks if a session is in a resumable state
+ *
+ * @param {AgentSession} session
+ * @returns {boolean} True if the session can be resumed
+ */
+const isResumable = (session: AgentSession | undefined | null) => {
+  if (!session) return false;
+  console.log(`[isResumable] Checking if session ${session.id} is resumable; status = '${session.status}'`);
+  return session.status === 'halted';
 }
 
 
@@ -67,7 +79,8 @@ const SessionHaltButton = ({ session }: { session: AgentSession }) => {
       .then((response) => {
         if (response.ok) {
           console.log(`[SessionHaltButton] Session ${id} halted successfully`);
-          updateSessionStatus(id, 'halted'); // Update status in store
+          updateSessionStatus(id, 'halting'); // Update status to 'halting' first
+          // The backend will update to 'halted' when the agent actually stops
         } else {
           console.error(`[SessionHaltButton] Failed to halt session ${id}`);
         }
@@ -78,9 +91,64 @@ const SessionHaltButton = ({ session }: { session: AgentSession }) => {
   };
 
   return (
-    <Button variant="destructive" size="sm" onClick={handleHalt}>
-      {/* Stop Button Icon */}
-      STOP
+    <Button variant="destructive" size="sm" onClick={handleHalt} className="ml-2">
+      Stop
+    </Button>
+  );
+};
+
+/**
+ * SessionResumeButton component
+ *
+ * Button to resume a halted session.
+ *
+ * @param {AgentSession} session
+ * @constructor
+ */
+const SessionResumeButton = ({ session }: { session: AgentSession }) => {
+  const { id, status } = session;
+  const updateSessionStatus = useSessionStore((state) => state.updateSessionStatus);
+  const updateSessionDetails = useSessionStore((state) => state.updateSessionDetails);
+
+  const handleResume = () => {
+    // Get the host and port from the client config store
+    const { host, port } = useClientConfigStore.getState();
+
+    console.log(`[SessionResumeButton] Resuming session ${id}`);
+
+    // Optimistic update to show activity
+    updateSessionStatus(id, 'pending');
+
+    // Call the API to resume the session
+    fetch(`http://${host}:${port}/v1/session/${id}/resume`, {
+      method: 'POST',
+    })
+      .then(async (response) => {
+        if (response.ok) {
+          const updatedSessionData = await response.json();
+          console.log(`[SessionResumeButton] Session ${id} resumed successfully`, updatedSessionData);
+
+          // Convert backend format to frontend format
+          const updatedSession = safeBackendToAgentSession(updatedSessionData);
+
+          // Update the store with the full session details
+          updateSessionDetails(updatedSession);
+        } else {
+          console.error(`[SessionResumeButton] Failed to resume session ${id}`);
+          // Revert optimistic update on error
+          updateSessionStatus(id, 'halted');
+        }
+      })
+      .catch((error) => {
+        console.error(`[SessionResumeButton] Error resuming session ${id}:`, error);
+        // Revert optimistic update on error
+        updateSessionStatus(id, 'halted');
+      });
+  };
+
+  return (
+    <Button variant="outline" size="sm" onClick={handleResume} className="ml-2">
+      Resume
     </Button>
   );
 }
@@ -426,7 +494,10 @@ export const DefaultAgentScreen: React.FC = () => {
         {/* Session title with minimal spacing */}
         <div className="px-6 pt-4 pb-2 border-b border-border/30 sticky top-0 bg-background z-10 flex items-center justify-between">
           <h2 className="text-xl font-medium">{sessionName}</h2>
-          {(selectedSession && isHaltable(selectedSession)) && <SessionHaltButton session={selectedSession} />}
+          <div className="flex items-center">
+            {selectedSession && isHaltable(selectedSession) && <SessionHaltButton session={selectedSession} />}
+            {selectedSession && isResumable(selectedSession) && <SessionResumeButton session={selectedSession} />}
+          </div>
         </div>
         {/* Trajectory panel with consistent spacing */}
         <TrajectoryPanel

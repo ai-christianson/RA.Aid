@@ -554,19 +554,31 @@ def run_agent_with_retry(
     fallback_handler: Optional[FallbackHandler] = None,
     session_id: Optional[int] = None,
 ) -> Optional[str]:
-    """Run an agent with retry logic for API errors."""
-    logger.debug("Running agent with prompt length: %d", len(prompt))
+    """Run an agent with retry logic for API errors and session status management."""
+    logger.debug(f"Running agent for session {session_id} with prompt length: {len(prompt)}")
     original_handler = _setup_interrupt_handling()
     max_retries = 20
     base_delay = 1
     test_attempts = 0
 
+    # Ensure session_id is valid for repository operations
+    if session_id is None:
+        logger.error("run_agent_with_retry called without a session_id. Cannot update session status.")
+        # Proceed but log heavily
+
+    # Get session repository for status updates
+    session_repo = None
+    if session_id is not None:
+        try:
+            from ra_aid.database.repositories.session_repository import get_session_repository
+            session_repo = get_session_repository()
+        except RuntimeError as e:
+            logger.error(f"Failed to get session repository for session {session_id}: {e}. Status updates will be skipped.")
+
     _max_test_retries = get_config_repository().get(
         "max_test_cmd_retries", DEFAULT_MAX_TEST_CMD_RETRIES
     )
     auto_test = get_config_repository().get("auto_test", False)
-
-    # Create run_config with only the values needed by execute_test_command
     original_prompt = prompt
     msg_list = [HumanMessage(content=prompt)]
 
@@ -584,11 +596,13 @@ def run_agent_with_retry(
         "auto_test": auto_test,
     }
 
+    final_status_message = "Agent processing finished."
+
     # Create a new agent context for this run
     with InterruptibleSection(), agent_context() as ctx:
         try:
             for attempt in range(max_retries):
-                logger.debug("Attempt %d/%d", attempt + 1, max_retries)
+                logger.debug(f"Session {session_id}: Agent attempt {attempt + 1}/{max_retries}")
                 check_interrupt()
 
                 # Check if the agent has crashed before attempting to run it
@@ -596,37 +610,98 @@ def run_agent_with_retry(
 
                 if is_crashed():
                     crash_message = get_crash_message()
-                    logger.error("Agent has crashed: %s", crash_message)
-                    return f"Agent has crashed: {crash_message}"
+                    logger.error(f"Session {session_id}: Agent has crashed: {crash_message}")
+                    if session_repo and session_id is not None:
+                        session_repo.update_session_status(session_id, 'error')
+                        from ra_aid.utils.agent_thread_manager import unregister_agent
+                        unregister_agent(session_id)
+                    final_status_message = f"Agent crashed: {crash_message}"
+                    return final_status_message
 
                 # Check if the agent has received a stop signal
                 if has_received_stop_signal(session_id):
-                    logger.debug("Agent received halt signal; stopping not due to error.")
-                    break
+                    logger.info(f"Session {session_id}: Agent received stop signal. Halting.")
+                    if session_repo and session_id is not None:
+                        session_repo.update_session_status(session_id, 'halted')
+                        from ra_aid.utils.agent_thread_manager import unregister_agent
+                        unregister_agent(session_id)
+                    final_status_message = "Agent halted by signal."
+                    return final_status_message
 
                 try:
-                    _run_agent_stream(agent, msg_list, session_id)
+                    stream_completed = _run_agent_stream(agent, msg_list, session_id)
+
+                    if not stream_completed and session_id is not None and has_received_stop_signal(session_id):
+                        # Stream was interrupted by stop signal
+                        logger.info(f"Session {session_id}: Stream halted by signal during execution.")
+                        if session_repo:
+                            session_repo.update_session_status(session_id, 'halted')
+                            from ra_aid.utils.agent_thread_manager import unregister_agent
+                            unregister_agent(session_id)
+                        final_status_message = "Agent stream halted by signal."
+                        return final_status_message
+
                     if fallback_handler and hasattr(
                         fallback_handler, "reset_fallback_handler"
                     ):
                         fallback_handler.reset_fallback_handler()
+
                     should_break, prompt, auto_test, test_attempts = (
                         _execute_test_command_wrapper(
                             original_prompt, run_config, test_attempts, auto_test
                         )
                     )
+
                     if should_break:
-                        break
+                        logger.info(f"Session {session_id}: Task considered complete by test logic.")
+                        if session_repo and session_id is not None:
+                            session_repo.update_session_status(session_id, 'completed')
+                            from ra_aid.utils.agent_thread_manager import unregister_agent
+                            unregister_agent(session_id)
+                        final_status_message = "Agent task completed (verified by test)."
+                        return final_status_message
 
-                    if should_exit(session_id):
-                        logger.info("Agent run exited due to user request.")
-                        break
+                    if session_id is not None and (is_completed() or should_exit(session_id)):
+                        status_to_set = 'halted' if should_exit(session_id) and not is_completed() else 'completed'
+                        log_message = "Agent run exited by user request." if should_exit(session_id) else "Agent task marked as completed by tool."
+                        logger.info(f"Session {session_id}: {log_message}")
+                        if session_repo:
+                            session_repo.update_session_status(session_id, status_to_set)
+                            from ra_aid.utils.agent_thread_manager import unregister_agent
+                            unregister_agent(session_id)
+                        final_status_message = log_message
+                        return final_status_message
 
+                    # For React agents, check if state.next is empty to determine natural completion
+                    if not isinstance(agent, CiaynAgent):
+                        _cb_temp, temp_stream_config = initialize_callback_handler(agent)
+                        temp_stream_config = _prepare_state_config(temp_stream_config)
+                        current_agent_state = _get_agent_state(agent, temp_stream_config)
+                        if not current_agent_state.next:
+                            logger.info(f"Session {session_id}: React agent has no next steps. Marking as completed.")
+                            if session_repo and session_id is not None:
+                                session_repo.update_session_status(session_id, 'completed')
+                                from ra_aid.utils.agent_thread_manager import unregister_agent
+                                unregister_agent(session_id)
+                            final_status_message = "Agent completed all steps."
+                            return final_status_message
+
+                    # If prompt changed by test logic, loop again
                     if prompt != original_prompt:
+                        logger.info(f"Session {session_id}: Prompt modified by test logic, continuing.")
+                        msg_list = [HumanMessage(content=prompt)]
+                        original_prompt = prompt
                         continue
 
-                    logger.debug("Agent run completed successfully")
-                    return "Agent run completed successfully"
+                    # If we reach here with no continuation, it's a natural completion
+                    logger.info(f"Session {session_id}: Agent run completed successfully.")
+                    if session_repo and session_id is not None:
+                        session_repo.update_session_status(session_id, 'completed')
+                        from ra_aid.utils.agent_thread_manager import unregister_agent
+                        unregister_agent(session_id)
+                    final_status_message = "Agent run completed successfully."
+                    return final_status_message
+
                 except ToolExecutionError as e:
                     # Check if this is a BadRequestError (HTTP 400) which is unretryable
                     error_str = str(e).lower()
@@ -635,8 +710,13 @@ def run_agent_with_retry(
 
                         crash_message = f"Unretryable error: {str(e)}"
                         mark_agent_crashed(crash_message)
-                        logger.error("Agent has crashed: %s", crash_message)
-                        return f"Agent has crashed: {crash_message}"
+                        logger.error(f"Session {session_id}: Agent has crashed: {crash_message}")
+                        if session_repo and session_id is not None:
+                            session_repo.update_session_status(session_id, 'error')
+                            from ra_aid.utils.agent_thread_manager import unregister_agent
+                            unregister_agent(session_id)
+                        final_status_message = f"Agent crashed: {crash_message}"
+                        return final_status_message
 
                     _handle_fallback_response(e, fallback_handler, agent, msg_list)
                     continue
@@ -645,6 +725,12 @@ def run_agent_with_retry(
                         SystemMessage(f"FallbackToolExecutionError:{str(e)}")
                     )
                 except (KeyboardInterrupt, AgentInterrupt):
+                    logger.info(f"Session {session_id}: Agent interrupted by user (KeyboardInterrupt/AgentInterrupt).")
+                    if session_repo and session_id is not None:
+                        session_repo.update_session_status(session_id, 'halted')
+                        from ra_aid.utils.agent_thread_manager import unregister_agent
+                        unregister_agent(session_id)
+                    final_status_message = "Agent interrupted by user."
                     raise
                 except (
                     InternalServerError,
@@ -662,14 +748,60 @@ def run_agent_with_retry(
                     error_str = str(e).lower()
                     if (
                         "400" in error_str or "bad request" in error_str
-                    ) and isinstance(e, APIError):
+                    ) and isinstance(e, (APIError, ValueError)):
                         from ra_aid.agent_context import mark_agent_crashed
 
                         crash_message = f"Unretryable API error: {str(e)}"
                         mark_agent_crashed(crash_message)
-                        logger.error("Agent has crashed: %s", crash_message)
-                        return f"Agent has crashed: {crash_message}"
+                        logger.error(f"Session {session_id}: Agent has crashed: {crash_message}")
+                        if session_repo and session_id is not None:
+                            session_repo.update_session_status(session_id, 'error')
+                            from ra_aid.utils.agent_thread_manager import unregister_agent
+                            unregister_agent(session_id)
+                        final_status_message = f"Agent crashed: {crash_message}"
+                        return final_status_message
+
+                    if attempt == max_retries - 1:
+                        logger.error(f"Session {session_id}: Max retries reached for API errors. Last error: {e}")
+                        if session_repo and session_id is not None:
+                            session_repo.update_session_status(session_id, 'error')
+                            from ra_aid.utils.agent_thread_manager import unregister_agent
+                            unregister_agent(session_id)
+                        final_status_message = f"Agent failed after max retries for API error: {e}"
+                        return final_status_message
 
                     _handle_api_error(e, attempt, max_retries, base_delay)
+                except Exception as e:
+                    logger.error(f"Session {session_id}: Unexpected error in agent run: {e}", exc_info=True)
+                    if session_repo and session_id is not None:
+                        session_repo.update_session_status(session_id, 'error')
+                        from ra_aid.utils.agent_thread_manager import unregister_agent
+                        unregister_agent(session_id)
+                    final_status_message = f"Agent crashed due to unexpected error: {e}"
+                    return final_status_message
+
+            # If loop finishes without returning, it's an error
+            logger.warning(f"Session {session_id}: Agent loop completed iterations without explicit success/failure. Defaulting to error.")
+            if session_repo and session_id is not None:
+                session_repo.update_session_status(session_id, 'error')
+                from ra_aid.utils.agent_thread_manager import unregister_agent
+                unregister_agent(session_id)
+            final_status_message = "Agent processing finished with indeterminate state after retries."
+            return final_status_message
+
         finally:
             _restore_interrupt_handling(original_handler)
+            # Final check: if agent thread is no longer in registry but status is still 'running' or 'pending',
+            # it's an anomaly. This can happen if the thread dies unexpectedly.
+            if session_id is not None:
+                from ra_aid.utils.agent_thread_manager import agent_thread_registry
+                if session_id not in agent_thread_registry and session_repo:
+                    current_db_session = session_repo.get(session_id)
+                    if current_db_session and current_db_session.status in ['running', 'pending', 'halting']:
+                        logger.warning(
+                            f"Session {session_id}: Agent thread unregistered but DB status is '{current_db_session.status}'. "
+                            f"Setting to 'error' as a precaution."
+                        )
+                        session_repo.update_session_status(session_id, 'error')
+
+    return final_status_message

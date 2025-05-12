@@ -1,6 +1,4 @@
-
-"""Unit tests for agent_utils.py."""
-
+#"""Unit tests for agent_utils.py."""
 from typing import Any, Dict, Literal
 from unittest.mock import Mock, patch, MagicMock
 import copy
@@ -568,7 +566,7 @@ def test_run_agent_with_retry_checks_crash_status(monkeypatch, mock_config_repos
         # Verify _run_agent_stream was not called
         assert mock_calls["run_agent_stream"] == 0
         # Verify the result contains the crash message
-        assert "Agent has crashed: Test crash message" in result
+        assert "Agent crashed: Test crash message" in result
 
 
 def test_run_agent_with_retry_handles_badrequest_error(
@@ -626,7 +624,7 @@ def test_run_agent_with_retry_handles_badrequest_error(
         # Verify the agent was only run once and not retried
         assert run_count[0] == 1
         # Verify the result contains the crash message
-        assert "Agent has crashed: Unretryable error" in result
+        assert "Agent crashed: Unretryable error" in result
         # Verify the agent is marked as crashed
         assert is_crashed()
 
@@ -696,7 +694,7 @@ def test_run_agent_with_retry_handles_api_badrequest_error(
         # Verify the agent was only run once and not retried
         assert run_count[0] == 1
         # Verify the result contains the crash message
-        assert "Agent has crashed: Unretryable API error" in result
+        assert "Agent crashed: Unretryable API error" in result
         # Verify the agent is marked as crashed
         assert is_crashed()
 
@@ -783,6 +781,13 @@ def test_create_agent_default_token_limit(mock_model, mock_config_repository):
         "model": "unknown-model"
     })
 
+    # Create run_config with only the values needed by execute_test_command
+    run_config = {
+        "test_cmd": None,
+        "max_test_cmd_retries": 3,
+        "test_cmd_timeout": 30
+    }
+
     with patch("ra_aid.agent_utils.should_use_react_agent", return_value=False):
         with patch("ra_aid.agent_utils.CiaynAgent") as mock_ciayn:
             mock_ciayn.return_value = "ciayn_agent"
@@ -793,9 +798,6 @@ def test_create_agent_default_token_limit(mock_model, mock_config_repository):
                 mock_model,
                 [],
                 max_tokens=DEFAULT_TOKEN_LIMIT,
-                config={
-                    "provider": "unknown",
-                    "model": "unknown-model"
-                },
+                config={"provider": "unknown", "model": "unknown-model"},
                 session_id=None
             )

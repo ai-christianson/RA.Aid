@@ -30,3 +30,5 @@ ra_aid/__main__.exe
 .githooks
 .qodo
 /.DS_Store
+run_ra_aid.py
+ra_aid/config.py

@@ -360,18 +360,19 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
    * Update the full details of a specific session
    */
   updateSessionDetails: (updatedSession: AgentSession) => {
-    // Ensure the incoming data is a valid AgentSession
-    if (!validateAgentSession(updatedSession)) {
-        console.warn('[SessionStore] Received invalid session details payload:', updatedSession);
-        return;
-    }
+    try {
+      // Validate the incoming session data
+      validateAgentSession(updatedSession);
 
-    set((state) => ({
-        sessions: state.sessions.map((session) =>
-            session.id === updatedSession.id ? updatedSession : session
-        ),
-    }));
-    console.log(`Store updated session ${updatedSession.id} details. New name: ${updatedSession.name}`);
+      set((state) => ({
+          sessions: state.sessions.map((session) =>
+              session.id === updatedSession.id ? updatedSession : session
+          ),
+      }));
+      console.log(`Store updated session ${updatedSession.id} details. Status: ${updatedSession.status}, Name: ${updatedSession.name}`);
+    } catch (error) {
+      console.warn('[SessionStore] Received invalid session details payload:', updatedSession, error);
+    }
   },
 
 }));

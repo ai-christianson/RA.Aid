@@ -44,7 +44,12 @@ def unregister_agent(session_id: int) -> None:
     """
     logger.info(f"Unregistering agent for session_id {session_id}")
     with _registry_lock:
-        agent_thread_registry.pop(session_id, None)
+        if session_id in agent_thread_registry:
+            removed_entry = agent_thread_registry.pop(session_id, None)
+            if removed_entry:
+                logger.info(f"Successfully unregistered agent for session_id {session_id}, thread: {removed_entry['thread'].name}")
+        else:
+            logger.warning(f"Attempted to unregister non-existent agent for session_id {session_id}")
 
 
 def stop_agent(session_id: int) -> bool:
