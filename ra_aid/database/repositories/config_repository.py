@@ -29,6 +29,9 @@ class ConfigRepository:
             RETRY_FALLBACK_COUNT,
             DEFAULT_TEST_CMD_TIMEOUT,
             DEFAULT_SHOW_COST,
+            DEFAULT_MAX_COST,
+            DEFAULT_MAX_TOKENS,
+            DEFAULT_EXIT_AT_LIMIT,
             VALID_PROVIDERS,
         )
         
@@ -41,6 +44,9 @@ class ConfigRepository:
             "test_cmd_timeout": DEFAULT_TEST_CMD_TIMEOUT,
             "show_cost": DEFAULT_SHOW_COST,
             "track_cost": True,
+            "max_cost": DEFAULT_MAX_COST,
+            "max_tokens": DEFAULT_MAX_TOKENS,
+            "exit_at_limit": DEFAULT_EXIT_AT_LIMIT,
             "valid_providers": VALID_PROVIDERS,
         }
         

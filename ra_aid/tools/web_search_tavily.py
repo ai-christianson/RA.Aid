@@ -7,6 +7,7 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from tavily import TavilyClient
 
+from ra_aid.console.formatting import cpm
 from ra_aid.database.repositories.trajectory_repository import get_trajectory_repository
 from ra_aid.database.repositories.human_input_repository import get_human_input_repository
 
@@ -38,10 +39,7 @@ def web_search_tavily(query: str) -> Dict:
         human_input_id=human_input_id
     )
     
-    # Display search query panel
-    console.print(
-        Panel(Markdown(query), title="🔍 Searching Tavily", border_style="bright_blue")
-    )
+    cpm(query, title="🔍 Searching Tavily", border_style="bright_blue")
     
     try:
         client = TavilyClient(api_key=os.environ["TAVILY_API_KEY"])

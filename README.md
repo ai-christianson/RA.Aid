@@ -240,6 +240,9 @@ More information is available in our [Usage Examples](https://docs.ra-aid.ai/cat
 - `--show-cost`: Display cost information as the agent works - currently only supported on claude model agents
 - `--track-cost`: Track token usage and costs (default: False)
 - `--no-track-cost`: Disable tracking of token usage and costs
+- `--max-cost`: Maximum cost threshold in USD (positive float)
+- `--max-tokens`: Maximum token threshold (positive integer)
+- `--exit-at-limit`: Exit immediately without prompting when --max-cost or --max-tokens limits are reached
 - `--version`: Show program version number and exit
 - `--server`: Launch the server with web interface (alpha feature)
 - `--server-host`: Host to listen on for server (default: 0.0.0.0)  (alpha feature)

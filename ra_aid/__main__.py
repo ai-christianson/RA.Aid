@@ -95,6 +95,18 @@ from ra_aid.tools.human import ask_human
 
 logger = get_logger(__name__)
 
+
+def store_limit_config(config_repo, args):
+    """Store limit-related configuration values in the repository.
+    
+    Args:
+        config_repo: ConfigRepository instance
+        args: Parsed command line arguments
+    """
+    config_repo.set("max_cost", args.max_cost)
+    config_repo.set("max_tokens", args.max_tokens)
+    config_repo.set("exit_at_limit", args.exit_at_limit)
+
 # Configure litellm to suppress debug logs
 os.environ["LITELLM_LOG"] = "ERROR"
 litellm.suppress_debug_info = True
@@ -253,6 +265,9 @@ def launch_server(host: str, port: int, args):
                 "force_reasoning_assistance": args.reasoning_assistance,
                 "disable_reasoning_assistance": args.no_reasoning_assistance,
                 "cowboy_mode": args.cowboy_mode,
+                "max_cost": args.max_cost,
+                "max_tokens": args.max_tokens,
+                "exit_at_limit": args.exit_at_limit,
             }
         )
 
@@ -490,6 +505,23 @@ Examples:
         help="Disable tracking of token usage and costs",
     )
     parser.add_argument(
+        "--max-cost",
+        type=float,
+        default=None,
+        help="Maximum cost threshold in USD (positive float)",
+    )
+    parser.add_argument(
+        "--max-tokens",
+        type=int,
+        default=None,
+        help="Maximum token threshold (positive integer)",
+    )
+    parser.add_argument(
+        "--exit-at-limit",
+        action="store_true",
+        help="Exit immediately without prompt when limits are reached",
+    )
+    parser.add_argument(
         "--reasoning-assistance",
         action="store_true",
         help="Force enable reasoning assistance regardless of model defaults",
@@ -606,6 +638,14 @@ Examples:
     # If show_cost is true, we must also enable track_cost
     if parsed_args.show_cost:
         parsed_args.track_cost = True
+
+    # Validate max_cost is positive if provided
+    if parsed_args.max_cost is not None and parsed_args.max_cost <= 0:
+        parser.error("--max-cost must be a positive number")
+
+    # Validate max_tokens is positive if provided
+    if parsed_args.max_tokens is not None and parsed_args.max_tokens <= 0:
+        parser.error("--max-tokens must be a positive integer")
 
     return parsed_args
 
@@ -907,6 +947,7 @@ def main():
                     )
 
                 # Update config repo with values from CLI arguments
+                store_limit_config(config_repo, args)
                 config_repo.update(config)
                 config_repo.set("provider", args.provider)
                 config_repo.set("model", args.model)

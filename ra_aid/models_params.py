@@ -31,7 +31,7 @@ models_params = {
             "supports_think_tag": True,
             "default_temperature": DEFAULT_TEMPERATURE,
             "latency_coefficient": DEFAULT_BASE_LATENCY,
-            "default_backend": AgentBackendType.CIAYN
+            "default_backend": AgentBackendType.CIAYN,
         },
         "accounts/fireworks/models/llama-v3-70b-instruct": {
             "token_limit": 8192,
@@ -316,21 +316,44 @@ models_params = {
             "max_tokens": 32000,
             "reasoning_assist_default": False,
         },
+        "deepseek/deepseek-chat": {
+            "token_limit": 128000,
+            "supports_temperature": True,
+            "default_temperature": DEFAULT_TEMPERATURE,
+            "supports_reasoning_effort": False,
+            "latency_coefficient": DEFAULT_BASE_LATENCY,
+            "default_backend": AgentBackendType.CIAYN,
+        },
+        "mistralai/mistral-small-3.1-24b-instruct": {
+            "token_limit": 32768,
+            "supports_temperature": True,
+            "default_temperature": DEFAULT_TEMPERATURE,
+            "supports_reasoning_effort": False,
+            "latency_coefficient": DEFAULT_BASE_LATENCY,
+            "default_backend": AgentBackendType.CIAYN,
+        },
         "google/gemini-2.5-pro-preview-03-25": {
             "token_limit": 1048576,
-            "max_tokens": 1048576, # Match token_limit as per gemini provider entry
+            "max_tokens": 1048576,
             "supports_temperature": True,
-            "default_temperature": 1.0, # Match gemini provider entry
+            "default_temperature": 1.0,
             "latency_coefficient": DEFAULT_BASE_LATENCY,
-            "default_backend": AgentBackendType.CIAYN, # Match gemini provider entry
+            "default_backend": AgentBackendType.CIAYN,
         },
         "google/gemini-2.5-pro-preview-05-06": {
             "token_limit": 1048576,
-            "max_tokens": 1048576, # Match token_limit as per gemini provider entry
+            "max_tokens": 1048576,  # Match token_limit as per gemini provider entry
             "supports_temperature": True,
-            "default_temperature": 1.0, # Match gemini provider entry
+            "default_temperature": 1.0,  # Match gemini provider entry
             "latency_coefficient": DEFAULT_BASE_LATENCY,
-            "default_backend": AgentBackendType.CIAYN, # Match gemini provider entry
+            "default_backend": AgentBackendType.CIAYN,  # Match gemini provider entry
+        },
+        "anthropic/claude-sonnet-4": {
+            "token_limit": 200000,
+            "supports_temperature": True,
+            "default_temperature": DEFAULT_TEMPERATURE,
+            "latency_coefficient": DEFAULT_BASE_LATENCY,
+            "default_backend": AgentBackendType.CREATE_REACT_AGENT,
         },
     },
     "openai-compatible": {
@@ -1162,6 +1185,13 @@ models_params = {
             "supports_temperature": True,
             "default_temperature": DEFAULT_TEMPERATURE,
             "latency_coefficient": DEFAULT_BASE_LATENCY,
+        },
+        "anthropic/claude-sonnet-4": {
+            "token_limit": 200000,
+            "supports_temperature": True,
+            "default_temperature": DEFAULT_TEMPERATURE,
+            "latency_coefficient": DEFAULT_BASE_LATENCY,
+            "default_backend": AgentBackendType.CREATE_REACT_AGENT,
         },
     },
     "bedrock": {
