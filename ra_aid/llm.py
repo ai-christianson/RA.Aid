@@ -455,7 +455,7 @@ def get_provider_config(provider: str, is_expert: bool = False) -> Dict[str, Any
             "aws_access_key_id": get_env_var("AWS_ACCESS_KEY_ID", is_expert),
             "aws_secret_access_key": get_env_var("AWS_SECRET_ACCESS_KEY", is_expert),
             "aws_session_token": get_env_var("AWS_SESSION_TOKEN", is_expert),
-            "region_name": get_env_var("AWS_REGION_NAME", is_expert, "us-east-1"),
+            "region_name": get_env_var("AWS_REGION", is_expert, "us-east-1"),
             "base_url": None,
         },
         "makehub": {
