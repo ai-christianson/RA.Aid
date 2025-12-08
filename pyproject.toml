@@ -60,7 +60,7 @@ dependencies = [
     "langchain-mcp-adapters>=0.0.5",
     "langchain-deepseek>=0.1.2",
     "langchain-text-splitters>=0.3.7",
-    "protobuf>=5.0.0,<=5.29.3",
+    "protobuf>=5.0.0,<=6.33.2",
 ]
 
 [project.optional-dependencies]
