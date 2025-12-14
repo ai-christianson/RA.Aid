@@ -1,32 +1,51 @@
-/.pyenv/
-/__pycache__/
-__pycache__/
-.aider*
+# Environment variables - NEVER commit API keys!
 .env
-/work
-/dist
-/.ra-aid/
-.coverage
-/.venv
-/venv*
-/.idea
-/htmlcov
-.envrc
-appmap.log
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv
+
+# IDE
+.vscode/
+.idea/
 *.swp
-/vsc/node_modules
-/vsc/dist
-node_modules/
-/frontend/common/dist
-/frontend/web/dist/
-/.vscode
-/frontend/common/dist/
-/.ra-prompt
-ra_aid/__main__.build
-ra_aid/__main__.dist
-ra_aid/__main__.onefile-build
-ra_aid/__main__.exe
-.github
-.githooks
-.qodo
-/.DS_Store
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# RA.Aid specific
+.ra_aid/
+
+# SQLite database files
+.ra-aid/pk.db*
+

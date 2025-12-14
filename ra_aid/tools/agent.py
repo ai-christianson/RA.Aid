@@ -46,6 +46,7 @@ ResearchResult = Dict[str, Union[str, bool, Dict[int, Any], List[Any], None]]
 CANCELLED_BY_USER_REASON = "The operation was explicitly cancelled by the user. This typically is an indication that the action requested was not aligned with the user request."
 
 RESEARCH_AGENT_RECURSION_LIMIT = 3
+IMPLEMENTATION_AGENT_DEPTH_LIMIT = 2  # Prevent infinite agent spawning chains
 
 console = Console()
 logger = logging.getLogger(__name__)
@@ -565,6 +566,13 @@ def request_implementation(task_spec: str) -> str:
     Args:
         task_spec: The task specification to plan implementation for
     """
+    # Check depth to prevent infinite agent spawning
+    current_depth = get_depth()
+    if current_depth >= IMPLEMENTATION_AGENT_DEPTH_LIMIT:
+        error_message = f"Maximum agent depth ({IMPLEMENTATION_AGENT_DEPTH_LIMIT}) reached. Cannot spawn more agents."
+        logger.warning(error_message)
+        print_error(error_message)
+        return f"Error: {error_message}. Please complete your task without spawning additional agents."
 
     model = initialize_llm(
         get_config_repository().get("provider", "anthropic"),

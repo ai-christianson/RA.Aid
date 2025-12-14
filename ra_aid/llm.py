@@ -153,6 +153,7 @@ def create_openrouter_client(
         "api_key": api_key,
         "base_url": base_url,
         "model": model_name,
+        "streaming": True,  # Enable streaming for real-time token output
         "timeout": int(
             get_env_var(name="LLM_REQUEST_TIMEOUT", default=LLM_REQUEST_TIMEOUT)
         ),
@@ -564,7 +565,10 @@ def create_llm_client(
     num_ctx_value = config_repo.get(num_ctx_key, 262144)
 
     # Handle temperature settings
-    if is_expert:
+    # Note: Models with thinking enabled require temperature=1
+    if supports_thinking:
+        temp_kwargs = {"temperature": 1} if supports_temperature else {}
+    elif is_expert:
         temp_kwargs = {"temperature": 0} if supports_temperature else {}
     elif supports_temperature:
         if temperature is None:

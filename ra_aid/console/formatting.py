@@ -21,12 +21,13 @@ def cpm(message: str, title: Optional[str] = None, border_style: str = "blue", s
         subtitle = get_cost_subtitle()
         
     console.print(Panel(
-        Markdown(message), 
-        title=title, 
+        Markdown(message),
+        title=title,
         border_style=border_style,
         subtitle=subtitle,
         subtitle_align="right" if subtitle else None
     ))
+    print()  # Add spacing after panel
 
 
 def console_panel(
@@ -75,6 +76,7 @@ def console_panel(
             height=height,
         )
     )
+    print()  # Add spacing after panel
 
 
 def print_stage_header(stage: str) -> None:

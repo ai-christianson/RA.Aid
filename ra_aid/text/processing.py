@@ -140,8 +140,19 @@ def process_thinking_content(
                     panel_kwargs["border_style"] = panel_style
                 cpm(extracted_thinking, **panel_kwargs)
 
-            # Return remaining items as processed content and the extracted thinking
-            return regular_items, extracted_thinking
+            # Convert remaining items to string
+            text_parts = []
+            for item in regular_items:
+                if isinstance(item, dict):
+                    text_parts.append(item.get("text", str(item)))
+                elif isinstance(item, str):
+                    text_parts.append(item)
+                else:
+                    text_parts.append(str(item))
+            processed_content = "\n".join(text_parts)
+
+            # Return processed string content and the extracted thinking
+            return processed_content, extracted_thinking
         else:
             if logger: logger.debug("No structured thinking content found in list.")
         # If no structured thinking found in list, fall through to check string processing
@@ -185,4 +196,16 @@ def process_thinking_content(
         # If should_extract_tag is False, or if extraction failed, fall through.
 
     # 3. Return original content if no thinking was processed and returned above
+    # If content is still a list, convert to string
+    if isinstance(content, list):
+        text_parts = []
+        for item in content:
+            if isinstance(item, dict):
+                text_parts.append(item.get("text", str(item)))
+            elif isinstance(item, str):
+                text_parts.append(item)
+            else:
+                text_parts.append(str(item))
+        return "\n".join(text_parts), None
+
     return content, None

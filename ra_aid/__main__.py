@@ -5,6 +5,11 @@ import sys
 import uuid
 from datetime import datetime
 
+from dotenv import load_dotenv
+
+# Load .env file early, before any other imports that might read environment variables
+load_dotenv()
+
 import litellm
 import uvicorn
 
@@ -29,6 +34,7 @@ from ra_aid.config import (
     DEFAULT_OPENAI_MODEL,
     DEFAULT_GEMINI_MODEL,
     DEFAULT_DEEPSEEK_MODEL,
+    DEFAULT_OPENROUTER_MODEL,
     DEFAULT_PROVIDER,
     DEFAULT_RECURSION_LIMIT,
     DEFAULT_TEST_CMD_TIMEOUT,
@@ -427,6 +433,17 @@ def parse_arguments(args=None):
         help="Enable chat mode with direct human interaction (implies --hil)",
     )
     parser.add_argument(
+        "--supervisor",
+        action="store_true",
+        default=True,
+        help="Enable supervisor mode: expert plans tasks, workers execute (default: on)",
+    )
+    parser.add_argument(
+        "--legacy",
+        action="store_true",
+        help="Use legacy agent architecture instead of supervisor mode",
+    )
+    parser.add_argument(
         "--temperature",
         type=float,
         help="LLM temperature (0.0-2.0). Controls randomness in responses",
@@ -479,6 +496,28 @@ def parse_arguments(args=None):
         help=f"Timeout in seconds for test command execution (default: {DEFAULT_TEST_CMD_TIMEOUT})",
     )
     parser.add_argument(
+        "--skip-version-check",
+        action="store_true",
+        help="Skip checking for newer versions on startup (faster startup)",
+    )
+    parser.add_argument(
+        "--skip-env-discovery",
+        action="store_true",
+        help="Skip environment discovery on startup (faster startup, but environment info won't be available to agents)",
+    )
+    parser.add_argument(
+        "--fast-startup",
+        action="store_true",
+        default=True,
+        help="Enable fast startup mode (implies --skip-version-check and --skip-env-discovery). Enabled by default.",
+    )
+    parser.add_argument(
+        "--no-fast-startup",
+        action="store_false",
+        dest="fast_startup",
+        help="Disable fast startup mode",
+    )
+    parser.add_argument(
         "--server",
         action="store_true",
         help="Launch the web interface",
@@ -504,7 +543,14 @@ def parse_arguments(args=None):
     parser.add_argument(
         "--show-thoughts",
         action="store_true",
-        help="Display model thinking content extracted from think tags when supported by the model",
+        default=True,
+        help="Display model thinking content extracted from think tags when supported by the model. Enabled by default.",
+    )
+    parser.add_argument(
+        "--no-show-thoughts",
+        action="store_false",
+        dest="show_thoughts",
+        help="Hide model thinking content",
     )
     parser.add_argument(
         "--show-cost",
@@ -697,6 +743,8 @@ Examples:
             parsed_args.model = parsed_args.model or DEFAULT_ANTHROPIC_MODEL
         elif parsed_args.provider == "gemini":
             parsed_args.model = parsed_args.model or DEFAULT_GEMINI_MODEL
+        elif parsed_args.provider == "openrouter":
+            parsed_args.model = parsed_args.model or DEFAULT_OPENROUTER_MODEL
         elif not parsed_args.model and not parsed_args.research_only:
             # Require model for other providers unless in research mode
             if not hasattr(parsed_args, 'command') or parsed_args.command is None or parsed_args.command == "agent":
@@ -731,6 +779,9 @@ Examples:
             elif os.environ.get("DEEPSEEK_API_KEY"): # Check main Deepseek key as fallback
                 parsed_args.expert_provider = "deepseek"
                 parsed_args.expert_model = DEFAULT_EXPERT_DEEPSEEK_MODEL # Specific default for Deepseek expert
+            elif os.environ.get("ANTHROPIC_API_KEY"): # Use Anthropic for expert if available
+                parsed_args.expert_provider = "anthropic"
+                parsed_args.expert_model = parsed_args.expert_model or DEFAULT_EXPERT_ANTHROPIC_MODEL
             else:
                 # Final Fallback: Use main provider settings if none of the above conditions met
                 # Special-case OpenAI main provider: we want to use the provider but let later logic choose the best expert model.
@@ -1000,10 +1051,13 @@ def wipe_project_memory(custom_dir=None):
         return f"Error: Failed to wipe project memory: {str(e)}"
 
 
-def build_status():
+def build_status(skip_version_check=False):
     """Build status panel with model and feature information.
 
     Includes memory statistics at the bottom with counts of key facts, snippets, and research notes.
+
+    Args:
+        skip_version_check: If True, skip checking for newer versions
     """
     status = Text()
 
@@ -1094,11 +1148,12 @@ def build_status():
     if fact_count > 0 or snippet_count > 0 or note_count > 0:
         status.append(" (use --wipe-project-memory to reset)")
 
-    # Check for newer version
-    version_message = check_for_newer_version()
-    if version_message:
-        status.append("\n\n")
-        status.append(version_message, style="yellow")
+    # Check for newer version (unless skipped)
+    if not skip_version_check:
+        version_message = check_for_newer_version()
+        if version_message:
+            status.append("\n\n")
+            status.append(version_message, style="yellow")
 
     return status
 
@@ -1106,6 +1161,11 @@ def build_status():
 def main():
     """Main entry point for the ra-aid command line tool."""
     args = parse_arguments() # This now parses global args and subcommands
+
+    # Handle --fast-startup flag by enabling skip flags
+    if args.fast_startup:
+        args.skip_version_check = True
+        args.skip_env_discovery = True
 
     # Setup logging early. project_state_dir is a global arg.
     setup_logging(
@@ -1203,10 +1263,14 @@ def main():
             config = {}
 
             # Initialize repositories with database connection
-            # Create environment inventory data
-            env_discovery = EnvDiscovery()
-            env_discovery.discover()
-            env_data = env_discovery.format_markdown()
+            # Create environment inventory data (skip if requested for faster startup)
+            if args.skip_env_discovery:
+                logger.debug("Skipping environment discovery (--skip-env-discovery)")
+                env_data = "Environment discovery skipped for faster startup."
+            else:
+                env_discovery = EnvDiscovery()
+                env_discovery.discover()
+                env_data = env_discovery.format_markdown()
 
             with (
                 SessionRepositoryManager(db) as session_repo,
@@ -1311,7 +1375,7 @@ def main():
                 custom_tools_enabled = config_repo.get("custom_tools_enabled", False)
 
                 # Build status panel with memory statistics
-                status = build_status()
+                status = build_status(skip_version_check=args.skip_version_check)
 
                 console.print(
                     Panel(
@@ -1369,13 +1433,27 @@ def main():
                         human_input_id=human_input_id,
                     )
 
-                    # Get project info
+                    # Get project info (skip deep scan if fast startup is enabled)
+                    # Always run pwd and ls -la for basic context
+                    import subprocess
                     try:
-                        project_info = get_project_info(".", file_limit=2000)
-                        formatted_project_info = format_project_info(project_info)
+                        pwd_result = subprocess.run(['pwd'], capture_output=True, text=True, timeout=5)
+                        ls_result = subprocess.run(['ls', '-la'], capture_output=True, text=True, timeout=5)
+                        quick_context = f"Current Directory:\n{pwd_result.stdout}\nDirectory Listing:\n{ls_result.stdout}"
                     except Exception as e:
-                        logger.warning(f"Failed to get project info: {e}")
-                        formatted_project_info = ""
+                        logger.warning(f"Failed to get directory context: {e}")
+                        quick_context = ""
+
+                    if args.fast_startup or args.skip_env_discovery:
+                        logger.debug("Skipping deep project info scan for faster startup")
+                        formatted_project_info = f"{quick_context}\n\n(Deep project scan skipped for faster startup. Use fuzzy_find_project_files or list_dir to explore further.)"
+                    else:
+                        try:
+                            project_info = get_project_info(".", file_limit=2000)
+                            formatted_project_info = f"{quick_context}\n\n{format_project_info(project_info)}"
+                        except Exception as e:
+                            logger.warning(f"Failed to get project info: {e}")
+                            formatted_project_info = quick_context
 
                     # Get initial request from user
                     initial_request = ask_human.invoke(
@@ -1475,6 +1553,47 @@ def main():
                         ),
                         config,
                     )
+                    return
+
+                # Handle supervisor mode (default) unless --legacy is specified
+                if args.supervisor and not getattr(args, 'legacy', False):
+                    print_stage_header("Supervisor Mode")
+
+                    # Initialize models
+                    # Expert model = main model (or expert model if specified)
+                    expert_provider = args.expert_provider or args.provider
+                    expert_model_name = args.expert_model or args.model
+
+                    expert_model = initialize_llm(
+                        expert_provider,
+                        expert_model_name,
+                        temperature=args.temperature,
+                    )
+
+                    # Worker model = can be cheaper/faster
+                    # For now, use the same model, but could be configured separately
+                    worker_model = initialize_llm(
+                        args.provider,
+                        args.model,
+                        temperature=args.temperature,
+                    )
+
+                    # Import and run supervisor
+                    from ra_aid.agents.supervisor import run_supervisor
+
+                    result = run_supervisor(
+                        user_request=args.message or "",
+                        expert_model=expert_model,
+                        worker_model=worker_model,
+                    )
+
+                    # Print final result
+                    print()
+                    console.print(Panel(
+                        Markdown(result),
+                        title="Supervisor Complete",
+                        border_style="green bold",
+                    ))
                     return
 
                 # Validate message is provided

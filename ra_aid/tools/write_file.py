@@ -13,6 +13,55 @@ from ra_aid.tools.memory import emit_related_files
 console = Console()
 
 
+# Guardrail thresholds
+MIN_LINES_FOR_PROTECTION = 20  # Files with fewer lines aren't protected
+MIN_BYTES_FOR_PROTECTION = 500  # Files smaller than this aren't protected
+MAX_CONTENT_LOSS_RATIO = 0.5  # Refuse if new content is less than 50% of original
+
+
+def _check_destructive_write(filepath: str, new_content: str, encoding: str = "utf-8") -> str | None:
+    """
+    Check if a write operation would be destructive.
+
+    Returns:
+        Error message if write should be blocked, None if safe to proceed.
+    """
+    if not os.path.exists(filepath):
+        return None  # New file, always safe
+
+    try:
+        with open(filepath, "r", encoding=encoding) as f:
+            old_content = f.read()
+    except Exception:
+        return None  # Can't read, let the write proceed
+
+    old_lines = len(old_content.splitlines())
+    old_bytes = len(old_content.encode(encoding))
+    new_bytes = len(new_content.encode(encoding))
+
+    # Skip protection for small files
+    if old_lines < MIN_LINES_FOR_PROTECTION and old_bytes < MIN_BYTES_FOR_PROTECTION:
+        return None
+
+    # Check for destructive write (empty or massive reduction)
+    if new_bytes == 0 and old_bytes > MIN_BYTES_FOR_PROTECTION:
+        return (
+            f"GUARDRAIL: Refusing to write empty content to {filepath} "
+            f"which has {old_lines} lines ({old_bytes} bytes). "
+            f"This looks like accidental file deletion."
+        )
+
+    if old_bytes > 0 and new_bytes < old_bytes * MAX_CONTENT_LOSS_RATIO:
+        loss_percent = int((1 - new_bytes / old_bytes) * 100)
+        return (
+            f"GUARDRAIL: Refusing to reduce {filepath} from {old_bytes} to {new_bytes} bytes "
+            f"({loss_percent}% content loss). This looks like accidental deletion. "
+            f"If intentional, delete the file first then recreate it."
+        )
+
+    return None
+
+
 @tool
 def put_complete_file_contents(
     filepath: str,
@@ -42,6 +91,18 @@ def put_complete_file_contents(
     }
 
     try:
+        # GUARDRAIL: Check for destructive writes
+        guardrail_error = _check_destructive_write(filepath, complete_file_contents, encoding)
+        if guardrail_error:
+            console_panel(
+                guardrail_error,
+                title="🛡️ Write Blocked",
+                border_style="red bold",
+            )
+            result["error"] = guardrail_error
+            result["message"] = guardrail_error
+            return result
+
         # Ensure directory exists if filepath contains directories
         dirpath = os.path.dirname(filepath)
         if dirpath:

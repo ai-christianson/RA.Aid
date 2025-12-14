@@ -166,7 +166,7 @@ def mark_research_complete_no_implementation_required(message: str):
     # Print confirmation message to console
     cpm(f"🎯 Research complete (no implementation required): {message}", "Research Complete", "green")
     
-    # Signal agent to exit
-    mark_should_exit()
+    # Signal agent to exit - propagate to all parent contexts so the main loop breaks
+    mark_should_exit(propagation_depth=None)
     
     return f"Research task completed with no implementation required: {message}"

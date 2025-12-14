@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Optional
 
 from langchain_core.tools import tool
 
@@ -12,6 +12,47 @@ from ra_aid.database.repositories.human_input_repository import get_human_input_
 import logging
 
 logger = logging.getLogger(__name__)
+
+# Guardrail thresholds
+MIN_LINES_FOR_PROTECTION = 20  # Files with fewer lines aren't protected
+MIN_BYTES_FOR_PROTECTION = 500  # Files smaller than this aren't protected
+MAX_CONTENT_LOSS_RATIO = 0.5  # Refuse if replacement removes >50% of content
+
+
+def _check_destructive_replace(
+    old_content: str, new_content: str, filepath: str
+) -> Optional[str]:
+    """
+    Check if a replacement would be destructive.
+
+    Returns:
+        Error message if replacement should be blocked, None if safe to proceed.
+    """
+    old_lines = len(old_content.splitlines())
+    old_bytes = len(old_content)
+    new_bytes = len(new_content)
+
+    # Skip protection for small files
+    if old_lines < MIN_LINES_FOR_PROTECTION and old_bytes < MIN_BYTES_FOR_PROTECTION:
+        return None
+
+    # Check for destructive replacement
+    if new_bytes == 0 and old_bytes > MIN_BYTES_FOR_PROTECTION:
+        return (
+            f"GUARDRAIL: Refusing replacement that would empty {filepath} "
+            f"({old_lines} lines, {old_bytes} bytes). "
+            f"This looks like accidental file deletion."
+        )
+
+    if old_bytes > 0 and new_bytes < old_bytes * MAX_CONTENT_LOSS_RATIO:
+        loss_percent = int((1 - new_bytes / old_bytes) * 100)
+        return (
+            f"GUARDRAIL: Refusing replacement that would reduce {filepath} "
+            f"from {old_bytes} to {new_bytes} bytes ({loss_percent}% content loss). "
+            f"This looks like accidental deletion."
+        )
+
+    return None
 
 
 def truncate_display_str(s: str, max_length: int = 30) -> str:
@@ -150,6 +191,17 @@ def file_str_replace(filepath: str, old_str: str, new_str: str, *, replace_all: 
             return {"success": False, "message": msg}
 
         new_content = content.replace(old_str, new_str)
+
+        # GUARDRAIL: Check for destructive replacement
+        guardrail_error = _check_destructive_replace(content, new_content, filepath)
+        if guardrail_error:
+            console_panel(
+                guardrail_error,
+                title="🛡️ Replace Blocked",
+                border_style="red bold",
+            )
+            return {"success": False, "message": guardrail_error}
+
         path.write_text(new_content)
 
         replacement_msg = f"Replaced in {filepath}:"

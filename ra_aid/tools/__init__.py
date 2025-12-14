@@ -1,4 +1,5 @@
 from .expert import ask_expert, emit_expert_context
+from .expert_image import ask_expert_with_image
 from .file_str_replace import file_str_replace
 from .fuzzy_find import fuzzy_find_project_files
 from .human import ask_human
@@ -21,6 +22,7 @@ from .write_file import put_complete_file_contents
 
 __all__ = [
     "ask_expert",
+    "ask_expert_with_image",
     "web_search_tavily",
     "deregister_related_files",
     "emit_expert_context",

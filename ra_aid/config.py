@@ -88,21 +88,24 @@ def save_default_values(values: Dict[str, Any], project_state_dir: Optional[str]
 _default_values = load_default_values()
 
 # Set default provider and model from the loaded values or use empty strings as fallback
-DEFAULT_PROVIDER = _default_values.get("provider", "anthropic")
-DEFAULT_MODEL = _default_values.get("model", "claude-3-7-sonnet-20250219")
-DEFAULT_EXPERT_MODEL = _default_values.get("expert_model", "claude-3-7-sonnet-20250219")
+DEFAULT_PROVIDER = _default_values.get("provider", "openrouter")
+DEFAULT_MODEL = _default_values.get("model", "qwen/qwen3-coder")
+DEFAULT_EXPERT_PROVIDER = _default_values.get("expert_provider", "anthropic")
+DEFAULT_EXPERT_MODEL = _default_values.get("expert_model", "claude-opus-4-5-20251101")
 
 
-DEFAULT_ANTHROPIC_MODEL = "claude-3-7-sonnet-20250219"
+DEFAULT_ANTHROPIC_MODEL = "claude-opus-4-5-20251101"
 DEFAULT_OPENAI_MODEL = "o4-mini"
 DEFAULT_GEMINI_MODEL = "gemini-2.5-pro-preview-05-06"
 DEFAULT_DEEPSEEK_MODEL = "deepseek-reasoner"
+DEFAULT_OPENROUTER_MODEL = "qwen/qwen3-coder"
 
 
-DEFAULT_EXPERT_ANTHROPIC_MODEL = "claude-3-7-sonnet-20250219"
+DEFAULT_EXPERT_ANTHROPIC_MODEL = "claude-opus-4-5-20251101"
 DEFAULT_EXPERT_OPENAI_MODEL = "o4-mini"
 DEFAULT_EXPERT_GEMINI_MODEL = "gemini-2.5-pro-preview-05-06"
 DEFAULT_EXPERT_DEEPSEEK_MODEL = "deepseek-reasoner"
+DEFAULT_EXPERT_OPENROUTER_MODEL = "claude-opus-4-5-20251101"
 DEFAULT_MAKEHUB_MODEL = "anthropic/claude-4-sonnet"
 DEFAULT_EXPERT_MAKEHUB_MODEL = "anthropic/claude-4-sonnet"
 DEFAULT_SHOW_COST = True

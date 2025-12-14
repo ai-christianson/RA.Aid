@@ -39,6 +39,14 @@ MODEL_COSTS = {
         "input": Decimal("0.000015"),
         "output": Decimal("0.000075"),
     },
+    "claude-opus-4-5-20251101": {
+        "input": Decimal("0.000015"),
+        "output": Decimal("0.000075"),
+    },
+    "qwen/qwen3-coder": {
+        "input": Decimal("0.00000022"),  # $0.22/M tokens
+        "output": Decimal("0.00000095"),  # $0.95/M tokens
+    },
     "claude-3-sonnet-20240229": {
         "input": Decimal("0.000003"),
         "output": Decimal("0.000015"),
@@ -324,6 +332,11 @@ class DefaultCallbackHandler(BaseCallbackHandler, metaclass=Singleton):
                 self.model_name = serialized["name"]
         except Exception as e:
             logger.error(f"Error in on_llm_start: {e}", exc_info=True)
+
+    def on_llm_new_token(self, token: str, **kwargs) -> None:
+        """Handle streaming tokens - disabled for now."""
+        # Streaming disabled - tool calls get shown in panels instead
+        pass
 
     def _extract_token_usage(self, response: LLMResult) -> dict:
         """Extract token usage information from various response formats."""

@@ -366,7 +366,7 @@ def run_research_agent(
     if agent:
         logger.info(f"[{thread_id}] Research agent created successfully.")
     else:
-        logger.info(f"[{thread_id}] Research agent creation returned None (likely web research only).")
+        logger.debug(f"[{thread_id}] Research agent creation returned None (likely web research only).")
 
 
     expert_section = EXPERT_PROMPT_SECTION_RESEARCH if expert_enabled else ""

@@ -363,6 +363,14 @@ models_params = {
             "latency_coefficient": DEFAULT_BASE_LATENCY,
             "default_backend": AgentBackendType.CREATE_REACT_AGENT,
         },
+        "qwen/qwen3-coder": {
+            "token_limit": 262144,
+            "max_tokens": 262144,
+            "supports_temperature": True,
+            "default_temperature": 0.4,
+            "latency_coefficient": DEFAULT_BASE_LATENCY,
+            "default_backend": AgentBackendType.CIAYN,
+        },
     },
     "openai-compatible": {
         "qwen-qwq-32b": {
@@ -1153,6 +1161,15 @@ models_params = {
             "supports_temperature": True,
             "default_temperature": DEFAULT_TEMPERATURE,
             "latency_coefficient": DEFAULT_BASE_LATENCY,
+        },
+        "claude-opus-4-5-20251101": {
+            "token_limit": 200000,
+            "supports_temperature": True,
+            "supports_thinking": True,
+            "max_tokens": 64000,
+            "default_temperature": 1.0,
+            "latency_coefficient": DEFAULT_BASE_LATENCY,
+            "default_backend": AgentBackendType.CREATE_REACT_AGENT,
         },
         "claude-3-sonnet-20240229": {
             "token_limit": 200000,

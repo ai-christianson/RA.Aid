@@ -7,7 +7,7 @@ import time
 from typing import Any, Dict, List, Literal, Optional
 import uuid
 
-from langgraph.graph.graph import CompiledGraph
+from langgraph.pregel import Pregel as CompiledGraph
 from ra_aid.callbacks.default_callback_handler import (
     _initialize_callback_handler_internal,
 )

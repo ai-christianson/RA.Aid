@@ -6,6 +6,7 @@ from ra_aid.console import console
 from rich.markdown import Markdown
 from rich.panel import Panel
 from ra_aid.tools import (
+    ask_expert_with_image,
     ask_expert,
     ask_human,
     emit_expert_context,
@@ -190,7 +191,7 @@ MODIFICATION_TOOLS = [file_str_replace, put_complete_file_contents]
 COMMON_TOOLS = get_read_only_tools(use_aider=use_aider)
 # CUSTOM TOOLS will be set dynamically based on config, default defined here
 CUSTOM_TOOLS = []
-EXPERT_TOOLS = [emit_expert_context, ask_expert]
+EXPERT_TOOLS = [emit_expert_context, ask_expert, ask_expert_with_image]
 RESEARCH_TOOLS = [
     emit_research_notes,
     # *TEMPORARILY* disabled to improve tool calling perf.
@@ -233,19 +234,16 @@ def get_research_tools(
 
     tools.extend(RESEARCH_TOOLS)  # Add common research tools
 
-    # Conditionally add mark_research_complete_no_implementation_required
-    # The research_only argument to this function is the one from the agent's direct call,
-    # not necessarily the global CLI flag. We should check the global config.
+    # Always add termination tool so research agent can stop without spawning implementation
+    tools.append(mark_research_complete_no_implementation_required)
+
     config_repo = get_config_repository()
     is_global_research_only = config_repo.get("research_only", False)
-
-    if is_global_research_only:
-        tools.append(mark_research_complete_no_implementation_required)
 
     # Add modification tools if not research_only
     if research_and_plan_only:
         tools.append(emit_plan)
-    elif not is_global_research_only:  # Check global flag here too
+    elif not is_global_research_only:
         # For now, we ONLY do modifications after planning.
         # tools.extend(MODIFICATION_TOOLS)
         tools.append(request_implementation)

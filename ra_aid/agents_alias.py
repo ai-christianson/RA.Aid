@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 
-from langgraph.graph.graph import CompiledGraph
+from langgraph.pregel import Pregel as CompiledGraph
 
 # Unfortunately need this to avoid Circular Imports
 if TYPE_CHECKING:
