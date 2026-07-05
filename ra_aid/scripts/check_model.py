@@ -72,6 +72,7 @@ def main():
             "GROQ_API_KEY",
             "FIREWORKS_API_KEY",
             "OPENROUTER_API_KEY",
+            "REQUESTY_API_KEY",
             "MAKEHUB_API_KEY",
         ]
     )

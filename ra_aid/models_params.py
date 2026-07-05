@@ -364,6 +364,16 @@ models_params = {
             "default_backend": AgentBackendType.CREATE_REACT_AGENT,
         },
     },
+    "requesty": {
+        "openai/gpt-4o-mini": {
+            "token_limit": 128000,
+            "supports_temperature": True,
+            "default_temperature": DEFAULT_TEMPERATURE,
+            "supports_reasoning_effort": False,
+            "latency_coefficient": DEFAULT_BASE_LATENCY,
+            "default_backend": AgentBackendType.CIAYN,
+        },
+    },
     "openai-compatible": {
         "qwen-qwq-32b": {
             "token_limit": 131072,

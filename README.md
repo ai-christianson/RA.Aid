@@ -159,6 +159,9 @@ export OPENAI_API_KEY=your_api_key_here
 # For OpenRouter provider (optional)
 export OPENROUTER_API_KEY=your_api_key_here
 
+# For Requesty provider (optional)
+export REQUESTY_API_KEY=your_api_key_here
+
 # For Makehub provider (optional)
 export MAKEHUB_API_KEY=your_api_key_here
 
@@ -181,6 +184,7 @@ You can get your API keys from:
 - Anthropic API key: https://console.anthropic.com/
 - OpenAI API key: https://platform.openai.com/api-keys
 - OpenRouter API key: https://openrouter.ai/keys
+- Requesty API key: https://requesty.ai
 - Makehub API key: https://makehub.ai/
 - Gemini API key: https://aistudio.google.com/app/apikey
 
@@ -213,7 +217,7 @@ More information is available in our [Usage Examples](https://docs.ra-aid.ai/cat
 - `-m, --message`: The task or query to be executed (required except in chat mode, cannot be used with --msg-file)
 - `--msg-file`: Path to a text file containing the task/message (cannot be used with --message)
 - `--research-only`: Only perform research without implementation
-- `--provider`: The LLM provider to use (choices: anthropic, openai, openrouter, openai-compatible, makehub, gemini)
+- `--provider`: The LLM provider to use (choices: anthropic, openai, openrouter, requesty, openai-compatible, makehub, gemini)
 - `--model`: The model name to use (required for non-Anthropic providers)
 - `--use-aider`: Enable aider integration for code editing. When enabled, RA.Aid uses aider's specialized code editing capabilities instead of its own native file modification tools. This option is useful when you need aider's specific editing features or prefer its approach to code modifications. This feature is optional and disabled by default.
 - `--research-provider`: Provider to use specifically for research tasks (falls back to --provider if not specified)
@@ -394,6 +398,7 @@ RA.Aid supports multiple providers through environment variables:
 - `ANTHROPIC_API_KEY`: Required for the default Anthropic provider
 - `OPENAI_API_KEY`: Required for OpenAI provider
 - `OPENROUTER_API_KEY`: Required for OpenRouter provider
+- `REQUESTY_API_KEY`: Required for Requesty provider (OpenAI-compatible; e.g. model `openai/gpt-4o-mini`)
 - `MAKEHUB_API_KEY`: Required for Makehub provider
 - `DEEPSEEK_API_KEY`: Required for DeepSeek provider
 - `OPENAI_API_BASE`: Required for OpenAI-compatible providers along with `OPENAI_API_KEY`
@@ -403,6 +408,7 @@ Expert Tool Environment Variables:
 - `EXPERT_OPENAI_API_KEY`: API key for expert tool using OpenAI provider
 - `EXPERT_ANTHROPIC_API_KEY`: API key for expert tool using Anthropic provider
 - `EXPERT_OPENROUTER_API_KEY`: API key for expert tool using OpenRouter provider
+- `EXPERT_REQUESTY_API_KEY`: API key for expert tool using Requesty provider (automatically uses `REQUESTY_API_KEY` if not set)
 - `EXPERT_MAKEHUB_API_KEY`: API key for expert tool using Makehub provider (automatically uses `MAKEHUB_API_KEY` if not set)
 - `EXPERT_OPENAI_API_BASE`: Base URL for expert tool using OpenAI-compatible provider
 - `EXPERT_GEMINI_API_KEY`: API key for expert tool using Gemini provider
@@ -419,6 +425,9 @@ export OPENAI_API_KEY=your_api_key_here
 
 # For OpenRouter provider
 export OPENROUTER_API_KEY=your_api_key_here
+
+# For Requesty provider
+export REQUESTY_API_KEY=your_api_key_here
 
 # For Makehub provider
 export MAKEHUB_API_KEY=your_api_key_here
