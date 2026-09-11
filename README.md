@@ -225,7 +225,7 @@ More information is available in our [Usage Examples](https://docs.ra-aid.ai/cat
 - `--planner-provider`: Provider to use specifically for planning tasks (falls back to --provider if not specified)
 - `--planner-model`: Model to use specifically for planning tasks (falls back to --model if not specified)
 - `--cowboy-mode`: Skip interactive approval for shell commands
-- `--expert-provider`: The LLM provider to use for expert knowledge queries (choices: anthropic, openai, openrouter, openai-compatible, makehub, gemini)
+- `--expert-provider`: The LLM provider to use for expert knowledge queries (choices: anthropic, openai, openrouter, requesty, openai-compatible, makehub, gemini)
 - `--expert-model`: The model name to use for expert knowledge queries (required for non-OpenAI providers)
 - `--hil, -H`: Enable human-in-the-loop mode for interactive assistance during task execution
 - `--chat`: Enable chat mode with direct human interaction (implies --hil)
@@ -497,6 +497,10 @@ export GEMINI_API_KEY=your_api_key_here
    # Use Makehub for expert tool (automatically uses MAKEHUB_API_KEY)
    export MAKEHUB_API_KEY=your_makehub_api_key
    ra-aid -m "Your task" --expert-provider makehub --expert-model anthropic/claude-4-sonnet
+
+   # Use Requesty for expert tool (automatically uses REQUESTY_API_KEY)
+   export REQUESTY_API_KEY=your_requesty_api_key
+   ra-aid -m "Your task" --expert-provider requesty --expert-model openai/gpt-4o-mini
 
    # Use default OpenAI for expert tool
    export EXPERT_OPENAI_API_KEY=your_openai_api_key
