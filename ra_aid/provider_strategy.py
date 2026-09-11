@@ -243,6 +243,38 @@ class OpenRouterStrategy(ProviderStrategy):
         return ValidationResult(valid=len(missing) == 0, missing_vars=missing)
 
 
+class RequestyStrategy(ProviderStrategy):
+    """Requesty provider validation strategy."""
+
+    def validate(self, args: Optional[Any] = None) -> ValidationResult:
+        """Validate Requesty environment variables."""
+        missing = []
+
+        # Check if we're validating expert config
+        if (
+            args
+            and hasattr(args, "expert_provider")
+            and args.expert_provider == "requesty"
+        ):
+            key = os.environ.get("EXPERT_REQUESTY_API_KEY")
+            if not key or key == "":
+                # Try to copy from base if not set
+                base_key = os.environ.get("REQUESTY_API_KEY")
+                if base_key:
+                    os.environ["EXPERT_REQUESTY_API_KEY"] = base_key
+                    key = base_key
+            if not key:
+                missing.append(
+                    "EXPERT_REQUESTY_API_KEY environment variable is not set"
+                )
+        else:
+            key = os.environ.get("REQUESTY_API_KEY")
+            if not key:
+                missing.append("REQUESTY_API_KEY environment variable is not set")
+
+        return ValidationResult(valid=len(missing) == 0, missing_vars=missing)
+
+
 class GeminiStrategy(ProviderStrategy):
     """Gemini provider validation strategy."""
 
@@ -539,6 +571,7 @@ class ProviderFactory:
             "openai-compatible": OpenAICompatibleStrategy(),
             "anthropic": AnthropicStrategy(),
             "openrouter": OpenRouterStrategy(),
+            "requesty": RequestyStrategy(),
             "gemini": GeminiStrategy(),
             "ollama": OllamaStrategy(),
             "deepseek": DeepSeekStrategy(),

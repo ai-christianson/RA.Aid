@@ -22,6 +22,7 @@ RA.Aid supports these model providers:
 | Fireworks         | Serverless AI inference platform for open-source models | High-performance inference, pay-per-token, variety of open models |
 | MakeHub           | OpenAI-compatible AI router optimized for developers    | Customizable speed/price ratio, curated latest models, dev-optimized performance |
 | OpenRouter        | Multi-model gateway service                             | Access to 100+ models, unified API interface, pay-per-token       |
+| Requesty          | OpenAI-compatible AI router                             | Unified API, provider/model naming, pay-per-token, HTTP-Referer/X-Title support |
 | OpenAI-compatible | Self-hosted model endpoints                             | Compatible with Llama, Mistral and other open models              |
 | Anthropic         | Claude model series                                     | 200k token context, strong tool use, JSON/XML parsing             |
 | Gemini            | Google's multimodal models                              | Code generation in 20+ languages, parallel request support        |
@@ -40,6 +41,7 @@ export DEEPSEEK_API_KEY=your_key
 export FIREWORKS_API_KEY=your_key
 export MAKEHUB_API_KEY=your_key
 export OPENROUTER_API_KEY=your_key
+export REQUESTY_API_KEY=your_key
 export OPENAI_API_KEY=your_key
 export ANTHROPIC_API_KEY=your_key
 export GEMINI_API_KEY=your_key
@@ -145,6 +147,29 @@ ra-aid -m "Your task" --provider openrouter --model deepseek/deepseek-r1
 - `mistralai/mistral-large-2411`
 - `anthropic/claude-3`
 - `deepseek/deepseek-r1`
+</TabItem>
+<TabItem value="requesty" label="Requesty">
+
+### Requesty Integration
+
+Requesty is an OpenAI-compatible AI router that provides access to multiple models through a single API. Models use `provider/model` naming.
+
+```bash
+# Environment setup
+export REQUESTY_API_KEY=your_api_key_here
+
+# Example commands
+ra-aid -m "Your task" --provider requesty --model openai/gpt-4o-mini
+```
+
+**Details:**
+- OpenAI-compatible; base URL `https://router.requesty.ai/v1`
+- Auth via `REQUESTY_API_KEY` (`Authorization: Bearer ...`)
+- Optional `HTTP-Referer` and `X-Title` headers supported
+- Docs: https://requesty.ai
+
+**Example Model:**
+- `openai/gpt-4o-mini`
 </TabItem>
 <TabItem value="openai-compatible" label="OpenAI-compatible">
 
@@ -317,6 +342,7 @@ Complete list of supported environment variables:
 | Variable                       | Provider          | Purpose                                           |
 |--------------------------------|-------------------|---------------------------------------------------|
 | `OPENROUTER_API_KEY`           | OpenRouter        | Main API access                                   |
+| `REQUESTY_API_KEY`             | Requesty          | Main API access                                   |
 | `DEEPSEEK_API_KEY`             | DeepSeek          | Main API access                                   |
 | `FIREWORKS_API_KEY`            | Fireworks         | Main API access                                   |
 | `MAKEHUB_API_KEY`              | MakeHub           | Main API access                                   |
@@ -331,6 +357,7 @@ Complete list of supported environment variables:
 | `AWS_REGION`                   | Bedrock           | Region specification (default: us-east-1)         |
 | `OLLAMA_BASE_URL`              | Ollama            | Custom endpoint (default: http://localhost:11434) |
 | `EXPERT_OPENROUTER_API_KEY`    | OpenRouter        | Expert tool                                       |
+| `EXPERT_REQUESTY_API_KEY`      | Requesty          | Expert tool                                       |
 | `EXPERT_DEEPSEEK_API_KEY`      | DeepSeek          | Expert tool                                       |
 | `EXPERT_FIREWORKS_API_KEY`     | Fireworks         | Expert tool                                       |
 | `EXPERT_MAKEHUB_API_KEY`       | MakeHub           | Expert tool                                       |

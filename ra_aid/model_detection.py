@@ -197,6 +197,9 @@ def is_anthropic_claude(config: Dict[str, Any]) -> bool:
         provider.lower() == "openrouter"
         and model_name.lower().startswith("anthropic/claude-")
     ) or (
+        provider.lower() == "requesty"
+        and model_name.lower().startswith("anthropic/claude-")
+    ) or (
         provider.lower() == "makehub"
         and model_name.lower().startswith("anthropic/claude-")
     )

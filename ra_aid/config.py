@@ -115,6 +115,7 @@ VALID_PROVIDERS = [
     "anthropic",
     "openai",
     "openrouter",
+    "requesty",
     "openai-compatible",
     "deepseek",
     "gemini",

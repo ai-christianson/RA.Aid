@@ -68,6 +68,7 @@ known_temp_providers = {
     "openai",
     "anthropic",
     "openrouter",
+    "requesty",
     "openai-compatible",
     "gemini",
     "deepseek",
@@ -163,6 +164,47 @@ def create_openrouter_client(
         "metadata": {
             "model_name": model_name,
             "provider": "openrouter"
+        }
+    }
+
+    # Use ChatDeepseekReasoner for DeepSeek Reasoner models
+    if model_name.startswith("deepseek/") and "deepseek-r1" in model_name.lower():
+        return ChatDeepseekReasoner(temperature=temp_value, **common_params)
+
+    return ChatOpenAI(
+        **common_params,
+        **({"temperature": temperature} if temperature is not None else {}),
+    )
+
+
+def create_requesty_client(
+    model_name: str,
+    api_key: str,
+    temperature: Optional[float] = None,
+    is_expert: bool = False,
+) -> BaseChatModel:
+    """Create Requesty client with appropriate configuration."""
+    default_headers = {"HTTP-Referer": "https://ra-aid.ai", "X-Title": "RA.Aid"}
+    base_url = "https://router.requesty.ai/v1"
+
+    # Set temperature based on expert mode and provided value
+    temp_value = 0 if is_expert else (temperature if temperature is not None else 1)
+
+    # Common parameters for all Requesty clients
+    common_params = {
+        "api_key": api_key,
+        "base_url": base_url,
+        "model": model_name,
+        "timeout": int(
+            get_env_var(name="LLM_REQUEST_TIMEOUT", default=LLM_REQUEST_TIMEOUT)
+        ),
+        "max_retries": int(
+            get_env_var(name="LLM_MAX_RETRIES", default=LLM_MAX_RETRIES)
+        ),
+        "default_headers": default_headers,
+        "metadata": {
+            "model_name": model_name,
+            "provider": "requesty"
         }
     }
 
@@ -424,6 +466,10 @@ def get_provider_config(provider: str, is_expert: bool = False) -> Dict[str, Any
             "api_key": get_env_var("OPENROUTER_API_KEY", is_expert),
             "base_url": "https://openrouter.ai/api/v1",
         },
+        "requesty": {
+            "api_key": get_env_var("REQUESTY_API_KEY", is_expert),
+            "base_url": "https://router.requesty.ai/v1",
+        },
         "openai-compatible": {
             "api_key": get_env_var("OPENAI_API_KEY", is_expert),
             "base_url": get_env_var("OPENAI_API_BASE", is_expert),
@@ -634,6 +680,14 @@ def create_llm_client(
             **thinking_kwargs,
             is_expert=is_expert,
         )
+    elif provider == "requesty":
+        return create_requesty_client(
+            model_name=model_name,
+            api_key=config.get("api_key"),
+            **temp_kwargs,
+            **thinking_kwargs,
+            is_expert=is_expert,
+        )
     elif provider == "openai":
         openai_kwargs = {
             "api_key": config.get("api_key"),
@@ -792,6 +846,7 @@ def validate_provider_env(provider: str) -> bool:
         "openai": "OPENAI_API_KEY",
         "anthropic": "ANTHROPIC_API_KEY",
         "openrouter": "OPENROUTER_API_KEY",
+        "requesty": "REQUESTY_API_KEY",
         "openai-compatible": "OPENAI_API_KEY",
         "gemini": "GEMINI_API_KEY",
         "deepseek": "DEEPSEEK_API_KEY",
